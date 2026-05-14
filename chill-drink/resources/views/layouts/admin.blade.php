@@ -7,100 +7,166 @@
 
     <title>Admin - {{ config('app.name', 'Chill Drink') }}</title>
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-    <!-- Scripts -->
+    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --admin-primary: #0f8b8d;
+            --admin-primary-dark: #086972;
+            --admin-ink: #172033;
+            --admin-muted: #667085;
+            --admin-bg: #f4f8fb;
+            --admin-border: #dcebe8;
+            --admin-shadow: 0 18px 45px rgba(23, 32, 51, 0.10);
+        }
+
+        body {
+            font-family: Figtree, Arial, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(15, 139, 141, 0.12), transparent 30rem),
+                var(--admin-bg);
+            color: var(--admin-ink);
+        }
+
+        .admin-shell {
+            min-height: 100vh;
+        }
+
+        .admin-sidebar {
+            width: 270px;
+            background:
+                radial-gradient(circle at top left, rgba(59, 214, 181, 0.22), transparent 18rem),
+                linear-gradient(180deg, #132033 0%, #0b363b 100%);
+        }
+
+        .admin-sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.72);
+            border-radius: 14px;
+            font-weight: 700;
+            padding: 0.85rem 1rem;
+        }
+
+        .admin-sidebar .nav-link:hover,
+        .admin-sidebar .nav-link.active {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .admin-brand-mark {
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--admin-primary), #3bd6b5);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+            font-weight: 800;
+        }
+
+        .admin-topbar {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(18px);
+        }
+
+        .admin-card {
+            border: 1px solid var(--admin-border);
+            border-radius: 20px;
+            box-shadow: var(--admin-shadow);
+        }
+
+        .admin-table th {
+            color: var(--admin-muted);
+            font-size: 0.76rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .admin-thumb {
+            width: 58px;
+            height: 58px;
+            object-fit: cover;
+            border-radius: 14px;
+            border: 1px solid var(--admin-border);
+        }
+
+        .btn-primary {
+            --bs-btn-bg: var(--admin-primary);
+            --bs-btn-border-color: var(--admin-primary);
+            --bs-btn-hover-bg: var(--admin-primary-dark);
+            --bs-btn-hover-border-color: var(--admin-primary-dark);
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .badge {
+            font-weight: 700;
+        }
+
+        @media (max-width: 991.98px) {
+            .admin-shell {
+                flex-direction: column;
+            }
+
+            .admin-sidebar {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
-<body class="font-sans antialiased bg-gray-100">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-gray-800 text-white">
-            <div class="p-4">
-                <h1 class="text-2xl font-bold">🥤 Admin Panel</h1>
-            </div>
+<body>
+    <div class="admin-shell d-flex">
+        <aside class="admin-sidebar text-white p-3">
+            <a href="{{ route('admin.dashboard') }}" class="d-flex align-items-center gap-2 text-white text-decoration-none mb-4">
+                <span class="admin-brand-mark">C</span>
+                <span class="fs-5 fw-bold">Chill Admin</span>
+            </a>
 
-            <nav class="mt-8">
-                <a href="{{ route('admin.dashboard') }}" class="flex items-center px-6 py-3 hover:bg-gray-700 {{ request()->routeIs('admin.dashboard') ? 'bg-gray-700' : '' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    Dashboard
-                </a>
-
-                <a href="{{ route('admin.products.index') }}" class="flex items-center px-6 py-3 hover:bg-gray-700 {{ request()->routeIs('admin.products.*') ? 'bg-gray-700' : '' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    Sản Phẩm
-                </a>
-
-                <a href="{{ route('admin.categories.index') }}" class="flex items-center px-6 py-3 hover:bg-gray-700 {{ request()->routeIs('admin.categories.*') ? 'bg-gray-700' : '' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                    Danh Mục
-                </a>
-
-                <a href="{{ route('admin.orders.index') }}" class="flex items-center px-6 py-3 hover:bg-gray-700 {{ request()->routeIs('admin.orders.*') ? 'bg-gray-700' : '' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    Đơn Hàng
-                </a>
-
-                <a href="{{ route('admin.users.index') }}" class="flex items-center px-6 py-3 hover:bg-gray-700 {{ request()->routeIs('admin.users.*') ? 'bg-gray-700' : '' }}">
-                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    Người Dùng
-                </a>
-
-                <form method="POST" action="{{ route('logout') }}" class="mt-8">
-                    @csrf
-                    <button type="submit" class="flex items-center px-6 py-3 hover:bg-gray-700 w-full text-left">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                        Đăng Xuất
-                    </button>
-                </form>
+            <nav class="nav flex-column gap-1">
+                <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a>
+                <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}">Sản Phẩm</a>
+                <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">Danh Mục</a>
+                <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">Đơn Hàng</a>
+                <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">Người Dùng</a>
             </nav>
+
+            <form method="POST" action="{{ route('logout') }}" class="mt-4">
+                @csrf
+                <button type="submit" class="btn btn-outline-light w-100">Đăng Xuất</button>
+            </form>
         </aside>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Top Navbar -->
-            <header class="bg-white shadow-sm">
-                <div class="flex items-center justify-between px-6 py-4">
-                    <h2 class="text-xl font-semibold text-gray-800">@yield('page-title', 'Dashboard')</h2>
-                    
-                    <div class="flex items-center space-x-4">
-                        <span class="text-gray-600">{{ Auth::user()->name }}</span>
+        <div class="flex-grow-1">
+            <header class="admin-topbar border-bottom">
+                <div class="container-fluid py-3 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-secondary small mb-0">Chill Drink Admin</p>
+                        <h1 class="h4 fw-bold mb-0">@yield('page-title', 'Dashboard')</h1>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <a href="{{ route('home') }}" class="btn btn-outline-secondary btn-sm rounded-pill">Xem web</a>
+                        <div class="badge text-bg-primary rounded-pill px-3 py-2">{{ Auth::user()->name }}</div>
                     </div>
                 </div>
             </header>
 
-            <!-- Page Content -->
-            <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
-                <!-- Flash Messages -->
+            <main class="container-fluid p-4">
                 @if(session('success'))
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-                        {{ session('success') }}
-                    </div>
+                    <div class="alert alert-success">{{ session('success') }}</div>
                 @endif
 
                 @if(session('error'))
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-                        {{ session('error') }}
-                    </div>
+                    <div class="alert alert-danger">{{ session('error') }}</div>
                 @endif
 
                 @yield('content')
             </main>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

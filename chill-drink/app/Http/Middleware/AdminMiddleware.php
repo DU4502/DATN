@@ -17,7 +17,7 @@ class AdminMiddleware
     {
         // Check if user is authenticated and is admin
         if (!auth()->check() || !auth()->user()->isAdmin()) {
-            abort(403, 'Unauthorized access. Admin only.');
+            return redirect()->route('home')->with('error', 'Bạn không có quyền truy cập trang admin.');
         }
 
         return $next($request);
