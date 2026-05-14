@@ -3,106 +3,84 @@
 @section('title', 'Sản Phẩm')
 
 @section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800">Sản Phẩm</h1>
-        <p class="text-gray-600 mt-2">Khám phá các loại đồ uống thơm ngon</p>
-    </div>
-
-    <div class="flex flex-col lg:flex-row gap-8">
-        <!-- Sidebar Filter -->
-        <aside class="lg:w-64 flex-shrink-0">
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="font-semibold text-gray-800 mb-4">Danh Mục</h3>
-                <ul class="space-y-2">
-                    <li>
-                        <a href="{{ route('products.index') }}" 
-                           class="block px-3 py-2 rounded {{ !request('category') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
-                            Tất Cả
-                        </a>
-                    </li>
-                    @foreach($categories as $category)
-                        <li>
-                            <a href="{{ route('products.index', ['category' => $category->id]) }}" 
-                               class="block px-3 py-2 rounded {{ request('category') == $category->id ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:bg-gray-100' }}">
-                                {{ $category->name }}
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+            <div>
+                <p class="section-kicker mb-1">Menu</p>
+                <h1 class="section-title h2 mb-1">Khám phá đồ uống</h1>
+                <p class="text-secondary mb-0">Chọn nhanh món bạn thích, thêm vào giỏ và thanh toán thật gọn.</p>
             </div>
-        </aside>
+            <form action="{{ route('products.index') }}" method="GET" class="d-flex" role="search">
+                @if(request('category'))
+                    <input type="hidden" name="category" value="{{ request('category') }}">
+                @endif
+                <input type="search" name="search" value="{{ request('search') }}" class="form-control" placeholder="Tìm kiếm sản phẩm...">
+                <button type="submit" class="btn btn-primary ms-2">Tìm</button>
+            </form>
+        </div>
 
-        <!-- Products Grid -->
-        <div class="flex-1">
-            <!-- Search & Sort -->
-            <div class="bg-white rounded-lg shadow p-4 mb-6">
-                <form action="{{ route('products.index') }}" method="GET" class="flex gap-4">
-                    <input type="text" 
-                           name="search" 
-                           value="{{ request('search') }}"
-                           placeholder="Tìm kiếm sản phẩm..." 
-                           class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
-                        Tìm Kiếm
-                    </button>
-                </form>
-            </div>
-
-            <!-- Products -->
-            @if($products->count() > 0)
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @foreach($products as $product)
-                        <div class="bg-white rounded-lg shadow hover:shadow-lg transition">
-                            <a href="{{ route('products.show', $product->slug) }}">
-                                <img src="{{ $product->image }}" 
-                                     alt="{{ $product->name }}" 
-                                     class="w-full h-48 object-cover rounded-t-lg">
-                            </a>
-                            <div class="p-4">
-                                <a href="{{ route('products.show', $product->slug) }}" 
-                                   class="font-semibold text-gray-800 hover:text-blue-600 line-clamp-2">
-                                    {{ $product->name }}
+        <div class="row g-4">
+            <aside class="col-lg-3">
+                <div class="drink-card card border-0 sticky-top" style="top: 100px;">
+                    <div class="card-body">
+                        <h2 class="h5 fw-bold mb-3">Danh Mục</h2>
+                        <div class="list-group list-group-flush rounded-4 overflow-hidden">
+                            <a href="{{ route('products.index') }}" class="list-group-item list-group-item-action {{ !request('category') ? 'active' : '' }}">Tất Cả</a>
+                            @foreach($categories as $category)
+                                <a href="{{ route('products.index', ['category' => $category->id]) }}" class="list-group-item list-group-item-action {{ request('category') == $category->id ? 'active' : '' }}">
+                                    {{ $category->name }}
                                 </a>
-                                <p class="text-sm text-gray-600 mt-1">{{ $product->category->name }}</p>
-                                
-                                <div class="flex items-center justify-between mt-4">
-                                    <span class="text-lg font-bold text-blue-600">
-                                        {{ number_format($product->price, 0, ',', '.') }}đ
-                                    </span>
-                                    
-                                    @if($product->stock > 0)
-                                        <form action="{{ route('cart.add', $product->id) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" 
-                                                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-                                                Thêm Vào Giỏ
-                                            </button>
-                                        </form>
-                                    @else
-                                        <span class="text-red-500 text-sm">Hết hàng</span>
-                                    @endif
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="col-lg-9">
+                @if($products->count() > 0)
+                    <div class="row g-4">
+                        @foreach($products as $product)
+                            <div class="col-sm-6 col-xl-4">
+                                <div class="drink-card card border-0 h-100 overflow-hidden">
+                                    <a href="{{ route('products.show', $product->slug) }}">
+                                        <img src="{{ $product->image }}" alt="{{ $product->name }}" class="card-img-top" style="height: 210px; object-fit: cover;">
+                                    </a>
+                                    <div class="card-body d-flex flex-column">
+                                        <span class="badge rounded-pill align-self-start mb-2" style="background: var(--drink-soft); color: var(--drink-primary);">{{ $product->category->name }}</span>
+                                        <h3 class="h5">
+                                            <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
+                                        </h3>
+                                        <div class="mt-auto d-flex justify-content-between align-items-center gap-3">
+                                            <strong class="h5 text-primary mb-0">{{ number_format($product->price, 0, ',', '.') }}đ</strong>
+                                            @if($product->stock > 0)
+                                                <form action="{{ route('cart.add', $product->id) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-primary btn-sm">Thêm vào giỏ</button>
+                                                </form>
+                                            @else
+                                                <span class="badge text-bg-danger">Hết hàng</span>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    @endforeach
-                </div>
+                        @endforeach
+                    </div>
 
-                <!-- Pagination -->
-                <div class="mt-8">
-                    {{ $products->links() }}
-                </div>
-            @else
-                <div class="bg-white rounded-lg shadow p-12 text-center">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900">Không tìm thấy sản phẩm</h3>
-                    <p class="mt-1 text-sm text-gray-500">Thử tìm kiếm với từ khóa khác</p>
-                </div>
-            @endif
+                    <div class="mt-4">
+                        {{ $products->links() }}
+                    </div>
+                @else
+                    <div class="drink-card card border-0">
+                        <div class="card-body text-center py-5">
+                            <h2 class="h5 fw-bold">Không tìm thấy sản phẩm</h2>
+                            <p class="text-secondary mb-0">Thử tìm kiếm với từ khóa khác.</p>
+                        </div>
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
-</div>
+</section>
 @endsection
