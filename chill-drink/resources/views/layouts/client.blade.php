@@ -141,6 +141,11 @@
             letter-spacing: 0;
         }
 
+        /* Override Tailwind's .collapse visibility conflict */
+        .collapse.navbar-collapse {
+            visibility: visible !important;
+        }
+
         .site-header {
             background: rgba(239, 252, 248, 0.94);
             border-bottom: 1px solid rgba(213, 238, 232, 0.95);
@@ -185,7 +190,7 @@
         }
 
         .client-search {
-            width: min(360px, 30vw);
+            width: clamp(220px, 24vw, 300px);
         }
 
         .navbar-toggler {
@@ -362,7 +367,7 @@
 </head>
 <body class="bg-light">
     <header class="site-header sticky-top">
-        <nav class="navbar navbar-expand-lg container py-3">
+        <nav class="navbar navbar-expand-md container py-3">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
                 <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
                 <span class="brand-text">Chill Drink</span>
