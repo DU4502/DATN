@@ -40,12 +40,20 @@
                     <tr>
                         <td>
                             <div class="admin-thumb d-flex align-items-center justify-content-center overflow-hidden">
-                                <img src="{{ $product->image ?: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=75' }}" alt="{{ $product->name }}" class="w-100 h-100" style="object-fit: cover;">
+                                <x-product-image
+                                    :sku="$product->sku"
+                                    :name="$product->name"
+                                    :alt="$product->name"
+                                    :category="$product->category?->name"
+                                    class="w-100 h-100"
+                                    style="object-fit: cover; min-height: 56px;"
+                                    :width="200"
+                                />
                             </div>
                         </td>
                         <td>
                             <div class="fw-bold">{{ $product->name }}</div>
-                            <small class="text-secondary">Mã: {{ $product->slug }}</small>
+                            <small class="text-secondary font-monospace">{{ $product->sku }}</small>
                         </td>
                         <td><span class="badge badge-soft-primary">{{ $product->category->name ?? 'Chưa phân loại' }}</span></td>
                         <td class="fw-bold">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</td>

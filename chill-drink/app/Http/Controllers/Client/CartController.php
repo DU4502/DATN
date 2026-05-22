@@ -26,7 +26,14 @@ class CartController extends Controller
     public function index()
     {
         $cart = session()->get('cart', []);
-        return view('client.cart.index', compact('cart'));
+        $suggestions = Product::query()
+            ->where('status', true)
+            ->with('category')
+            ->inRandomOrder()
+            ->limit(4)
+            ->get();
+
+        return view('client.cart.index', compact('cart', 'suggestions'));
     }
 
     private function cartPayload(string $message): array
@@ -71,11 +78,17 @@ class CartController extends Controller
             $cart[$id]['quantity']++;
         } else {
             // Add new product to cart
+            $image = $product instanceof Product
+                ? $product->image_url
+                : ($product->image ?? \App\Support\ProductImage::forCategory(null, crc32((string) $id)));
+
             $cart[$id] = [
                 'name' => $product->name,
                 'price' => $product->price,
-                'image' => $product->image,
-                'quantity' => 1
+                'image' => $image,
+                'sku' => $product instanceof Product ? $product->sku : null,
+                'category' => $product instanceof Product ? $product->category?->name : null,
+                'quantity' => 1,
             ];
         }
         

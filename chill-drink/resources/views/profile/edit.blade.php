@@ -3,6 +3,7 @@
 @section('title', 'Tài Khoản')
 
 @section('content')
+@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 @php
     $avatarValue = old('avatar', $user->avatar ?: 'preset-mint');
     $avatarIsImage = $user->avatar && ! str_starts_with($user->avatar, 'preset-');
@@ -76,7 +77,12 @@
             <h1 class="h2 fw-bold mb-0">Thông tin cá nhân</h1>
         </div>
 
-        <div class="row g-4">
+        <nav class="profile-tabs" aria-label="Mục tài khoản">
+            <a href="#profile-info" class="profile-tab active">Thông tin</a>
+            <a href="#profile-orders" class="profile-tab">Đơn hàng của tôi</a>
+        </nav>
+
+        <div id="profile-info" class="row g-4">
             <div class="col-lg-6">
                 <div class="drink-card card border-0 h-100">
                     <div class="card-body p-4">
@@ -233,8 +239,28 @@
                 </div>
             </div>
         </div>
+
+        @include('profile.partials.my-orders')
     </div>
 </section>
+
+<script>
+    document.querySelectorAll('.profile-tab').forEach((tab) => {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.profile-tab').forEach((item) => item.classList.remove('active'));
+            tab.classList.add('active');
+        });
+    });
+
+    if (window.location.hash === '#profile-orders') {
+        document.querySelectorAll('.profile-tab').forEach((item) => item.classList.remove('active'));
+        const ordersTab = document.querySelector('.profile-tab[href="#profile-orders"]');
+        if (ordersTab) {
+            ordersTab.classList.add('active');
+        }
+        document.getElementById('profile-orders')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+</script>
 
 <script>
     const avatarPreview = document.getElementById('avatarPreview');

@@ -3,6 +3,7 @@
 @section('title', 'Giỏ Hàng')
 
 @section('content')
+@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <script>
     document.body.dataset.page = 'cart';
 </script>
@@ -147,12 +148,6 @@
                 $total = 0;
                 $shipping = 0;
                 $tax = 0;
-                $suggestions = [
-                    ['Trà Dưa Leo Bạc Hà', '45.000đ', 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=85'],
-                    ['Nước Cam Mát Lạnh', '52.000đ', 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=600&q=85'],
-                    ['Bánh Ngọt Socola', '38.000đ', 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=600&q=85'],
-                    ['Cà Phê Đá Êm Vị', '60.000đ', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=85'],
-                ];
             @endphp
 
             <div class="row g-5 align-items-start">
@@ -166,7 +161,14 @@
 
                             <div class="cart-item-card p-3 p-md-4" data-cart-row>
                                 <div class="d-flex flex-column flex-md-row align-items-md-center gap-4">
-                                    <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="cart-item-image">
+                                    <x-product-image
+                                        :sku="$item['sku'] ?? null"
+                                        :name="$item['name']"
+                                        :alt="$item['name']"
+                                        :category="$item['category'] ?? null"
+                                        class="cart-item-image"
+                                        :width="400"
+                                    />
 
                                     <div class="flex-grow-1">
                                         <h2 class="h4 fw-bold mb-1">{{ $item['name'] }}</h2>
@@ -265,22 +267,30 @@
                 </div>
             </div>
 
-            <section class="mt-5 pt-5">
-                <h2 class="section-title h1 mb-4">Gợi ý dùng kèm</h2>
-                <div class="row g-4">
-                    @foreach($suggestions as $item)
-                        <div class="col-sm-6 col-lg-3">
-                            <div class="cart-recommend-card overflow-hidden h-100">
-                                <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="recommend-image">
-                                <div class="p-3">
-                                    <h3 class="h5 fw-bold mb-1">{{ $item[0] }}</h3>
-                                    <p class="text-primary fw-semibold mb-0">{{ $item[1] }}</p>
-                                </div>
+            @if(isset($suggestions) && $suggestions->isNotEmpty())
+                <section class="mt-5 pt-5">
+                    <h2 class="section-title h1 mb-4">Gợi ý thêm</h2>
+                    <div class="row g-4">
+                        @foreach($suggestions->filter(fn ($product) => $uiProductVisible($product->sku ?? null))->take(4) as $product)
+                            <div class="col-sm-6 col-lg-3">
+                                <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
+                                    <x-product-image
+                                        :sku="$product->sku"
+                                        :name="$product->name"
+                                        :alt="$product->name"
+                                        :category="$product->category?->name"
+                                        class="recommend-image"
+                                    />
+                                    <div class="p-3">
+                                        <h3 class="h5 fw-bold mb-1">{{ $product->name }}</h3>
+                                        <p class="text-primary fw-semibold mb-0">{{ number_format($product->price, 0, ',', '.') }}đ</p>
+                                    </div>
+                                </a>
                             </div>
-                        </div>
-                    @endforeach
-                </div>
-            </section>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
         @else
             <div class="cart-summary-card text-center p-5">
                 <span class="checkout-step mx-auto mb-3"><i class="bi bi-bag"></i></span>
