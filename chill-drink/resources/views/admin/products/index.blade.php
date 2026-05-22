@@ -21,6 +21,7 @@
                     <th>Tồn kho</th>
                     <th>Trạng thái</th>
                     <th>Ngày tạo</th>
+                    <th>Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,7 +29,13 @@
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-3">
-                                <img src="{{ $product->image }}" alt="{{ $product->name }}" class="admin-thumb">
+                                @if($product->image)
+                                    <img src="{{ Storage::url($product->image) }}" alt="{{ $product->name }}" class="admin-thumb">
+                                @else
+                                    <div class="admin-thumb d-flex align-items-center justify-content-center bg-light">
+                                        <span class="text-secondary" style="font-size: 12px;">No IMG</span>
+                                    </div>
+                                @endif
                                 <div>
                                     <div class="fw-bold">{{ $product->name }}</div>
                                     <small class="text-secondary">{{ $product->slug }}</small>
@@ -44,10 +51,23 @@
                             </span>
                         </td>
                         <td class="text-secondary">{{ $product->created_at->format('d/m/Y') }}</td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-sm btn-outline-primary">
+                                    Sửa
+                                </a>
+                                <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" 
+                                      onsubmit="return confirm('Bạn có chắc muốn xóa sản phẩm này?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Xóa</button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-secondary py-5">Chưa có sản phẩm.</td>
+                        <td colspan="7" class="text-center text-secondary py-5">Chưa có sản phẩm.</td>
                     </tr>
                 @endforelse
             </tbody>
