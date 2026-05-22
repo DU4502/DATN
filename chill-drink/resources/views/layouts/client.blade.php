@@ -141,11 +141,6 @@
             letter-spacing: 0;
         }
 
-        /* Override Tailwind's .collapse visibility conflict */
-        .collapse.navbar-collapse {
-            visibility: visible !important;
-        }
-
         .site-header {
             background: rgba(239, 252, 248, 0.94);
             border-bottom: 1px solid rgba(213, 238, 232, 0.95);
@@ -398,11 +393,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
                         </svg>
-                        @if(session('cart'))
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                {{ count(session('cart')) }}
-                            </span>
-                        @endif
+                        <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {{ session('cart') ? '' : 'd-none' }}">
+                            {{ session('cart') ? count(session('cart')) : 0 }}
+                        </span>
                     </a>
 
                     @auth
@@ -439,12 +432,6 @@
     </header>
 
     <main style="min-height: 100vh;">
-        @if(session('success'))
-            <div class="container mt-4">
-                <div class="alert alert-success mb-0">{{ session('success') }}</div>
-            </div>
-        @endif
-
         @if(session('error'))
             <div class="container mt-4">
                 <div class="alert alert-danger mb-0">{{ session('error') }}</div>
@@ -492,5 +479,106 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('submit', async function (event) {
+            const form = event.target;
+
+            if (!form.matches('[data-ajax-cart]')) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const submitter = event.submitter;
+            const formData = new FormData(form);
+
+            if (submitter && submitter.name) {
+                formData.set(submitter.name, submitter.value);
+                submitter.disabled = true;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                const badge = document.querySelector('[data-cart-badge]');
+
+                if (badge) {
+                    badge.textContent = data.count;
+                    badge.classList.toggle('d-none', data.count < 1);
+                }
+
+                if (document.body.dataset.page === 'cart') {
+                    if (data.count < 1) {
+                        const cartContainer = document.querySelector('.cart-page .container');
+
+                        if (cartContainer) {
+                            cartContainer.innerHTML = `
+                                <div class="mb-5">
+                                    <p class="section-kicker mb-2">Giỏ hàng</p>
+                                    <h1 class="cart-title mb-0">Giỏ hàng của bạn</h1>
+                                </div>
+                                <div class="cart-summary-card text-center p-5">
+                                    <span class="checkout-step mx-auto mb-3"><i class="bi bi-bag"></i></span>
+                                    <h2 class="h3 fw-bold">Giỏ hàng trống</h2>
+                                    <p class="text-secondary">Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
+                                    <a href="{{ route('products.index') }}" class="btn btn-primary rounded-pill px-4">Mua sắm ngay</a>
+                                </div>
+                            `;
+                        }
+
+                        return;
+                    }
+
+                    Object.entries(data.items).forEach(([id, item]) => {
+                        document.querySelectorAll(`[data-cart-quantity="${CSS.escape(id)}"]`).forEach((input) => {
+                            input.value = item.quantity;
+
+                            const qtyForm = input.closest('form');
+                            const minusButton = qtyForm?.querySelector('button[aria-label^="Giảm"]');
+                            const plusButton = qtyForm?.querySelector('button[aria-label^="Tăng"]');
+
+                            if (minusButton) {
+                                minusButton.value = Math.max(1, item.quantity - 1);
+                            }
+
+                            if (plusButton) {
+                                plusButton.value = item.quantity + 1;
+                            }
+                        });
+
+                        document.querySelectorAll(`[data-cart-subtotal="${CSS.escape(id)}"]`).forEach((element) => {
+                            element.textContent = item.subtotal_formatted;
+                        });
+                    });
+
+                    document.querySelectorAll('[data-cart-total]').forEach((element) => {
+                        element.textContent = data.total_formatted;
+                    });
+
+                    if (form.dataset.cartRemove === 'true') {
+                        form.closest('[data-cart-row]')?.remove();
+                    }
+                }
+            } catch (error) {
+                console.error('Không thể cập nhật giỏ hàng.', error);
+            } finally {
+                if (submitter) {
+                    submitter.disabled = false;
+                }
+            }
+        });
+    </script>
 </body>
 </html>
