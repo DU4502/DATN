@@ -13,105 +13,77 @@
     <div class="card-body p-4">
         <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
-            
+
             <div class="row">
                 <div class="col-md-8">
-<<<<<<< Updated upstream
-                    <!-- Tên sản phẩm -->
-=======
->>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="name" class="form-label fw-semibold">Tên sản phẩm <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                               id="name" name="name" value="{{ old('name') }}" required>
+                        <input type="text" class="form-control @error('name') is-invalid @enderror"
+                            id="name" name="name" value="{{ old('name') }}" required>
                         @error('name')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-<<<<<<< Updated upstream
-                    <!-- Danh mục -->
-=======
->>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="category_id" class="form-label fw-semibold">Danh mục <span class="text-danger">*</span></label>
-                        <select class="form-select @error('category_id') is-invalid @enderror" 
-                                id="category_id" name="category_id" required>
+                        <select class="form-select @error('category_id') is-invalid @enderror"
+                            id="category_id" name="category_id" required>
                             <option value="">-- Chọn danh mục --</option>
                             @foreach($categories as $category)
-                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                </option>
+                            <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                {{ $category->name }}
+                            </option>
                             @endforeach
                         </select>
                         @error('category_id')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-<<<<<<< Updated upstream
-                    <!-- Mô tả -->
-=======
->>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="description" class="form-label fw-semibold">Mô tả sản phẩm</label>
-                        <textarea class="form-control @error('description') is-invalid @enderror" 
-                                  id="description" name="description" rows="4">{{ old('description') }}</textarea>
+                        <textarea class="form-control @error('description') is-invalid @enderror"
+                            id="description" name="description" rows="4">{{ old('description') }}</textarea>
                         @error('description')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                 </div>
 
                 <div class="col-md-4">
-<<<<<<< Updated upstream
-                    <!-- Ảnh sản phẩm -->
-=======
->>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="image" class="form-label fw-semibold">Ảnh sản phẩm</label>
-                        <input type="file" class="form-control @error('image') is-invalid @enderror" 
-                               id="image" name="image" accept="image/jpeg,image/jpg,image/png,image/webp">
+                        <input type="file" class="form-control @error('image') is-invalid @enderror"
+                            id="image" name="image" accept="image/jpeg,image/jpg,image/png,image/webp">
                         <small class="text-secondary">Định dạng: JPEG, JPG, PNG, WEBP. Tối đa 2MB.</small>
                         @error('image')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 
-<<<<<<< Updated upstream
-                    <!-- Giá -->
-=======
->>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="price" class="form-label fw-semibold">Giá (VNĐ) <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control @error('price') is-invalid @enderror" 
-                               id="price" name="price" value="{{ old('price') }}" min="0" required>
+                        <input type="number" class="form-control @error('price') is-invalid @enderror"
+                            id="price" name="price" value="{{ old('price') }}" min="0" required>
                         @error('price')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-<<<<<<< Updated upstream
-                    <!-- Tồn kho -->
-=======
->>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="stock" class="form-label fw-semibold">Tồn kho <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control @error('stock') is-invalid @enderror" 
-                               id="stock" name="stock" value="{{ old('stock', 0) }}" min="0" required>
+                        <input type="number" class="form-control @error('stock') is-invalid @enderror"
+                            id="stock" name="stock" value="{{ old('stock', 0) }}" min="0" required>
                         @error('stock')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
-<<<<<<< Updated upstream
-                    <!-- Trạng thái -->
-=======
->>>>>>> Stashed changes
                     <div class="mb-4">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="status" name="status" 
-                                   value="1" {{ old('status', true) ? 'checked' : '' }}>
+                            <input class="form-check-input" type="checkbox" id="status" name="status"
+                                value="1" {{ old('status', true) ? 'checked' : '' }}>
                             <label class="form-check-label fw-semibold" for="status">
                                 Hiển thị sản phẩm
                             </label>
