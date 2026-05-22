@@ -1,3 +1,4 @@
+@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -188,6 +189,30 @@
             width: clamp(220px, 24vw, 300px);
         }
 
+        /* Tailwind/Bootstrap conflict: luôn hiện menu trên màn hình >= md */
+        @media (min-width: 768px) {
+            #clientNavbar.navbar-collapse {
+                display: flex !important;
+                flex-basis: auto;
+                flex-grow: 1;
+                align-items: center;
+                visibility: visible !important;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            #clientNavbar.navbar-collapse:not(.show) {
+                display: none !important;
+            }
+
+            #clientNavbar.navbar-collapse.show {
+                display: flex !important;
+                flex-direction: column;
+                align-items: stretch;
+                visibility: visible !important;
+            }
+        }
+
         .navbar-toggler {
             border-color: var(--drink-border);
             border-radius: 999px;
@@ -331,6 +356,14 @@
             transform: translateX(3px);
         }
 
+        .nav-actions .btn-outline-primary,
+        .nav-actions .btn-primary {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         @media (max-width: 991.98px) {
             .client-search {
                 width: 100%;
@@ -372,7 +405,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <div class="collapse navbar-collapse" id="clientNavbar">
+            <div class="collapse navbar-collapse flex-grow-1" id="clientNavbar">
                 <ul class="navbar-nav ms-lg-4 gap-lg-1">
                     <li class="nav-item">
                         <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : 'text-dark' }}">Trang Chủ</a>
@@ -384,8 +417,15 @@
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search" role="search">
-                        <input type="search" name="search" class="form-control" placeholder="Tìm kiếm đồ uống..." aria-label="Tìm kiếm sản phẩm">
-                        <button type="submit" class="btn btn-primary ms-2">Tìm</button>
+                        <input
+                            type="search"
+                            name="search"
+                            class="form-control"
+                            placeholder="Tìm kiếm đồ uống..."
+                            aria-label="Tìm kiếm sản phẩm"
+                            value="{{ request('search') }}"
+                        >
+                        <button type="submit" class="btn btn-primary">Tìm</button>
                     </form>
 
                     <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng">
@@ -414,6 +454,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end profile-menu">
                                 <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Tài khoản</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}#profile-orders">Đơn hàng của tôi</a></li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
@@ -423,8 +464,8 @@
                             </ul>
                         </div>
                     @else
-                        <a href="{{ route('login') }}" class="btn btn-outline-primary">Đăng Nhập</a>
-                        <a href="{{ route('register') }}" class="btn btn-primary">Đăng Ký</a>
+                        <a href="{{ route('login') }}" class="btn btn-outline-primary {{ request()->routeIs('login') ? 'active' : '' }}">Đăng Nhập</a>
+                        <a href="{{ route('register') }}" class="btn btn-primary {{ request()->routeIs('register') ? 'active' : '' }}">Đăng Ký</a>
                     @endauth
                 </div>
             </div>

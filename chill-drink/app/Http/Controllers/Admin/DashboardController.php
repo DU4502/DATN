@@ -16,7 +16,7 @@ class DashboardController extends Controller
     public function index()
     {
         // Get statistics
-        $totalUsers = User::where('role_id', 1)->count();
+        $totalUsers = User::customers()->count();
         $totalProducts = Product::count();
         $totalOrders = Order::count();
         $totalRevenue = 0;

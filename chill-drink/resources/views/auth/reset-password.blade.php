@@ -3,11 +3,11 @@
 @section('title', 'Đặt Lại Mật Khẩu')
 
 @section('content')
-<section class="py-5">
+<section class="auth-page">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-5">
-                <div class="card border-0 shadow-sm rounded-3">
+                <div class="auth-card card border-0">
                     <div class="card-body p-4 p-md-5">
                         <h1 class="h3 fw-bold mb-4">Đặt lại mật khẩu</h1>
 

@@ -1,3 +1,5 @@
+@import './client-theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

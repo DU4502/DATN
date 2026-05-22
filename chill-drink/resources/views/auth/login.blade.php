@@ -3,23 +3,11 @@
 @section('title', 'Đăng Nhập')
 
 @section('content')
-<style>
-    .auth-brand-mark {
-        display: flex;
-        margin-left: auto;
-        margin-right: auto;
-    }
-
-    .auth-brand-mark i {
-        line-height: 1;
-    }
-</style>
-
-<section class="py-5">
+<section class="auth-page">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-5">
-                <div class="drink-card card border-0">
+                <div class="auth-card card border-0">
                     <div class="card-body p-4 p-md-5">
                         <div class="brand-mark auth-brand-mark mb-3" aria-label="Chill Drink">
                             <i class="bi bi-cup-straw" aria-hidden="true"></i>
