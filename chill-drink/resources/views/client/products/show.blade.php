@@ -273,7 +273,7 @@
                             </div>
 
                             @if(($product->stock ?? 1) > 0)
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1">
+                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
                                     @csrf
                                     <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
                                 </form>

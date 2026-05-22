@@ -73,19 +73,33 @@ class ProductController extends Controller
                     'description' => 'Trà sữa đậm vị cùng trân châu mềm, lựa chọn quen thuộc dễ uống.',
                     'category' => 'Trà sữa',
                 ],
+                'cold-brew-arctic' => [
+                    'name' => 'Cà Phê Ủ Lạnh',
+                    'price' => 52000,
+                    'image' => 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=1000&q=85',
+                    'description' => 'Cà phê ủ lạnh êm vị, uống cùng đá viên lớn cực mát.',
+                    'category' => 'Cà phê',
+                ],
+                'tropical-frost' => [
+                    'name' => 'Trà Trái Cây Nhiệt Đới',
+                    'price' => 59000,
+                    'image' => 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=1000&q=85',
+                    'description' => 'Xoài, thanh long và trà xanh tạo một ly trái cây rực rỡ.',
+                    'category' => 'Trà trái cây',
+                ],
             ]);
 
             abort_unless($demoProducts->has($slug), 404);
 
             $item = $demoProducts->get($slug);
             $product = (object) [
-                'id' => 0,
+                'id' => 'demo-' . $slug,
                 'name' => $item['name'],
                 'slug' => $slug,
                 'price' => $item['price'],
                 'image' => $item['image'],
                 'description' => $item['description'],
-                'stock' => 0,
+                'stock' => 20,
                 'category' => (object) ['name' => $item['category']],
             ];
 
