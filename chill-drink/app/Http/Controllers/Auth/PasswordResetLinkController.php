@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 use PHPMailer\PHPMailer\PHPMailer;
+use RuntimeException;
 
 class PasswordResetLinkController extends Controller
 {
@@ -57,7 +58,7 @@ class PasswordResetLinkController extends Controller
 
             return back()
                 ->withInput($request->only('email'))
-                ->withErrors(['email' => 'Không thể gửi email đặt lại mật khẩu lúc này. Vui lòng thử lại sau.']);
+                ->withErrors(['email' => 'Lỗi: ' . $exception->getMessage()]);
         }
 
         return back()->with('status', 'Liên kết đặt lại mật khẩu đã được gửi tới email của bạn.');
@@ -102,10 +103,10 @@ class PasswordResetLinkController extends Controller
             'expireMinutes' => $expireMinutes,
         ])->render();
         $mail->AltBody = "Xin chào {$user->name},\n\n"
-            ."Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản Chill Drink.\n"
-            ."Nhấn vào liên kết sau để đặt lại mật khẩu: {$resetLink}\n\n"
-            ."Liên kết này có hiệu lực trong {$expireMinutes} phút và chỉ dùng được một lần.\n"
-            ."Nếu bạn không yêu cầu thao tác này, hãy bỏ qua email này.";
+            . "Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản Chill Drink.\n"
+            . "Nhấn vào liên kết sau để đặt lại mật khẩu: {$resetLink}\n\n"
+            . "Liên kết này có hiệu lực trong {$expireMinutes} phút và chỉ dùng được một lần.\n"
+            . "Nếu bạn không yêu cầu thao tác này, hãy bỏ qua email này.";
 
         $mail->send();
     }
