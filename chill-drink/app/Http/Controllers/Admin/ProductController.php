@@ -27,6 +27,10 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::orderBy('name')->get();
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
         return view('admin.products.create', compact('categories'));
     }
 
@@ -45,6 +49,7 @@ class ProductController extends Controller
             'status' => 'nullable|boolean',
         ]);
 
+<<<<<<< Updated upstream
         // Handle image upload
         $imagePath = null;
         if ($request->hasFile('image')) {
@@ -56,11 +61,27 @@ class ProductController extends Controller
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']),
             'image' => $imagePath,
+=======
+        $data = [
+            'category_id' => $validated['category_id'],
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+>>>>>>> Stashed changes
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
             'stock' => $validated['stock'],
             'status' => $validated['status'] ?? true,
+<<<<<<< Updated upstream
         ]);
+=======
+        ];
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        Product::create($data);
+>>>>>>> Stashed changes
 
         return redirect()->route('admin.products.index')->with('success', 'Thêm sản phẩm thành công!');
     }
@@ -80,6 +101,10 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $categories = Category::orderBy('name')->get();
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
@@ -100,6 +125,7 @@ class ProductController extends Controller
             'status' => 'nullable|boolean',
         ]);
 
+<<<<<<< Updated upstream
         // Handle image upload
         if ($request->hasFile('image')) {
             // Delete old image
@@ -112,6 +138,9 @@ class ProductController extends Controller
         }
 
         $product->update([
+=======
+        $data = [
+>>>>>>> Stashed changes
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
             'slug' => Str::slug($validated['name']),
@@ -119,7 +148,20 @@ class ProductController extends Controller
             'description' => $validated['description'] ?? null,
             'stock' => $validated['stock'],
             'status' => $validated['status'] ?? true,
+<<<<<<< Updated upstream
         ]);
+=======
+        ];
+
+        if ($request->hasFile('image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $data['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $product->update($data);
+>>>>>>> Stashed changes
 
         return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
     }
@@ -131,7 +173,10 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
+<<<<<<< Updated upstream
         // Delete associated image
+=======
+>>>>>>> Stashed changes
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
         }
