@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -23,7 +26,8 @@ class ProductController extends Controller
      */
     public function create()
     {
-        //
+        $categories = Category::orderBy('name')->get();
+        return view('admin.products.create', compact('categories'));
     }
 
     /**
@@ -31,7 +35,34 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'price' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'stock' => 'required|integer|min:0',
+            'status' => 'nullable|boolean',
+        ]);
+
+        // Handle image upload
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('products', 'public');
+        }
+
+        Product::create([
+            'category_id' => $validated['category_id'],
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'image' => $imagePath,
+            'price' => $validated['price'],
+            'description' => $validated['description'] ?? null,
+            'stock' => $validated['stock'],
+            'status' => $validated['status'] ?? true,
+        ]);
+
+        return redirect()->route('admin.products.index')->with('success', 'Thêm sản phẩm thành công!');
     }
 
     /**
@@ -47,7 +78,9 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $product = Product::findOrFail($id);
+        $categories = Category::orderBy('name')->get();
+        return view('admin.products.edit', compact('product', 'categories'));
     }
 
     /**
@@ -55,7 +88,40 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $product = Product::findOrFail($id);
+
+        $validated = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'price' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'stock' => 'required|integer|min:0',
+            'status' => 'nullable|boolean',
+        ]);
+
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            
+            // Store new image
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        $product->update([
+            'category_id' => $validated['category_id'],
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'price' => $validated['price'],
+            'description' => $validated['description'] ?? null,
+            'stock' => $validated['stock'],
+            'status' => $validated['status'] ?? true,
+        ]);
+
+        return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
     }
 
     /**
@@ -63,6 +129,15 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $product = Product::findOrFail($id);
+
+        // Delete associated image
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
+        }
+
+        $product->delete();
+
+        return redirect()->route('admin.products.index')->with('success', 'Xóa sản phẩm thành công!');
     }
 }

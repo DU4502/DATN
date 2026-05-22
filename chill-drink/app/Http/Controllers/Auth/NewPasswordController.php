@@ -56,16 +56,7 @@ class NewPasswordController extends Controller
                 ->withErrors(['email' => 'Liên kết đặt lại mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng.']);
         }
 
-        $hashedPassword = password_hash($request->input('password'), PASSWORD_DEFAULT);
-
-        if ($hashedPassword === false) {
-            return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['password' => 'Không thể tạo mật khẩu mới. Vui lòng thử lại.']);
-        }
-
         $user->forceFill([
-            'password' => $hashedPassword,
             'password' => Hash::make($request->input('password')),
             'remember_token' => Str::random(60),
             'reset_token' => null,
