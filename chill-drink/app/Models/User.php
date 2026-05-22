@@ -25,6 +25,8 @@ class User extends Authenticatable
         'phone',
         'address',
         'points',
+        'reset_token',
+        'reset_expire',
     ];
 
     /**
@@ -35,6 +37,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'reset_token',
     ];
 
     /**
@@ -47,7 +50,57 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'reset_expire' => 'datetime',
         ];
+    }
+
+    /**
+     * Generate and persist a one-time password reset token.
+     */
+    public function generatePasswordResetToken(int $ttlMinutes = 60): string
+    {
+        $plainToken = bin2hex(random_bytes(32));
+
+        $this->forceFill([
+            'reset_token' => hash('sha256', $plainToken),
+            'reset_expire' => now()->addMinutes($ttlMinutes),
+        ])->save();
+
+        return $plainToken;
+    }
+
+    /**
+     * Determine whether the given reset token is still valid.
+     */
+    public function hasValidPasswordResetToken(string $plainToken): bool
+    {
+        if (blank($this->reset_token) || blank($this->reset_expire)) {
+            return false;
+        }
+
+        return $this->reset_expire->isFuture()
+            && hash_equals($this->reset_token, hash('sha256', $plainToken));
+    }
+
+    /**
+     * Find a user by reset email/token pair.
+     */
+    public static function findForPasswordReset(string $email, string $plainToken): ?self
+    {
+        $user = static::where('email', $email)->first();
+
+        return $user && $user->hasValidPasswordResetToken($plainToken) ? $user : null;
+    }
+
+    /**
+     * Clear the password reset token once it is no longer valid.
+     */
+    public function clearPasswordResetToken(): void
+    {
+        $this->forceFill([
+            'reset_token' => null,
+            'reset_expire' => null,
+        ])->save();
     }
 
     /**

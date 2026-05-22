@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'password_reset' => [
+        'expire_minutes' => env('PASSWORD_RESET_EXPIRE_MINUTES', 60),
+    ],
+
 ];
