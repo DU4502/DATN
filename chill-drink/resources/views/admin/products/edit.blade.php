@@ -17,7 +17,10 @@
             
             <div class="row">
                 <div class="col-md-8">
+<<<<<<< Updated upstream
                     <!-- Tên sản phẩm -->
+=======
+>>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="name" class="form-label fw-semibold">Tên sản phẩm <span class="text-danger">*</span></label>
                         <input type="text" class="form-control @error('name') is-invalid @enderror" 
@@ -27,7 +30,10 @@
                         @enderror
                     </div>
 
+<<<<<<< Updated upstream
                     <!-- Danh mục -->
+=======
+>>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="category_id" class="form-label fw-semibold">Danh mục <span class="text-danger">*</span></label>
                         <select class="form-select @error('category_id') is-invalid @enderror" 
@@ -44,7 +50,10 @@
                         @enderror
                     </div>
 
+<<<<<<< Updated upstream
                     <!-- Mô tả -->
+=======
+>>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="description" class="form-label fw-semibold">Mô tả sản phẩm</label>
                         <textarea class="form-control @error('description') is-invalid @enderror" 
@@ -56,7 +65,10 @@
                 </div>
 
                 <div class="col-md-4">
+<<<<<<< Updated upstream
                     <!-- Ảnh sản phẩm -->
+=======
+>>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="image" class="form-label fw-semibold">Ảnh sản phẩm</label>
                         @if($product->image)
@@ -73,7 +85,10 @@
                         @enderror
                     </div>
 
+<<<<<<< Updated upstream
                     <!-- Giá -->
+=======
+>>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="price" class="form-label fw-semibold">Giá (VNĐ) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control @error('price') is-invalid @enderror" 
@@ -83,7 +98,10 @@
                         @enderror
                     </div>
 
+<<<<<<< Updated upstream
                     <!-- Tồn kho -->
+=======
+>>>>>>> Stashed changes
                     <div class="mb-4">
                         <label for="stock" class="form-label fw-semibold">Tồn kho <span class="text-danger">*</span></label>
                         <input type="number" class="form-control @error('stock') is-invalid @enderror" 
@@ -93,7 +111,10 @@
                         @enderror
                     </div>
 
+<<<<<<< Updated upstream
                     <!-- Trạng thái -->
+=======
+>>>>>>> Stashed changes
                     <div class="mb-4">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="status" name="status" 
