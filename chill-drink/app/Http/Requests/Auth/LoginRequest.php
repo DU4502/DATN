@@ -42,7 +42,14 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // 1. Lấy thông tin email và password gửi lên từ form
+        $credentials = $this->only('email', 'password');
+
+        // 2. Bổ sung điều kiện: Chỉ cho phép tài khoản có trạng thái đang hoạt động đăng nhập
+        $credentials['is_active'] = 1;
+
+        // 3. Tiến hành xác thực với Laravel Auth
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -81,6 +88,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('email')) . '|' . $this->ip());
     }
 }

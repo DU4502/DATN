@@ -71,7 +71,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     
     // Product Management
     Route::resource('products', AdminProductController::class);
-    
+
     // Category Management
     Route::resource('categories', CategoryController::class);
     
