@@ -6,6 +6,7 @@ use App\Support\ProductCatalog;
 use App\Support\ProductImage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
 {
@@ -52,8 +53,13 @@ class Product extends Model
                 $product->category?->name,
             );
 
-            $product->sku ??= $codes['sku'];
-            $product->slug ??= $codes['slug'];
+            if (Schema::hasColumn('products', 'sku')) {
+                $product->sku ??= $codes['sku'];
+            }
+
+            if (Schema::hasColumn('products', 'slug')) {
+                $product->slug ??= $codes['slug'];
+            }
 
             if (empty($product->description) || ProductCatalog::isPlaceholderDescription($product->description)) {
                 $product->description = $codes['description'];

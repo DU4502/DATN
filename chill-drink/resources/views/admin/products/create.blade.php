@@ -54,9 +54,16 @@
                 <div class="col-md-4">
                     <div class="mb-4">
                         <label for="image" class="form-label fw-semibold">Ảnh sản phẩm</label>
-                        <input type="file" class="form-control @error('image') is-invalid @enderror"
-                            id="image" name="image" accept="image/jpeg,image/jpg,image/png,image/webp">
-                        <small class="text-secondary">Định dạng: JPEG, JPG, PNG, WEBP. Tối đa 2MB.</small>
+                        <div class="d-flex align-items-center gap-3">
+                            <div id="create-product-image-preview" class="admin-form-image-preview">
+                                <i class="bi bi-image"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <input type="file" class="form-control @error('image') is-invalid @enderror"
+                                    id="image" name="image" accept="image/jpeg,image/jpg,image/png,image/webp" data-image-input data-preview-target="#create-product-image-preview">
+                                <small class="text-secondary d-block mt-2">JPEG, JPG, PNG, WEBP. Tối đa 2MB.</small>
+                            </div>
+                        </div>
                         @error('image')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
@@ -82,6 +89,7 @@
 
                     <div class="mb-4">
                         <div class="form-check form-switch">
+                            <input type="hidden" name="status" value="0">
                             <input class="form-check-input" type="checkbox" id="status" name="status"
                                 value="1" {{ old('status', true) ? 'checked' : '' }}>
                             <label class="form-check-label fw-semibold" for="status">

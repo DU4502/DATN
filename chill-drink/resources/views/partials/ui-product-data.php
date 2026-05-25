@@ -24,6 +24,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1571935111042-0b8857563-b371033873b8?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1525385133512-4f3bdd81f6f4?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1558857563-3996d7e5491a?auto=format&fit=crop&w=700&q=80',
         ],
         'Cà Phê' => [
             'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=80',
@@ -31,6 +32,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1461023058943-9b1bb28aecb8?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=700&q=80',
         ],
         'Sinh Tố' => [
             'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=700&q=80',
@@ -38,6 +40,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             'https://images.unsplash.com/photo-1559180900-446972b811b9?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1595475207225-428b62bda831?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1570197788417-0e82375c9371?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=700&q=80',
         ],
         'Nước Ép' => [
             'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=700&q=80',
@@ -45,6 +48,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             'https://images.unsplash.com/photo-1570197788417-0e82375c9371?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1613478263727-4d922f818f94?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1546171753-97d7676a4602?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1523371683702-5f0a2b1f1c35?auto=format&fit=crop&w=700&q=80',
         ],
         'Trà Trái Cây' => [
             'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=80',
@@ -52,6 +56,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=700&q=80',
         ],
         'Soda' => [
             'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=80',
@@ -59,6 +64,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             'https://images.unsplash.com/photo-1546171753-97d7676a4602?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1576092768241-decf85352c69?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1534353470581-06fe4f57a88e?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1488900128323-21503983a07e?auto=format&fit=crop&w=700&q=80',
         ],
     ];
 

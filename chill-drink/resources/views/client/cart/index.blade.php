@@ -172,7 +172,12 @@
 
                                     <div class="flex-grow-1">
                                         <h2 class="h4 fw-bold mb-1">{{ $item['name'] }}</h2>
-                                        <p class="text-secondary small mb-1">Biến thể: size vừa / đá lạnh</p>
+                                        <p class="text-secondary small mb-1">
+                                            {{ $item['size_label'] ?? 'Size M' }}
+                                            @if(($item['size_extra'] ?? 0) > 0)
+                                                · +{{ number_format($item['size_extra'], 0, ',', '.') }}đ
+                                            @endif
+                                        </p>
                                         <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
                                     </div>
 

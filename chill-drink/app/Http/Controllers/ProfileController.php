@@ -24,6 +24,16 @@ class ProfileController extends Controller
     }
 
     /**
+     * Display the user's order history outside the profile form.
+     */
+    public function orders(Request $request): View
+    {
+        return view('profile.orders', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    /**
      * Update the user's profile information.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse

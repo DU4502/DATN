@@ -29,8 +29,20 @@
                 </div>
 
                 <div class="mb-0">
-                    <label for="image" class="form-label">URL hình ảnh</label>
-                    <input id="image" type="url" name="image" value="{{ old('image', $product->image) }}" class="form-control @error('image') is-invalid @enderror" placeholder="https://example.com/product.jpg">
+                    <label for="image" class="form-label">Ảnh sản phẩm</label>
+                    <div class="d-flex align-items-center gap-3">
+                        <div id="product-image-preview" class="admin-form-image-preview">
+                            @if(!empty($product->image_url))
+                                <img src="{{ $product->image_url }}" alt="{{ $product->name }}">
+                            @else
+                                <i class="bi bi-image"></i>
+                            @endif
+                        </div>
+                        <div class="flex-grow-1">
+                            <input id="image" type="file" name="image" class="form-control @error('image') is-invalid @enderror" accept="image/jpeg,image/jpg,image/png,image/webp" data-image-input data-preview-target="#product-image-preview">
+                            <small class="text-secondary d-block mt-2">Ảnh JPG, PNG hoặc WEBP. Khung xem trước giữ nhỏ để form gọn hơn.</small>
+                        </div>
+                    </div>
                     @error('image')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
