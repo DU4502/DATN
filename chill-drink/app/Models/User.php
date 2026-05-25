@@ -2,55 +2,45 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
+     * Các trường được phép fill (Đã đồng bộ với database trong ảnh)
      */
     protected $fillable = [
+        'role_id',    // Thay cho 'role'
         'name',
         'email',
         'password',
-        'role',
+        'role_id',
         'phone',
         'address',
         'points',
         'reset_token',
         'reset_expire',
+        'avatar',
+        'is_active',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
         'reset_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'reset_expire' => 'datetime',
+            'is_active' => 'boolean', // Tự động cast về true/false
         ];
     }
 
@@ -105,23 +95,33 @@ class User extends Authenticatable
 
     /**
      * Check if user is admin
+     * Giả sử role_id = 1 là Admin (Bạn tự thay đổi số này theo logic của bạn nhé)
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return (int) ($this->role_id ?? 1) === 2;
     }
 
     /**
-     * Get all orders for the user
+     * The current database does not include Laravel's remember_token column.
      */
+    public function getRememberToken()
+    {
+        return $this->attributes[$this->getRememberTokenName()] ?? null;
+    }
+
+    public function setRememberToken($value): void
+    {
+        if (array_key_exists($this->getRememberTokenName(), $this->attributes)) {
+            $this->attributes[$this->getRememberTokenName()] = $value;
+        }
+    }
+
     public function orders()
     {
         return $this->hasMany(Order::class);
     }
 
-    /**
-     * Get all reviews for the user
-     */
     public function reviews()
     {
         return $this->hasMany(Review::class);
