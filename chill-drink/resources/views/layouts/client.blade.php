@@ -11,31 +11,35 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
         :root {
-            --drink-primary: #0f8b8d;
-            --drink-primary-dark: #086972;
-            --drink-accent: #ffb703;
-            --drink-coral: #fb6f5b;
-            --drink-ink: #172033;
-            --drink-muted: #65758b;
-            --drink-soft: #f3fbf8;
-            --drink-border: #dcebe8;
-            --drink-shadow: 0 18px 45px rgba(18, 56, 63, 0.12);
+            --drink-primary: #008b7a;
+            --drink-primary-dark: #006f62;
+            --drink-primary-soft: #edf9f6;
+            --drink-accent: #b8eadf;
+            --drink-coral: #7fd8c7;
+            --drink-ink: #071b19;
+            --drink-muted: #647b78;
+            --drink-soft: #eefaf7;
+            --drink-border: #d5eee8;
+            --drink-shadow: 0 18px 45px rgba(79, 183, 168, 0.15);
         }
 
         body {
+            font-family: Figtree, Arial, sans-serif;
             color: var(--drink-ink);
             background:
-                radial-gradient(circle at top left, rgba(15, 139, 141, 0.12), transparent 34rem),
-                linear-gradient(180deg, #fbfffd 0%, #f4f8fb 100%);
+                radial-gradient(circle at top left, rgba(184, 234, 223, 0.38), transparent 34rem),
+                linear-gradient(180deg, #f4fffc 0%, #edf9f6 100%);
         }
 
         .btn {
             border-radius: 999px;
             font-weight: 700;
             padding-inline: 1.1rem;
+            min-height: 42px;
         }
 
         .btn-primary {
@@ -45,12 +49,12 @@
             --bs-btn-hover-border-color: var(--drink-primary-dark);
             --bs-btn-active-bg: var(--drink-primary-dark);
             --bs-btn-active-border-color: var(--drink-primary-dark);
-            box-shadow: 0 10px 24px rgba(15, 139, 141, 0.22);
+            box-shadow: 0 10px 24px rgba(79, 183, 168, 0.20);
         }
 
         .btn-outline-primary {
             --bs-btn-color: var(--drink-primary);
-            --bs-btn-border-color: rgba(15, 139, 141, 0.35);
+            --bs-btn-border-color: rgba(79, 183, 168, 0.45);
             --bs-btn-hover-bg: var(--drink-primary);
             --bs-btn-hover-border-color: var(--drink-primary);
         }
@@ -68,6 +72,13 @@
             border-color: var(--drink-border);
             border-radius: 999px;
             padding: 0.72rem 1rem;
+            color: var(--drink-ink);
+            font-weight: 500;
+        }
+
+        .form-label {
+            color: var(--drink-ink);
+            font-weight: 700;
         }
 
         textarea.form-control {
@@ -77,7 +88,7 @@
         .form-control:focus,
         .form-select:focus {
             border-color: var(--drink-primary);
-            box-shadow: 0 0 0 0.22rem rgba(15, 139, 141, 0.13);
+            box-shadow: 0 0 0 0.22rem rgba(79, 183, 168, 0.16);
         }
 
         .card,
@@ -105,14 +116,14 @@
 
         .drink-card {
             border: 1px solid var(--drink-border);
-            border-radius: 22px;
+            border-radius: 18px;
             box-shadow: 0 12px 30px rgba(18, 56, 63, 0.08);
             transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         }
 
         .drink-card:hover {
             transform: translateY(-5px);
-            border-color: rgba(15, 139, 141, 0.28);
+            border-color: rgba(79, 183, 168, 0.35);
             box-shadow: var(--drink-shadow);
         }
 
@@ -130,57 +141,66 @@
             letter-spacing: 0;
         }
 
-        .client-navbar {
-            gap: 24px;
-        }
-
         .site-header {
-            background: rgba(255, 255, 255, 0.92);
-            border-bottom: 1px solid rgba(220, 235, 232, 0.9);
+            background: rgba(239, 252, 248, 0.94);
+            border-bottom: 1px solid rgba(213, 238, 232, 0.95);
             backdrop-filter: blur(18px);
         }
 
         .brand-mark {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 14px;
-            background: linear-gradient(135deg, var(--drink-primary), #3bd6b5);
+            border-radius: 16px;
+            background: var(--drink-primary);
             color: #ffffff;
             font-weight: 800;
-            box-shadow: 0 12px 28px rgba(15, 139, 141, 0.24);
+            box-shadow: 0 12px 28px rgba(0, 107, 95, 0.18);
+            font-size: 1.15rem;
         }
 
         .brand-text {
             color: var(--drink-ink);
             letter-spacing: 0;
+            font-size: 1.25rem;
         }
 
         .nav-link {
             border-radius: 999px;
             font-weight: 700;
+            padding: 0.65rem 1rem !important;
         }
 
         .nav-link:hover {
             color: var(--drink-primary) !important;
-            background: rgba(15, 139, 141, 0.08);
+            background: rgba(79, 183, 168, 0.10);
         }
 
         .nav-link.active,
         .nav-link.fw-semibold {
             color: var(--drink-primary) !important;
-            background: rgba(15, 139, 141, 0.11);
+            background: rgba(79, 183, 168, 0.14);
         }
 
         .client-search {
-            width: min(420px, 34vw);
+            width: min(360px, 30vw);
+        }
+
+        .navbar-toggler {
+            border-color: var(--drink-border);
+            border-radius: 999px;
+            padding: 0.55rem 0.75rem;
+        }
+
+        .navbar-toggler:focus {
+            box-shadow: 0 0 0 0.22rem rgba(79, 183, 168, 0.16);
         }
 
         .cart-button {
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -198,111 +218,217 @@
             flex: 0 0 auto;
         }
 
+        .user-avatar {
+            width: 58px;
+            height: 58px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #9fe2d5, var(--drink-primary));
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 1.2rem;
+            box-shadow: 0 14px 32px rgba(79, 183, 168, 0.28);
+            padding: 0;
+            overflow: hidden;
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .user-avatar.show {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 36px rgba(79, 183, 168, 0.34);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-preset-mint {
+            background: linear-gradient(135deg, #9fe2d5, #008b7a);
+        }
+
+        .avatar-preset-sky {
+            background: linear-gradient(135deg, #9ddcff, #1d8bd6);
+        }
+
+        .avatar-preset-berry {
+            background: linear-gradient(135deg, #f6a6c8, #b83280);
+        }
+
+        .avatar-preset-orange {
+            background: linear-gradient(135deg, #ffd08a, #e97828);
+        }
+
+        .user-avatar::after {
+            display: none;
+        }
+
+        .profile-menu {
+            min-width: 200px;
+            margin-top: 0.45rem !important;
+            padding: 0.55rem 0;
+            border: 1px solid var(--drink-border);
+            border-radius: 10px;
+            box-shadow: 0 18px 44px rgba(8, 42, 38, 0.14);
+        }
+
+        .dropdown:hover > .profile-menu:not(.show) {
+            display: none !important;
+        }
+
+        .profile-menu.show {
+            display: block;
+        }
+
+        .profile-menu .dropdown-item {
+            color: #2f3b3a;
+            font-size: 1.05rem;
+            font-weight: 500;
+            padding: 0.72rem 1.15rem;
+            border-radius: 8px;
+            transition: color 0.16s ease, background-color 0.16s ease;
+        }
+
+        .profile-menu .dropdown-item:hover,
+        .profile-menu .dropdown-item:focus {
+            color: var(--drink-primary);
+            background: var(--drink-primary-soft);
+        }
+
+        .profile-menu form {
+            margin: 0;
+        }
+
         .site-footer {
-            background:
-                radial-gradient(circle at 18% 20%, rgba(59, 214, 181, 0.18), transparent 24rem),
-                linear-gradient(135deg, #101928, #0b363b 72%, #083a3f);
+            position: relative;
+            overflow: hidden;
+            color: var(--drink-ink) !important;
+            background: #f8fffd;
+            border-top: 1px solid var(--drink-border);
+            border-top-left-radius: 22px;
+            border-top-right-radius: 22px;
+            box-shadow: 0 -10px 28px rgba(0, 107, 95, 0.04);
+        }
+
+        .site-footer .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-link {
+            color: var(--drink-muted);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.18s ease, transform 0.18s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--drink-primary);
+            transform: translateX(3px);
         }
 
         @media (max-width: 991.98px) {
-            .client-navbar {
-                gap: 12px;
+            .client-search {
+                width: 100%;
+                margin-top: 0.75rem;
             }
 
-            .client-search {
-                order: 4;
-                width: min(420px, 100%);
+            .navbar-collapse {
+                margin-top: 1rem;
+                padding-top: 1rem;
+                border-top: 1px solid var(--drink-border);
+            }
+
+            .nav-actions {
+                width: 100%;
+                align-items: stretch !important;
+            }
+
+            .nav-actions .btn:not(.cart-button),
+            .nav-actions .dropdown {
+                width: 100%;
+            }
+
+            .nav-actions .dropdown .user-avatar {
                 margin-left: auto;
-            }
-        }
-
-        @media (max-width: 767.98px) {
-            .client-navbar .nav {
-                order: 3;
-                width: 100%;
-                justify-content: center;
-            }
-
-            .client-navbar > .d-flex.ms-auto {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .client-search {
-                width: 100%;
-                max-width: 520px;
-            }
-        }
-
-        @media (max-width: 575.98px) {
-            .client-navbar {
-                justify-content: center;
-            }
-
-            .brand-text {
-                font-size: 1rem;
-            }
-
-            .client-search {
-                order: 2;
+                margin-right: auto;
             }
         }
     </style>
 </head>
-<body class="bg-light" style="font-family: Figtree, Arial, sans-serif;">
+<body class="bg-light">
     <header class="site-header sticky-top">
-        <nav class="container d-flex flex-wrap align-items-center py-3 client-navbar">
+        <nav class="navbar navbar-expand-lg container py-3">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
-                <span class="brand-mark">C</span>
+                <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
                 <span class="brand-text">Chill Drink</span>
             </a>
 
-            <ul class="nav">
-                <li class="nav-item">
-                    <a href="{{ route('home') }}" class="nav-link px-3 {{ request()->routeIs('home') ? 'active' : 'text-dark' }}">Trang Chủ</a>
-                </li>
-                <li class="nav-item">
-                    <a href="{{ route('products.index') }}" class="nav-link px-3 {{ request()->routeIs('products.*') ? 'active' : 'text-dark' }}">Sản Phẩm</a>
-                </li>
-            </ul>
+            <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#clientNavbar" aria-controls="clientNavbar" aria-expanded="false" aria-label="Mở menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
-                <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search" role="search">
-                    <input type="search" name="search" class="form-control" placeholder="Tìm kiếm đồ uống..." aria-label="Tìm kiếm sản phẩm">
-                    <button type="submit" class="btn btn-primary ms-2">Tìm</button>
-                </form>
+            <div class="collapse navbar-collapse" id="clientNavbar">
+                <ul class="navbar-nav ms-lg-4 gap-lg-1">
+                    <li class="nav-item">
+                        <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : 'text-dark' }}">Trang Chủ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : 'text-dark' }}">Sản Phẩm</a>
+                    </li>
+                </ul>
 
-                <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
-                    </svg>
-                    @if(session('cart'))
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            {{ count(session('cart')) }}
-                        </span>
-                    @endif
-                </a>
+                <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
+                    <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search" role="search">
+                        <input type="search" name="search" class="form-control" placeholder="Tìm kiếm đồ uống..." aria-label="Tìm kiếm sản phẩm">
+                        <button type="submit" class="btn btn-primary ms-2">Tìm</button>
+                    </form>
 
-                @auth
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            {{ Auth::user()->name }}
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Tài khoản</a></li>
-                            <li>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item">Đăng Xuất</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-                @else
-                    <a href="{{ route('login') }}" class="btn btn-outline-primary">Đăng Nhập</a>
-                    <a href="{{ route('register') }}" class="btn btn-primary">Đăng Ký</a>
-                @endauth
+                    <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
+                        </svg>
+                        @if(session('cart'))
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                {{ count(session('cart')) }}
+                            </span>
+                        @endif
+                    </a>
+
+                    @auth
+                        @php
+                            $avatar = Auth::user()->avatar;
+                            $avatarIsPreset = is_string($avatar) && str_starts_with($avatar, 'preset-');
+                            $avatarClass = $avatarIsPreset ? 'avatar-' . $avatar : 'avatar-preset-mint';
+                        @endphp
+                        <div class="dropdown text-center">
+                            <button class="user-avatar dropdown-toggle {{ $avatarClass }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản">
+                                @if(!empty($avatar) && ! $avatarIsPreset)
+                                    <img src="{{ asset('storage/' . Auth::user()->avatar) }}" alt="{{ Auth::user()->name }}">
+                                @else
+                                    {{ mb_substr(Auth::user()->name, 0, 1) }}
+                                @endif
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end profile-menu">
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Tài khoản</a></li>
+                                <li>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item">Đăng Xuất</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    @else
+                        <a href="{{ route('login') }}" class="btn btn-outline-primary">Đăng Nhập</a>
+                        <a href="{{ route('register') }}" class="btn btn-primary">Đăng Ký</a>
+                    @endauth
+                </div>
             </div>
         </nav>
     </header>
@@ -323,34 +449,38 @@
         @yield('content')
     </main>
 
-    <footer class="site-footer text-white mt-5">
+    <footer class="site-footer mt-5">
         <div class="container py-5">
             <div class="row g-4">
                 <div class="col-md-4">
                     <div class="d-flex align-items-center gap-2 mb-3">
-                        <span class="brand-mark">C</span>
+                        <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
                         <h3 class="h5 fw-bold mb-0">Chill Drink</h3>
                     </div>
-                    <p class="text-white-50 mb-0">Đồ uống tươi mát, giao nhanh và đặt hàng dễ dàng mỗi ngày.</p>
+                    <p class="text-secondary mb-3">Đồ uống tươi mát, giao nhanh và đặt hàng dễ dàng mỗi ngày.</p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="footer-link">◎</a>
+                        <a href="#" class="footer-link">@</a>
+                    </div>
                 </div>
                 <div class="col-md-4">
-                    <h3 class="h5 fw-bold mb-3">Liên Hệ</h3>
-                    <ul class="list-unstyled text-white-50 mb-0">
+                    <h3 class="h6 fw-bold text-uppercase mb-3">Liên Hệ</h3>
+                    <ul class="list-unstyled text-secondary mb-0">
                         <li class="mb-2">Hotline: 1900-xxxx</li>
                         <li class="mb-2">Email: contact@chilldrink.com</li>
                         <li>Địa chỉ: Hà Nội, Việt Nam</li>
                     </ul>
                 </div>
                 <div class="col-md-4">
-                    <h3 class="h5 fw-bold mb-3">Mạng Xã Hội</h3>
-                    <div class="d-flex gap-3">
-                        <a href="#" class="link-light link-offset-2 link-underline-opacity-0 link-underline-opacity-100-hover">Facebook</a>
-                        <a href="#" class="link-light link-offset-2 link-underline-opacity-0 link-underline-opacity-100-hover">Instagram</a>
-                        <a href="#" class="link-light link-offset-2 link-underline-opacity-0 link-underline-opacity-100-hover">Zalo</a>
+                    <h3 class="h6 fw-bold text-uppercase mb-3">Mạng Xã Hội</h3>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="#" class="footer-link">Facebook</a>
+                        <a href="#" class="footer-link">Instagram</a>
+                        <a href="#" class="footer-link">Zalo</a>
                     </div>
                 </div>
             </div>
-            <div class="border-top border-secondary mt-4 pt-4 text-center text-white-50">
+            <div class="border-top mt-4 pt-4 text-center text-secondary">
                 <p class="mb-0">&copy; 2026 Chill Drink. All rights reserved.</p>
             </div>
         </div>

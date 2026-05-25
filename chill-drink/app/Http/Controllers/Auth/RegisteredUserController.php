@@ -41,8 +41,8 @@ class RegisteredUserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role_id' => 2,   // Thay số 2 bằng ID nhóm quyền "Khách hàng/User thường" trong DB của bạn
-            'is_active' => 1, // Kích hoạt tài khoản ngay sau khi đăng ký thành công
+            'role_id' => 1,
+            'is_active' => 1,
         ]);
 
         event(new Registered($user));

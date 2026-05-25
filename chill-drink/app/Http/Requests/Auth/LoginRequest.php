@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -42,20 +45,38 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        // 1. Lấy thông tin email và password gửi lên từ form
-        $credentials = $this->only('email', 'password');
+        $user = User::where('email', $this->string('email'))->first();
+        $password = $this->string('password')->toString();
+        $passwordIsValid = false;
 
-        // 2. Bổ sung điều kiện: Chỉ cho phép tài khoản có trạng thái đang hoạt động đăng nhập
-        $credentials['is_active'] = 1;
+        if ($user) {
+            $storedPassword = (string) $user->password;
+            $isBcryptPassword = preg_match('/^\$(2y|2a|2b)\$/', $storedPassword) === 1;
 
-        // 3. Tiến hành xác thực với Laravel Auth
-        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
+            if ($isBcryptPassword) {
+                $passwordIsValid = Hash::check($password, $storedPassword);
+            } else {
+                $passwordIsValid = hash_equals($storedPassword, $password);
+
+                if ($passwordIsValid) {
+                    $user->forceFill([
+                        'password' => Hash::make($password),
+                    ])->save();
+                }
+            }
+        }
+
+        if (! $user || ! $passwordIsValid) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
+
+        $remember = $this->boolean('remember') && Schema::hasColumn('users', 'remember_token');
+
+        Auth::login($user, $remember);
 
         RateLimiter::clear($this->throttleKey());
     }

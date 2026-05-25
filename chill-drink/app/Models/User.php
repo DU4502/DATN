@@ -17,10 +17,11 @@ class User extends Authenticatable
         'role_id',    // Thay cho 'role'
         'name',
         'email',
-        'avatar',     // Thêm vào vì database có
-        'phone',
         'password',
-        'is_active',  // Thêm vào vì database có
+        'role_id',
+        'phone',
+        'avatar',
+        'is_active',
     ];
 
     protected $hidden = [
@@ -43,7 +44,22 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->role_id == 1;
+        return (int) ($this->role_id ?? 1) === 2;
+    }
+
+    /**
+     * The current database does not include Laravel's remember_token column.
+     */
+    public function getRememberToken()
+    {
+        return $this->attributes[$this->getRememberTokenName()] ?? null;
+    }
+
+    public function setRememberToken($value): void
+    {
+        if (array_key_exists($this->getRememberTokenName(), $this->attributes)) {
+            $this->attributes[$this->getRememberTokenName()] = $value;
+        }
     }
 
     public function orders()
