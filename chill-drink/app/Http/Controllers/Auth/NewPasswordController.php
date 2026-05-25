@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -19,9 +18,22 @@ class NewPasswordController extends Controller
     /**
      * Display the password reset view.
      */
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
-        return view('auth.reset-password', ['request' => $request]);
+        $email = (string) $request->query('email', '');
+        $token = (string) $request->route('token');
+        $user = User::findForPasswordReset($email, $token);
+
+        if (! $user) {
+            return redirect()
+                ->route('password.request')
+                ->withErrors(['email' => 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.']);
+        }
+
+        return view('auth.reset-password', [
+            'email' => $user->email,
+            'token' => $token,
+        ]);
     }
 
     /**

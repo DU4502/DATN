@@ -7,6 +7,8 @@ use App\Http\Requests\Auth\ForgotPasswordRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
+use PHPMailer\PHPMailer\PHPMailer;
+use RuntimeException;
 
 class PasswordResetLinkController extends Controller
 {
