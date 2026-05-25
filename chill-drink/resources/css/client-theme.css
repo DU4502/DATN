@@ -1,0 +1,118 @@
+/* Shared storefront theme — forms, auth, search, product images */
+
+@media (min-width: 768px) {
+    #clientNavbar.navbar-collapse {
+        display: flex !important;
+        flex-basis: auto;
+        flex-grow: 1;
+        align-items: center;
+        visibility: visible !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    #clientNavbar.navbar-collapse:not(.show) {
+        display: none !important;
+    }
+
+    #clientNavbar.navbar-collapse.show {
+        display: flex !important;
+        flex-direction: column;
+        align-items: stretch;
+        visibility: visible !important;
+    }
+}
+
+.product-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: var(--drink-primary-soft, #edf9f6);
+}
+
+.auth-page {
+    padding: 3rem 0 4rem;
+}
+
+.auth-card {
+    border: 1px solid var(--drink-border, #d5eee8);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 24px 60px rgba(8, 42, 38, 0.08);
+}
+
+.auth-brand-mark {
+    display: flex;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.auth-brand-mark i {
+    line-height: 1;
+}
+
+.form-check-input:checked {
+    background-color: var(--drink-primary, #008b7a);
+    border-color: var(--drink-primary, #008b7a);
+}
+
+.form-check-label,
+.invalid-feedback {
+    font-size: 0.95rem;
+}
+
+.client-search {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+}
+
+.client-search .form-control {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.client-search .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding-inline: 1.25rem;
+}
+
+.search-results-banner {
+    border: 1px solid var(--drink-border, #d5eee8);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.88);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.search-results-banner strong {
+    color: var(--drink-primary, #008b7a);
+}
+
+.nav-link-auth.active {
+    color: var(--drink-primary, #008b7a) !important;
+    background: rgba(79, 183, 168, 0.14);
+}
+
+@media (max-width: 991.98px) {
+    .client-search {
+        width: 100%;
+    }
+
+    .nav-actions .btn-outline-primary,
+    .nav-actions .btn-primary {
+        flex: 1 1 calc(50% - 0.35rem);
+        text-align: center;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .auth-page {
+        padding-top: 2rem;
+    }
+
+    .client-search .btn {
+        padding-inline: 0.9rem;
+    }
+}
