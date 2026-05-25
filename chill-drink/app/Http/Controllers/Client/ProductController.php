@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Support\ProductCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -18,19 +19,23 @@ class ProductController extends Controller
         $query = Product::where('status', true)->with('category');
 
         // Filter by category
-        if ($request->has('category')) {
+        if ($request->filled('category')) {
             $query->where('category_id', $request->category);
         }
 
         // Search by name
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+        $searchQuery = trim((string) $request->input('search', ''));
+        if ($searchQuery !== '') {
+            $query->where(function ($q) use ($searchQuery) {
+                $q->where('name', 'like', '%'.$searchQuery.'%')
+                    ->orWhere('sku', 'like', '%'.$searchQuery.'%');
+            });
         }
 
-        $products = $query->paginate(12);
+        $products = $query->paginate(12)->withQueryString();
         $categories = Category::orderBy('name')->get();
 
-        return view('client.products.index', compact('products', 'categories'));
+        return view('client.products.index', compact('products', 'categories', 'searchQuery'));
     }
 
     /**
@@ -73,19 +78,37 @@ class ProductController extends Controller
                     'description' => 'Trà sữa đậm vị cùng trân châu mềm, lựa chọn quen thuộc dễ uống.',
                     'category' => 'Trà sữa',
                 ],
+                'cold-brew-arctic' => [
+                    'name' => 'Cà Phê Ủ Lạnh',
+                    'price' => 52000,
+                    'image' => 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=1000&q=85',
+                    'description' => 'Cà phê ủ lạnh êm vị, uống cùng đá viên lớn cực mát.',
+                    'category' => 'Cà phê',
+                ],
+                'tropical-frost' => [
+                    'name' => 'Trà Trái Cây Nhiệt Đới',
+                    'price' => 59000,
+                    'image' => 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=1000&q=85',
+                    'description' => 'Xoài, thanh long và trà xanh tạo một ly trái cây rực rỡ.',
+                    'category' => 'Trà trái cây',
+                ],
             ]);
 
             abort_unless($demoProducts->has($slug), 404);
 
             $item = $demoProducts->get($slug);
+            $codes = ProductCatalog::codesFor($item['name'], $item['category']);
             $product = (object) [
-                'id' => 0,
+                'id' => 'demo-'.$slug,
                 'name' => $item['name'],
-                'slug' => $slug,
+                'slug' => $codes['slug'],
+                'sku' => $codes['sku'],
                 'price' => $item['price'],
                 'image' => $item['image'],
+                'image_url' => $item['image'],
+                'gallery_images' => [$item['image']],
                 'description' => $item['description'],
-                'stock' => 0,
+                'stock' => 20,
                 'category' => (object) ['name' => $item['category']],
             ];
 

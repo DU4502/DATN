@@ -14,7 +14,6 @@ class User extends Authenticatable
      * Các trường được phép fill (Đã đồng bộ với database trong ảnh)
      */
     protected $fillable = [
-        'role_id',    // Thay cho 'role'
         'name',
         'email',
         'password',
@@ -24,6 +23,7 @@ class User extends Authenticatable
         'points',
         'reset_token',
         'reset_expire',
+        'area',
         'avatar',
         'is_active',
     ];
@@ -99,7 +99,24 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return (int) ($this->role_id ?? 1) === 2;
+        return (int) ($this->role_id ?? 1) === 2 || $this->role === 'admin';
+    }
+
+    public function isCustomer(): bool
+    {
+        return ! $this->isAdmin();
+    }
+
+    public function scopeCustomers($query)
+    {
+        return $query->where('role_id', 1);
+    }
+
+    public function scopeAdmins($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('role_id', 2)->orWhere('role', 'admin');
+        });
     }
 
     /**

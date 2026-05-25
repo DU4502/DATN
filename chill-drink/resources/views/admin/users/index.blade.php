@@ -8,21 +8,21 @@
     <div class="col-md-3">
         <div class="admin-card p-4">
             <p class="admin-kicker mb-1">Tổng khách hàng</p>
-            <p class="admin-value text-primary mb-2">{{ $users->total() ?? $users->count() }}</p>
-            <span class="badge badge-soft-muted">Dữ liệu thực tế</span>
+            <p class="admin-value text-primary mb-2">{{ $totalCustomers }}</p>
+            <span class="badge badge-soft-muted">Khách đăng ký thật</span>
         </div>
     </div>
     <div class="col-md-3">
         <div class="admin-card p-4">
             <p class="admin-kicker mb-1">Đang hiển thị</p>
             <p class="admin-value mb-2">{{ $users->count() }}</p>
-            <span class="badge badge-soft-muted">Theo trang hiện tại</span>
+            <span class="badge badge-soft-muted">Trang {{ $users->currentPage() }}</span>
         </div>
     </div>
     <div class="col-md-3">
         <div class="admin-card p-4">
             <p class="admin-kicker mb-1">Quản trị viên</p>
-            <p class="admin-value mb-2">{{ $users->filter(fn($user) => (int)($user->role_id ?? 1) === 2)->count() }}</p>
+            <p class="admin-value mb-2">{{ $totalAdmins }}</p>
             <span class="badge badge-soft-primary">Nội bộ</span>
         </div>
     </div>
@@ -47,7 +47,6 @@
             </thead>
             <tbody>
                 @forelse($users as $user)
-                    @php($isAdmin = (int) ($user->role_id ?? 1) === 2)
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-3">
@@ -61,9 +60,7 @@
                         <td class="text-secondary">{{ $user->email }}</td>
                         <td>{{ $user->phone ?: 'Chưa cập nhật' }}</td>
                         <td>
-                            <span class="badge {{ $isAdmin ? 'badge-soft-primary' : 'badge-soft-muted' }}">
-                                {{ $isAdmin ? 'Quản trị' : 'Khách hàng' }}
-                            </span>
+                            <span class="badge badge-soft-muted">Khách hàng</span>
                         </td>
                         <td class="text-secondary">{{ optional($user->created_at)->format('d/m/Y') }}</td>
                         <td class="text-end">
@@ -82,7 +79,13 @@
         </table>
     </div>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
-        <p class="text-secondary mb-0">Đang hiển thị {{ $users->count() }} khách hàng</p>
+        <p class="text-secondary mb-0">
+            @if($totalCustomers > 0)
+                Đang hiển thị {{ $users->count() }} / {{ $totalCustomers }} khách hàng
+            @else
+                Chưa có khách hàng đăng ký
+            @endif
+        </p>
         {{ $users->links() }}
     </div>
 </section>

@@ -3,14 +3,25 @@
 namespace Database\Factories;
 
 use App\Models\Category;
+use App\Models\Product;
+use App\Support\ProductCatalog;
+use App\Support\ProductImage;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Product>
  */
 class ProductFactory extends Factory
 {
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product) {
+            $product->update([
+                'image' => ProductImage::forProduct($product->id, $product->slug, 700),
+            ]);
+        });
+    }
+
     /**
      * Define the model's default state.
      *
@@ -18,34 +29,26 @@ class ProductFactory extends Factory
      */
     public function definition(): array
     {
-        $drinks = [
-            'Trà Sữa Trân Châu Đường Đen',
-            'Cà Phê Sữa Đá',
-            'Sinh Tố Bơ',
-            'Nước Ép Cam',
-            'Trà Đào Cam Sả',
-            'Soda Blue Curacao',
-            'Đá Xay Matcha',
-            'Trà Oolong Sữa',
-            'Cà Phê Đen Đá',
-            'Sinh Tố Dâu',
-            'Nước Ép Dưa Hấu',
-            'Trà Vải',
-            'Soda Chanh Dây',
-            'Đá Xay Chocolate',
-            'Trà Sữa Thái',
-        ];
+        static $index = 0;
+        $catalog = ProductCatalog::ITEMS;
+        $item = $catalog[$index % count($catalog)];
+        $index++;
 
-        $name = fake()->randomElement($drinks) . ' ' . fake()->unique()->numberBetween(1, 9999);
+        $category = Category::where('name', $item['category'])->first()
+            ?? Category::inRandomOrder()->first()
+            ?? Category::factory();
+
+        $categoryId = $category instanceof Category ? $category->id : $category;
 
         return [
-            'category_id' => Category::inRandomOrder()->first()->id ?? Category::factory(),
-            'name' => $name,
-            'slug' => Str::slug($name),
-            'image' => 'https://via.placeholder.com/400x400.png?text=' . urlencode($name),
-            'price' => fake()->randomFloat(2, 20000, 80000),
-            'description' => fake()->paragraph(),
-            'stock' => fake()->numberBetween(0, 100),
+            'category_id' => $categoryId,
+            'name' => $item['name'],
+            'slug' => $item['slug'],
+            'sku' => $item['sku'],
+            'image' => null,
+            'price' => $item['price'],
+            'description' => $item['description'],
+            'stock' => fake()->numberBetween(20, 80),
             'status' => true,
         ];
     }
