@@ -3,12 +3,27 @@
 @section('title', 'Đăng Ký')
 
 @section('content')
+<style>
+    .auth-brand-mark {
+        display: flex;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .auth-brand-mark i {
+        line-height: 1;
+    }
+</style>
+
 <section class="py-5">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-5">
-                <div class="card border-0 shadow-sm rounded-3">
+                <div class="drink-card card border-0">
                     <div class="card-body p-4 p-md-5">
+                        <div class="brand-mark auth-brand-mark mb-3" aria-label="Chill Drink">
+                            <i class="bi bi-cup-straw" aria-hidden="true"></i>
+                        </div>
                         <h1 class="h3 fw-bold text-center mb-2">Tạo Tài Khoản</h1>
                         <p class="text-secondary text-center mb-4">Đăng ký để đặt đồ uống nhanh hơn.</p>
 
@@ -31,18 +46,10 @@
                                 @enderror
                             </div>
 
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <label for="password" class="form-label">Mật khẩu</label>
                                 <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" required autocomplete="new-password">
                                 @error('password')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-4">
-                                <label for="password_confirmation" class="form-label">Nhập lại mật khẩu</label>
-                                <input id="password_confirmation" type="password" name="password_confirmation" class="form-control @error('password_confirmation') is-invalid @enderror" required autocomplete="new-password">
-                                @error('password_confirmation')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
