@@ -14,11 +14,11 @@
 
                         <form method="POST" action="{{ route('password.store') }}">
                             @csrf
-                            <input type="hidden" name="token" value="{{ $request->route('token') }}">
+                            <input type="hidden" name="token" value="{{ $token }}">
 
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email</label>
-                                <input id="email" type="email" name="email" value="{{ old('email', $request->email) }}" class="form-control @error('email') is-invalid @enderror" required autofocus autocomplete="username">
+                                <input id="email" type="email" name="email" value="{{ old('email', $email) }}" class="form-control @error('email') is-invalid @enderror" required readonly autocomplete="username">
                                 @error('email')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -27,6 +27,7 @@
                             <div class="mb-4">
                                 <label for="password" class="form-label">Mật khẩu mới</label>
                                 <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" required autocomplete="new-password">
+                                <div class="form-text">Mật khẩu cần tối thiểu 8 ký tự.</div>
                                 @error('password')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror

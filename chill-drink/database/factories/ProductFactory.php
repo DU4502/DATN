@@ -36,7 +36,7 @@ class ProductFactory extends Factory
             'Trà Sữa Thái',
         ];
 
-        $name = fake()->unique()->randomElement($drinks);
+        $name = fake()->randomElement($drinks) . ' ' . fake()->unique()->numberBetween(1, 9999);
 
         return [
             'category_id' => Category::inRandomOrder()->first()->id ?? Category::factory(),
