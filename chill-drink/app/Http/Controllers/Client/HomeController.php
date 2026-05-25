@@ -21,7 +21,7 @@ class HomeController extends Controller
             ->get();
 
         // Get all categories
-        $categories = Category::where('status', true)->get();
+        $categories = Category::orderBy('name')->get();
 
         return view('client.home', compact('featuredProducts', 'categories'));
     }
