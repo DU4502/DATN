@@ -11,7 +11,7 @@
             @php $total = 0; @endphp
             <div class="row g-4">
                 <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm">
+                    <div class="drink-card card border-0">
                         <div class="list-group list-group-flush">
                             @foreach(session('cart') as $id => $item)
                                 @php $subtotal = $item['price'] * $item['quantity']; $total += $subtotal; @endphp
@@ -54,7 +54,7 @@
                 </div>
 
                 <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm sticky-top" style="top: 96px;">
+                    <div class="drink-card card border-0 sticky-top" style="top: 96px;">
                         <div class="card-body p-4">
                             <h2 class="h5 fw-bold mb-4">Tổng Đơn Hàng</h2>
                             <div class="d-flex justify-content-between mb-3">
@@ -83,7 +83,7 @@
                 </div>
             </div>
         @else
-            <div class="card border-0 shadow-sm">
+            <div class="drink-card card border-0">
                 <div class="card-body text-center py-5">
                     <h2 class="h4 fw-bold">Giỏ hàng trống</h2>
                     <p class="text-secondary">Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
