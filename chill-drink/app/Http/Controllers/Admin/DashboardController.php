@@ -30,7 +30,7 @@ class DashboardController extends Controller
 
             $totalRevenue = $revenueQuery->sum('total_price');
         }
-        
+
         // Get recent orders
         $recentOrdersQuery = Order::with('user');
 
@@ -42,6 +42,7 @@ class DashboardController extends Controller
 
         $recentOrders = $recentOrdersQuery->take(5)->get();
 
+        // Đảm bảo tất cả các biến đã được định nghĩa đầy đủ ở trên
         return view('admin.dashboard', compact(
             'totalUsers',
             'totalProducts',
@@ -50,4 +51,5 @@ class DashboardController extends Controller
             'recentOrders'
         ));
     }
+
 }
