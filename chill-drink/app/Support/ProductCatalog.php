@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Product;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ProductCatalog
@@ -175,6 +176,10 @@ class ProductCatalog
     {
         $code = self::categoryCode($categoryName);
         $prefix = self::SKU_PREFIX.'-'.$code.'-';
+
+        if (! Schema::hasColumn('products', 'sku')) {
+            return $prefix.'001';
+        }
 
         $latest = Product::query()
             ->where('sku', 'like', $prefix.'%')
