@@ -21,10 +21,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',
+        'role_id',
         'phone',
-        'address',
-        'points',
+        'avatar',
+        'is_active',
     ];
 
     /**
@@ -55,7 +55,22 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return (int) ($this->role_id ?? 1) === 2;
+    }
+
+    /**
+     * The current database does not include Laravel's remember_token column.
+     */
+    public function getRememberToken()
+    {
+        return $this->attributes[$this->getRememberTokenName()] ?? null;
+    }
+
+    public function setRememberToken($value): void
+    {
+        if (array_key_exists($this->getRememberTokenName(), $this->attributes)) {
+            $this->attributes[$this->getRememberTokenName()] = $value;
+        }
     }
 
     /**

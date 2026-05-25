@@ -6,8 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Order;
-use App\Models\Category;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -17,16 +16,31 @@ class DashboardController extends Controller
     public function index()
     {
         // Get statistics
-        $totalUsers = User::where('role', 'user')->count();
+        $totalUsers = User::where('role_id', 1)->count();
         $totalProducts = Product::count();
         $totalOrders = Order::count();
-        $totalRevenue = Order::where('status', 'completed')->sum('total_price');
+        $totalRevenue = 0;
+
+        if (Schema::hasColumn('orders', 'total_price')) {
+            $revenueQuery = Order::query();
+
+            if (Schema::hasColumn('orders', 'status')) {
+                $revenueQuery->where('status', 'completed');
+            }
+
+            $totalRevenue = $revenueQuery->sum('total_price');
+        }
         
         // Get recent orders
-        $recentOrders = Order::with('user')
-            ->latest()
-            ->take(5)
-            ->get();
+        $recentOrdersQuery = Order::with('user');
+
+        if (Schema::hasColumn('orders', 'created_at')) {
+            $recentOrdersQuery->latest();
+        } else {
+            $recentOrdersQuery->orderByDesc('id');
+        }
+
+        $recentOrders = $recentOrdersQuery->take(5)->get();
 
         return view('admin.dashboard', compact(
             'totalUsers',
