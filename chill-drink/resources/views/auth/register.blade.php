@@ -46,18 +46,10 @@
                                 @enderror
                             </div>
 
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <label for="password" class="form-label">Mật khẩu</label>
                                 <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" required autocomplete="new-password">
                                 @error('password')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="mb-4">
-                                <label for="password_confirmation" class="form-label">Nhập lại mật khẩu</label>
-                                <input id="password_confirmation" type="password" name="password_confirmation" class="form-control @error('password_confirmation') is-invalid @enderror" required autocomplete="new-password">
-                                @error('password_confirmation')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
