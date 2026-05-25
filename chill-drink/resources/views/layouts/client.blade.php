@@ -1,3 +1,4 @@
+@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -185,7 +186,31 @@
         }
 
         .client-search {
-            width: min(360px, 30vw);
+            width: clamp(220px, 24vw, 300px);
+        }
+
+        /* Tailwind/Bootstrap conflict: luôn hiện menu trên màn hình >= md */
+        @media (min-width: 768px) {
+            #clientNavbar.navbar-collapse {
+                display: flex !important;
+                flex-basis: auto;
+                flex-grow: 1;
+                align-items: center;
+                visibility: visible !important;
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            #clientNavbar.navbar-collapse:not(.show) {
+                display: none !important;
+            }
+
+            #clientNavbar.navbar-collapse.show {
+                display: flex !important;
+                flex-direction: column;
+                align-items: stretch;
+                visibility: visible !important;
+            }
         }
 
         .navbar-toggler {
@@ -331,6 +356,14 @@
             transform: translateX(3px);
         }
 
+        .nav-actions .btn-outline-primary,
+        .nav-actions .btn-primary {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         @media (max-width: 991.98px) {
             .client-search {
                 width: 100%;
@@ -362,7 +395,7 @@
 </head>
 <body class="bg-light">
     <header class="site-header sticky-top">
-        <nav class="navbar navbar-expand-lg container py-3">
+        <nav class="navbar navbar-expand-md container py-3">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
                 <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
                 <span class="brand-text">Chill Drink</span>
@@ -372,7 +405,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <div class="collapse navbar-collapse" id="clientNavbar">
+            <div class="collapse navbar-collapse flex-grow-1" id="clientNavbar">
                 <ul class="navbar-nav ms-lg-4 gap-lg-1">
                     <li class="nav-item">
                         <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : 'text-dark' }}">Trang Chủ</a>
@@ -384,8 +417,15 @@
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search" role="search">
-                        <input type="search" name="search" class="form-control" placeholder="Tìm kiếm đồ uống..." aria-label="Tìm kiếm sản phẩm">
-                        <button type="submit" class="btn btn-primary ms-2">Tìm</button>
+                        <input
+                            type="search"
+                            name="search"
+                            class="form-control"
+                            placeholder="Tìm kiếm đồ uống..."
+                            aria-label="Tìm kiếm sản phẩm"
+                            value="{{ request('search') }}"
+                        >
+                        <button type="submit" class="btn btn-primary">Tìm</button>
                     </form>
 
                     <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng">
@@ -393,11 +433,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
                         </svg>
-                        @if(session('cart'))
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                {{ count(session('cart')) }}
-                            </span>
-                        @endif
+                        <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {{ session('cart') ? '' : 'd-none' }}">
+                            {{ session('cart') ? count(session('cart')) : 0 }}
+                        </span>
                     </a>
 
                     @auth
@@ -416,6 +454,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end profile-menu">
                                 <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Tài khoản</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}#profile-orders">Đơn hàng của tôi</a></li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
@@ -425,8 +464,8 @@
                             </ul>
                         </div>
                     @else
-                        <a href="{{ route('login') }}" class="btn btn-outline-primary">Đăng Nhập</a>
-                        <a href="{{ route('register') }}" class="btn btn-primary">Đăng Ký</a>
+                        <a href="{{ route('login') }}" class="btn btn-outline-primary {{ request()->routeIs('login') ? 'active' : '' }}">Đăng Nhập</a>
+                        <a href="{{ route('register') }}" class="btn btn-primary {{ request()->routeIs('register') ? 'active' : '' }}">Đăng Ký</a>
                     @endauth
                 </div>
             </div>
@@ -434,12 +473,6 @@
     </header>
 
     <main style="min-height: 100vh;">
-        @if(session('success'))
-            <div class="container mt-4">
-                <div class="alert alert-success mb-0">{{ session('success') }}</div>
-            </div>
-        @endif
-
         @if(session('error'))
             <div class="container mt-4">
                 <div class="alert alert-danger mb-0">{{ session('error') }}</div>
@@ -487,5 +520,106 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('submit', async function (event) {
+            const form = event.target;
+
+            if (!form.matches('[data-ajax-cart]')) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const submitter = event.submitter;
+            const formData = new FormData(form);
+
+            if (submitter && submitter.name) {
+                formData.set(submitter.name, submitter.value);
+                submitter.disabled = true;
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const data = await response.json();
+                const badge = document.querySelector('[data-cart-badge]');
+
+                if (badge) {
+                    badge.textContent = data.count;
+                    badge.classList.toggle('d-none', data.count < 1);
+                }
+
+                if (document.body.dataset.page === 'cart') {
+                    if (data.count < 1) {
+                        const cartContainer = document.querySelector('.cart-page .container');
+
+                        if (cartContainer) {
+                            cartContainer.innerHTML = `
+                                <div class="mb-5">
+                                    <p class="section-kicker mb-2">Giỏ hàng</p>
+                                    <h1 class="cart-title mb-0">Giỏ hàng của bạn</h1>
+                                </div>
+                                <div class="cart-summary-card text-center p-5">
+                                    <span class="checkout-step mx-auto mb-3"><i class="bi bi-bag"></i></span>
+                                    <h2 class="h3 fw-bold">Giỏ hàng trống</h2>
+                                    <p class="text-secondary">Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
+                                    <a href="{{ route('products.index') }}" class="btn btn-primary rounded-pill px-4">Mua sắm ngay</a>
+                                </div>
+                            `;
+                        }
+
+                        return;
+                    }
+
+                    Object.entries(data.items).forEach(([id, item]) => {
+                        document.querySelectorAll(`[data-cart-quantity="${CSS.escape(id)}"]`).forEach((input) => {
+                            input.value = item.quantity;
+
+                            const qtyForm = input.closest('form');
+                            const minusButton = qtyForm?.querySelector('button[aria-label^="Giảm"]');
+                            const plusButton = qtyForm?.querySelector('button[aria-label^="Tăng"]');
+
+                            if (minusButton) {
+                                minusButton.value = Math.max(1, item.quantity - 1);
+                            }
+
+                            if (plusButton) {
+                                plusButton.value = item.quantity + 1;
+                            }
+                        });
+
+                        document.querySelectorAll(`[data-cart-subtotal="${CSS.escape(id)}"]`).forEach((element) => {
+                            element.textContent = item.subtotal_formatted;
+                        });
+                    });
+
+                    document.querySelectorAll('[data-cart-total]').forEach((element) => {
+                        element.textContent = data.total_formatted;
+                    });
+
+                    if (form.dataset.cartRemove === 'true') {
+                        form.closest('[data-cart-row]')?.remove();
+                    }
+                }
+            } catch (error) {
+                console.error('Không thể cập nhật giỏ hàng.', error);
+            } finally {
+                if (submitter) {
+                    submitter.disabled = false;
+                }
+            }
+        });
+    </script>
 </body>
 </html>

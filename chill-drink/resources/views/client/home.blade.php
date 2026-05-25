@@ -3,6 +3,7 @@
 @section('title', 'Trang Chủ')
 
 @section('content')
+@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
     .home-hero {
         position: relative;
@@ -386,14 +387,7 @@
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-card text-decoration-none">
                         <img
-                            src="{{ [
-                                'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=500&q=85',
-                                'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=500&q=85',
-                                'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=85',
-                                'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=500&q=85',
-                                'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=500&q=85',
-                                'https://images.unsplash.com/photo-1570197788417-0e82375c9371?auto=format&fit=crop&w=500&q=85',
-                            ][$loop->index % 6] }}"
+                            src="{{ $uiCategoryImages[$category->name] ?? $uiDefaultImage }}"
                             alt="{{ $category->name }}"
                             class="category-image"
                         >
@@ -430,14 +424,33 @@
         </div>
 
         <div class="row g-4">
-            @forelse($featuredProducts as $product)
+            @php
+                $homeFeaturedSkus = $uiHomeFeaturedSkus ?? [
+                    'CD-TS-001', 'CD-CF-001', 'CD-ST-001', 'CD-NE-001',
+                    'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
+                ];
+                $homeFeaturedProducts = \App\Models\Product::with('category')
+                    ->whereIn('sku', $homeFeaturedSkus)
+                    ->get()
+                    ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
+                    ->values();
+            @endphp
+            @forelse($homeFeaturedProducts as $product)
                 <div class="col-sm-6 col-lg-3">
                     <div class="product-card drink-card card h-100 overflow-hidden border-0">
-                        <a href="{{ route('products.show', $product->slug) }}">
-                            <img src="{{ $product->image ?: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85' }}" class="card-img-top" alt="{{ $product->name }}">
+                        <a href="{{ route('products.show', $product->slug) }}" class="d-block">
+                            <x-product-image
+                                :sku="$product->sku"
+                                :name="$product->name"
+                                :alt="$product->name"
+                                :category="$product->category?->name"
+                                class="card-img-top"
+                                style="aspect-ratio: 4/3;"
+                            />
                         </a>
                         <div class="card-body d-flex flex-column">
                             <span class="badge rounded-pill align-self-start mb-2" style="background: var(--drink-soft); color: var(--drink-primary);">{{ $product->category->name }}</span>
+                            <p class="text-secondary small font-monospace mb-1">{{ $product->sku }}</p>
                             <h3 class="h5 card-title">
                                 <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">
                                     {{ $product->name }}

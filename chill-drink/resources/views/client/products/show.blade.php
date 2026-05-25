@@ -3,6 +3,7 @@
 @section('title', $product->name)
 
 @section('content')
+@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
     .product-detail-wrap {
         padding-top: 2.25rem;
@@ -79,7 +80,8 @@
     .detail-thumb img {
         width: 100%;
         height: 100%;
-        object-fit: contain;
+        object-fit: cover;
+        border-radius: 6px;
     }
 
     .detail-pill {
@@ -198,28 +200,40 @@
         <div class="row g-5 align-items-start">
             <div class="col-lg-6">
                 @php
-                    $mainImage = $product->image ?: 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=1000&q=85';
-                    $galleryImages = collect([
-                        $mainImage,
-                        $product->image ?: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1000&q=85',
-                    ])->filter()->unique()->values();
+                    $detailCategory = $product->category->name ?? null;
+                    $detailGalleryImages = $uiGetProductGallery(
+                        $product->sku ?? null,
+                        $detailCategory,
+                        $product->name,
+                        4
+                    );
+                    $detailMainImage = $detailGalleryImages[0]
+                        ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
                 @endphp
                 <div class="detail-gallery">
                     <div class="detail-photo-card">
                         <img
                             id="detailMainImage"
-                            src="{{ $mainImage }}"
+                            src="{{ $detailMainImage }}"
                             alt="{{ $product->name }}"
-                            onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=1000&q=85';"
+                            style="width:100%;height:100%;object-fit:cover;"
+                            onerror="this.onerror=null;this.src='{{ $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000) }}';"
                         >
                     </div>
-                    <div class="detail-thumbs" aria-label="Ảnh sản phẩm">
-                        @foreach($galleryImages as $index => $image)
-                            <button type="button" class="detail-thumb {{ $index === 0 ? 'active' : '' }}" data-detail-thumb="{{ $image }}" aria-label="Xem ảnh {{ $index + 1 }}">
-                                <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}">
-                            </button>
-                        @endforeach
-                    </div>
+                    @if(count($detailGalleryImages) > 1)
+                        <div class="detail-thumbs" aria-label="Ảnh sản phẩm">
+                            @foreach($detailGalleryImages as $index => $image)
+                                <button
+                                    type="button"
+                                    class="detail-thumb {{ $index === 0 ? 'active' : '' }}"
+                                    data-detail-thumb="{{ $image }}"
+                                    aria-label="Xem ảnh {{ $index + 1 }}"
+                                >
+                                    <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy">
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -228,13 +242,16 @@
                     <div>
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
                         <h1 class="display-5 fw-bold mb-3">{{ $product->name }}</h1>
+                        @if(!empty($product->sku))
+                            <p class="text-secondary small font-monospace mb-2">Mã sản phẩm: {{ $product->sku }}</p>
+                        @endif
                         <p class="h2 text-primary fw-bold mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
                     </div>
 
                     <div class="detail-info-card p-4">
                         <p class="option-label mb-2">Trải nghiệm hương vị</p>
                         <p class="text-secondary mb-3">
-                            {{ $product->description ?? 'Đồ uống được pha chế tươi, vị cân bằng, phù hợp cho những lúc cần một ly mát lành và dễ uống.' }}
+                            {{ $product instanceof \App\Models\Product ? $product->display_description : ($product->description ?? \App\Support\ProductCatalog::descriptionFor($product->name ?? '', $product->category->name ?? null)) }}
                         </p>
                         <div class="d-flex flex-wrap gap-3">
                             <span class="text-primary fw-semibold">Tươi mát</span>
@@ -273,7 +290,7 @@
                             </div>
 
                             @if(($product->stock ?? 1) > 0)
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1">
+                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
                                     @csrf
                                     <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
                                 </form>
@@ -323,12 +340,14 @@
                     <div class="col-sm-6 col-lg-3">
                         <div class="related-card drink-card card border-0 h-100 overflow-hidden">
                             <a href="{{ route('products.show', $item->slug) }}">
-                                <img
-                                    src="{{ $item->image ?: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85' }}"
-                                    alt="{{ $item->name }}"
+                                <x-product-image
+                                    :sku="$item->sku"
+                                    :name="$item->name"
+                                    :alt="$item->name"
+                                    :category="$item->category?->name"
                                     class="card-img-top"
-                                    onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85';"
-                                >
+                                    style="aspect-ratio: 4/3;"
+                                />
                             </a>
                             <div class="card-body">
                                 <h3 class="h5">
