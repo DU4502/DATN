@@ -11,16 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            // Thêm cột status kiểu số nguyên nhỏ, mặc định là 1 (hoạt động)
-            $table->tinyInteger('status')->default(1)->after('name');
-        });
+        if (!Schema::hasColumn('categories', 'status')) {
+            Schema::table('categories', function (Blueprint $table) {
+                // Thêm cột status kiểu số nguyên nhỏ, mặc định là 1 (hoạt động)
+                $table->tinyInteger('status')->default(1)->after('name');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('categories', function (Blueprint $table) {
-            $table->dropColumn('status');
-        });
+        if (Schema::hasColumn('categories', 'status')) {
+            Schema::table('categories', function (Blueprint $table) {
+                $table->dropColumn('status');
+            });
+        }
     }
 };
