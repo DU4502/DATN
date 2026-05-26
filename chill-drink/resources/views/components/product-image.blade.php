@@ -13,7 +13,9 @@
         ? collect(view()->getShared())->only(['uiResolveProductImage', 'uiDefaultImage', 'uiCategoryImages', 'uiProductImageUrls'])->all()
         : require resource_path('views/partials/ui-product-data.php');
     $resolveImage = $uiData['uiResolveProductImage'];
-    $imageUrl = $resolveImage($sku, $category, $name ?: $alt, (int) $width);
+    $imageUrl = $src
+        ? (str_starts_with($src, 'http://') || str_starts_with($src, 'https://') ? $src : asset('storage/'.ltrim($src, '/')))
+        : $resolveImage($sku, $category, $name ?: $alt, (int) $width);
 
     if (! $imageUrl) {
         $imageUrl = $uiData['uiDefaultImage'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=80';

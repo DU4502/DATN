@@ -42,7 +42,11 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         $product = $this->route('product');
-        $productId = $product instanceof Product ? $product->id : $product;
+        $productId = $product instanceof Product
+            ? $product->id
+            : (is_numeric($product)
+                ? (int) $product
+                : Product::query()->where('slug', (string) $product)->value('id'));
         $imageRules = $this->hasFile('image')
             ? ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048']
             : ['nullable', 'string', 'url', 'max:2048'];

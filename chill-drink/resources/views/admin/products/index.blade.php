@@ -42,6 +42,7 @@
                         <td>
                             <div class="admin-thumb d-flex align-items-center justify-content-center overflow-hidden">
                                 <x-product-image
+                                    :src="$product->image_url"
                                     :sku="$product->sku ?? null"
                                     :name="$product->name"
                                     :alt="$product->name"
