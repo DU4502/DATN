@@ -178,6 +178,10 @@
                                                 · +{{ number_format($item['size_extra'], 0, ',', '.') }}đ
                                             @endif
                                         </p>
+                                        <p class="text-secondary small mb-1">
+                                            Đường: {{ $item['sugar_label'] ?? (($item['sugar_level'] ?? 30).'%') }}
+                                            · Đá: {{ $item['ice_label'] ?? (($item['ice_level'] ?? 100).'%') }}
+                                        </p>
                                         <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
                                     </div>
 
