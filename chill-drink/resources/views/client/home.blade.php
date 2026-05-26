@@ -141,21 +141,7 @@
     }
 </style>
 
-<section class="home-hero">
-    <div class="container hero-content py-5">
-        <div class="row align-items-center g-5" style="min-height: 540px;">
-            <div class="col-lg-7">
-                <span class="badge hero-badge rounded-pill px-3 py-2 mb-3">Pha tươi mỗi ngày</span>
-                <h1 class="display-4 fw-bold mb-3">Đồ uống mát lạnh giao tới bạn trong tích tắc</h1>
-                <p class="lead mb-4">Trà sữa, cà phê, nước ép và trà trái cây được tuyển chọn gọn gàng để bạn tìm nhanh, chọn dễ và đặt hàng thật nhẹ.</p>
-                <div class="d-flex flex-wrap gap-3">
-                    <a href="{{ route('products.index') }}" class="btn btn-light btn-lg text-primary fw-bold">Đặt ngay</a>
-                    <a href="#featured-products" class="btn btn-outline-light btn-lg">Xem gợi ý hôm nay</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<x-animated-slider />
 
 <section class="py-5">
     <div class="container">
