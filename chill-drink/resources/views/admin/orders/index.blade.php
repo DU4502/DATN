@@ -57,7 +57,7 @@
                             </div>
                         </td>
                         <td>{{ strtoupper(str_replace('_', ' ', $order->payment_method ?? 'cod')) }}</td>
-                        <td class="text-end fw-bold text-primary">{{ number_format($order->total_price ?? 0, 0, ',', '.') }}đ</td>
+                        <td class="text-end fw-bold text-primary">{{ number_format($order->total_price ?? $order->total ?? 0, 0, ',', '.') }}đ</td>
                         <td class="text-center">
                             @php($status = $order->status ?? 'pending')
                             <span class="badge

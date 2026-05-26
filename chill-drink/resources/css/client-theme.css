@@ -1,5 +1,20 @@
 /* Shared storefront theme — forms, auth, search, product images */
 
+:root {
+    --font-ui: Figtree, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html,
+body,
+button,
+input,
+select,
+textarea,
+table {
+    font-family: var(--font-ui) !important;
+    letter-spacing: 0 !important;
+}
+
 @media (min-width: 768px) {
     #clientNavbar.navbar-collapse {
         display: flex !important;
@@ -31,6 +46,15 @@
     background: var(--drink-primary-soft, #edf9f6);
 }
 
+img[src*="photo-1558857563-b371033873b8"],
+.product-image[src*="photo-1558857563-b371033873b8"] {
+    box-sizing: border-box;
+    object-fit: contain !important;
+    object-position: center;
+    padding: 0.75rem;
+    background: var(--drink-primary-soft, #edf9f6);
+}
+
 .auth-page {
     padding: 3rem 0 4rem;
 }
@@ -42,6 +66,11 @@
     box-shadow: 0 24px 60px rgba(8, 42, 38, 0.08);
 }
 
+.auth-card-register {
+    max-width: 760px;
+    margin-inline: auto;
+}
+
 .auth-brand-mark {
     display: flex;
     margin-left: auto;
@@ -50,6 +79,96 @@
 
 .auth-brand-mark i {
     line-height: 1;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--drink-muted, #6d7f7a);
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin: 1.35rem 0 1rem;
+    text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--drink-border, #d5eee8);
+}
+
+.auth-social-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.auth-social-btn {
+    min-height: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    border: 1px solid var(--drink-border, #d5eee8);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--drink-ink, #082a26);
+    font-weight: 700;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.auth-social-btn:hover {
+    border-color: rgba(0, 139, 122, 0.34);
+    box-shadow: 0 14px 28px rgba(0, 107, 95, 0.10);
+    transform: translateY(-1px);
+}
+
+.auth-social-btn i {
+    font-size: 1.35rem;
+}
+
+.auth-social-btn.facebook i {
+    color: #1877f2;
+}
+
+.auth-social-btn.google i {
+    color: #ea4335;
+}
+
+.auth-section-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--drink-primary, #008b7a);
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.auth-section-label i {
+    font-size: 1rem;
+}
+
+.auth-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.auth-form-grid .full-span {
+    grid-column: 1 / -1;
+}
+
+.auth-note {
+    border: 1px solid var(--drink-border, #d5eee8);
+    border-radius: 18px;
+    background: rgba(237, 249, 246, 0.72);
+    color: var(--drink-muted, #6d7f7a);
+    font-size: 0.92rem;
+    padding: 0.85rem 1rem;
 }
 
 .form-check-input:checked {
@@ -112,7 +231,15 @@
         padding-top: 2rem;
     }
 
+    .auth-form-grid {
+        grid-template-columns: 1fr;
+    }
+
     .client-search .btn {
         padding-inline: 0.9rem;
+    }
+
+    .auth-social-grid {
+        grid-template-columns: 1fr;
     }
 }

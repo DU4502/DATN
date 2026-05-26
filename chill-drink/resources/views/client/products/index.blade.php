@@ -282,14 +282,11 @@
 
                 <div class="row g-4">
                     @forelse($products as $product)
-                        @if(!$uiProductVisible($product->sku ?? null))
-                            @continue
-                        @endif
                         <div class="col-sm-6 col-xl-4">
                             <article class="shop-product-card">
                                 <a href="{{ route('products.show', $product->slug) }}" class="shop-product-image d-block mb-3">
                                     <x-product-image
-                                        :sku="$product->sku"
+                                        :sku="$product->sku ?? null"
                                         :alt="$product->name"
                                         :name="$product->name"
                                         :category="$product->category?->name"
@@ -300,7 +297,9 @@
                                 <h2 class="h4 fw-bold mb-1">
                                     <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
                                 </h2>
-                                <p class="text-secondary small font-monospace mb-2">{{ $product->sku }}</p>
+                                @if(!empty($product->sku))
+                                    <p class="text-secondary small font-monospace mb-2">{{ $product->sku }}</p>
+                                @endif
                                 <p class="text-secondary mb-4">{{ \Illuminate\Support\Str::limit($product->display_description, 90) }}</p>
 
                                 <div class="d-flex justify-content-between align-items-center">
@@ -308,6 +307,7 @@
                                     @if(($product->stock ?? 1) > 0)
                                         <form action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
                                             @csrf
+                                            <input type="hidden" name="size" value="M">
                                             <button type="submit" class="add-round" aria-label="Thêm vào giỏ">
                                                 <svg width="19" height="19" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
@@ -321,14 +321,14 @@
                             </article>
                         </div>
                     @empty
-                        @foreach([
-                            ['Sinh Tố Dâu', 'Dâu tươi chín ngọt xay mịn với sữa, vị chua ngọt thanh mát.', '45.000đ', 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=700&q=85', 'Bán chạy', 'sinh-to-dau'],
-                            ['Matcha Latte Đá', 'Matcha thơm nhẹ kết hợp sữa tươi béo mịn, hợp cho ngày cần tỉnh táo.', '57.000đ', 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85', '', 'matcha-latte-da'],
-                            ['Nước Ép Cam Chanh Dây', 'Cam, chanh dây và soda tạo vị chua ngọt sảng khoái.', '49.000đ', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85', 'Mới', 'citrus-sunset'],
-                            ['Trà Sữa Trân Châu', 'Trà sữa đậm vị cùng trân châu mềm, lựa chọn quen thuộc dễ uống.', '62.000đ', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85', '', 'tra-sua-tran-chau-demo'],
-                            ['Cà Phê Ủ Lạnh', 'Cà phê ủ lạnh êm vị, uống cùng đá viên lớn cực mát.', '52.000đ', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85', '', 'cold-brew-arctic'],
-                            ['Trà Trái Cây Nhiệt Đới', 'Xoài, thanh long và trà xanh tạo một ly trái cây rực rỡ.', '59.000đ', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=700&q=85', '', 'tropical-frost'],
-                        ] as $item)
+                        @foreach(($demoProducts ?? collect())->map(fn ($item) => [
+                            $item['name'],
+                            $item['description'],
+                            number_format($item['price'], 0, ',', '.') . 'đ',
+                            $item['image'],
+                            $item['category'] === request('category') ? 'Đang chọn' : '',
+                            $item['slug'],
+                        ]) as $item)
                             <div class="col-sm-6 col-xl-4">
                                 <article class="shop-product-card">
                                     <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}" class="shop-product-image d-block mb-3">
@@ -343,6 +343,7 @@
                                         <span class="h4 fw-bold text-primary mb-0">{{ $item[2] }}</span>
                                         <form action="{{ route('cart.add', 'demo-' . $item[5]) }}" method="POST" data-ajax-cart>
                                             @csrf
+                                            <input type="hidden" name="size" value="M">
                                             <button type="submit" class="add-round" aria-label="Thêm vào giỏ">
                                                 <svg width="19" height="19" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />

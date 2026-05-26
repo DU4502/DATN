@@ -9,6 +9,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -26,13 +27,21 @@ class RegisteredUserController extends Controller
      */
     public function store(RegisterRequest $request): RedirectResponse
     {
-        $user = User::create([
+        $userData = [
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role_id' => 1,
             'is_active' => 1,
-        ]);
+        ];
+
+        foreach (['phone', 'address', 'area'] as $field) {
+            if (Schema::hasColumn('users', $field)) {
+                $userData[$field] = $request->input($field);
+            }
+        }
+
+        $user = User::create($userData);
 
         event(new Registered($user));
 

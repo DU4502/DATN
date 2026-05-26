@@ -23,11 +23,11 @@
 
                         <div class="mb-4">
                             <label for="name" class="form-label fw-bold text-dark">Tên danh mục <span class="text-danger">*</span></label>
-                            <input type="text" 
-                                   class="form-control @error('name') is-invalid @enderror" 
-                                   id="name" 
-                                   name="name" 
-                                   value="{{ old('name') }}" 
+                            <input type="text"
+                                   class="form-control @error('name') is-invalid @enderror"
+                                   id="name"
+                                   name="name"
+                                   value="{{ old('name') }}"
                                    placeholder="Ví dụ: Cà phê, Trà sữa..."
                                    required>
                             @error('name')
@@ -39,11 +39,11 @@
                         <div class="mb-4">
                             <label class="form-label fw-bold text-dark d-block">Trạng thái hiển thị</label>
                             <div class="form-check form-switch mt-2">
-                                <input class="form-check-input" 
-                                       type="checkbox" 
-                                       id="status" 
-                                       name="status" 
-                                       value="1" 
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="status"
+                                       name="status"
+                                       value="1"
                                        {{ old('status', '1') == '1' ? 'checked' : '' }}>
                                 <label class="form-check-label text-secondary" for="status">
                                     Cho phép hiển thị danh mục này ngoài cửa hàng
