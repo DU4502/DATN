@@ -6,7 +6,7 @@
 <div class="row g-4">
     <div class="col-lg-5">
         <div class="admin-card card border-0 overflow-hidden">
-            <img src="{{ $product->image ?: 'https://placehold.co/800x600?text=Chill+Drink' }}" alt="{{ $product->name }}" class="w-100" style="height: 360px; object-fit: cover;">
+            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-100" style="height: 360px; object-fit: cover;">
         </div>
     </div>
 

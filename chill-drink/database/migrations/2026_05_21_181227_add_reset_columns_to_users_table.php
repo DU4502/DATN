@@ -11,10 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('reset_token')->nullable()->after('remember_token');
-            $table->dateTime('reset_expire')->nullable()->after('reset_token');
-        });
+        if (! Schema::hasColumn('users', 'reset_token')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('reset_token')->nullable();
+            });
+        }
+
+        if (! Schema::hasColumn('users', 'reset_expire')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dateTime('reset_expire')->nullable();
+            });
+        }
     }
 
     /**
@@ -23,7 +30,19 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['reset_token', 'reset_expire']);
+            $drops = [];
+
+            if (Schema::hasColumn('users', 'reset_token')) {
+                $drops[] = 'reset_token';
+            }
+
+            if (Schema::hasColumn('users', 'reset_expire')) {
+                $drops[] = 'reset_expire';
+            }
+
+            if (! empty($drops)) {
+                $table->dropColumn($drops);
+            }
         });
     }
 };

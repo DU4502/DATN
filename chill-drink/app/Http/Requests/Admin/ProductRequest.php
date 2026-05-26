@@ -43,6 +43,9 @@ class ProductRequest extends FormRequest
     {
         $product = $this->route('product');
         $productId = $product instanceof Product ? $product->id : $product;
+        $imageRules = $this->hasFile('image')
+            ? ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048']
+            : ['nullable', 'string', 'url', 'max:2048'];
 
         return [
             'category_id' => ['required', 'integer', 'exists:categories,id'],
@@ -53,7 +56,7 @@ class ProductRequest extends FormRequest
                 'max:255',
                 Rule::unique('products', 'slug')->ignore($productId),
             ],
-            'image' => ['nullable', 'url', 'max:2048'],
+            'image' => $imageRules,
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'description' => ['nullable', 'string', 'max:5000'],
             'stock' => ['required', 'integer', 'min:0', 'max:100000'],
@@ -75,8 +78,10 @@ class ProductRequest extends FormRequest
             'name.max' => 'Tên sản phẩm không được vượt quá :max ký tự.',
             'slug.required' => 'Vui lòng nhập đường dẫn sản phẩm.',
             'slug.unique' => 'Đường dẫn sản phẩm đã tồn tại.',
-            'image.url' => 'Hình ảnh phải là một URL hợp lệ.',
-            'image.max' => 'URL hình ảnh không được vượt quá :max ký tự.',
+            'image.url' => 'Ảnh sản phẩm phải là một URL hợp lệ.',
+            'image.image' => 'Tệp tải lên phải là hình ảnh.',
+            'image.mimes' => 'Ảnh sản phẩm chỉ chấp nhận định dạng: jpeg, jpg, png, webp.',
+            'image.max' => 'Ảnh sản phẩm không được vượt quá 2MB hoặc URL quá dài.',
             'price.required' => 'Vui lòng nhập giá bán.',
             'price.numeric' => 'Giá bán phải là số.',
             'price.min' => 'Giá bán không được âm.',
