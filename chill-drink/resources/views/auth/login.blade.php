@@ -52,6 +52,21 @@
                             <button type="submit" class="btn btn-primary w-100 py-2">Đăng Nhập</button>
                         </form>
 
+                        <div class="auth-divider">
+                            <span>Hoặc</span>
+                        </div>
+
+                        <div class="auth-social-grid">
+                            <button type="button" class="auth-social-btn facebook" aria-label="Đăng nhập bằng Facebook">
+                                <i class="bi bi-facebook" aria-hidden="true"></i>
+                                <span>Facebook</span>
+                            </button>
+                            <button type="button" class="auth-social-btn google" aria-label="Đăng nhập bằng Google">
+                                <i class="bi bi-google" aria-hidden="true"></i>
+                                <span>Google</span>
+                            </button>
+                        </div>
+
                         <p class="text-center text-secondary mt-4 mb-0">
                             Chưa có tài khoản?
                             <a href="{{ route('register') }}" class="text-decoration-none fw-semibold">Đăng ký ngay</a>

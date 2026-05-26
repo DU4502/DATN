@@ -15,7 +15,7 @@
                    id="name"
                    name="name"
                    class="form-control"
-                   value="{{ old('name', $category->name) }}" 
+                   value="{{ old('name', $category->name) }}"
                    required>
         </div>
 
@@ -25,7 +25,7 @@
                    id="slug"
                    name="slug"
                    class="form-control"
-                   value="{{ old('slug', $category->slug) }}" 
+                   value="{{ old('slug', $category->slug) }}"
                    required>
         </div>
 
@@ -62,7 +62,7 @@
         slug = slug.replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, 'u');
         slug = slug.replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, 'y');
         slug = slug.replace(/đ/gi, 'd');
-        
+
         // Xóa ký tự đặc biệt, thay khoảng trắng bằng dấu gạch ngang
         slug = slug.replace(/\s+/g, '-');
         slug = slug.replace(/[^a-z0-9\-]/g, '');

@@ -60,6 +60,8 @@ class CheckoutController extends Controller
 
             // Create order items
             foreach ($cart as $productId => $item) {
+                $productId = $item['product_id'] ?? $productId;
+
                 if (is_numeric($productId)) {
                     OrderItem::create([
                         'order_id' => $order->id,

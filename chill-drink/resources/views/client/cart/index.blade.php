@@ -172,7 +172,12 @@
 
                                     <div class="flex-grow-1">
                                         <h2 class="h4 fw-bold mb-1">{{ $item['name'] }}</h2>
-                                        <p class="text-secondary small mb-1">Biến thể: size vừa / đá lạnh</p>
+                                        <p class="text-secondary small mb-1">
+                                            {{ $item['size_label'] ?? 'Size M' }}
+                                            @if(($item['size_extra'] ?? 0) > 0)
+                                                · +{{ number_format($item['size_extra'], 0, ',', '.') }}đ
+                                            @endif
+                                        </p>
                                         <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
                                     </div>
 
@@ -271,7 +276,7 @@
                 <section class="mt-5 pt-5">
                     <h2 class="section-title h1 mb-4">Gợi ý thêm</h2>
                     <div class="row g-4">
-                        @foreach($suggestions->filter(fn ($product) => $uiProductVisible($product->sku ?? null))->take(4) as $product)
+                        @foreach($suggestions->take(4) as $product)
                             <div class="col-sm-6 col-lg-3">
                                 <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
                                     <x-product-image

@@ -20,10 +20,9 @@ class User extends Authenticatable
         'role_id',
         'phone',
         'address',
-        'points',
+        'area',
         'reset_token',
         'reset_expire',
-        'area',
         'avatar',
         'is_active',
     ];

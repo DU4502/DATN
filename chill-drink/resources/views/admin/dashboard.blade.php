@@ -6,7 +6,39 @@
 @section('content')
 <section class="mb-4">
     <h2 class="h2 fw-bold mb-1">Tổng quan hệ thống</h2>
-    <p class="text-secondary mb-0">Chỉ hiển thị số liệu thật từ cơ sở dữ liệu — không dùng dữ liệu mẫu.</p>
+    <p class="text-secondary mb-0">Theo dõi doanh thu, đơn hàng, khách hàng và sản phẩm theo ngày, tuần và tháng.</p>
+</section>
+
+<section class="admin-card p-4 mb-4">
+    <div class="d-flex flex-column flex-xl-row justify-content-between gap-3 mb-4">
+        <div>
+            <h3 class="h4 fw-bold mb-1">Lịch sử doanh thu</h3>
+            <p class="text-secondary mb-0">Số liệu được tách theo ngày, tuần và tháng để xem nhanh tình hình bán hàng.</p>
+        </div>
+        <div class="admin-period-tabs" role="list" aria-label="Mốc thời gian doanh thu">
+            @foreach($periodStats as $period)
+                <span class="admin-period-pill {{ $loop->first ? 'active' : '' }}">
+                    <i class="bi {{ $period['icon'] }}"></i>
+                    {{ $period['label'] }}
+                </span>
+            @endforeach
+        </div>
+    </div>
+    <div class="row g-3">
+        @foreach($periodStats as $period)
+            <div class="col-md-6 col-xl-4">
+                <div class="admin-period-card">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+                        <span class="admin-icon-dot"><i class="bi {{ $period['icon'] }}"></i></span>
+                        <span class="badge badge-soft-muted">{{ $period['orders'] }} đơn</span>
+                    </div>
+                    <p class="admin-kicker mb-1">{{ $period['label'] }}</p>
+                    <p class="admin-value mb-1">{{ number_format($period['revenue'], 0, ',', '.') }}đ</p>
+                    <small class="text-secondary">{{ $period['range'] }}</small>
+                </div>
+            </div>
+        @endforeach
+    </div>
 </section>
 
 <section class="row g-4 mb-4">
@@ -122,7 +154,7 @@
                         <td class="fw-bold text-primary">#{{ $order->id }}</td>
                         <td>{{ $order->user->name ?? 'Khách hàng' }}</td>
                         <td><span class="badge badge-soft-primary">{{ $order->status ?? 'Đang xử lý' }}</span></td>
-                        <td class="text-end fw-bold">{{ number_format($order->total_price ?? 0, 0, ',', '.') }}đ</td>
+                        <td class="text-end fw-bold">{{ number_format($order->total_price ?? $order->total ?? 0, 0, ',', '.') }}đ</td>
                     </tr>
                 @empty
                     <tr>
