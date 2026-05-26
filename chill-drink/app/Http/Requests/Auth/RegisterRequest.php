@@ -39,8 +39,11 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:30', 'regex:/^[0-9+\-\s().]{9,30}$/'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'string', Rules\Password::defaults()],
+            'area' => ['nullable', 'string', 'max:100'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ];
     }
 
@@ -55,14 +58,23 @@ class RegisterRequest extends FormRequest
             'name.required' => 'Vui lòng nhập họ tên.',
             'name.string' => 'Họ tên không hợp lệ.',
             'name.max' => 'Họ tên không được vượt quá :max ký tự.',
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.string' => 'Số điện thoại không hợp lệ.',
+            'phone.max' => 'Số điện thoại không được vượt quá :max ký tự.',
+            'phone.regex' => 'Số điện thoại không đúng định dạng.',
             'email.required' => 'Vui lòng nhập email.',
             'email.string' => 'Email không hợp lệ.',
             'email.lowercase' => 'Email phải viết thường.',
             'email.email' => 'Email không đúng định dạng.',
             'email.max' => 'Email không được vượt quá :max ký tự.',
             'email.unique' => 'Email này đã được đăng ký.',
+            'area.string' => 'Khu vực không hợp lệ.',
+            'area.max' => 'Khu vực không được vượt quá :max ký tự.',
+            'address.string' => 'Địa chỉ không hợp lệ.',
+            'address.max' => 'Địa chỉ không được vượt quá :max ký tự.',
             'password.required' => 'Vui lòng nhập mật khẩu.',
             'password.string' => 'Mật khẩu không hợp lệ.',
+            'password.confirmed' => 'Mật khẩu nhập lại không khớp.',
             'password.min' => 'Mật khẩu phải có ít nhất :min ký tự.',
         ];
     }
