@@ -770,7 +770,9 @@
                                     >
                                     <div class="flex-grow-1">
                                         <div class="fw-bold">{{ $item['name'] }}</div>
-                                        <div class="text-secondary small">Số lượng: {{ $item['quantity'] }}</div>
+                                        <div class="text-secondary small">
+                                            {{ $item['size_label'] ?? 'Size M' }} · Số lượng: {{ $item['quantity'] }}
+                                        </div>
                                     </div>
                                     <strong>{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}đ</strong>
                                 </div>
