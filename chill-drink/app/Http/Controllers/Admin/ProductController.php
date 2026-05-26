@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ProductRequest;
 use App\Models\Category;
 use App\Models\Product;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -30,7 +30,7 @@ class ProductController extends Controller
         return view('admin.products.create', compact('categories', 'product'));
     }
 
-    public function store(Request $request)
+    public function store(ProductRequest $request)
     {
         $product = Product::create($this->productData($request));
 
@@ -62,10 +62,10 @@ class ProductController extends Controller
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
-    public function update(Request $request, string $product)
+    public function update(ProductRequest $request, string $product)
     {
         $product = $this->findProduct($product);
-        $product->update($this->productData($request));
+        $product->update($this->productData($request, $product));
 
         return redirect()
             ->route('admin.products.show', $product->id)
@@ -75,6 +75,7 @@ class ProductController extends Controller
     public function destroy(string $product)
     {
         $product = $this->findProduct($product);
+        $this->deleteStoredImage($product->image);
         $product->delete();
 
         return redirect()
@@ -82,20 +83,31 @@ class ProductController extends Controller
             ->with('success', 'Xóa sản phẩm thành công!');
     }
 
-    private function productData(Request $request): array
+    private function productData(ProductRequest $request, ?Product $product = null): array
     {
-        $name = (string) $request->input('name', '');
-        $slug = (string) $request->input('slug', '');
+        $validated = $request->validated();
 
-        return [
-            'category_id' => $request->input('category_id') ?: null,
-            'name' => $name,
-            'slug' => Str::slug($slug ?: $name),
-            'price' => (float) ($request->input('price') ?: 0),
-            'description' => $request->input('description'),
-            'stock' => (int) ($request->input('stock') ?: 0),
-            'status' => $request->boolean('status'),
+        $data = [
+            'category_id' => $validated['category_id'],
+            'name' => $validated['name'],
+            'slug' => $validated['slug'],
+            'price' => (float) $validated['price'],
+            'description' => $validated['description'] ?? null,
+            'stock' => (int) $validated['stock'],
+            'status' => (bool) $validated['status'],
         ];
+
+        if ($request->hasFile('image')) {
+            if ($product) {
+                $this->deleteStoredImage($product->image);
+            }
+
+            $data['image'] = $request->file('image')->store('products', 'public');
+        } elseif (! empty($validated['image']) && is_string($validated['image'])) {
+            $data['image'] = $validated['image'];
+        }
+
+        return $data;
     }
 
     private function findProduct(string $product): Product
@@ -104,5 +116,14 @@ class ProductController extends Controller
             ->whereKey($product)
             ->orWhere('slug', $product)
             ->firstOrFail();
+    }
+
+    private function deleteStoredImage(?string $imagePath): void
+    {
+        if (! $imagePath || str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+            return;
+        }
+
+        Storage::disk('public')->delete($imagePath);
     }
 }
