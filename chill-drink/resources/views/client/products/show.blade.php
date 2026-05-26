@@ -308,6 +308,12 @@
             </div>
 
             <div class="col-lg-7">
+                @php
+                    $sizeOptions = $sizeOptions ?? [];
+                    $selectedSize = collect($sizeOptions)->firstWhere('selected', true) ?? ($sizeOptions[0] ?? null);
+                    $selectedSizePrice = (int) ($selectedSize['price'] ?? ($product->price ?? 0));
+                    $selectedSizeToken = (string) ($selectedSize['token'] ?? 'M');
+                @endphp
                 <div class="d-flex flex-column gap-4">
                     <div>
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
@@ -315,7 +321,7 @@
                         @if(!empty($product->sku))
                             <p class="text-secondary small font-monospace mb-2">Mã sản phẩm: {{ $product->sku }}</p>
                         @endif
-                        <p class="h2 text-primary fw-bold mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
+                        <p class="h2 text-primary fw-bold mb-0" data-active-price>{{ number_format($selectedSizePrice, 0, ',', '.') }}đ</p>
                     </div>
 
                     <div class="detail-info-card p-4">
@@ -333,39 +339,45 @@
                         <div class="mb-4">
                             <label class="option-label d-block mb-3">Size</label>
                             <div class="d-flex flex-wrap gap-2" data-size-group>
-                                <button type="button" class="choice-btn size-choice" data-size-option="S" data-size-extra="0">
-                                    S
-                                    <small>Giá gốc</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice active" data-size-option="M" data-size-extra="5000">
-                                    M
-                                    <small>+5.000đ</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
-                                    L
-                                    <small>+10.000đ</small>
-                                </button>
+                                @foreach($sizeOptions as $option)
+                                    @php
+                                        $extra = (int) ($option['extra'] ?? 0);
+                                        $extraLabel = $extra > 0
+                                            ? '+'.number_format($extra, 0, ',', '.').'đ'
+                                            : ($extra < 0 ? number_format($extra, 0, ',', '.').'đ' : 'Giá gốc');
+                                    @endphp
+                                    <button
+                                        type="button"
+                                        class="choice-btn size-choice {{ !empty($option['selected']) ? 'active' : '' }}"
+                                        data-size-option="{{ $option['token'] }}"
+                                        data-size-price="{{ (int) $option['price'] }}"
+                                        data-size-extra="{{ $extra }}"
+                                    >
+                                        {{ $option['code'] }}
+                                        <small>{{ $extraLabel }}</small>
+                                    </button>
+                                @endforeach
                             </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="option-label d-block mb-3">Mức đường</label>
-                            <div class="d-flex flex-wrap gap-2" data-choice-group="sugar">
-                                <button type="button" class="choice-btn">0%</button>
-                                <button type="button" class="choice-btn active">30%</button>
-                                <button type="button" class="choice-btn">50%</button>
-                                <button type="button" class="choice-btn">70%</button>
-                                <button type="button" class="choice-btn">100%</button>
+                            <div class="d-flex flex-wrap gap-2" data-choice-group="sugar" data-choice-input="[data-sugar-input]">
+                                <button type="button" class="choice-btn" data-choice-value="0" data-choice-label="0%">0%</button>
+                                <button type="button" class="choice-btn active" data-choice-value="30" data-choice-label="30%">30%</button>
+                                <button type="button" class="choice-btn" data-choice-value="50" data-choice-label="50%">50%</button>
+                                <button type="button" class="choice-btn" data-choice-value="70" data-choice-label="70%">70%</button>
+                                <button type="button" class="choice-btn" data-choice-value="100" data-choice-label="100%">100%</button>
                             </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="option-label d-block mb-3">Mức đá</label>
-                            <div class="d-flex flex-wrap gap-2" data-choice-group="ice">
-                                <button type="button" class="choice-btn">Không đá</button>
-                                <button type="button" class="choice-btn active">Bình thường</button>
-                                <button type="button" class="choice-btn">Ít đá</button>
-                                <button type="button" class="choice-btn">Nhiều đá</button>
+                            <div class="d-flex flex-wrap gap-2" data-choice-group="ice" data-choice-input="[data-ice-input]">
+                                <button type="button" class="choice-btn" data-choice-value="0" data-choice-label="Không đá">Không đá</button>
+                                <button type="button" class="choice-btn active" data-choice-value="100" data-choice-label="Bình thường">Bình thường</button>
+                                <button type="button" class="choice-btn" data-choice-value="50" data-choice-label="Ít đá">Ít đá</button>
+                                <button type="button" class="choice-btn" data-choice-value="130" data-choice-label="Nhiều đá">Nhiều đá</button>
                             </div>
                         </div>
 
@@ -376,16 +388,16 @@
                                 <button type="button" data-qty-plus aria-label="Tăng số lượng">+</button>
                             </div>
 
-                            @if(($product->stock ?? 1) > 0)
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
-                                    @csrf
-                                    <input type="hidden" name="size" value="M" data-size-input>
-                                    <input type="hidden" name="quantity" value="1" data-qty-input>
-                                    <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
-                                </form>
-                            @else
-                                <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
-                            @endif
+                            <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
+                                @csrf
+                                <input type="hidden" name="size" value="{{ $selectedSizeToken }}" data-size-input>
+                                <input type="hidden" name="quantity" value="1" data-qty-input>
+                                <input type="hidden" name="sugar_level" value="30" data-sugar-input>
+                                <input type="hidden" name="sugar_label" value="30%" data-sugar-label-input>
+                                <input type="hidden" name="ice_level" value="100" data-ice-input>
+                                <input type="hidden" name="ice_label" value="Bình thường" data-ice-label-input>
+                                <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -453,12 +465,25 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('[data-choice-group]').forEach(function (group) {
+            const inputSelector = group.dataset.choiceInput;
+            const hiddenInput = inputSelector ? document.querySelector(inputSelector) : null;
+            const groupName = group.dataset.choiceGroup || '';
+            const labelInput = document.querySelector(`[data-${groupName}-label-input]`);
+
             group.querySelectorAll('.choice-btn').forEach(function (button) {
                 button.addEventListener('click', function () {
                     group.querySelectorAll('.choice-btn').forEach(function (item) {
                         item.classList.remove('active');
                     });
                     button.classList.add('active');
+
+                    if (hiddenInput) {
+                        hiddenInput.value = button.dataset.choiceValue || '';
+                    }
+
+                    if (labelInput) {
+                        labelInput.value = button.dataset.choiceLabel || button.textContent.trim();
+                    }
                 });
             });
         });
@@ -490,8 +515,14 @@
 
         const sizeGroup = document.querySelector('[data-size-group]');
         const sizeInput = document.querySelector('[data-size-input]');
+        const activePriceEl = document.querySelector('[data-active-price]');
 
         if (sizeGroup && sizeInput) {
+            const formatMoney = function (value) {
+                const numericValue = Number(value || 0);
+                return numericValue.toLocaleString('vi-VN') + 'đ';
+            };
+
             sizeGroup.querySelectorAll('[data-size-option]').forEach(function (button) {
                 button.addEventListener('click', function () {
                     sizeGroup.querySelectorAll('[data-size-option]').forEach(function (item) {
@@ -499,6 +530,11 @@
                     });
                     button.classList.add('active');
                     sizeInput.value = button.dataset.sizeOption || 'M';
+
+                    if (activePriceEl) {
+                        const nextPrice = Number(button.dataset.sizePrice || 0);
+                        activePriceEl.textContent = formatMoney(nextPrice);
+                    }
                 });
             });
         }

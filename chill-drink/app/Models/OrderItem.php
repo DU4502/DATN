@@ -17,8 +17,13 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'product_size_id',
+        'ice_level',
+        'sugar_level',
         'quantity',
         'price',
+        'unit_price',
+        'total_price',
     ];
 
     /**
@@ -27,6 +32,8 @@ class OrderItem extends Model
      * @var array
      */
     protected $casts = [
+        'unit_price' => 'integer',
+        'total_price' => 'integer',
         'price' => 'decimal:2',
     ];
 
@@ -44,6 +51,11 @@ class OrderItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function productSize()
+    {
+        return $this->belongsTo(ProductSize::class, 'product_size_id');
     }
 
     /**
