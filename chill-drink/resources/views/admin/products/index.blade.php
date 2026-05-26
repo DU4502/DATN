@@ -19,6 +19,7 @@
             <div style="width:1px;height:38px;background:var(--admin-border);"></div>
             <div><span class="admin-value" style="color:var(--admin-danger);">0</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
         </div>
+        <a href="{{ route('admin.products.create') }}" class="btn btn-primary mt-3">+ Thêm sản phẩm</a>
     </div>
 </section>
 
@@ -65,8 +66,13 @@
                             @endif
                         </td>
                         <td class="text-end">
-                            <button class="admin-action" title="Sửa">✎</button>
-                            <button class="admin-action" title="Xóa" style="color:var(--admin-danger);">⌫</button>
+                            <a href="{{ route('admin.products.show', $product) }}" class="admin-action text-decoration-none" title="Xem">👁</a>
+                            <a href="{{ route('admin.products.edit', $product) }}" class="admin-action text-decoration-none" title="Sửa">✎</a>
+                            <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="admin-action border-0 bg-transparent" title="Xóa" style="color:var(--admin-danger);">⌫</button>
+                            </form>
                         </td>
                     </tr>
                 @empty

@@ -29,10 +29,16 @@
                 </div>
 
                 <div class="mb-0">
-                    <label for="image" class="form-label">URL hình ảnh</label>
-                    <input id="image" type="url" name="image" value="{{ old('image', $product->image) }}" class="form-control @error('image') is-invalid @enderror" placeholder="https://example.com/product.jpg">
+                    <label for="image" class="form-label">Ảnh sản phẩm</label>
+                    @if($product->image)
+                        <div class="mb-2">
+                            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="rounded border" style="max-height: 120px;">
+                        </div>
+                    @endif
+                    <input id="image" type="file" name="image" class="form-control @error('image') is-invalid @enderror" accept="image/jpeg,image/jpg,image/png,image/webp">
+                    <small class="text-secondary">Định dạng: JPEG, JPG, PNG, WEBP. Tối đa 2MB.</small>
                     @error('image')
-                        <div class="invalid-feedback">{{ $message }}</div>
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                 </div>
             </div>
