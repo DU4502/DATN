@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->string('phone', 30)->nullable();
             $table->string('password', 255);
             $table->tinyInteger('is_active')->default(1);
+            $table->rememberToken();
             $table->timestamps();
 
             // Viết lệnh liên kết khóa ngoại thủ công ở dòng này:

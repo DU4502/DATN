@@ -19,15 +19,13 @@ class DatabaseSeeder extends Seeder
         User::create([
             'name' => 'Admin',
             'email' => 'admin@chilldrink.com',
-            'password' => Hash::make('password'),
+            'password' => Hash::make('12345678'),
             'role' => 'admin',
+            'role_id' => 2,
             'phone' => '0123456789',
             'address' => 'Hà Nội, Việt Nam',
             'points' => 0,
         ]);
-
-        // Create Regular Users
-        User::factory(10)->create();
 
         // Create Categories
         $categories = [
