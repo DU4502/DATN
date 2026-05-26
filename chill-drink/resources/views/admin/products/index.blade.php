@@ -42,6 +42,7 @@
                         <td>
                             <div class="admin-thumb d-flex align-items-center justify-content-center overflow-hidden">
                                 <x-product-image
+                                    :src="$product->image_url"
                                     :sku="$product->sku ?? null"
                                     :name="$product->name"
                                     :alt="$product->name"
@@ -68,6 +69,7 @@
                             @endif
                         </td>
                         <td class="text-end">
+                            <a href="{{ route('admin.products.show', $product->id) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
                             <a href="{{ route('admin.products.edit', $product->id) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
                             <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
                                 @csrf

@@ -265,6 +265,96 @@
             flex: 0 0 auto;
         }
 
+        .cart-bump {
+            animation: cartBump 0.55s ease;
+            box-shadow: 0 14px 32px rgba(0, 139, 122, 0.24);
+        }
+
+        .cart-button [data-cart-badge] {
+            transition: transform 0.18s ease;
+        }
+
+        .cart-bump [data-cart-badge] {
+            transform: scale(1.12);
+        }
+
+        .cart-fly-dot {
+            position: fixed;
+            z-index: 1080;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--drink-primary);
+            color: #ffffff;
+            box-shadow: 0 16px 34px rgba(0, 139, 122, 0.28);
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(1);
+            transition: transform 0.72s cubic-bezier(.22, .88, .22, 1), opacity 0.72s ease;
+        }
+
+        .cart-feedback {
+            position: fixed;
+            right: 1.25rem;
+            top: 5.4rem;
+            z-index: 1081;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.65rem;
+            max-width: min(340px, calc(100vw - 2rem));
+            padding: 0.8rem 1rem;
+            border: 1px solid rgba(0, 139, 122, 0.15);
+            border-radius: 999px;
+            background: #ffffff;
+            color: var(--drink-ink);
+            box-shadow: 0 20px 46px rgba(8, 42, 38, 0.16);
+            font-weight: 700;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+            pointer-events: none;
+        }
+
+        .cart-feedback.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .cart-feedback-icon {
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--drink-soft);
+            color: var(--drink-primary);
+            flex: 0 0 auto;
+        }
+
+        [data-ajax-cart].is-adding button[type="submit"],
+        [data-ajax-cart].is-added button[type="submit"] {
+            transform: translateY(-1px);
+        }
+
+        @keyframes cartBump {
+            0% { transform: scale(1); }
+            35% { transform: scale(1.12); }
+            70% { transform: scale(0.96); }
+            100% { transform: scale(1); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .cart-button.cart-bump,
+            .cart-fly-dot,
+            .cart-feedback {
+                animation: none;
+                transition: none;
+            }
+        }
+
         .user-avatar {
             width: 58px;
             height: 58px;
@@ -537,7 +627,7 @@
     <header class="site-header sticky-top">
         <nav class="navbar navbar-expand-md container py-3">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
-                <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="background: white; object-fit: contain; padding: 2px;">
                 <span class="brand-text">Chill Drink</span>
             </a>
 
@@ -568,7 +658,7 @@
                         <button type="submit" class="btn btn-primary">Tìm</button>
                     </form>
 
-                    <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng">
+                    <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng" data-cart-button>
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
@@ -675,7 +765,7 @@
             <div class="row g-4">
                 <div class="col-md-4">
                     <div class="d-flex align-items-center gap-2 mb-3">
-                        <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
+                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="background: white; object-fit: contain; padding: 2px;">
                         <h3 class="h5 fw-bold mb-0">Chill Drink</h3>
                     </div>
                     <p class="text-secondary mb-3">Đồ uống tươi mát, giao nhanh và đặt hàng dễ dàng mỗi ngày.</p>
@@ -767,11 +857,125 @@
 
             const submitter = event.submitter;
             const formData = new FormData(form);
+            const isAddAction = form.action.includes('/cart/add/');
+            const originalSubmitterHtml = submitter?.innerHTML;
+
+            function cartButton() {
+                const buttons = Array.from(document.querySelectorAll('[data-cart-button]'));
+                const visibleButtons = buttons.filter((button) => {
+                    const rect = button.getBoundingClientRect();
+                    return rect.width > 0 && rect.height > 0;
+                });
+
+                return visibleButtons.at(-1) || document.querySelector('.cart-button');
+            }
+
+            function setAddButtonState(state) {
+                if (!isAddAction || !submitter) {
+                    return;
+                }
+
+                form.classList.toggle('is-adding', state === 'loading');
+                form.classList.toggle('is-added', state === 'success');
+                submitter.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+
+                const hasText = submitter.textContent.trim().length > 0;
+
+                if (state === 'loading' && hasText) {
+                    submitter.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang thêm';
+                }
+
+                if (state === 'success' && hasText) {
+                    submitter.innerHTML = '<i class="bi bi-check2-circle me-2"></i>Đã thêm';
+                }
+
+                if (state === 'idle' && typeof originalSubmitterHtml === 'string') {
+                    submitter.innerHTML = originalSubmitterHtml;
+                    submitter.removeAttribute('aria-busy');
+                    form.classList.remove('is-adding', 'is-added');
+                }
+            }
+
+            function animateCartButton() {
+                const target = cartButton();
+
+                if (!target) {
+                    return;
+                }
+
+                target.classList.remove('cart-bump');
+                void target.offsetWidth;
+                target.classList.add('cart-bump');
+                window.setTimeout(() => target.classList.remove('cart-bump'), 620);
+            }
+
+            function flyToCart() {
+                const target = cartButton();
+                const source = submitter || form;
+
+                if (!isAddAction || !target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    animateCartButton();
+                    return;
+                }
+
+                const sourceRect = source.getBoundingClientRect();
+                const targetRect = target.getBoundingClientRect();
+                const dot = document.createElement('span');
+
+                dot.className = 'cart-fly-dot';
+                dot.innerHTML = '<i class="bi bi-cup-straw" aria-hidden="true"></i>';
+                dot.style.left = `${sourceRect.left + sourceRect.width / 2}px`;
+                dot.style.top = `${sourceRect.top + sourceRect.height / 2}px`;
+                document.body.appendChild(dot);
+
+                requestAnimationFrame(() => {
+                    dot.style.transform = `translate(${targetRect.left + targetRect.width / 2 - (sourceRect.left + sourceRect.width / 2)}px, ${targetRect.top + targetRect.height / 2 - (sourceRect.top + sourceRect.height / 2)}px) scale(0.35)`;
+                    dot.style.opacity = '0.15';
+                });
+
+                window.setTimeout(() => {
+                    dot.remove();
+                    animateCartButton();
+                }, 760);
+            }
+
+            function showCartFeedback(message) {
+                if (!isAddAction) {
+                    return;
+                }
+
+                let feedback = document.querySelector('[data-cart-feedback]');
+
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'cart-feedback';
+                    feedback.dataset.cartFeedback = 'true';
+                    feedback.setAttribute('role', 'status');
+                    feedback.setAttribute('aria-live', 'polite');
+                    document.body.appendChild(feedback);
+                }
+
+                feedback.innerHTML = `
+                    <span class="cart-feedback-icon"><i class="bi bi-bag-check"></i></span>
+                    <span>${message || 'Đã thêm vào giỏ hàng'}</span>
+                `;
+                feedback.classList.add('show');
+
+                window.clearTimeout(feedback._hideTimer);
+                feedback._hideTimer = window.setTimeout(() => {
+                    feedback.classList.remove('show');
+                }, 1800);
+            }
 
             if (submitter && submitter.name) {
                 formData.set(submitter.name, submitter.value);
+            }
+
+            if (submitter) {
                 submitter.disabled = true;
             }
+
+            setAddButtonState('loading');
 
             try {
                 const response = await fetch(form.action, {
@@ -788,11 +992,17 @@
                 }
 
                 const data = await response.json();
-                const badge = document.querySelector('[data-cart-badge]');
+                const badges = document.querySelectorAll('[data-cart-badge]');
 
-                if (badge) {
+                badges.forEach((badge) => {
                     badge.textContent = data.count;
                     badge.classList.toggle('d-none', data.count < 1);
+                });
+
+                if (isAddAction) {
+                    setAddButtonState('success');
+                    flyToCart();
+                    showCartFeedback(data.message);
                 }
 
                 if (document.body.dataset.page === 'cart') {
@@ -837,6 +1047,10 @@
                         document.querySelectorAll(`[data-cart-subtotal="${CSS.escape(id)}"]`).forEach((element) => {
                             element.textContent = item.subtotal_formatted;
                         });
+
+                        document.querySelectorAll(`[data-cart-row][data-cart-key="${CSS.escape(id)}"]`).forEach((row) => {
+                            row.dataset.cartSubtotalValue = item.subtotal;
+                        });
                     });
 
                     document.querySelectorAll('[data-cart-total]').forEach((element) => {
@@ -846,12 +1060,17 @@
                     if (form.dataset.cartRemove === 'true') {
                         form.closest('[data-cart-row]')?.remove();
                     }
+
+                    document.dispatchEvent(new CustomEvent('cart:updated', { detail: data }));
                 }
             } catch (error) {
                 console.error('Không thể cập nhật giỏ hàng.', error);
             } finally {
                 if (submitter) {
-                    submitter.disabled = false;
+                    window.setTimeout(() => {
+                        submitter.disabled = false;
+                        setAddButtonState('idle');
+                    }, isAddAction ? 900 : 0);
                 }
             }
         });

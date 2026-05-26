@@ -16,6 +16,10 @@ class Order extends Model
      */
     protected $fillable = [
         'user_id',
+        'subtotal',
+        'shipping_fee',
+        'discount',
+        'total',
         'total_price',
         'payment_method',
         'status',
@@ -29,6 +33,10 @@ class Order extends Model
      */
     protected $casts = [
         'total_price' => 'decimal:2',
+        'subtotal' => 'integer',
+        'shipping_fee' => 'integer',
+        'discount' => 'integer',
+        'total' => 'integer',
     ];
 
     /**

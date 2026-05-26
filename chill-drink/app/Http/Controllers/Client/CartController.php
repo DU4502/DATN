@@ -14,6 +14,8 @@ class CartController extends Controller
             'S' => ['label' => 'Size S', 'extra' => 0],
             'M' => ['label' => 'Size M', 'extra' => 5000],
             'L' => ['label' => 'Size L', 'extra' => 10000],
+            'XL' => ['label' => 'Size XL', 'extra' => 15000],
+            'XXL' => ['label' => 'Size XXL', 'extra' => 20000],
         ];
     }
 

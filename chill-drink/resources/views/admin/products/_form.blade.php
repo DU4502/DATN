@@ -1,5 +1,11 @@
 @csrf
 
+@php
+    $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_images') ?: '[]', true) ?: [])
+        ->filter()
+        ->values();
+@endphp
+
 <div class="row g-4">
     <div class="col-lg-8">
         <div class="admin-card card border-0">
@@ -45,6 +51,33 @@
                     </div>
                     @error('image')
                         <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="mt-4">
+                    <label for="gallery_images" class="form-label">Ảnh con / gallery chi tiết</label>
+                    @if($storedGalleryImages->isNotEmpty())
+                        <div class="d-flex flex-wrap gap-3 mb-3">
+                            @foreach($storedGalleryImages as $galleryImage)
+                                @php
+                                    $galleryUrl = str_starts_with($galleryImage, 'http')
+                                        ? $galleryImage
+                                        : \Illuminate\Support\Facades\Storage::disk('public')->url($galleryImage);
+                                @endphp
+                                <label class="admin-form-image-preview position-relative" style="cursor: pointer;">
+                                    <img src="{{ $galleryUrl }}" alt="Ảnh con {{ $loop->iteration }}">
+                                    <span class="position-absolute bottom-0 start-0 end-0 bg-white bg-opacity-90 px-2 py-1 small text-danger fw-bold">
+                                        <input type="checkbox" name="remove_gallery_images[]" value="{{ $galleryImage }}" class="form-check-input me-1">
+                                        Xóa
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+                    <input id="gallery_images" type="file" name="gallery_images[]" class="form-control @error('gallery_images.*') is-invalid @enderror" accept="image/jpeg,image/jpg,image/png,image/webp" multiple>
+                    <small class="text-secondary d-block mt-2">Có thể chọn nhiều ảnh con. Các ảnh này sẽ hiện dưới ảnh chính ở trang chi tiết sản phẩm.</small>
+                    @error('gallery_images.*')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
                     @enderror
                 </div>
             </div>
