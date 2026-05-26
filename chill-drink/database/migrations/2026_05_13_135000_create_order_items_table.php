@@ -11,14 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_items', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('order_id')->index();
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->integer('quantity');
-            $table->decimal('price', 10, 2);
-            $table->timestamps();
-        });
+        // Legacy migration kept for history only.
+        // `order_items` is created by 2026_05_17_121748_create_order_items_table.
+        return;
     }
 
     /**
@@ -26,6 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_items');
+        // Keep legacy migration fully no-op to avoid dropping the active `order_items` table.
+        return;
     }
 };

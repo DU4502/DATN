@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('categories', function (Blueprint $table) {
-            $table->id();
+            $table->integer('id')->autoIncrement();
             $table->string('name');
             // Thêm dòng này để tạo cột status cố định cho bảng
             $table->tinyInteger('status')->default(1);
