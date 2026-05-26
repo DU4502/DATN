@@ -7,6 +7,7 @@
     <div class="col-lg-5">
         <div class="admin-card card border-0 overflow-hidden p-3">
             <x-product-image
+                :src="$product->image_url"
                 :sku="$product->sku ?? null"
                 :name="$product->name"
                 :alt="$product->name"
