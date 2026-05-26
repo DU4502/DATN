@@ -73,7 +73,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::view('/vouchers', 'admin.vouchers.index')->name('vouchers.index');
     
     // Product Management
-    Route::resource('products', AdminProductController::class)->only(['index']);
+    Route::resource('products', AdminProductController::class);
     
     // Category Management
     Route::resource('categories', CategoryController::class)->only(['index']);
