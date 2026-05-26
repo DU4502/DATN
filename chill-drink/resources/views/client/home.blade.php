@@ -425,7 +425,22 @@
 
         <div class="row g-4">
             @php
-                $homeFeaturedProducts = ($featuredProducts ?? collect())->take(8);
+                $homeFeaturedSkus = $uiHomeFeaturedSkus ?? [
+                    'CD-TS-001', 'CD-CF-001', 'CD-ST-001', 'CD-NE-001',
+                    'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
+                ];
+                $homeHasSkuColumn = \Illuminate\Support\Facades\Schema::hasColumn('products', 'sku');
+                $homeFeaturedProducts = $homeHasSkuColumn
+                    ? \App\Models\Product::with('category')
+                        ->whereIn('sku', $homeFeaturedSkus)
+                        ->get()
+                        ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
+                        ->values()
+                    : \App\Models\Product::with('category')
+                        ->where('status', true)
+                        ->latest()
+                        ->limit(8)
+                        ->get();
             @endphp
             @forelse($homeFeaturedProducts as $product)
                 <div class="col-sm-6 col-lg-3">
