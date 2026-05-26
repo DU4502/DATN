@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -21,7 +20,10 @@ class NewPasswordController extends Controller
      */
     public function create(Request $request): View
     {
-        return view('auth.reset-password', ['request' => $request]);
+        return view('auth.reset-password', [
+            'email' => (string) $request->query('email', ''),
+            'token' => (string) $request->route('token'),
+        ]);
     }
 
     /**
@@ -37,10 +39,23 @@ class NewPasswordController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'token'),
             function (User $user) use ($validated) {
-                $user->forceFill([
+                $passwordData = [
                     'password' => Hash::make($validated['password']),
-                    'remember_token' => Str::random(60),
-                ])->save();
+                ];
+
+                if (Schema::hasColumn('users', 'remember_token')) {
+                    $passwordData['remember_token'] = Str::random(60);
+                }
+
+                if (Schema::hasColumn('users', 'reset_token')) {
+                    $passwordData['reset_token'] = null;
+                }
+
+                if (Schema::hasColumn('users', 'reset_expire')) {
+                    $passwordData['reset_expire'] = null;
+                }
+
+                $user->forceFill($passwordData)->save();
 
                 event(new PasswordReset($user));
             }

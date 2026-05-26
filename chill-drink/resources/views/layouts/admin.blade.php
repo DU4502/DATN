@@ -15,6 +15,7 @@
 
     <style>
         :root {
+            --font-ui: Figtree, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             --admin-primary: #006b5f;
             --admin-primary-soft: #b3ebe1;
             --admin-secondary: #316760;
@@ -33,7 +34,7 @@
             margin: 0;
             color: var(--admin-ink);
             background: var(--admin-bg);
-            font-family: Figtree, Arial, sans-serif;
+            font-family: var(--font-ui);
             font-size: 16px;
             line-height: 1.55;
             letter-spacing: 0;
@@ -47,7 +48,7 @@
         select,
         textarea,
         table {
-            font-family: Figtree, Arial, sans-serif !important;
+            font-family: var(--font-ui) !important;
             letter-spacing: 0 !important;
         }
 
@@ -277,6 +278,15 @@
             border-radius: 50%;
             background: linear-gradient(135deg, #9ad1c8, var(--admin-primary));
             box-shadow: 0 12px 24px rgba(0, 107, 95, 0.16);
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+
+        .admin-avatar img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
         }
 
         .admin-page {
@@ -290,6 +300,11 @@
             background: var(--admin-surface);
             box-shadow: var(--admin-shadow);
             overflow: hidden;
+        }
+
+        .admin-table-card,
+        .admin-table-card .table-responsive {
+            overflow: visible;
         }
 
         .admin-metric {
@@ -357,12 +372,103 @@
         }
 
         .admin-thumb {
-            width: 64px;
-            height: 64px;
-            object-fit: cover;
-            border-radius: 14px;
+            width: 58px;
+            height: 58px;
+            border-radius: 13px;
             border: 1px solid rgba(188, 201, 198, 0.65);
             background: var(--admin-soft);
+        }
+
+        .admin-thumb img,
+        .admin-thumb .product-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain !important;
+            object-position: center;
+            padding: 0.28rem;
+            background: #ffffff;
+            box-sizing: border-box;
+        }
+
+        .admin-form-image-preview,
+        .admin-review-thumb {
+            width: 88px;
+            height: 88px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid rgba(0, 107, 95, 0.16);
+            border-radius: 16px;
+            background: var(--admin-soft-2);
+            color: var(--admin-muted);
+            flex: 0 0 auto;
+        }
+
+        .admin-form-image-preview img,
+        .admin-review-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain !important;
+            object-position: center;
+            padding: 0.28rem;
+            background: #ffffff;
+            box-sizing: border-box;
+        }
+
+        .admin-review-thumb {
+            width: 54px;
+            height: 54px;
+            border-radius: 13px;
+            color: var(--admin-primary);
+        }
+
+        .admin-period-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .admin-period-pill {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.55rem 1rem;
+            border: 1px solid rgba(0, 107, 95, 0.26);
+            border-radius: 999px;
+            color: var(--admin-primary);
+            background: #ffffff;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .admin-period-pill.active {
+            color: #ffffff;
+            background: var(--admin-primary);
+            border-color: var(--admin-primary);
+        }
+
+        .admin-period-card {
+            height: 100%;
+            padding: 20px;
+            border: 1px solid rgba(188, 201, 198, 0.55);
+            border-radius: 14px;
+            background: #ffffff;
+        }
+
+        .admin-rating {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #8a5a00;
+            background: #fff4d6;
+            border-radius: 999px;
+            padding: 0.42rem 0.75rem;
+            font-weight: 800;
+            white-space: nowrap;
         }
 
         .admin-action {
@@ -379,6 +485,63 @@
 
         .admin-action:hover {
             background: var(--admin-primary-soft);
+        }
+
+        .admin-dropdown-menu {
+            min-width: 190px;
+            padding: 0.45rem;
+            border: 1px solid rgba(188, 201, 198, 0.65);
+            border-radius: 14px;
+            box-shadow: 0 18px 42px rgba(7, 52, 58, 0.12);
+            z-index: 1085;
+        }
+
+        .admin-dropdown-menu .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            min-height: 38px;
+            border-radius: 10px;
+            color: var(--admin-ink);
+            font-weight: 700;
+        }
+
+        .admin-dropdown-menu .dropdown-item:hover {
+            color: var(--admin-primary);
+            background: var(--admin-soft-2);
+        }
+
+        .admin-dropdown-menu .dropdown-item.danger:hover {
+            color: var(--admin-danger);
+            background: #fff1ef;
+        }
+
+        .admin-review-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+        }
+
+        .admin-filter-pill {
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(0, 107, 95, 0.16);
+            border-radius: 999px;
+            padding: 0.5rem 0.95rem;
+            color: var(--admin-muted);
+            background: var(--admin-soft);
+            font-size: 0.9rem;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+        .admin-filter-pill.active {
+            color: #154f48;
+            background: var(--admin-primary-soft);
+            border-color: var(--admin-primary-soft);
         }
 
         .btn {
@@ -462,6 +625,11 @@
             .admin-page {
                 padding: 20px;
             }
+
+            .admin-table-card .table-responsive {
+                overflow-x: auto;
+                overflow-y: visible;
+            }
         }
     </style>
 </head>
@@ -482,11 +650,11 @@
                 <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-grid"></i> Danh mục</a>
                 <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-heart"></i> Đánh giá</a>
                 <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
             </nav>
 
             <div class="admin-sidebar-footer">
-                <a href="{{ route('admin.products.index') }}" class="btn btn-primary w-100 mb-2"><i class="bi bi-plus-lg me-1"></i>Sản phẩm mới</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="btn btn-outline-primary w-100">Đăng xuất</button>
@@ -506,7 +674,18 @@
                 <div class="admin-topbar-actions">
                     <a href="{{ route('home') }}" class="btn btn-outline-primary btn-sm">Xem web</a>
                     <span class="text-secondary fw-semibold d-none d-lg-inline">{{ Auth::user()->name }}</span>
-                    <div class="admin-avatar" aria-label="Tài khoản">{{ mb_substr(Auth::user()->name, 0, 1) }}</div>
+                    @php
+                        $adminAvatar = Auth::user()->avatar;
+                        $adminAvatarIsImage = $adminAvatar && ! str_starts_with($adminAvatar, 'preset-');
+                        $adminAvatarUrl = $adminAvatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($adminAvatar) : null;
+                    @endphp
+                    <div class="admin-avatar" aria-label="Tài khoản">
+                        @if($adminAvatarUrl)
+                            <img src="{{ $adminAvatarUrl }}" alt="{{ Auth::user()->name }}">
+                        @else
+                            {{ mb_substr(Auth::user()->name, 0, 1) }}
+                        @endif
+                    </div>
                 </div>
             </header>
 
@@ -525,5 +704,23 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.querySelectorAll('[data-image-input]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const target = document.querySelector(input.dataset.previewTarget);
+                const file = input.files && input.files[0];
+
+                if (!target || !file) {
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    target.innerHTML = `<img src="${event.target.result}" alt="Xem trước ảnh sản phẩm">`;
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+    </script>
 </body>
 </html>

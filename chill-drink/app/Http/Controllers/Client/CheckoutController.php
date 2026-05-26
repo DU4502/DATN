@@ -60,12 +60,16 @@ class CheckoutController extends Controller
 
             // Create order items
             foreach ($cart as $productId => $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $productId,
-                    'quantity' => $item['quantity'],
-                    'price' => $item['price'],
-                ]);
+                $productId = $item['product_id'] ?? $productId;
+
+                if (is_numeric($productId)) {
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_id' => $productId,
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],
+                    ]);
+                }
             }
 
             // Clear cart
@@ -73,11 +77,11 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            return redirect()->route('home')->with('success', 'Order placed successfully!');
+            return redirect()->route('home')->with('success', 'Đặt hàng thành công!');
             
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Something went wrong!');
+            return redirect()->back()->with('error', 'Có lỗi xảy ra, vui lòng thử lại!');
         }
     }
 }

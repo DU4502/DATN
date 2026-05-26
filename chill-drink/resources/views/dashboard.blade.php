@@ -12,6 +12,7 @@
                 <p class="text-secondary mb-4">Bạn đã đăng nhập thành công. Từ đây bạn có thể xem thông tin tài khoản hoặc tiếp tục chọn đồ uống.</p>
                 <div class="d-flex flex-wrap gap-3">
                     <a href="{{ route('profile.edit') }}" class="btn btn-primary">Thông tin tài khoản</a>
+                    <a href="{{ route('profile.orders') }}" class="btn btn-outline-primary">Đơn hàng của tôi</a>
                     <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Xem sản phẩm</a>
                 </div>
             </div>
