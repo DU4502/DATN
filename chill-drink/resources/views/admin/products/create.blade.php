@@ -70,6 +70,20 @@
                     </div>
 
                     <div class="mb-4">
+                        <label for="gallery_images" class="form-label fw-semibold">Ảnh con / gallery chi tiết</label>
+                        <input type="file"
+                            class="form-control @error('gallery_images.*') is-invalid @enderror"
+                            id="gallery_images"
+                            name="gallery_images[]"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            multiple>
+                        <small class="text-secondary d-block mt-2">Chọn nhiều ảnh con để hiển thị dưới ảnh chính ở trang chi tiết sản phẩm.</small>
+                        @error('gallery_images.*')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-4">
                         <label for="price" class="form-label fw-semibold">Giá (VNĐ) <span class="text-danger">*</span></label>
                         <input type="number" class="form-control @error('price') is-invalid @enderror"
                             id="price" name="price" value="{{ old('price') }}" min="0" required>

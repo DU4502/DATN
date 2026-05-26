@@ -9,9 +9,7 @@
             <div class="col-lg-9 col-xl-8">
                 <div class="auth-card auth-card-register card border-0">
                     <div class="card-body p-4 p-md-5">
-                        <div class="brand-mark auth-brand-mark mb-3" aria-label="Chill Drink">
-                            <i class="bi bi-cup-straw" aria-hidden="true"></i>
-                        </div>
+                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark auth-brand-mark mb-3" style="background: white; object-fit: contain; padding: 2px;">
                         <h1 class="h3 fw-bold text-center mb-2">Tạo Tài Khoản</h1>
                         <p class="text-secondary text-center mb-4">Lưu thông tin liên hệ để đặt đồ uống và theo dõi đơn hàng thuận tiện hơn.</p>
 

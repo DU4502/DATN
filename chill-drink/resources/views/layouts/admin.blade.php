@@ -637,7 +637,7 @@
     <div class="admin-shell">
         <aside class="admin-sidebar">
             <a href="{{ route('admin.dashboard') }}" class="admin-logo">
-                <span class="admin-logo-mark"><i class="bi bi-cup-straw"></i></span>
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="background: white; object-fit: contain; padding: 2px;">
                 <span>
                     <span class="admin-logo-title d-block">Chill Drink</span>
                     <span class="admin-logo-subtitle">Bảng quản trị</span>

@@ -150,6 +150,7 @@
                     <div class="order-item-thumb">
                         @if($product)
                             <x-product-image
+                                :src="$product->image_url"
                                 :sku="$product->sku"
                                 :name="$product->name"
                                 :alt="$product->name"
