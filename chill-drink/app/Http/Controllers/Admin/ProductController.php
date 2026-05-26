@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -40,6 +41,8 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'gallery_images' => 'nullable|array|max:6',
+            'gallery_images.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'stock' => 'required|integer|min:0',
@@ -60,6 +63,14 @@ class ProductController extends Controller
             $data['image'] = $request->file('image')->store('products', 'public');
         }
 
+        if (Schema::hasColumn('products', 'gallery_images')) {
+            $galleryImages = $this->storeGalleryImages($request);
+
+            if (! empty($galleryImages)) {
+                $data['gallery_images'] = $galleryImages;
+            }
+        }
+
         Product::create($data);
 
         return redirect()->route('admin.products.index')->with('success', 'Thêm sản phẩm thành công!');
@@ -70,7 +81,17 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $product = Product::with('category')
+            ->withCount('orderItems')
+            ->findOrFail($id);
+
+        if (Schema::hasTable('reviews')) {
+            $product->loadCount('reviews');
+        } else {
+            $product->setAttribute('reviews_count', 0);
+        }
+
+        return view('admin.products.show', compact('product'));
     }
 
     /**
@@ -95,6 +116,10 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'gallery_images' => 'nullable|array|max:6',
+            'gallery_images.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'remove_gallery_images' => 'nullable|array',
+            'remove_gallery_images.*' => 'string',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'stock' => 'required|integer|min:0',
@@ -118,6 +143,28 @@ class ProductController extends Controller
             $data['image'] = $request->file('image')->store('products', 'public');
         }
 
+        if (Schema::hasColumn('products', 'gallery_images')) {
+            $galleryImages = $this->galleryImagePaths($product);
+            $removeGalleryImages = array_filter((array) $request->input('remove_gallery_images', []));
+
+            if (! empty($removeGalleryImages)) {
+                foreach ($removeGalleryImages as $image) {
+                    if (in_array($image, $galleryImages, true) && ! str_starts_with($image, 'http')) {
+                        Storage::disk('public')->delete($image);
+                    }
+                }
+
+                $galleryImages = array_values(array_diff($galleryImages, $removeGalleryImages));
+            }
+
+            $galleryImages = array_values(array_unique(array_merge(
+                $galleryImages,
+                $this->storeGalleryImages($request)
+            )));
+
+            $data['gallery_images'] = $galleryImages;
+        }
+
         $product->update($data);
 
         return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
@@ -134,8 +181,37 @@ class ProductController extends Controller
             Storage::disk('public')->delete($product->image);
         }
 
+        foreach ($this->galleryImagePaths($product) as $image) {
+            if (! str_starts_with($image, 'http')) {
+                Storage::disk('public')->delete($image);
+            }
+        }
+
         $product->delete();
 
         return redirect()->route('admin.products.index')->with('success', 'Xóa sản phẩm thành công!');
+    }
+
+    private function storeGalleryImages(Request $request): array
+    {
+        if (! $request->hasFile('gallery_images')) {
+            return [];
+        }
+
+        return collect($request->file('gallery_images'))
+            ->filter()
+            ->map(fn ($file) => $file->store('products/gallery', 'public'))
+            ->values()
+            ->all();
+    }
+
+    private function galleryImagePaths(Product $product): array
+    {
+        $galleryImages = $product->getRawOriginal('gallery_images');
+        $galleryImages = is_string($galleryImages) ? json_decode($galleryImages, true) : $galleryImages;
+
+        return is_array($galleryImages)
+            ? array_values(array_filter($galleryImages))
+            : [];
     }
 }

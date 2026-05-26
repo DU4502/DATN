@@ -289,6 +289,7 @@
                             <article class="shop-product-card">
                                 <a href="{{ route('products.show', $product->slug) }}" class="shop-product-image d-block mb-3">
                                     <x-product-image
+                                        :src="$product->image_url"
                                         :sku="$product->sku ?? null"
                                         :alt="$product->name"
                                         :name="$product->name"
@@ -378,13 +379,13 @@
     </div>
 </section>
 
-<a href="{{ route('cart.index') }}" class="position-fixed bottom-0 end-0 m-4 add-round shadow-lg" style="z-index: 30;" aria-label="Giỏ hàng">
+<a href="{{ route('cart.index') }}" class="position-fixed bottom-0 end-0 m-4 add-round shadow-lg" style="z-index: 30;" aria-label="Giỏ hàng" data-cart-button>
     <svg width="21" height="21" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
     </svg>
-    @if(session('cart'))
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ count(session('cart')) }}</span>
-    @endif
+    <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {{ session('cart') ? '' : 'd-none' }}">
+        {{ session('cart') ? count(session('cart')) : 0 }}
+    </span>
 </a>
 @endsection

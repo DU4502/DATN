@@ -447,6 +447,7 @@
                     <div class="product-card drink-card card h-100 overflow-hidden border-0">
                         <a href="{{ route('products.show', $product->slug) }}" class="d-block">
                             <x-product-image
+                                :src="$product->image_url"
                                 :sku="$product->sku ?? null"
                                 :name="$product->name"
                                 :alt="$product->name"
