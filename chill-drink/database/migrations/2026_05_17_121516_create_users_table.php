@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
+            $table->integer('id')->autoIncrement();
 
             // Tạo cột role_id kiểu INT thông thường để khớp với bảng roles cũ
             $table->integer('role_id')->default(1);
