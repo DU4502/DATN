@@ -14,11 +14,11 @@
         <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
     </div>
     <div class="text-lg-end">
-        <p class="admin-kicker mb-1">Tình trạng kho</p>
+        <p class="admin-kicker mb-1">Tình trạng sản phẩm</p>
         <div class="d-flex align-items-center gap-3">
             <div><span class="admin-value text-primary">{{ $products->total() ?? $products->count() }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
             <div style="width:1px;height:38px;background:var(--admin-border);"></div>
-            <div><span class="admin-value" style="color:var(--admin-danger);">0</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
+            <div><span class="admin-value" style="color:var(--admin-danger);">{{ $products->where('status', false)->count() }}</span><small class="d-block text-secondary fw-bold">Đã ẩn</small></div>
         </div>
     </div>
 </section>

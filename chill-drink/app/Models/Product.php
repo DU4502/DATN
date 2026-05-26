@@ -97,6 +97,12 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function sizes()
+    {
+        return $this->belongsToMany(Size::class, 'product_sizes')
+            ->withPivot('price');
+    }
+
     /**
      * Get all reviews for the product
      */

@@ -6,6 +6,12 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+<<<<<<< Updated upstream
+=======
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+>>>>>>> Stashed changes
 use Tests\TestCase;
 
 class ProductManagementTest extends TestCase
@@ -17,7 +23,6 @@ class ProductManagementTest extends TestCase
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Trà Sữa',
-            'slug' => 'tra-sua',
             'status' => true,
         ]);
 
@@ -36,12 +41,42 @@ class ProductManagementTest extends TestCase
         $response->assertRedirect(route('admin.products.show', $product));
     }
 
+<<<<<<< Updated upstream
+=======
+    public function test_admin_can_upload_image_when_creating_product(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Trà Trái Cây',
+            'status' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('admin.products.store'), [
+            'category_id' => $category->id,
+            'name' => 'Trà Đào Cam Sả',
+            'price' => 49000,
+            'stock' => 10,
+            'status' => '1',
+            'image' => UploadedFile::fake()->create('tra-dao-cam-sa.png', 120, 'image/png'),
+        ]);
+
+        $product = Product::firstWhere('slug', 'tra-dao-cam-sa');
+
+        $this->assertNotNull($product);
+        $this->assertNotNull($product->image);
+        $this->assertStringStartsWith('products/', $product->image);
+        Storage::disk('public')->assertExists($product->image);
+        $response->assertRedirect(route('admin.products.show', $product));
+    }
+
+>>>>>>> Stashed changes
     public function test_admin_can_update_product(): void
     {
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Cà Phê',
-            'slug' => 'ca-phe',
             'status' => true,
         ]);
         $product = Product::create([
@@ -70,12 +105,54 @@ class ProductManagementTest extends TestCase
         $response->assertRedirect(route('admin.products.show', $product));
     }
 
+<<<<<<< Updated upstream
+=======
+    public function test_admin_can_replace_old_image_when_updating_product(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Soda',
+            'status' => true,
+        ]);
+
+        $oldPath = UploadedFile::fake()->create('old-image.jpg', 120, 'image/jpeg')->store('products', 'public');
+
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Soda Blue',
+            'slug' => 'soda-blue',
+            'image' => $oldPath,
+            'price' => 35000,
+            'stock' => 8,
+            'status' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('admin.products.update', $product->id), [
+            'category_id' => $category->id,
+            'name' => 'Soda Blue New',
+            'slug' => 'soda-blue-new',
+            'price' => 37000,
+            'stock' => 12,
+            'status' => '1',
+            'image' => UploadedFile::fake()->create('new-image.jpg', 120, 'image/jpeg'),
+        ]);
+
+        $product->refresh();
+
+        Storage::disk('public')->assertMissing($oldPath);
+        Storage::disk('public')->assertExists($product->image);
+        $this->assertNotSame($oldPath, $product->image);
+        $response->assertRedirect(route('admin.products.show', $product));
+    }
+
+>>>>>>> Stashed changes
     public function test_admin_can_delete_product_without_orders(): void
     {
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Soda',
-            'slug' => 'soda',
             'status' => true,
         ]);
         $product = Product::create([
@@ -93,10 +170,48 @@ class ProductManagementTest extends TestCase
         $response->assertRedirect(route('admin.products.index'));
     }
 
+<<<<<<< Updated upstream
+=======
+    public function test_product_validation_rejects_invalid_image_and_negative_values(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Nước Ép',
+            'status' => true,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from(route('admin.products.create'))
+            ->post(route('admin.products.store'), [
+                'category_id' => $category->id,
+                'name' => 'Cam Ép Test',
+                'price' => -1,
+                'stock' => -5,
+                'status' => '1',
+                'image' => UploadedFile::fake()->create('wrong-file.pdf', 120, 'application/pdf'),
+            ]);
+
+        $response->assertRedirect(route('admin.products.create'));
+        $response->assertSessionHasErrors(['image', 'price', 'stock']);
+        $this->assertDatabaseMissing('products', ['name' => 'Cam Ép Test']);
+    }
+
+>>>>>>> Stashed changes
     private function admin(): User
     {
-        return User::factory()->create([
-            'role' => 'admin',
+        DB::table('roles')->updateOrInsert(
+            ['id' => 2],
+            ['name' => 'admin', 'description' => 'Administrator']
+        );
+
+        return User::create([
+            'name' => 'Admin Test',
+            'email' => 'admin-test-'.uniqid().'@example.com',
+            'password' => bcrypt('password'),
+            'role_id' => 2,
+            'is_active' => 1,
         ]);
     }
 }

@@ -41,8 +41,8 @@
                 <div class="row g-3 my-4">
                     <div class="col-sm-4">
                         <div class="border rounded-3 p-3">
-                            <div class="text-secondary small">Tồn kho</div>
-                            <div class="h5 fw-bold mb-0">{{ $product->stock ?? 0 }}</div>
+                            <div class="text-secondary small">Số size áp dụng</div>
+                            <div class="h5 fw-bold mb-0">{{ $product->sizes->count() }}</div>
                         </div>
                     </div>
                     <div class="col-sm-4">
@@ -58,6 +58,23 @@
                         </div>
                     </div>
                 </div>
+
+                @if($product->sizes->isNotEmpty())
+                    <div class="border rounded-3 p-3 mb-4">
+                        <div class="text-secondary small mb-2">Giá theo size</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach($product->sizes->sortBy('id') as $size)
+                                @php
+                                    $sizeName = trim((string) $size->name);
+                                    $sizeLabel = str_starts_with(mb_strtolower($sizeName), 'size') ? $sizeName : 'Size '.$sizeName;
+                                @endphp
+                                <span class="badge badge-soft-primary">
+                                    {{ $sizeLabel }}: {{ number_format((int) ($size->pivot->price ?? 0), 0, ',', '.') }}đ
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
 
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('admin.products.edit', $product->id) }}" class="btn btn-primary">Sửa sản phẩm</a>
