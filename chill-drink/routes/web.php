@@ -61,28 +61,28 @@ Route::middleware('auth')->group(function () {
 /*
 |--------------------------------------------------------------------------
 | Admin Routes
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------https://antigravity.google/support
 */
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
-    
+
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Voucher Management (UI only)
     Route::view('/vouchers', 'admin.vouchers.index')->name('vouchers.index');
-    
+
     // Product Management
     Route::resource('products', AdminProductController::class)->only(['index']);
-    
+
     // Category Management
     Route::resource('categories', CategoryController::class)->only(['index']);
-    
+
     // Order Management
     Route::resource('orders', OrderController::class)->only(['index']);
-    
+
     // User Management
     Route::resource('users', UserController::class)->only(['index']);
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
