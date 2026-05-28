@@ -6,6 +6,7 @@ use App\Support\ProductCatalog;
 use App\Support\ProductImage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
 {
@@ -22,6 +23,7 @@ class Product extends Model
         'slug',
         'sku',
         'image',
+        'gallery_images',
         'price',
         'description',
         'stock',
@@ -34,6 +36,7 @@ class Product extends Model
      * @var array
      */
     protected $casts = [
+        'gallery_images' => 'array',
         'price' => 'decimal:2',
         'status' => 'boolean',
     ];
@@ -52,8 +55,13 @@ class Product extends Model
                 $product->category?->name,
             );
 
-            $product->sku ??= $codes['sku'];
-            $product->slug ??= $codes['slug'];
+            if (Schema::hasColumn('products', 'sku')) {
+                $product->sku ??= $codes['sku'];
+            }
+
+            if (Schema::hasColumn('products', 'slug')) {
+                $product->slug ??= $codes['slug'];
+            }
 
             if (empty($product->description) || ProductCatalog::isPlaceholderDescription($product->description)) {
                 $product->description = $codes['description'];
@@ -118,11 +126,34 @@ class Product extends Model
 
     public function getGalleryImagesAttribute(): array
     {
-        return ProductImage::gallery(
+        $rawGallery = $this->attributes['gallery_images'] ?? null;
+        $storedGallery = is_string($rawGallery) ? json_decode($rawGallery, true) : $rawGallery;
+        $storedGallery = is_array($storedGallery) ? $storedGallery : [];
+
+        $manualImages = collect($storedGallery)
+            ->filter()
+            ->map(fn ($image) => ProductImage::resolve(
+                (string) $image,
+                $this->category?->name,
+                $this->id,
+                1000,
+            ))
+            ->all();
+
+        $generatedImages = ProductImage::gallery(
             $this->image,
             $this->category?->name,
             $this->id,
             1000,
         );
+
+        $mainImage = $generatedImages[0] ?? $this->image_url;
+
+        return collect([$mainImage])
+            ->merge($manualImages)
+            ->merge($generatedImages)
+            ->unique()
+            ->values()
+            ->all();
     }
 }
