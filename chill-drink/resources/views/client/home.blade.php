@@ -28,76 +28,6 @@
         z-index: 1;
     }
 
-    .hero-carousel .carousel-item {
-        min-height: 540px;
-        overflow: hidden;
-        transition: opacity 1.45s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        transform: translateZ(0);
-        backface-visibility: hidden;
-        will-change: opacity;
-    }
-
-    .hero-carousel .carousel-item-next,
-    .hero-carousel .carousel-item-prev,
-    .hero-carousel .carousel-item.active {
-        display: block;
-    }
-
-    .hero-carousel .carousel-item::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(90deg, rgba(0, 31, 25, 0.90), rgba(0, 58, 48, 0.62) 48%, rgba(12, 77, 55, 0.25));
-        z-index: 1;
-    }
-
-    .hero-slide-image {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transform: scale(1.01) translateZ(0);
-        backface-visibility: hidden;
-    }
-
-    .hero-carousel .carousel-item.active .hero-copy {
-        animation: heroCopyIn 0.85s ease both;
-    }
-
-    .hero-carousel .carousel-indicators {
-        bottom: 28px;
-        margin-bottom: 0;
-    }
-
-    .hero-carousel .carousel-indicators [data-bs-target] {
-        width: 34px;
-        height: 7px;
-        border: 0;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.55);
-    }
-
-    .hero-carousel .carousel-indicators .active {
-        background: #ffffff;
-    }
-
-    .hero-carousel .carousel-control-prev,
-    .hero-carousel .carousel-control-next {
-        width: 7%;
-    }
-
-    @keyframes heroCopyIn {
-        from {
-            opacity: 0;
-            transform: translateY(18px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
     .hero-badge {
         background: rgba(255, 255, 255, 0.16);
         border: 1px solid rgba(255, 255, 255, 0.28);
@@ -120,23 +50,6 @@
         background: linear-gradient(135deg, rgba(79, 183, 168, 0.13), rgba(184, 234, 223, 0.26));
         color: var(--drink-primary);
         font-weight: 800;
-    }
-
-    .promo-card {
-        background: rgba(255, 255, 255, 0.94);
-        border: 1px solid rgba(255, 255, 255, 0.72);
-        border-radius: 22px;
-        box-shadow: 0 28px 70px rgba(7, 52, 58, 0.24);
-        backdrop-filter: blur(16px);
-    }
-
-    .promo-pill {
-        background: #edf9f6;
-        color: #2f8f83;
-        border-radius: 999px;
-        padding: 0.35rem 0.75rem;
-        font-weight: 800;
-        font-size: 0.8rem;
     }
 
     .category-card {
@@ -221,13 +134,6 @@
         text-align: center;
     }
 
-    @media (max-width: 991.98px) {
-        .hero-carousel .carousel-item,
-        .hero-carousel .row {
-            min-height: 620px !important;
-        }
-    }
-
     @media (max-width: 575.98px) {
         .product-card img {
             height: 230px;
@@ -235,142 +141,7 @@
     }
 </style>
 
-<section class="home-hero">
-    <div id="drinkHeroCarousel" class="carousel slide carousel-fade hero-carousel" data-bs-interval="5200" data-bs-pause="hover">
-        <div class="carousel-indicators">
-            <button type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-            <button type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
-            <button type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
-        </div>
-
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img class="hero-slide-image" src="https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1800&q=85" alt="Đồ uống mát lạnh" fetchpriority="high">
-                <div class="container hero-content py-5">
-                    <div class="row align-items-center g-5" style="min-height: 540px;">
-                        <div class="col-lg-7 hero-copy">
-                            <span class="badge hero-badge rounded-pill px-3 py-2 mb-3">Pha tươi mỗi ngày</span>
-                            <h1 class="display-4 fw-bold mb-3">Đồ uống mát lạnh giao tới bạn trong tích tắc</h1>
-                            <p class="lead mb-4">Trà sữa, cà phê, nước ép và trà trái cây được tuyển chọn gọn gàng để bạn tìm nhanh, chọn dễ và đặt hàng thật nhẹ.</p>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a href="{{ route('products.index') }}" class="btn btn-light btn-lg text-primary fw-bold">Đặt ngay</a>
-                                <a href="#featured-products" class="btn btn-outline-light btn-lg">Xem gợi ý hôm nay</a>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="promo-card text-dark p-4 p-md-5">
-                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                                    <div>
-                                        <span class="promo-pill">Combo nổi bật</span>
-                                        <h2 class="h3 fw-bold mt-3 mb-2">Combo tiết kiệm</h2>
-                                    </div>
-                                    <span class="display-6 fw-bold text-primary">-20%</span>
-                                </div>
-                                <p class="text-secondary mb-4">Combo trà trái cây, cà phê sữa và nước ép được cập nhật theo ngày.</p>
-                                <div class="row g-3 text-center">
-                                    <div class="col-4">
-                                        <div class="h3 fw-bold text-primary mb-0">30'</div>
-                                        <small class="text-secondary">Giao nhanh</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="h3 fw-bold text-primary mb-0">8+</div>
-                                        <small class="text-secondary">Danh mục</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="h3 fw-bold text-primary mb-0">24/7</div>
-                                        <small class="text-secondary">Đặt hàng</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="carousel-item">
-                <img class="hero-slide-image" src="https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1800&q=85" alt="Nước ép trái cây" loading="eager">
-                <div class="container hero-content py-5">
-                    <div class="row align-items-center g-5" style="min-height: 540px;">
-                        <div class="col-lg-7 hero-copy">
-                            <span class="badge hero-badge rounded-pill px-3 py-2 mb-3">Trái cây tươi</span>
-                            <h1 class="display-4 fw-bold mb-3">Nước ép và trà trái cây cho ngày thật nhẹ</h1>
-                            <p class="lead mb-4">Vị chua ngọt cân bằng, màu sắc bắt mắt và menu rõ ràng để bạn chọn món hợp tâm trạng.</p>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a href="{{ route('products.index', ['category' => 4]) }}" class="btn btn-light btn-lg text-primary fw-bold">Xem nước ép</a>
-                                <a href="{{ route('products.index') }}" class="btn btn-outline-light btn-lg">Mở menu</a>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="promo-card text-dark p-4 p-md-5">
-                                <span class="promo-pill">Gợi ý tươi mát</span>
-                                <h2 class="h3 fw-bold mt-3 mb-3">Mát lành tự nhiên</h2>
-                                <p class="text-secondary mb-0">Phù hợp cho bữa trưa, buổi học, giờ làm hoặc những lúc cần nạp lại năng lượng.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="carousel-item">
-                <img class="hero-slide-image" src="https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=1800&q=85" alt="Cà phê và trà sữa" loading="eager">
-                <div class="container hero-content py-5">
-                    <div class="row align-items-center g-5" style="min-height: 540px;">
-                        <div class="col-lg-7 hero-copy">
-                            <span class="badge hero-badge rounded-pill px-3 py-2 mb-3">Cà phê & trà sữa</span>
-                            <h1 class="display-4 fw-bold mb-3">Đậm vị, đẹp mắt, sẵn sàng để thêm vào giỏ</h1>
-                            <p class="lead mb-4">Các món được trình bày bằng card rõ giá, rõ danh mục, giúp trải nghiệm mua hàng nhanh và dễ chịu hơn.</p>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a href="{{ route('products.index', ['category' => 2]) }}" class="btn btn-light btn-lg text-primary fw-bold">Xem cà phê</a>
-                                <a href="{{ route('cart.index') }}" class="btn btn-outline-light btn-lg">Tới giỏ hàng</a>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="promo-card text-dark p-4 p-md-5">
-                                <span class="promo-pill">Đặt nhanh</span>
-                                <h2 class="h3 fw-bold mt-3 mb-3">Đặt nhanh hơn</h2>
-                                <p class="text-secondary mb-0">Tìm kiếm, chọn món, thêm giỏ và thanh toán trong vài thao tác gọn gàng.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <button class="carousel-control-prev" type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Trước</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Sau</span>
-        </button>
-    </div>
-</section>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const hero = document.getElementById('drinkHeroCarousel');
-        if (!hero || !window.bootstrap) {
-            return;
-        }
-
-        const images = Array.from(hero.querySelectorAll('.hero-slide-image')).map((image) => image.src);
-        Promise.all(images.map((src) => new Promise((resolve) => {
-            const image = new Image();
-            image.onload = resolve;
-            image.onerror = resolve;
-            image.src = src;
-        }))).then(() => {
-            bootstrap.Carousel.getOrCreateInstance(hero, {
-                interval: 5200,
-                ride: 'carousel',
-                pause: 'hover',
-                touch: true,
-                wrap: true
-            });
-        });
-    });
-</script>
+<x-animated-slider />
 
 <section class="py-5">
     <div class="container">
