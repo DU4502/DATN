@@ -1,34 +1,34 @@
 @props([
     'beverages' => [
         [
-            'name' => 'MATCHA LATTE',
-            'title' => 'MACCHIATO, A NEW PRODUCT',
+            'name' => 'TRÀ MATCHA',
+            'title' => 'TRÀ MATCHA THANH MÁT, TINH KHIẾT',
             'price' => '85.000₫',
-            'image' => 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&q=80&w=800',
+            'image' => '/images/matcha.png',
             'bg' => '#5d9c59',
-            'desc' => 'Hương vị trà xanh Nhật Bản thượng hạng hòa quyện cùng sữa tươi béo ngậy. Một sự lựa chọn hoàn hảo cho những ai yêu thích sự thanh khiết và tươi mới.'
+            'desc' => 'Hương vị trà xanh Nhật Bản thượng hạng hòa quyện cùng sữa tươi béo ngậy. Một lựa chọn hoàn hảo cho những ai yêu thích sự thanh khiết và tươi mới.'
         ],
         [
-            'name' => 'STRAWBERRY SHAKE',
-            'title' => 'BERRY BLAST, FRESH ENERGY',
+            'name' => 'TRÀ SỮA',
+            'title' => 'TRÀ SỮA CHÂN TRÂU ĐƯỜNG ĐEN',
             'price' => '75.000₫',
-            'image' => 'https://images.unsplash.com/photo-1543362906-acfc16c67564?auto=format&fit=crop&q=80&w=800', 
-            'bg' => '#df2e38',
-            'desc' => 'Dâu tây tươi Đà Lạt thơm mọng kết hợp với kem vani tạo nên sự tươi mát khó cưỡng cho ngày hè năng động và tràn đầy sức sống.'
+            'image' => '/images/trasua.png', 
+            'bg' => '#ffffff',
+            'desc' => 'Trà sữa dâu đỏ đậm đà hòa quyện với sữa tươi, nổi bật trên nền trắng tinh khôi và chữ đỏ rực.'
         ],
         [
-            'name' => 'COLD BREW COFFEE',
-            'title' => 'INTENSE BREW, PURE TASTE',
+            'name' => 'CÀ PHÊ Ủ LẠNH',
+            'title' => 'CÀ PHÊ Ủ LẠNH ĐẬM ĐÀ, SANG CHẢNH',
             'price' => '65.000₫',
-            'image' => 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&q=80&w=800',
+            'image' => '/images/cafe.png',
             'bg' => '#322c2b',
             'desc' => 'Cà phê ủ lạnh 12 giờ cho vị thanh khiết, ít đắng và đượm hương trái cây tự nhiên từ những hạt cà phê Arabica được tuyển chọn kỹ lưỡng.'
         ],
         [
-            'name' => 'MANGO TROPIC',
-            'title' => 'SUMMER VIBE, EXOTIC MIX',
+            'name' => 'XOÀI NHIỆT ĐỚI',
+            'title' => 'HƯƠNG VỊ NHIỆT ĐỚI MÁT LẠNH',
             'price' => '90.000₫',
-            'image' => 'https://images.unsplash.com/photo-1623065426202-18a0ad12e902?auto=format&fit=crop&q=80&w=800',
+            'image' => '/images/sinhtoxoai.png',
             'bg' => '#ffb100',
             'desc' => 'Hương vị xoài chín mọng hòa quyện cùng cốt dừa tươi, mang cả mùa hè nhiệt đới vào từng ngụm nước mát lạnh và thơm nồng nàn.'
         ]
@@ -78,6 +78,27 @@
             color: #fff;
         }
 
+        .item.item-white .content {
+            color: #111;
+        }
+
+        .item.item-white .content h1,
+        .item.item-white .content h2,
+        .item.item-white .content .price,
+        .item.item-white .content .description {
+            color: #111;
+        }
+
+        .item.item-white .btn-order {
+            background: #df2e38;
+            color: #fff;
+        }
+
+        .item.item-white .btn-suggest {
+            color: #111;
+            border-color: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.04);
+        }
 
 
         .list {
@@ -190,7 +211,7 @@
 
         .content .btn-order {
             padding: 16px 36px;
-            background: var(--drink-primary, #008b7a);
+            background: var(--btn-bg, var(--drink-primary, #008b7a));
             color: #fff;
             border: none;
             border-radius: 40px;
@@ -299,31 +320,36 @@
         /* Navigation Arrows */
         .arrows {
             position: absolute;
-            bottom: 40px;
-            left: 45%;
-            transform: translateX(-50%);
+            inset: 0;
             display: flex;
-            gap: 15px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
             z-index: 100;
         }
 
-        .arrows button {
-            width: 45px;
-            height: 45px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #fff;
+        .arrow-btn {
+            pointer-events: auto;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.08);
+            border: 2px solid #000;
+            color: #111;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: 0.3s;
+            transition: transform 0.2s ease, background 0.3s ease, border-color 0.3s ease;
             backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
         }
 
-        .arrows button:hover {
+        .arrow-btn:hover {
             background: rgba(255,255,255,0.2);
-            border-color: #fff;
+            border-color: #000;
+            transform: scale(1.05);
         }
 
         /* Responsive Design */
@@ -365,7 +391,7 @@
 
     <div class="list">
         @foreach($beverages as $item)
-            <div class="item" style="--bg: {{ $item['bg'] }}">
+            <div class="item{{ $item['name'] === 'TRÀ SỮA' ? ' item-white' : '' }}" style="--bg: {{ $item['bg'] }}; --btn-bg: {{ $item['name'] === 'TRÀ SỮA' ? '#df2e38' : $item['bg'] }};">
                 <div class="content">
                     <h1>{{ $item['name'] }}</h1>
                     <h2>{{ $item['title'] }}</h2>
@@ -384,8 +410,8 @@
     </div>
 
     <div class="arrows">
-        <button id="prevBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-        <button id="nextBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+        <button id="prevBtn" class="arrow-btn prevBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button id="nextBtn" class="arrow-btn nextBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
 
     <script>
