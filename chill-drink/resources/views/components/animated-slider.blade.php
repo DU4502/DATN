@@ -317,41 +317,6 @@
             opacity: var(--item5-opacity);
         }
 
-        /* Navigation Arrows */
-        .arrows {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            pointer-events: none;
-            z-index: 100;
-        }
-
-        .arrow-btn {
-            pointer-events: auto;
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.08);
-            border: 2px solid #000;
-            color: #111;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s ease, background 0.3s ease, border-color 0.3s ease;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-        }
-
-        .arrow-btn:hover {
-            background: rgba(255,255,255,0.2);
-            border-color: #000;
-            transform: scale(1.05);
-        }
-
         /* Responsive Design */
         @media screen and (max-width: 1023px) {
             .product-img { width: 350px; }
@@ -409,19 +374,12 @@
         @endforeach
     </div>
 
-    <div class="arrows">
-        <button id="prevBtn" class="arrow-btn prevBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
-        <button id="nextBtn" class="arrow-btn nextBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
-    </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const nextBtn        = document.getElementById('nextBtn');
-            const prevBtn        = document.getElementById('prevBtn');
-            const list           = document.querySelector('#mainSlider .list');
-            const sliderEl       = document.getElementById('mainSlider');
-            const bgBase         = document.getElementById('sliderBg');
-            const bgIncoming     = document.getElementById('sliderBgIncoming');
+            const sliderEl   = document.getElementById('mainSlider');
+            const list       = document.querySelector('#mainSlider .list');
+            const bgBase     = document.getElementById('sliderBg');
+            const bgIncoming = document.getElementById('sliderBgIncoming');
 
             let isAnimating = false;
 
@@ -476,17 +434,43 @@
                 }, 800);
             };
 
-            nextBtn.onclick = () => moveSlider('next');
-            prevBtn.onclick = () => moveSlider('prev');
+            sliderEl.style.touchAction = 'pan-y';
 
-            // Autoplay
             let autoplayInterval = setInterval(() => moveSlider('next'), 6000);
             const resetAutoplay = () => {
                 clearInterval(autoplayInterval);
                 autoplayInterval = setInterval(() => moveSlider('next'), 6000);
             };
-            nextBtn.addEventListener('click', resetAutoplay);
-            prevBtn.addEventListener('click', resetAutoplay);
+
+            let pointerStartX = null;
+
+            const onPointerDown = (event) => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                pointerStartX = event.clientX;
+                sliderEl.setPointerCapture(event.pointerId);
+            };
+
+            const onPointerUp = (event) => {
+                if (pointerStartX === null) return;
+                const deltaX = event.clientX - pointerStartX;
+                pointerStartX = null;
+                sliderEl.releasePointerCapture(event.pointerId);
+
+                if (Math.abs(deltaX) < 50) return;
+
+                if (deltaX < 0) {
+                    moveSlider('next');
+                } else {
+                    moveSlider('prev');
+                }
+
+                resetAutoplay();
+            };
+
+            sliderEl.addEventListener('pointerdown', onPointerDown);
+            sliderEl.addEventListener('pointerup', onPointerUp);
+            sliderEl.addEventListener('pointercancel', onPointerUp);
+            sliderEl.addEventListener('pointerleave', onPointerUp);
         });
     </script>
 </div>
