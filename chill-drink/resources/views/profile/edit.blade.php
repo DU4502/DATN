@@ -7,6 +7,7 @@
 @php
     $avatarValue = old('avatar', $user->avatar ?: 'preset-mint');
     $avatarIsImage = $user->avatar && ! str_starts_with($user->avatar, 'preset-');
+    $avatarUrl = $avatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar) : null;
     $avatarOptions = [
         'preset-mint' => ['label' => 'Mint', 'class' => 'avatar-preset-mint'],
         'preset-sky' => ['label' => 'Sky', 'class' => 'avatar-preset-sky'],
@@ -78,8 +79,8 @@
         </div>
 
         <nav class="profile-tabs" aria-label="Mục tài khoản">
-            <a href="#profile-info" class="profile-tab active">Thông tin</a>
-            <a href="#profile-orders" class="profile-tab">Đơn hàng của tôi</a>
+            <a href="{{ route('profile.edit') }}" class="profile-tab active">Thông tin</a>
+            <a href="{{ route('profile.orders') }}" class="profile-tab">Đơn hàng của tôi</a>
         </nav>
 
         <div id="profile-info" class="row g-4">
@@ -96,7 +97,7 @@
                             <div class="profile-preview mb-4">
                                 <div id="avatarPreview" class="profile-avatar-large {{ $avatarIsImage ? '' : ($avatarOptions[$avatarValue]['class'] ?? 'avatar-preset-mint') }}">
                                     @if($avatarIsImage)
-                                        <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}">
+                                        <img src="{{ $avatarUrl }}" alt="{{ $user->name }}">
                                     @else
                                         <span>{{ mb_substr($user->name, 0, 1) }}</span>
                                     @endif
@@ -240,27 +241,8 @@
             </div>
         </div>
 
-        @include('profile.partials.my-orders')
     </div>
 </section>
-
-<script>
-    document.querySelectorAll('.profile-tab').forEach((tab) => {
-        tab.addEventListener('click', function () {
-            document.querySelectorAll('.profile-tab').forEach((item) => item.classList.remove('active'));
-            tab.classList.add('active');
-        });
-    });
-
-    if (window.location.hash === '#profile-orders') {
-        document.querySelectorAll('.profile-tab').forEach((item) => item.classList.remove('active'));
-        const ordersTab = document.querySelector('.profile-tab[href="#profile-orders"]');
-        if (ordersTab) {
-            ordersTab.classList.add('active');
-        }
-        document.getElementById('profile-orders')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-</script>
 
 <script>
     const avatarPreview = document.getElementById('avatarPreview');
@@ -284,12 +266,14 @@
 
     document.getElementById('avatar_file').addEventListener('change', (event) => {
         const file = event.target.files[0];
+        const avatarInput = document.getElementById('avatar');
 
         if (!file) {
             return;
         }
 
         document.querySelectorAll('[data-avatar-value]').forEach((item) => item.classList.remove('active'));
+        avatarInput.value = '';
         avatarPreview.classList.remove(...presetClasses);
         avatarPreview.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="Avatar mới">`;
     });

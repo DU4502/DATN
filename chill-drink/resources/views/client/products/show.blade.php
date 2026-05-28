@@ -6,7 +6,7 @@
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
     .product-detail-wrap {
-        padding-top: 2.25rem;
+        padding-top: 2rem;
         padding-bottom: 4rem;
     }
 
@@ -28,13 +28,13 @@
     .detail-photo-card {
         position: relative;
         overflow: hidden;
-        border: 1px solid var(--drink-border);
-        border-radius: 12px;
-        background: #ffffff;
-        box-shadow: 0 16px 36px rgba(7, 52, 58, 0.08);
-        aspect-ratio: 5 / 4;
-        height: min(54vw, 520px);
-        min-height: 420px;
+        border: 0;
+        border-radius: 22px;
+        background: #f3efe5;
+        box-shadow: 0 18px 42px rgba(7, 52, 58, 0.08);
+        aspect-ratio: 1 / 1;
+        height: auto;
+        min-height: 0;
     }
 
     .detail-photo-card img {
@@ -43,6 +43,37 @@
         object-fit: cover;
         padding: 0;
         transition: opacity 0.18s ease;
+    }
+
+    .detail-gallery-nav {
+        position: absolute;
+        top: 50%;
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--drink-primary-dark);
+        box-shadow: 0 12px 28px rgba(7, 52, 58, 0.16);
+        transform: translateY(-50%);
+        transition: transform 0.18s ease, background 0.18s ease;
+        z-index: 2;
+    }
+
+    .detail-gallery-nav:hover {
+        background: #ffffff;
+        transform: translateY(-50%) scale(1.05);
+    }
+
+    .detail-gallery-nav.prev {
+        left: 1rem;
+    }
+
+    .detail-gallery-nav.next {
+        right: 1rem;
     }
 
     .detail-gallery {
@@ -62,7 +93,7 @@
         width: 86px;
         height: 86px;
         border: 2px solid transparent;
-        border-radius: 8px;
+        border-radius: 12px;
         background: #ffffff;
         padding: 0.35rem;
         box-shadow: 0 8px 18px rgba(7, 52, 58, 0.08);
@@ -98,12 +129,12 @@
     }
 
     .detail-info-card,
-    .option-card,
-    .mini-info-card {
-        border: 1px solid var(--drink-border);
-        border-radius: 22px;
-        background: rgba(255, 255, 255, 0.82);
-        box-shadow: 0 18px 42px rgba(79, 183, 168, 0.10);
+    .option-card {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        padding: 0 !important;
     }
 
     .option-label {
@@ -120,7 +151,7 @@
         background: #ffffff;
         color: var(--drink-ink);
         font-weight: 700;
-        padding: 0.72rem 1rem;
+        padding: 0.52rem 0.95rem;
         transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
     }
 
@@ -131,12 +162,43 @@
         color: var(--drink-primary-dark);
     }
 
+    .size-choice {
+        min-width: 76px;
+        text-align: center;
+    }
+
+    .size-choice small {
+        display: block;
+        color: var(--drink-muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        margin-top: 0.15rem;
+    }
+
     .qty-control {
-        min-width: 150px;
+        min-width: 132px;
         border: 1px solid var(--drink-border);
         border-radius: 999px;
         background: #ffffff;
         padding: 0.45rem 0.75rem;
+    }
+
+    .product-detail-actions {
+        border-top: 1px solid var(--drink-border);
+        padding-top: 1.2rem;
+    }
+
+    .product-detail-actions .btn-primary {
+        min-height: 52px;
+    }
+
+    .detail-info-card {
+        max-width: 680px;
+    }
+
+    .product-detail-wrap .display-5 {
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        line-height: 1.12;
     }
 
     .qty-control button {
@@ -197,18 +259,27 @@
             <span class="text-primary">{{ $product->name }}</span>
         </nav>
 
-        <div class="row g-5 align-items-start">
-            <div class="col-lg-6">
+        <div class="row g-4 g-xl-5 align-items-start">
+            <div class="col-lg-5">
                 @php
                     $detailCategory = $product->category->name ?? null;
-                    $detailGalleryImages = $uiGetProductGallery(
-                        $product->sku ?? null,
-                        $detailCategory,
-                        $product->name,
-                        4
-                    );
+                    $detailGalleryImages = $product instanceof \App\Models\Product
+                        ? $product->gallery_images
+                        : ($product->gallery_images ?? []);
+
+                    if (empty($detailGalleryImages)) {
+                        $detailGalleryImages = $uiGetProductGallery(
+                            $product->sku ?? null,
+                            $detailCategory,
+                            $product->name,
+                            6,
+                            $product->image_url ?? $product->image ?? null
+                        );
+                    }
+
                     $detailMainImage = $detailGalleryImages[0]
                         ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
+                    $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
                 @endphp
                 <div class="detail-gallery">
                     <div class="detail-photo-card">
@@ -217,8 +288,17 @@
                             src="{{ $detailMainImage }}"
                             alt="{{ $product->name }}"
                             style="width:100%;height:100%;object-fit:cover;"
-                            onerror="this.onerror=null;this.src='{{ $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000) }}';"
+                            data-detail-fallback="{{ $detailFallbackImage }}"
+                            onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';"
                         >
+                        @if(count($detailGalleryImages) > 1)
+                            <button type="button" class="detail-gallery-nav prev" data-gallery-prev aria-label="Ảnh trước">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <button type="button" class="detail-gallery-nav next" data-gallery-next aria-label="Ảnh tiếp theo">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        @endif
                     </div>
                     @if(count($detailGalleryImages) > 1)
                         <div class="detail-thumbs" aria-label="Ảnh sản phẩm">
@@ -229,7 +309,7 @@
                                     data-detail-thumb="{{ $image }}"
                                     aria-label="Xem ảnh {{ $index + 1 }}"
                                 >
-                                    <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy">
+                                    <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
                                 </button>
                             @endforeach
                         </div>
@@ -237,7 +317,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-6">
+            <div class="col-lg-7">
                 <div class="d-flex flex-column gap-4">
                     <div>
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
@@ -249,7 +329,6 @@
                     </div>
 
                     <div class="detail-info-card p-4">
-                        <p class="option-label mb-2">Trải nghiệm hương vị</p>
                         <p class="text-secondary mb-3">
                             {{ $product instanceof \App\Models\Product ? $product->display_description : ($product->description ?? \App\Support\ProductCatalog::descriptionFor($product->name ?? '', $product->category->name ?? null)) }}
                         </p>
@@ -261,6 +340,32 @@
                     </div>
 
                     <div class="option-card p-4">
+                        <div class="mb-4">
+                            <label class="option-label d-block mb-3">Size</label>
+                            <div class="d-flex flex-wrap gap-2" data-size-group>
+                                <button type="button" class="choice-btn size-choice" data-size-option="S" data-size-extra="0">
+                                    S
+                                    <small>Giá gốc</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice active" data-size-option="M" data-size-extra="5000">
+                                    M
+                                    <small>+5.000đ</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
+                                    L
+                                    <small>+10.000đ</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice" data-size-option="XL" data-size-extra="15000">
+                                    XL
+                                    <small>+15.000đ</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice" data-size-option="XXL" data-size-extra="20000">
+                                    XXL
+                                    <small>+20.000đ</small>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="mb-4">
                             <label class="option-label d-block mb-3">Mức đường</label>
                             <div class="d-flex flex-wrap gap-2" data-choice-group="sugar">
@@ -282,7 +387,7 @@
                             </div>
                         </div>
 
-                        <div class="d-flex flex-column flex-sm-row gap-3">
+                        <div class="product-detail-actions d-flex flex-column flex-sm-row gap-3">
                             <div class="qty-control d-flex align-items-center justify-content-between">
                                 <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
                                 <span class="h5 fw-bold mb-0" data-qty-value>1</span>
@@ -292,6 +397,8 @@
                             @if(($product->stock ?? 1) > 0)
                                 <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
                                     @csrf
+                                    <input type="hidden" name="size" value="M" data-size-input>
+                                    <input type="hidden" name="quantity" value="1" data-qty-input>
                                     <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
                                 </form>
                             @else
@@ -299,29 +406,6 @@
                             @endif
                         </div>
                     </div>
-
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <div class="mini-info-card p-3 d-flex align-items-center gap-3 h-100">
-                                <span class="brand-mark">G</span>
-                                <div>
-                                    <div class="fw-bold">Giao hàng nhanh</div>
-                                    <small class="text-secondary">Miễn phí theo ưu đãi</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="mini-info-card p-3 d-flex align-items-center gap-3 h-100">
-                                <span class="brand-mark">T</span>
-                                <div>
-                                    <div class="fw-bold">Thanh toán an toàn</div>
-                                    <small class="text-secondary">Xác nhận rõ ràng</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <a href="{{ route('products.index') }}" class="btn btn-outline-primary align-self-start">Quay lại danh sách</a>
                 </div>
             </div>
         </div>
@@ -341,7 +425,8 @@
                         <div class="related-card drink-card card border-0 h-100 overflow-hidden">
                             <a href="{{ route('products.show', $item->slug) }}">
                                 <x-product-image
-                                    :sku="$item->sku"
+                                    :src="$item->image_url ?? null"
+                                    :sku="$item->sku ?? null"
                                     :name="$item->name"
                                     :alt="$item->name"
                                     :category="$item->category?->name"
@@ -359,16 +444,20 @@
                     </div>
                 @empty
                     @foreach([
-                        ['Cà phê ủ lạnh vani', '55.000đ', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85'],
-                        ['Trà Earl Grey Đá', '45.000đ', 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=85'],
-                        ['Trà hoa bụp giấm mát lạnh', '52.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85'],
-                        ['Trà Sữa Khoai Môn', '60.000đ', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85'],
+                        ['Cà phê ủ lạnh vani', '55.000đ', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85', 'cold-brew-arctic'],
+                        ['Trà Earl Grey Đá', '45.000đ', 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=85', 'tropical-frost'],
+                        ['Trà hoa bụp giấm mát lạnh', '52.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85', 'citrus-sunset'],
+                        ['Trà Sữa Khoai Môn', '60.000đ', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85', 'tra-sua-tran-chau-demo'],
                     ] as $item)
                         <div class="col-sm-6 col-lg-3">
                             <div class="related-card drink-card card border-0 h-100 overflow-hidden">
-                                <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
+                                <a href="{{ route('products.show', $item[3]) }}">
+                                    <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
+                                </a>
                                 <div class="card-body">
-                                    <h3 class="h5">{{ $item[0] }}</h3>
+                                    <h3 class="h5">
+                                        <a href="{{ route('products.show', $item[3]) }}" class="text-dark text-decoration-none">{{ $item[0] }}</a>
+                                    </h3>
                                     <strong class="text-primary">{{ $item[1] }}</strong>
                                 </div>
                             </div>
@@ -396,11 +485,15 @@
         const minus = document.querySelector('[data-qty-minus]');
         const plus = document.querySelector('[data-qty-plus]');
         const value = document.querySelector('[data-qty-value]');
+        const qtyInput = document.querySelector('[data-qty-input]');
 
         if (minus && plus && value) {
             let qty = 1;
             const render = function () {
                 value.textContent = qty;
+                if (qtyInput) {
+                    qtyInput.value = qty;
+                }
             };
 
             minus.addEventListener('click', function () {
@@ -414,24 +507,65 @@
             });
         }
 
-        const mainImage = document.getElementById('detailMainImage');
-        const thumbs = document.querySelectorAll('[data-detail-thumb]');
+        const sizeGroup = document.querySelector('[data-size-group]');
+        const sizeInput = document.querySelector('[data-size-input]');
 
-        if (mainImage && thumbs.length) {
-            thumbs.forEach(function (thumb) {
-                thumb.addEventListener('click', function () {
-                    thumbs.forEach(function (item) {
+        if (sizeGroup && sizeInput) {
+            sizeGroup.querySelectorAll('[data-size-option]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    sizeGroup.querySelectorAll('[data-size-option]').forEach(function (item) {
                         item.classList.remove('active');
                     });
-
-                    thumb.classList.add('active');
-                    mainImage.style.opacity = '0';
-
-                    setTimeout(function () {
-                        mainImage.src = thumb.dataset.detailThumb;
-                        mainImage.style.opacity = '1';
-                    }, 120);
+                    button.classList.add('active');
+                    sizeInput.value = button.dataset.sizeOption || 'M';
                 });
+            });
+        }
+
+        const mainImage = document.getElementById('detailMainImage');
+        const thumbs = document.querySelectorAll('[data-detail-thumb]');
+        const prevButton = document.querySelector('[data-gallery-prev]');
+        const nextButton = document.querySelector('[data-gallery-next]');
+        let activeImageIndex = 0;
+
+        const setActiveImage = function (index) {
+            if (!mainImage || !thumbs.length) {
+                return;
+            }
+
+            activeImageIndex = (index + thumbs.length) % thumbs.length;
+
+            thumbs.forEach(function (item) {
+                item.classList.remove('active');
+            });
+
+            const activeThumb = thumbs[activeImageIndex];
+            activeThumb.classList.add('active');
+            mainImage.style.opacity = '0';
+
+            setTimeout(function () {
+                mainImage.onerror = function () {
+                    mainImage.onerror = null;
+                    mainImage.src = mainImage.dataset.detailFallback || '';
+                };
+                mainImage.src = activeThumb.dataset.detailThumb;
+                mainImage.style.opacity = '1';
+            }, 120);
+        };
+
+        if (mainImage && thumbs.length) {
+            thumbs.forEach(function (thumb, index) {
+                thumb.addEventListener('click', function () {
+                    setActiveImage(index);
+                });
+            });
+
+            prevButton?.addEventListener('click', function () {
+                setActiveImage(activeImageIndex - 1);
+            });
+
+            nextButton?.addEventListener('click', function () {
+                setActiveImage(activeImageIndex + 1);
             });
         }
     });

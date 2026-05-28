@@ -8,13 +8,27 @@ use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
+    private function sizeOptions(): array
+    {
+        return [
+            'S' => ['label' => 'Size S', 'extra' => 0],
+            'M' => ['label' => 'Size M', 'extra' => 5000],
+            'L' => ['label' => 'Size L', 'extra' => 10000],
+            'XL' => ['label' => 'Size XL', 'extra' => 15000],
+            'XXL' => ['label' => 'Size XXL', 'extra' => 20000],
+        ];
+    }
+
     private function demoProducts(): array
     {
         return [
             'demo-wild-berry-bliss' => ['name' => 'Sinh Tố Dâu Rừng', 'price' => 65000, 'image' => 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=700&q=85'],
+            'demo-sinh-to-dau' => ['name' => 'Sinh Tố Dâu', 'price' => 45000, 'image' => 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=700&q=85'],
             'demo-matcha-latte-da' => ['name' => 'Matcha Latte Đá', 'price' => 57000, 'image' => 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85'],
             'demo-citrus-sunset' => ['name' => 'Nước Ép Cam Chanh Dây', 'price' => 49000, 'image' => 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85'],
             'demo-tra-sua-tran-chau-demo' => ['name' => 'Trà Sữa Trân Châu', 'price' => 62000, 'image' => 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85'],
+            'demo-tra-sua-tran-chau-duong-den' => ['name' => 'Trà Sữa Trân Châu Đường Đen', 'price' => 75450, 'image' => 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85'],
+            'demo-ca-phe-sua-da' => ['name' => 'Cà Phê Sữa Đá', 'price' => 24971, 'image' => 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85'],
             'demo-cold-brew-arctic' => ['name' => 'Cà Phê Ủ Lạnh', 'price' => 52000, 'image' => 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85'],
             'demo-tropical-frost' => ['name' => 'Trà Trái Cây Nhiệt Đới', 'price' => 59000, 'image' => 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=700&q=85'],
         ];
@@ -72,23 +86,34 @@ class CartController extends Controller
             : Product::findOrFail($id);
         
         $cart = session()->get('cart', []);
+        $sizes = $this->sizeOptions();
+        $sizeCode = strtoupper((string) $request->input('size', 'M'));
+        $size = $sizes[$sizeCode] ?? $sizes['M'];
+        $cartKey = $id . ':' . $sizeCode;
+        $basePrice = (int) ($product->price ?? 0);
+        $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
         
-        // If product already in cart, increase quantity
-        if (isset($cart[$id])) {
-            $cart[$id]['quantity']++;
+        // If the same product and size already exist, increase quantity.
+        if (isset($cart[$cartKey])) {
+            $cart[$cartKey]['quantity'] = min(99, $cart[$cartKey]['quantity'] + $quantity);
         } else {
             // Add new product to cart
             $image = $product instanceof Product
                 ? $product->image_url
                 : ($product->image ?? \App\Support\ProductImage::forCategory(null, crc32((string) $id)));
 
-            $cart[$id] = [
+            $cart[$cartKey] = [
+                'product_id' => $id,
                 'name' => $product->name,
-                'price' => $product->price,
+                'base_price' => $basePrice,
+                'price' => $basePrice + $size['extra'],
+                'size' => $sizeCode,
+                'size_label' => $size['label'],
+                'size_extra' => $size['extra'],
                 'image' => $image,
-                'sku' => $product instanceof Product ? $product->sku : null,
+                'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
-                'quantity' => 1,
+                'quantity' => $quantity,
             ];
         }
         

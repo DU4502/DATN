@@ -24,11 +24,13 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
+        // Gọi hàm authenticate() từ LoginRequest để đăng nhập
         $request->authenticate();
 
         $request->session()->regenerate();
         $request->session()->forget('url.intended');
 
+        // Kiểm tra quyền dựa trên hàm isAdmin() trong Model User
         if ($request->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }

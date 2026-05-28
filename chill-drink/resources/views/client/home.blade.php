@@ -200,18 +200,26 @@
                     'CD-TS-001', 'CD-CF-001', 'CD-ST-001', 'CD-NE-001',
                     'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
                 ];
-                $homeFeaturedProducts = \App\Models\Product::with('category')
-                    ->whereIn('sku', $homeFeaturedSkus)
-                    ->get()
-                    ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
-                    ->values();
+                $homeHasSkuColumn = \Illuminate\Support\Facades\Schema::hasColumn('products', 'sku');
+                $homeFeaturedProducts = $homeHasSkuColumn
+                    ? \App\Models\Product::with('category')
+                        ->whereIn('sku', $homeFeaturedSkus)
+                        ->get()
+                        ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
+                        ->values()
+                    : \App\Models\Product::with('category')
+                        ->where('status', true)
+                        ->latest()
+                        ->limit(8)
+                        ->get();
             @endphp
             @forelse($homeFeaturedProducts as $product)
                 <div class="col-sm-6 col-lg-3">
                     <div class="product-card drink-card card h-100 overflow-hidden border-0">
                         <a href="{{ route('products.show', $product->slug) }}" class="d-block">
                             <x-product-image
-                                :sku="$product->sku"
+                                :src="$product->image_url"
+                                :sku="$product->sku ?? null"
                                 :name="$product->name"
                                 :alt="$product->name"
                                 :category="$product->category?->name"
@@ -221,7 +229,9 @@
                         </a>
                         <div class="card-body d-flex flex-column">
                             <span class="badge rounded-pill align-self-start mb-2" style="background: var(--drink-soft); color: var(--drink-primary);">{{ $product->category->name }}</span>
-                            <p class="text-secondary small font-monospace mb-1">{{ $product->sku }}</p>
+                            @if(!empty($product->sku))
+                                <p class="text-secondary small font-monospace mb-1">{{ $product->sku }}</p>
+                            @endif
                             <h3 class="h5 card-title">
                                 <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">
                                     {{ $product->name }}
@@ -241,24 +251,30 @@
                 </div>
             @empty
                 @foreach([
-                    ['Matcha Latte', '45.000đ', 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85', 'Mới'],
-                    ['Trà Dâu Dứa', '38.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85', 'Bán chạy'],
-                    ['Bạc Xỉu Đá', '29.000đ', 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=700&q=85', ''],
-                    ['Nước Chanh Bạc Hà', '35.000đ', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85', 'Combo mát lạnh'],
+                    ['Matcha Latte', '45.000đ', 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85', 'Mới', 'matcha-latte-da'],
+                    ['Trà Dâu Dứa', '38.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85', 'Bán chạy', 'tropical-frost'],
+                    ['Bạc Xỉu Đá', '29.000đ', 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=700&q=85', '', 'ca-phe-sua-da'],
+                    ['Nước Chanh Bạc Hà', '35.000đ', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85', 'Combo mát lạnh', 'citrus-sunset'],
+                    ['Trà Sữa Trân Châu Đường Đen', '75.450đ', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85', 'Đậm vị', 'tra-sua-tran-chau-duong-den'],
+                    ['Cà Phê Sữa Đá', '24.971đ', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85', 'Buổi sáng', 'ca-phe-sua-da'],
+                    ['Sinh Tố Dâu', '45.000đ', 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=700&q=85', 'Trái cây', 'sinh-to-dau'],
+                    ['Trà Trái Cây Nhiệt Đới', '59.000đ', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=700&q=85', 'Tươi mát', 'tropical-frost'],
                 ] as $item)
                     <div class="col-sm-6 col-lg-3">
                         <div class="product-card drink-card card h-100 overflow-hidden border-0">
-                            <div class="position-relative">
+                            <a href="{{ route('products.show', $item[4]) }}" class="position-relative d-block text-decoration-none">
                                 @if($item[3])
                                     <span class="badge rounded-pill position-absolute top-0 start-0 m-3" style="background: var(--drink-primary);">{{ $item[3] }}</span>
                                 @endif
                                 <img src="{{ $item[2] }}" class="card-img-top" alt="{{ $item[0] }}">
-                            </div>
+                            </a>
                             <div class="card-body d-flex flex-column">
-                                <h3 class="h5 card-title mb-3">{{ $item[0] }}</h3>
+                                <h3 class="h5 card-title mb-3">
+                                    <a href="{{ route('products.show', $item[4]) }}" class="text-dark text-decoration-none">{{ $item[0] }}</a>
+                                </h3>
                                 <div class="mt-auto d-flex align-items-center justify-content-between gap-3">
                                     <strong class="text-primary">{{ $item[1] }}</strong>
-                                    <a href="{{ route('products.index') }}" class="btn btn-primary product-cart-btn product-detail-btn" aria-label="Xem chi tiết {{ $item[0] }}" title="Xem chi tiết">
+                                    <a href="{{ route('products.show', $item[4]) }}" class="btn btn-primary product-cart-btn product-detail-btn" aria-label="Xem chi tiết {{ $item[0] }}" title="Xem chi tiết">
                                         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z" />
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 12a2.25 2.25 0 1 0 4.5 0 2.25 2.25 0 0 0-4.5 0Z" />

@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -54,6 +55,7 @@ Route::middleware('auth')->group(function () {
     })->name('dashboard');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile/orders', [ProfileController::class, 'orders'])->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
@@ -73,6 +75,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::view('/vouchers', 'admin.vouchers.index')->name('vouchers.index');
 
     // Product Management
+    Route::resource('products', AdminProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+    
     Route::resource('products', AdminProductController::class)->only(['index']);
 
     // Category Management
@@ -81,8 +85,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Order Management
     Route::resource('orders', OrderController::class)->only(['index']);
 
+    // Review Management
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    
     // User Management
-    Route::resource('users', UserController::class)->only(['index']);
+    Route::patch('/users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'update']);
 });
 
 require __DIR__ . '/auth.php';
