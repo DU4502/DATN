@@ -9,9 +9,7 @@
             <div class="col-md-8 col-lg-5">
                 <div class="auth-card card border-0">
                     <div class="card-body p-4 p-md-5">
-                        <div class="brand-mark auth-brand-mark mb-3" aria-label="Chill Drink">
-                            <i class="bi bi-cup-straw" aria-hidden="true"></i>
-                        </div>
+                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark auth-brand-mark mb-3" style="background: white; object-fit: contain; padding: 2px;">
                         <h1 class="h3 fw-bold text-center mb-2">Đăng Nhập</h1>
                         <p class="text-secondary text-center mb-4">Chào mừng bạn quay lại Chill Drink.</p>
 
@@ -51,6 +49,21 @@
 
                             <button type="submit" class="btn btn-primary w-100 py-2">Đăng Nhập</button>
                         </form>
+
+                        <div class="auth-divider">
+                            <span>Hoặc</span>
+                        </div>
+
+                        <div class="auth-social-grid">
+                            <button type="button" class="auth-social-btn facebook" aria-label="Đăng nhập bằng Facebook">
+                                <i class="bi bi-facebook" aria-hidden="true"></i>
+                                <span>Facebook</span>
+                            </button>
+                            <button type="button" class="auth-social-btn google" aria-label="Đăng nhập bằng Google">
+                                <i class="bi bi-google" aria-hidden="true"></i>
+                                <span>Google</span>
+                            </button>
+                        </div>
 
                         <p class="text-center text-secondary mt-4 mb-0">
                             Chưa có tài khoản?

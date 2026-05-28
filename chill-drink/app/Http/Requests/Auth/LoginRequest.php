@@ -24,6 +24,18 @@ class LoginRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('email')) {
+            $this->merge([
+                'email' => Str::lower($this->input('email')),
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -33,6 +45,22 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'Vui lòng nhập email.',
+            'email.string' => 'Email không hợp lệ.',
+            'email.email' => 'Email không đúng định dạng.',
+            'password.required' => 'Vui lòng nhập mật khẩu.',
+            'password.string' => 'Mật khẩu không hợp lệ.',
         ];
     }
 
@@ -74,6 +102,12 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (Schema::hasColumn('users', 'is_active') && ! (bool) $user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.',
+            ]);
+        }
+
         $remember = $this->boolean('remember') && Schema::hasColumn('users', 'remember_token');
 
         Auth::login($user, $remember);
@@ -109,6 +143,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('email')) . '|' . $this->ip());
     }
 }

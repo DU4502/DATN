@@ -11,6 +11,7 @@
         <button class="btn btn-outline-primary">Cà phê</button>
         <button class="btn btn-outline-primary">Nước ép</button>
         <button class="btn btn-outline-primary">Bộ lọc</button>
+        <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
     </div>
     <div class="text-lg-end">
         <p class="admin-kicker mb-1">Tình trạng kho</p>
@@ -41,19 +42,22 @@
                         <td>
                             <div class="admin-thumb d-flex align-items-center justify-content-center overflow-hidden">
                                 <x-product-image
-                                    :sku="$product->sku"
+                                    :src="$product->image_url"
+                                    :sku="$product->sku ?? null"
                                     :name="$product->name"
                                     :alt="$product->name"
                                     :category="$product->category?->name"
                                     class="w-100 h-100"
-                                    style="object-fit: cover; min-height: 56px;"
-                                    :width="200"
+                                    style="object-fit: contain;"
+                                    :width="180"
                                 />
                             </div>
                         </td>
                         <td>
                             <div class="fw-bold">{{ $product->name }}</div>
-                            <small class="text-secondary font-monospace">{{ $product->sku }}</small>
+                            @if(!empty($product->sku))
+                                <small class="text-secondary font-monospace">{{ $product->sku }}</small>
+                            @endif
                         </td>
                         <td><span class="badge badge-soft-primary">{{ $product->category->name ?? 'Chưa phân loại' }}</span></td>
                         <td class="fw-bold">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</td>
@@ -65,8 +69,13 @@
                             @endif
                         </td>
                         <td class="text-end">
-                            <button class="admin-action" title="Sửa">✎</button>
-                            <button class="admin-action" title="Xóa" style="color:var(--admin-danger);">⌫</button>
+                            <a href="{{ route('admin.products.show', $product->id) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
+                            <a href="{{ route('admin.products.edit', $product->id) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
+                            <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="admin-action" title="Xóa" style="color:var(--admin-danger);"><i class="bi bi-trash3"></i></button>
+                            </form>
                         </td>
                     </tr>
                 @empty
