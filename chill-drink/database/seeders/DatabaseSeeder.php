@@ -17,17 +17,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Ensure roles exist before creating users
+        $this->call(\Database\Seeders\RoleSeeder::class);
+
         // Create Admin User without changing an existing account/password.
+        // Only include columns that exist in the current database schema.
         User::firstOrCreate(
             ['email' => 'admin@chilldrink.com'],
             [
                 'name' => 'Admin',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
                 'role_id' => 2,
                 'phone' => '0123456789',
-                'address' => 'Hà Nội, Việt Nam',
-                'points' => 0,
             ]
         );
 
@@ -48,8 +49,11 @@ class DatabaseSeeder extends Seeder
                 : ['name' => $category['name']];
             $categoryData = [
                 'name' => $category['name'],
-                'status' => true,
             ];
+
+            if (Schema::hasColumn('categories', 'status')) {
+                $categoryData['status'] = true;
+            }
 
             if (Schema::hasColumn('categories', 'slug')) {
                 $categoryData['slug'] = $categorySlug;
@@ -62,9 +66,13 @@ class DatabaseSeeder extends Seeder
             Category::updateOrCreate($categoryLookup, $categoryData);
         }
 
-        // Create Products
+        // Create Products only if schema matches factory expectations
         if (Product::count() === 0) {
-            Product::factory(30)->create();
+            if (Schema::hasColumn('products', 'price')) {
+                Product::factory(30)->create();
+            } else {
+                $this->command->info('Skipping Product factory: `products.price` column not found.');
+            }
         }
 
         $this->command->info('Database seeded successfully!');
