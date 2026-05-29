@@ -3,15 +3,14 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class NewPasswordController extends Controller
@@ -21,32 +20,42 @@ class NewPasswordController extends Controller
      */
     public function create(Request $request): View
     {
-        return view('auth.reset-password', ['request' => $request]);
+        return view('auth.reset-password', [
+            'email' => (string) $request->query('email', ''),
+            'token' => (string) $request->route('token'),
+        ]);
     }
 
     /**
      * Handle an incoming new password request.
-     *
-     * @throws ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(ResetPasswordRequest $request): RedirectResponse
     {
-        $request->validate([
-            'token' => ['required'],
-            'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        $validated = $request->validated();
 
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user) use ($request) {
-                $user->forceFill([
-                    'password' => Hash::make($request->password),
-                    'remember_token' => Str::random(60),
-                ])->save();
+            $request->only('email', 'password', 'token'),
+            function (User $user) use ($validated) {
+                $passwordData = [
+                    'password' => Hash::make($validated['password']),
+                ];
+
+                if (Schema::hasColumn('users', 'remember_token')) {
+                    $passwordData['remember_token'] = Str::random(60);
+                }
+
+                if (Schema::hasColumn('users', 'reset_token')) {
+                    $passwordData['reset_token'] = null;
+                }
+
+                if (Schema::hasColumn('users', 'reset_expire')) {
+                    $passwordData['reset_expire'] = null;
+                }
+
+                $user->forceFill($passwordData)->save();
 
                 event(new PasswordReset($user));
             }

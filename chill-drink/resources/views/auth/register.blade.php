@@ -3,57 +3,157 @@
 @section('title', 'Đăng Ký')
 
 @section('content')
-<section class="py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-5">
-                <div class="card border-0 shadow-sm rounded-3">
-                    <div class="card-body p-4 p-md-5">
-                        <h1 class="h3 fw-bold text-center mb-2">Tạo Tài Khoản</h1>
-                        <p class="text-secondary text-center mb-4">Đăng ký để đặt đồ uống nhanh hơn.</p>
+<style>
+    .auth-page {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        background: url('https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=2000&q=80') center/cover no-repeat;
+        position: relative;
+    }
+    .auth-page::before {
+        content: ''; position: absolute; inset: 0;
+        background: linear-gradient(135deg, rgba(13, 147, 115, 0.85) 0%, rgba(6, 122, 95, 0.95) 100%);
+    }
+    
+    .auth-container { position: relative; z-index: 1; padding: 4rem 0; width: 100%; }
 
-                        <form method="POST" action="{{ route('register') }}">
-                            @csrf
+    .auth-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: var(--radius-2xl);
+        box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+        overflow: hidden;
+    }
 
-                            <div class="mb-3">
-                                <label for="name" class="form-label">Họ tên</label>
-                                <input id="name" type="text" name="name" value="{{ old('name') }}" class="form-control @error('name') is-invalid @enderror" required autofocus autocomplete="name">
-                                @error('name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+    .auth-header { text-align: center; margin-bottom: 2.5rem; }
+    .auth-logo {
+        width: 64px; height: 64px; border-radius: var(--radius-lg);
+        background: #fff; display: inline-flex; align-items: center; justify-content: center;
+        box-shadow: var(--shadow-md); margin-bottom: 1.5rem; border: 1px solid var(--c-border);
+    }
+    .auth-logo img { width: 44px; height: 44px; object-fit: contain; }
+
+    .form-floating > .form-control, .form-floating > .form-select {
+        border-radius: var(--radius-md); border-color: var(--c-border);
+    }
+    .form-floating > .form-control:focus, .form-floating > .form-select:focus {
+        border-color: var(--c-primary); box-shadow: 0 0 0 4px var(--c-primary-glow);
+    }
+
+    .btn-auth-submit {
+        height: 54px; border-radius: var(--radius-md); font-size: 1rem; font-weight: 700;
+        background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-dark) 100%);
+        border: none; color: #fff; box-shadow: 0 8px 16px rgba(13,147,115,0.3); transition: all 0.3s ease;
+    }
+    .btn-auth-submit:hover { transform: translateY(-3px); box-shadow: 0 12px 20px rgba(13,147,115,0.4); color: #fff; }
+
+    .auth-section-title {
+        color: var(--c-primary); font-size: 0.8125rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.5rem;
+    }
+    .auth-section-title i { font-size: 1.1rem; }
+    
+    .form-check-input:checked { background-color: var(--c-primary); border-color: var(--c-primary); }
+</style>
+
+<section class="auth-page">
+    <div class="auth-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-9 col-lg-7 col-xl-6">
+                    <div class="auth-card">
+                        <div class="p-4 p-md-5">
+                            <div class="auth-header">
+                                <div class="auth-logo"><img src="{{ asset('images/logo.png') }}" alt="Chill Drink"></div>
+                                <h1 class="h3 fw-bold mb-2">Tạo tài khoản mới</h1>
+                                <p class="text-secondary">Điền thông tin để bắt đầu đặt đồ uống siêu tốc</p>
                             </div>
 
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
-                                <input id="email" type="email" name="email" value="{{ old('email') }}" class="form-control @error('email') is-invalid @enderror" required autocomplete="username">
-                                @error('email')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            <form method="POST" action="{{ route('register') }}">
+                                @csrf
 
-                            <div class="mb-3">
-                                <label for="password" class="form-label">Mật khẩu</label>
-                                <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" required autocomplete="new-password">
-                                @error('password')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12"><div class="auth-section-title"><i class="bi bi-person-vcard"></i> Thông tin cá nhân</div></div>
+                                    <div class="col-sm-6">
+                                        <div class="form-floating">
+                                            <input id="name" type="text" name="name" value="{{ old('name') }}" class="form-control @error('name') is-invalid @enderror" placeholder="Nguyễn Văn A" required autofocus autocomplete="name">
+                                            <label for="name">Họ và tên</label>
+                                            @error('name') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-floating">
+                                            <input id="phone" type="tel" name="phone" value="{{ old('phone') }}" class="form-control @error('phone') is-invalid @enderror" placeholder="0901234567" required autocomplete="tel">
+                                            <label for="phone">Số điện thoại</label>
+                                            @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-floating">
+                                            <input id="email" type="email" name="email" value="{{ old('email') }}" class="form-control @error('email') is-invalid @enderror" placeholder="name@example.com" required autocomplete="username">
+                                            <label for="email">Địa chỉ Email</label>
+                                            @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <div class="mb-4">
-                                <label for="password_confirmation" class="form-label">Nhập lại mật khẩu</label>
-                                <input id="password_confirmation" type="password" name="password_confirmation" class="form-control @error('password_confirmation') is-invalid @enderror" required autocomplete="new-password">
-                                @error('password_confirmation')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12"><div class="auth-section-title"><i class="bi bi-geo-alt"></i> Giao hàng</div></div>
+                                    <div class="col-sm-5">
+                                        <div class="form-floating">
+                                            <select id="area" name="area" class="form-select @error('area') is-invalid @enderror">
+                                                <option value="" disabled selected>Chọn khu vực...</option>
+                                                @foreach(['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Cần Thơ', 'Khác'] as $area)
+                                                    <option value="{{ $area }}" @selected(old('area') === $area)>{{ $area }}</option>
+                                                @endforeach
+                                            </select>
+                                            <label for="area">Khu vực</label>
+                                            @error('area') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <div class="form-floating">
+                                            <input id="address" type="text" name="address" value="{{ old('address') }}" class="form-control @error('address') is-invalid @enderror" placeholder="Tầng 10, Tòa nhà A..." autocomplete="street-address">
+                                            <label for="address">Địa chỉ chi tiết (Không bắt buộc)</label>
+                                            @error('address') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                    </div>
+                                </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-2">Đăng Ký</button>
-                        </form>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12"><div class="auth-section-title"><i class="bi bi-shield-lock"></i> Bảo mật</div></div>
+                                    <div class="col-sm-6">
+                                        <div class="form-floating">
+                                            <input id="password" type="password" name="password" class="form-control @error('password') is-invalid @enderror" placeholder="Mật khẩu" required autocomplete="new-password">
+                                            <label for="password">Mật khẩu</label>
+                                            @error('password') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-floating">
+                                            <input id="password_confirmation" type="password" name="password_confirmation" class="form-control" placeholder="Nhập lại mật khẩu" required autocomplete="new-password">
+                                            <label for="password_confirmation">Xác nhận mật khẩu</label>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <p class="text-center text-secondary mt-4 mb-0">
-                            Đã có tài khoản?
-                            <a href="{{ route('login') }}" class="text-decoration-none fw-semibold">Đăng nhập</a>
-                        </p>
+                                <div class="form-check mb-4">
+                                    <input id="agree_terms" type="checkbox" class="form-check-input" required>
+                                    <label class="form-check-label text-secondary small" for="agree_terms">
+                                        Tôi đã đọc và đồng ý với <a href="#" class="text-primary text-decoration-none fw-semibold">Điều khoản dịch vụ</a> và <a href="#" class="text-primary text-decoration-none fw-semibold">Chính sách bảo mật</a> của Chill Drink.
+                                    </label>
+                                </div>
+
+                                <button type="submit" class="btn btn-auth-submit w-100">Hoàn Tất Đăng Ký</button>
+                            </form>
+
+                            <p class="text-center text-secondary mb-0 mt-4">
+                                Đã có tài khoản? <a href="{{ route('login') }}" class="text-primary fw-bold text-decoration-none ms-1">Đăng nhập</a>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
