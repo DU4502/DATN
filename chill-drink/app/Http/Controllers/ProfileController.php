@@ -7,6 +7,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -22,17 +24,39 @@ class ProfileController extends Controller
     }
 
     /**
+     * Display the user's order history outside the profile form.
+     */
+    public function orders(Request $request): View
+    {
+        return view('profile.orders', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    /**
      * Update the user's profile information.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $data = $request->validated();
+        unset($data['avatar_file']);
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($request->hasFile('avatar_file')) {
+            if ($user->avatar && ! str_starts_with($user->avatar, 'preset-')) {
+                Storage::disk('public')->delete($user->avatar);
+            }
+
+            $data['avatar'] = $request->file('avatar_file')->store('avatars', 'public');
         }
 
-        $request->user()->save();
+        $user->fill($data);
+
+        if ($user->isDirty('email') && Schema::hasColumn('users', 'email_verified_at')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }

@@ -3,382 +3,432 @@
 @section('title', 'Trang Chủ')
 
 @section('content')
+@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
-    .home-hero {
-        position: relative;
-        overflow: hidden;
-        background: #086972;
-        color: #ffffff;
-    }
-
-    .home-hero::after {
-        content: "";
-        position: absolute;
-        right: -8rem;
-        bottom: -10rem;
-        width: 34rem;
-        height: 34rem;
-        border-radius: 50%;
-        background: rgba(255, 183, 3, 0.18);
-    }
-
-    .hero-content {
-        position: relative;
-        z-index: 1;
-    }
-
-    .hero-carousel .carousel-item {
-        min-height: 650px;
-        overflow: hidden;
-        transition: opacity 1.45s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        transform: translateZ(0);
-        backface-visibility: hidden;
-        will-change: opacity;
-    }
-
-    .hero-carousel .carousel-item-next,
-    .hero-carousel .carousel-item-prev,
-    .hero-carousel .carousel-item.active {
-        display: block;
-    }
-
-    .hero-carousel .carousel-item::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(115deg, rgba(5, 52, 58, 0.92), rgba(15, 139, 141, 0.82) 50%, rgba(59, 214, 181, 0.72));
-        z-index: 1;
-    }
-
-    .hero-slide-image {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transform: scale(1.02) translateZ(0);
-        backface-visibility: hidden;
-    }
-
-    .hero-carousel .carousel-item.active .hero-copy {
-        animation: heroCopyIn 0.85s ease both;
-    }
-
-    .hero-carousel .carousel-indicators {
-        bottom: 28px;
-        margin-bottom: 0;
-    }
-
-    .hero-carousel .carousel-indicators [data-bs-target] {
-        width: 34px;
-        height: 7px;
-        border: 0;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.55);
-    }
-
-    .hero-carousel .carousel-indicators .active {
-        background: #ffffff;
-    }
-
-    .hero-carousel .carousel-control-prev,
-    .hero-carousel .carousel-control-next {
-        width: 7%;
-    }
-
-    @keyframes heroCopyIn {
-        from {
-            opacity: 0;
-            transform: translateY(18px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .hero-badge {
-        background: rgba(255, 255, 255, 0.16);
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        color: #ffffff;
-        backdrop-filter: blur(12px);
-    }
-
-    .product-card img {
-        height: 220px;
-        object-fit: cover;
-    }
-
-    .feature-icon {
-        width: 54px;
-        height: 54px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 18px;
-        background: linear-gradient(135deg, rgba(15, 139, 141, 0.12), rgba(255, 183, 3, 0.18));
-        color: var(--drink-primary);
-        font-weight: 800;
-    }
-
-    .promo-card {
-        background: rgba(255, 255, 255, 0.94);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-        border-radius: 28px;
-        box-shadow: 0 28px 70px rgba(7, 52, 58, 0.24);
+    /* ─── Shared ─── */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.7);
         backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: var(--shadow-sm);
     }
 
-    .promo-pill {
-        background: #fff7df;
-        color: #8a5a00;
-        border-radius: 999px;
-        padding: 0.35rem 0.75rem;
-        font-weight: 800;
-        font-size: 0.8rem;
+    /* ─── Categories ─── */
+    .category-section {
+        position: relative;
+        padding: 5rem 0;
+        background: linear-gradient(180deg, var(--c-bg) 0%, #fff 100%);
     }
 
     .category-card {
-        min-height: 150px;
+        position: relative;
+        display: block;
+        border-radius: var(--radius-2xl);
+        overflow: hidden;
+        text-decoration: none;
+        background: var(--c-surface);
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1.5px solid transparent;
+        aspect-ratio: 4/5;
     }
 
+    .category-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .category-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(0deg, rgba(17, 24, 39, 0.85) 0%, rgba(17, 24, 39, 0) 50%);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 1.5rem;
+        transition: background 0.3s ease;
+    }
+
+    .category-card:hover {
+        transform: translateY(-8px);
+        border-color: var(--c-primary);
+        box-shadow: var(--shadow-xl), var(--shadow-glow);
+    }
+
+    .category-card:hover .category-image {
+        transform: scale(1.08);
+    }
+
+    .category-card:hover .category-overlay {
+        background: linear-gradient(0deg, var(--c-primary-dark) 0%, rgba(17, 24, 39, 0) 60%);
+    }
+
+    .category-title {
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin-bottom: 0.25rem;
+        transition: transform 0.3s ease;
+    }
+
+    .category-icon {
+        width: 40px; height: 40px;
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(8px);
+        border-radius: 50%;
+        color: #fff; font-size: 1.25rem;
+        margin-bottom: auto; align-self: flex-end;
+        transition: transform 0.3s ease;
+    }
+
+    .category-card:hover .category-icon {
+        transform: scale(1.1) rotate(15deg);
+        background: var(--c-primary);
+    }
+    
+    .category-card:hover .category-title {
+        transform: translateX(4px);
+    }
+
+    /* ─── Featured Products ─── */
+    .featured-section {
+        padding: 5rem 0;
+        background: #fff;
+    }
+
+    .product-card {
+        border-radius: var(--radius-2xl);
+        overflow: hidden;
+        border: 1px solid var(--c-border);
+        background: var(--c-surface);
+        transition: all 0.3s ease;
+    }
+
+    .product-card:hover {
+        transform: translateY(-6px);
+        border-color: var(--c-primary);
+        box-shadow: var(--shadow-xl);
+    }
+
+    .product-img-wrap {
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+        background: var(--c-bg-warm);
+    }
+
+    .product-img-wrap img {
+        width: 100%; height: 100%; object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .product-card:hover .product-img-wrap img {
+        transform: scale(1.08);
+    }
+
+    .product-badge {
+        position: absolute;
+        top: 1rem; left: 1rem;
+        background: var(--c-surface);
+        color: var(--c-primary);
+        padding: 0.35rem 0.8rem;
+        border-radius: var(--radius-full);
+        font-weight: 700; font-size: 0.75rem;
+        box-shadow: var(--shadow-sm);
+        z-index: 2;
+    }
+
+    .product-rating {
+        display: flex; align-items: center; gap: 4px;
+        color: #F59E0B; font-size: 0.8rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .product-card .card-body { padding: 1.5rem; }
+
+    .product-cart-btn {
+        width: 44px; height: 44px;
+        border-radius: var(--radius-full);
+        padding: 0; display: inline-flex; align-items: center; justify-content: center;
+        background: var(--c-primary-light); color: var(--c-primary);
+        border: 0; transition: all 0.2s ease;
+    }
+
+    .product-card:hover .product-cart-btn, .product-cart-btn:hover {
+        background: var(--c-primary); color: #fff;
+        transform: scale(1.1);
+    }
+
+    /* ─── Feature Band ─── */
     .feature-band {
-        background:
-            radial-gradient(circle at 15% 15%, rgba(255, 183, 3, 0.12), transparent 20rem),
-            linear-gradient(180deg, #ffffff, #f2fbf8);
+        padding: 6rem 0;
+        background: linear-gradient(135deg, var(--c-primary-dark), var(--c-primary));
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .feature-band::before {
+        content: '';
+        position: absolute; top: -50%; left: -10%;
+        width: 50%; height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+        transform: rotate(30deg);
+    }
+
+    .feature-item {
+        text-align: center;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius-2xl);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: transform 0.3s ease;
+    }
+
+    .feature-item:hover { transform: translateY(-10px); }
+
+    .feature-icon-lg {
+        width: 72px; height: 72px; margin: 0 auto 1.5rem;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: var(--radius-xl);
+        font-size: 2rem; color: #fff;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+    }
+
+    /* ─── CTA Section ─── */
+    .cta-section { padding: 5rem 0; background: var(--c-bg); }
+
+    .cta-card {
+        background: var(--c-surface);
+        border-radius: 32px;
+        overflow: hidden;
+        border: 1px solid var(--c-border);
+        box-shadow: var(--shadow-xl);
+        display: flex; flex-wrap: wrap;
+    }
+
+    .cta-content { padding: 4rem; flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;}
+    .cta-image { flex: 1; min-width: 300px; background: var(--c-primary-light); position: relative; }
+    
+    .cta-image img {
+        position: absolute; width: 100%; height: 100%; object-fit: cover;
+    }
+
+    @media (max-width: 767.98px) {
+        .category-scroll {
+            display: flex; flex-wrap: nowrap; overflow-x: auto;
+            gap: 1rem; padding-bottom: 1rem; scroll-snap-type: x mandatory;
+        }
+        .category-scroll > div { flex: 0 0 calc(70% - 1rem); scroll-snap-align: center; }
+        .cta-content { padding: 2rem; }
+        .cta-image { min-height: 250px; }
     }
 </style>
 
-<section class="home-hero">
-    <div id="drinkHeroCarousel" class="carousel slide carousel-fade hero-carousel" data-bs-interval="5200" data-bs-pause="hover">
-        <div class="carousel-indicators">
-            <button type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-            <button type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
-            <button type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
-        </div>
+<x-animated-slider />
 
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img class="hero-slide-image" src="https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1800&q=85" alt="Đồ uống mát lạnh" fetchpriority="high">
-                <div class="container hero-content py-5">
-                    <div class="row align-items-center g-5" style="min-height: 650px;">
-                        <div class="col-lg-7 hero-copy">
-                            <span class="badge hero-badge rounded-pill px-3 py-2 mb-3">Pha tươi mỗi ngày</span>
-                            <h1 class="display-3 fw-bold mb-3">Đồ uống mát lạnh giao tới bạn trong tích tắc</h1>
-                            <p class="lead mb-4">Trà sữa, cà phê, nước ép và trà trái cây được tuyển chọn gọn gàng để bạn tìm nhanh, chọn dễ và đặt hàng thật nhẹ.</p>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a href="{{ route('products.index') }}" class="btn btn-light btn-lg text-primary fw-bold">Đặt ngay</a>
-                                <a href="#featured-products" class="btn btn-outline-light btn-lg">Xem món nổi bật</a>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="promo-card text-dark p-4 p-md-5">
-                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-                                    <div>
-                                        <span class="promo-pill">Best combo</span>
-                                        <h2 class="h3 fw-bold mt-3 mb-2">Ưu đãi hôm nay</h2>
-                                    </div>
-                                    <span class="display-6 fw-bold text-primary">-20%</span>
-                                </div>
-                                <p class="text-secondary mb-4">Combo trà trái cây, cà phê sữa và nước ép được cập nhật theo ngày.</p>
-                                <div class="row g-3 text-center">
-                                    <div class="col-4">
-                                        <div class="h3 fw-bold text-primary mb-0">30'</div>
-                                        <small class="text-secondary">Giao nhanh</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="h3 fw-bold text-primary mb-0">8+</div>
-                                        <small class="text-secondary">Danh mục</small>
-                                    </div>
-                                    <div class="col-4">
-                                        <div class="h3 fw-bold text-primary mb-0">24/7</div>
-                                        <small class="text-secondary">Đặt hàng</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="carousel-item">
-                <img class="hero-slide-image" src="https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1800&q=85" alt="Nước ép trái cây" loading="eager">
-                <div class="container hero-content py-5">
-                    <div class="row align-items-center g-5" style="min-height: 650px;">
-                        <div class="col-lg-7 hero-copy">
-                            <span class="badge hero-badge rounded-pill px-3 py-2 mb-3">Trái cây tươi</span>
-                            <h1 class="display-3 fw-bold mb-3">Nước ép và trà trái cây cho ngày thật nhẹ</h1>
-                            <p class="lead mb-4">Vị chua ngọt cân bằng, màu sắc bắt mắt và menu rõ ràng để bạn chọn món hợp tâm trạng.</p>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a href="{{ route('products.index', ['category' => 4]) }}" class="btn btn-light btn-lg text-primary fw-bold">Xem nước ép</a>
-                                <a href="{{ route('products.index') }}" class="btn btn-outline-light btn-lg">Mở menu</a>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="promo-card text-dark p-4 p-md-5">
-                                <span class="promo-pill">Fresh pick</span>
-                                <h2 class="h3 fw-bold mt-3 mb-3">Mát lành tự nhiên</h2>
-                                <p class="text-secondary mb-0">Phù hợp cho bữa trưa, buổi học, giờ làm hoặc những lúc cần nạp lại năng lượng.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="carousel-item">
-                <img class="hero-slide-image" src="https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=1800&q=85" alt="Cà phê và trà sữa" loading="eager">
-                <div class="container hero-content py-5">
-                    <div class="row align-items-center g-5" style="min-height: 650px;">
-                        <div class="col-lg-7 hero-copy">
-                            <span class="badge hero-badge rounded-pill px-3 py-2 mb-3">Cà phê & trà sữa</span>
-                            <h1 class="display-3 fw-bold mb-3">Đậm vị, đẹp mắt, sẵn sàng để thêm vào giỏ</h1>
-                            <p class="lead mb-4">Các món được trình bày bằng card rõ giá, rõ danh mục, giúp trải nghiệm mua hàng nhanh và dễ chịu hơn.</p>
-                            <div class="d-flex flex-wrap gap-3">
-                                <a href="{{ route('products.index', ['category' => 2]) }}" class="btn btn-light btn-lg text-primary fw-bold">Xem cà phê</a>
-                                <a href="{{ route('cart.index') }}" class="btn btn-outline-light btn-lg">Tới giỏ hàng</a>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="promo-card text-dark p-4 p-md-5">
-                                <span class="promo-pill">Quick order</span>
-                                <h2 class="h3 fw-bold mt-3 mb-3">Đặt nhanh hơn</h2>
-                                <p class="text-secondary mb-0">Tìm kiếm, chọn món, thêm giỏ và thanh toán trong vài thao tác gọn gàng.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <button class="carousel-control-prev" type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Trước</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#drinkHeroCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Sau</span>
-        </button>
-    </div>
-</section>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const hero = document.getElementById('drinkHeroCarousel');
-        if (!hero || !window.bootstrap) {
-            return;
-        }
-
-        const images = Array.from(hero.querySelectorAll('.hero-slide-image')).map((image) => image.src);
-        Promise.all(images.map((src) => new Promise((resolve) => {
-            const image = new Image();
-            image.onload = resolve;
-            image.onerror = resolve;
-            image.src = src;
-        }))).then(() => {
-            bootstrap.Carousel.getOrCreateInstance(hero, {
-                interval: 5200,
-                ride: 'carousel',
-                pause: 'hover',
-                touch: true,
-                wrap: true
-            });
-        });
-    });
-</script>
-
-<section class="py-5">
+<section class="category-section">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-4">
+        <div class="d-flex justify-content-between align-items-end mb-5">
             <div>
-                <p class="section-kicker mb-1">Danh mục</p>
-                <h2 class="section-title h1 mb-0">Chọn đồ uống yêu thích</h2>
+                <p class="section-kicker mb-2">Thực đơn</p>
+                <h2 class="section-title h1 mb-0">Hương vị yêu thích</h2>
             </div>
-            <a href="{{ route('products.index') }}" class="btn btn-outline-primary d-none d-md-inline-flex">Xem tất cả</a>
+            <a href="{{ route('products.index') }}" class="btn btn-outline-primary d-none d-md-inline-flex px-4 rounded-pill">Khám phá tất cả <i class="bi bi-arrow-right ms-2"></i></a>
         </div>
 
-        <div class="row g-4">
+        <div class="row g-4 category-scroll">
             @forelse($categories as $category)
-                <div class="col-6 col-md-4 col-lg-2">
-                    <a href="{{ route('products.index', ['category' => $category->id]) }}" class="text-decoration-none">
-                        <div class="category-card drink-card bg-white p-4 text-center h-100">
-                            <div class="feature-icon mx-auto mb-3">{{ mb_substr($category->name, 0, 1) }}</div>
-                            <h3 class="h6 text-dark mb-0">{{ $category->name }}</h3>
+                <div class="col-md-4 col-lg-3">
+                    <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-card">
+                        <img src="{{ $uiCategoryImages[$category->name] ?? $uiDefaultImage }}" alt="{{ $category->name }}" class="category-image">
+                        <div class="category-overlay">
+                            <span class="category-icon"><i class="bi bi-cup-straw"></i></span>
+                            <div class="category-title">{{ $category->name }}</div>
+                            <span class="text-white opacity-75 small">Xem lựa chọn</span>
                         </div>
                     </a>
                 </div>
             @empty
-                <div class="col-12">
-                    <div class="alert alert-info mb-0">Chưa có danh mục sản phẩm.</div>
-                </div>
+                @foreach([
+                    ['Trà Sữa', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=500&q=85', 'bi-cup-hot'],
+                    ['Cà Phê', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=500&q=85', 'bi-cup'],
+                    ['Nước Ép', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=85', 'bi-cup-straw'],
+                    ['Sinh Tố', 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=500&q=85', 'bi-snow'],
+                ] as $category)
+                    <div class="col-md-4 col-lg-3">
+                        <a href="{{ route('products.index') }}" class="category-card">
+                            <img src="{{ $category[1] }}" alt="{{ $category[0] }}" class="category-image">
+                            <div class="category-overlay">
+                                <span class="category-icon"><i class="bi {{ $category[2] }}"></i></span>
+                                <div class="category-title">{{ $category[0] }}</div>
+                                <span class="text-white opacity-75 small">Xem lựa chọn</span>
+                            </div>
+                        </a>
+                    </div>
+                @endforeach
             @endforelse
         </div>
     </div>
 </section>
 
-<section id="featured-products" class="py-5">
+<section id="featured-products" class="featured-section">
     <div class="container">
-        <div class="text-center mb-5">
-            <p class="section-kicker mb-1">Sản phẩm</p>
-            <h2 class="section-title h1 mb-2">Nổi bật trong ngày</h2>
-            <p class="text-secondary mb-0">Các món đang được khách hàng chọn nhiều nhất.</p>
+        <div class="text-center mb-5 max-w-2xl mx-auto" style="max-width: 600px; margin: 0 auto;">
+            <p class="section-kicker mb-2">Bán chạy nhất</p>
+            <h2 class="section-title h1 mb-3">Gợi ý hôm nay</h2>
+            <p class="text-secondary text-lg mb-0">Những món uống được yêu thích nhất tại Chill Drink, mang đến sự tươi mới cho ngày của bạn.</p>
         </div>
 
-        <div class="row g-4">
-            @forelse($featuredProducts as $product)
+        <div class="row g-4 g-lg-5">
+            @php
+                $homeFeaturedSkus = $uiHomeFeaturedSkus ?? [
+                    'CD-TS-001', 'CD-CF-001', 'CD-ST-001', 'CD-NE-001',
+                    'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
+                ];
+                $homeHasSkuColumn = \Illuminate\Support\Facades\Schema::hasColumn('products', 'sku');
+                $homeFeaturedProducts = $homeHasSkuColumn
+                    ? \App\Models\Product::with('category')
+                        ->whereIn('sku', $homeFeaturedSkus)
+                        ->get()
+                        ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
+                        ->values()
+                    : \App\Models\Product::with('category')
+                        ->where('status', true)
+                        ->latest()
+                        ->limit(8)
+                        ->get();
+            @endphp
+            @forelse($homeFeaturedProducts as $product)
                 <div class="col-sm-6 col-lg-3">
-                    <div class="product-card drink-card card h-100 overflow-hidden border-0">
-                        <a href="{{ route('products.show', $product->slug) }}">
-                            <img src="{{ $product->image }}" class="card-img-top" alt="{{ $product->name }}">
-                        </a>
-                        <div class="card-body d-flex flex-column">
-                            <span class="badge rounded-pill align-self-start mb-2" style="background: var(--drink-soft); color: var(--drink-primary);">{{ $product->category->name }}</span>
-                            <h3 class="h5 card-title">
-                                <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">
-                                    {{ $product->name }}
-                                </a>
+                    <div class="product-card h-100 d-flex flex-column">
+                        <div class="product-img-wrap">
+                            <span class="product-badge">{{ $product->category->name }}</span>
+                            <a href="{{ route('products.show', $product->slug) }}">
+                                <x-product-image
+                                    :src="$product->image_url"
+                                    :sku="$product->sku ?? null"
+                                    :name="$product->name"
+                                    :alt="$product->name"
+                                    :category="$product->category?->name"
+                                />
+                            </a>
+                        </div>
+                        <div class="card-body d-flex flex-column flex-grow-1">
+                            <div class="product-rating">
+                                <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i>
+                                <span class="text-secondary ms-1">(4.8)</span>
+                            </div>
+                            <h3 class="h5 fw-bold mb-1">
+                                <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
                             </h3>
-                            <div class="mt-auto d-flex align-items-center justify-content-between gap-3">
-                                <strong class="text-primary">{{ number_format($product->price, 0, ',', '.') }}đ</strong>
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="btn btn-primary btn-sm">Thêm</button>
-                                </form>
+                            @if(!empty($product->sku))
+                                <p class="text-muted small font-monospace mb-3">{{ $product->sku }}</p>
+                            @else
+                                <div class="mb-3"></div>
+                            @endif
+                            <div class="mt-auto d-flex align-items-center justify-content-between">
+                                <strong class="text-primary h5 mb-0">{{ number_format($product->price, 0, ',', '.') }}đ</strong>
+                                <a href="{{ route('products.show', $product->slug) }}" class="product-cart-btn" aria-label="Xem chi tiết {{ $product->name }}">
+                                    <i class="bi bi-bag-plus fs-5"></i>
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
             @empty
-                <div class="col-12">
-                    <div class="alert alert-info mb-0">Chưa có sản phẩm nổi bật.</div>
-                </div>
+                @foreach([
+                    ['Matcha Latte', '45.000đ', 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85', 'Trà', 'matcha-latte-da'],
+                    ['Trà Dâu Dứa', '38.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85', 'Trái cây', 'tropical-frost'],
+                    ['Bạc Xỉu Đá', '29.000đ', 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=700&q=85', 'Cà phê', 'ca-phe-sua-da'],
+                    ['Nước Chanh Bạc Hà', '35.000đ', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85', 'Giải khát', 'citrus-sunset'],
+                ] as $item)
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="product-card h-100 d-flex flex-column">
+                            <div class="product-img-wrap">
+                                <span class="product-badge">{{ $item[3] }}</span>
+                                <a href="{{ route('products.show', $item[4]) }}">
+                                    <img src="{{ $item[2] }}" alt="{{ $item[0] }}">
+                                </a>
+                            </div>
+                            <div class="card-body d-flex flex-column flex-grow-1">
+                                <div class="product-rating">
+                                    <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+                                </div>
+                                <h3 class="h5 fw-bold mb-3">
+                                    <a href="{{ route('products.show', $item[4]) }}" class="text-dark text-decoration-none">{{ $item[0] }}</a>
+                                </h3>
+                                <div class="mt-auto d-flex align-items-center justify-content-between">
+                                    <strong class="text-primary h5 mb-0">{{ $item[1] }}</strong>
+                                    <a href="{{ route('products.show', $item[4]) }}" class="product-cart-btn" aria-label="Xem chi tiết {{ $item[0] }}">
+                                        <i class="bi bi-bag-plus fs-5"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
             @endforelse
+        </div>
+        
+        <div class="text-center mt-5 pt-3">
+            <a href="{{ route('products.index') }}" class="btn btn-outline-primary px-5 py-2 rounded-pill fw-bold">Xem toàn bộ menu</a>
         </div>
     </div>
 </section>
 
-<section class="feature-band py-5">
+<section class="feature-band">
+    <div class="container position-relative z-1">
+        <div class="row g-4 g-lg-5">
+            <div class="col-md-4">
+                <div class="feature-item h-100">
+                    <div class="feature-icon-lg"><i class="bi bi-rocket-takeoff"></i></div>
+                    <h3 class="h4 fw-bold text-white mb-3">Giao Hàng Siêu Tốc</h3>
+                    <p class="text-white-50 mb-0">Cam kết giao hàng trong 30 phút. Đồ uống luôn tươi mát và chuẩn vị khi tới tay bạn.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-item h-100">
+                    <div class="feature-icon-lg"><i class="bi bi-cup-hot"></i></div>
+                    <h3 class="h4 fw-bold text-white mb-3">Nguyên Liệu Tươi Sạch</h3>
+                    <p class="text-white-50 mb-0">Sử dụng trái cây tươi mỗi ngày và trà/cà phê chọn lọc kỹ càng, đảm bảo an toàn.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-item h-100">
+                    <div class="feature-icon-lg"><i class="bi bi-shield-check"></i></div>
+                    <h3 class="h4 fw-bold text-white mb-3">Thanh Toán An Toàn</h3>
+                    <p class="text-white-50 mb-0">Hỗ trợ đa dạng phương thức thanh toán, tiện lợi và bảo mật tuyệt đối thông tin.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section">
     <div class="container">
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="feature-card drink-card bg-white p-4 h-100">
-                    <div class="feature-icon mb-3">1</div>
-                    <h3 class="h5 fw-bold">Giao hàng nhanh</h3>
-                    <p class="text-secondary mb-0">Nhận đơn nhanh, chuẩn bị gọn và giao tới bạn khi đồ uống còn ngon.</p>
+        <div class="cta-card">
+            <div class="cta-content">
+                <p class="section-kicker mb-2">Ưu đãi thành viên</p>
+                <h2 class="display-6 fw-bold mb-3">Tham gia cộng đồng <br>Chill Drink</h2>
+                <p class="text-secondary mb-4 fs-5">Đăng ký thành viên ngay hôm nay để nhận voucher giảm 20% cho đơn hàng đầu tiên và tích điểm đổi quà.</p>
+                <div class="d-flex flex-wrap gap-3">
+                    @guest
+                        <a href="{{ route('register') }}" class="btn btn-primary btn-lg rounded-pill px-4">Đăng ký ngay</a>
+                    @else
+                        <a href="{{ route('products.index') }}" class="btn btn-primary btn-lg rounded-pill px-4">Đặt hàng ngay</a>
+                    @endguest
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="feature-card drink-card bg-white p-4 h-100">
-                    <div class="feature-icon mb-3">2</div>
-                    <h3 class="h5 fw-bold">Dễ tìm dễ chọn</h3>
-                    <p class="text-secondary mb-0">Danh mục rõ ràng, tìm kiếm nhanh, card sản phẩm dễ xem trên mọi màn hình.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="feature-card drink-card bg-white p-4 h-100">
-                    <div class="feature-icon mb-3">3</div>
-                    <h3 class="h5 fw-bold">Thanh toán tiện</h3>
-                    <p class="text-secondary mb-0">Giỏ hàng, đăng nhập và thanh toán được sắp xếp gọn để thao tác ít bước hơn.</p>
-                </div>
+            <div class="cta-image">
+                <img src="https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1000&q=85" alt="Summer drinks">
             </div>
         </div>
     </div>
