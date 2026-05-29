@@ -10,45 +10,31 @@ class Category extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
+    public $timestamps = false;
+
     protected $fillable = [
         'name',
         'slug',
-        'description',
         'status',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array
-     */
     protected $casts = [
         'status' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    /**
-     * Boot the model.
-     */
     protected static function boot()
     {
         parent::boot();
 
-        // Auto generate slug from name
-        static::creating(function ($category) {
-            if (empty($category->slug)) {
+        static::saving(function ($category) {
+            if (empty($category->slug) || $category->isDirty('name')) {
                 $category->slug = Str::slug($category->name);
             }
         });
     }
 
-    /**
-     * Get all products for the category
-     */
     public function products()
     {
         return $this->hasMany(Product::class);

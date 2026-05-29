@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'password_reset' => [
+        'expire_minutes' => env('PASSWORD_RESET_EXPIRE_MINUTES', 60),
+        'smtp_host' => env('PASSWORD_RESET_SMTP_HOST'),
+        'smtp_port' => env('PASSWORD_RESET_SMTP_PORT', 587),
+        'smtp_encryption' => env('PASSWORD_RESET_SMTP_ENCRYPTION', 'tls'),
+        'smtp_username' => env('PASSWORD_RESET_SMTP_USERNAME'),
+        'smtp_password' => env('PASSWORD_RESET_SMTP_PASSWORD'),
+        'from_address' => env('PASSWORD_RESET_FROM_ADDRESS'),
+        'from_name' => env('PASSWORD_RESET_FROM_NAME', 'Chill Drink'),
+    ],
+
 ];
