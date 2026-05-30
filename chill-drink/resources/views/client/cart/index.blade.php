@@ -6,6 +6,7 @@
 @php
     extract(require resource_path('views/partials/ui-product-data.php'));
     $shippingTiers = \App\Support\ShippingFee::distanceOptions();
+    $cart = $cart ?? session('cart', []);
 @endphp
 <script>
     document.body.dataset.page = 'cart';
@@ -191,7 +192,7 @@
             <h1 class="cart-title mb-0">Giỏ hàng của bạn</h1>
         </div>
 
-        @if(session('cart') && count(session('cart')) > 0)
+        @if(!empty($cart))
             @php
                 $total = 0;
                 $tax = 0;
@@ -205,12 +206,12 @@
                             Chọn tất cả sản phẩm
                         </label>
                         <div class="text-secondary">
-                            Đã chọn <strong class="text-primary" data-selected-count>{{ count(session('cart')) }}</strong> sản phẩm
+                            Đã chọn <strong class="text-primary" data-selected-count>{{ count($cart) }}</strong> sản phẩm
                         </div>
                     </div>
 
                     <div class="vstack gap-4">
-                        @foreach(session('cart') as $id => $item)
+                        @foreach($cart as $id => $item)
                             @php
                                 $subtotal = $item['price'] * $item['quantity'];
                                 $total += $subtotal;
@@ -286,7 +287,7 @@
 
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Sản phẩm đã chọn</span>
-                            <strong><span data-selected-count>{{ count(session('cart')) }}</span> món</strong>
+                            <strong><span data-selected-count>{{ count($cart) }}</span> món</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Tạm tính đã chọn</span>
