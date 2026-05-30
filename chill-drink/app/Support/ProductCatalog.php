@@ -18,6 +18,7 @@ class ProductCatalog
         'Nước Ép' => 'NE',
         'Trà Trái Cây' => 'TC',
         'Soda' => 'SD',
+        'Đá Xay' => 'DX',
     ];
 
     /** @var array<string, string> */
@@ -28,6 +29,7 @@ class ProductCatalog
         'Nước Ép' => 'Nước ép nguyên chất, không pha loãng, vị trái cây tự nhiên.',
         'Trà Trái Cây' => 'Trà trái cây thanh mát, hương thơm nhẹ, giải khát hiệu quả.',
         'Soda' => 'Soda có gas, vị chua ngọt sảng khoái, uống cực đã khi thức uống.',
+        'Đá Xay' => 'Đồ uống đá xay mịn, mát lạnh, vị ngọt cân bằng và dễ uống.',
     ];
 
     /**
@@ -64,6 +66,8 @@ class ProductCatalog
         ['name' => 'Soda Việt Quất', 'category' => 'Soda', 'sku' => 'CD-SD-003', 'slug' => 'soda-viet-quat', 'description' => 'Việt quất chua nhẹ, soda sủi bọt, vị mát lạnh khó cưỡng.', 'price' => 40000],
         ['name' => 'Soda Dưa Leo', 'category' => 'Soda', 'sku' => 'CD-SD-004', 'slug' => 'soda-dua-leo', 'description' => 'Dưa leo tươi mát, soda nhẹ nhàng, giải khát cực nhanh.', 'price' => 32000],
         ['name' => 'Soda Cam', 'category' => 'Soda', 'sku' => 'CD-SD-005', 'slug' => 'soda-cam', 'description' => 'Cam tươi vắt, soda có gas, vị chua ngọt sảng khoái cả ngày.', 'price' => 34000],
+        ['name' => 'Matcha Đá Xay', 'category' => 'Đá Xay', 'sku' => 'CD-DX-001', 'slug' => 'matcha-da-xay', 'description' => 'Matcha đá xay mịn, phủ kem béo, vị trà xanh rõ và hậu ngọt dịu.', 'price' => 52000],
+        ['name' => 'Chocolate Đá Xay', 'category' => 'Đá Xay', 'sku' => 'CD-DX-002', 'slug' => 'chocolate-da-xay', 'description' => 'Chocolate đậm vị xay cùng đá, mát lạnh, phù hợp khách thích vị ngọt béo.', 'price' => 50000],
     ];
 
     public static function findByName(string $name): ?array
