@@ -4,8 +4,8 @@
 @section('search-placeholder', 'Tìm đồ uống, mã sản phẩm...')
 
 @section('content')
-<section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
-    <div class="d-flex flex-wrap gap-2">
+<section class="admin-products-header d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <div class="admin-products-filters d-flex flex-wrap gap-2">
         <button class="btn btn-primary">Tất cả sản phẩm</button>
         <button class="btn btn-outline-primary">Trà sữa</button>
         <button class="btn btn-outline-primary">Cà phê</button>
@@ -13,19 +13,19 @@
         <button class="btn btn-outline-primary">Bộ lọc</button>
         <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
     </div>
-    <div class="text-lg-end">
+    <div class="admin-stock-summary text-lg-end">
         <p class="admin-kicker mb-1">Tình trạng kho</p>
         <div class="d-flex align-items-center gap-3">
             <div><span class="admin-value text-primary">{{ $products->total() ?? $products->count() }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
-            <div style="width:1px;height:38px;background:var(--admin-border);"></div>
-            <div><span class="admin-value" style="color:var(--admin-danger);">0</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
+            <div style="width:1px;height:38px;background:var(--a-border);"></div>
+            <div><span class="admin-value" style="color:var(--a-danger);">0</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
         </div>
     </div>
 </section>
 
-<section class="admin-card">
+<section class="admin-card admin-table-card admin-products-card">
     <div class="table-responsive">
-        <table class="table admin-table align-middle">
+        <table class="table admin-table admin-products-table align-middle">
             <thead>
                 <tr>
                     <th>Ảnh</th>
@@ -63,9 +63,9 @@
                         <td class="fw-bold">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</td>
                         <td>
                             @if($product->status)
-                                <span class="d-inline-flex align-items-center gap-2 fw-bold text-primary"><span style="width:8px;height:8px;border-radius:50%;background:var(--admin-primary);"></span> Đang bán</span>
+                                <span class="d-inline-flex align-items-center gap-2 fw-bold text-primary"><span style="width:8px;height:8px;border-radius:50%;background:var(--a-primary);"></span> Đang bán</span>
                             @else
-                                <span class="d-inline-flex align-items-center gap-2 fw-bold text-secondary"><span style="width:8px;height:8px;border-radius:50%;background:var(--admin-muted);"></span> Đã ẩn</span>
+                                <span class="d-inline-flex align-items-center gap-2 fw-bold text-secondary"><span style="width:8px;height:8px;border-radius:50%;background:var(--a-muted);"></span> Đã ẩn</span>
                             @endif
                         </td>
                         <td class="text-end">
@@ -74,7 +74,7 @@
                             <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
                                 @csrf
                                 @method('DELETE')
-                                <button class="admin-action" title="Xóa" style="color:var(--admin-danger);"><i class="bi bi-trash3"></i></button>
+                                <button class="admin-action" title="Xóa" style="color:var(--a-danger);"><i class="bi bi-trash3"></i></button>
                             </form>
                         </td>
                     </tr>
@@ -89,9 +89,9 @@
             </tbody>
         </table>
     </div>
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
+    <div class="admin-pagination-footer">
         <p class="text-secondary mb-0">Đang hiển thị {{ $products->count() }} sản phẩm</p>
-        {{ $products->links() }}
+        {{ $products->onEachSide(1)->links() }}
     </div>
 </section>
 @endsection

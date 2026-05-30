@@ -15,7 +15,7 @@ return new class extends Migration
             }
 
             if (! Schema::hasColumn('products', 'stock')) {
-                $table->integer('stock')->default(0);
+                $table->integer('stock')->default(100);
             }
         });
 
@@ -32,6 +32,10 @@ return new class extends Migration
             ");
         }
 
+        DB::table('products')
+            ->where('stock', 0)
+            ->update(['stock' => 100]);
+
         if (Schema::hasTable('orders') && DB::getDriverName() === 'mysql') {
             DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('cod','bank_transfer','vnpay','momo','card','wallet') NOT NULL DEFAULT 'cod'");
         }
@@ -46,15 +50,5 @@ return new class extends Migration
 
             DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('cod','vnpay','momo','card','wallet') NOT NULL DEFAULT 'cod'");
         }
-
-        Schema::table('products', function (Blueprint $table) {
-            if (Schema::hasColumn('products', 'stock')) {
-                $table->dropColumn('stock');
-            }
-
-            if (Schema::hasColumn('products', 'price')) {
-                $table->dropColumn('price');
-            }
-        });
     }
 };

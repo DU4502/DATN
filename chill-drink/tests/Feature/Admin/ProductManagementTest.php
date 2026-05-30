@@ -6,12 +6,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-<<<<<<< Updated upstream
-=======
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
->>>>>>> Stashed changes
 use Tests\TestCase;
 
 class ProductManagementTest extends TestCase
@@ -38,11 +35,9 @@ class ProductManagementTest extends TestCase
 
         $this->assertNotNull($product);
         $this->assertSame($category->id, $product->category_id);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.index'));
     }
 
-<<<<<<< Updated upstream
-=======
     public function test_admin_can_upload_image_when_creating_product(): void
     {
         Storage::fake('public');
@@ -68,10 +63,9 @@ class ProductManagementTest extends TestCase
         $this->assertNotNull($product->image);
         $this->assertStringStartsWith('products/', $product->image);
         Storage::disk('public')->assertExists($product->image);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.index'));
     }
 
->>>>>>> Stashed changes
     public function test_admin_can_update_product(): void
     {
         $admin = $this->admin();
@@ -88,7 +82,7 @@ class ProductManagementTest extends TestCase
             'status' => true,
         ]);
 
-        $response = $this->actingAs($admin)->put(route('admin.products.update', $product), [
+        $response = $this->actingAs($admin)->put(route('admin.products.update', $product->id), [
             'category_id' => $category->id,
             'name' => 'Cà Phê Mới',
             'slug' => 'ca-phe-moi',
@@ -102,11 +96,9 @@ class ProductManagementTest extends TestCase
         $this->assertSame('Cà Phê Mới', $product->name);
         $this->assertSame('ca-phe-moi', $product->slug);
         $this->assertFalse($product->status);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.index'));
     }
 
-<<<<<<< Updated upstream
-=======
     public function test_admin_can_replace_old_image_when_updating_product(): void
     {
         Storage::fake('public');
@@ -144,10 +136,9 @@ class ProductManagementTest extends TestCase
         Storage::disk('public')->assertMissing($oldPath);
         Storage::disk('public')->assertExists($product->image);
         $this->assertNotSame($oldPath, $product->image);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.index'));
     }
 
->>>>>>> Stashed changes
     public function test_admin_can_delete_product_without_orders(): void
     {
         $admin = $this->admin();
@@ -164,14 +155,12 @@ class ProductManagementTest extends TestCase
             'status' => true,
         ]);
 
-        $response = $this->actingAs($admin)->delete(route('admin.products.destroy', $product));
+        $response = $this->actingAs($admin)->delete(route('admin.products.destroy', $product->id));
 
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
         $response->assertRedirect(route('admin.products.index'));
     }
 
-<<<<<<< Updated upstream
-=======
     public function test_product_validation_rejects_invalid_image_and_negative_values(): void
     {
         Storage::fake('public');
@@ -198,7 +187,6 @@ class ProductManagementTest extends TestCase
         $this->assertDatabaseMissing('products', ['name' => 'Cam Ép Test']);
     }
 
->>>>>>> Stashed changes
     private function admin(): User
     {
         DB::table('roles')->updateOrInsert(

@@ -178,7 +178,7 @@
                 </div>
                 <div class="text-end">
                     <div class="text-secondary small">Tổng thanh toán</div>
-                    <div class="h5 fw-bold text-primary mb-0">{{ number_format($order->total_price, 0, ',', '.') }}đ</div>
+                    <div class="h5 fw-bold text-primary mb-0">{{ number_format($order->total ?? 0, 0, ',', '.') }}đ</div>
                 </div>
             </div>
         </article>
