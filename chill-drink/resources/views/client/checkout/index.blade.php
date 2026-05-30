@@ -5,13 +5,21 @@
 @section('content')
 @php
     $total = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
-    $shippingFee = 0;
-    $discount = 0;
-    $grandTotal = $total + $shippingFee - $discount;
+    $shippingDistanceOptions = $shippingDistanceOptions ?? \App\Support\ShippingFee::distanceOptions();
+    $shippingMethods = $shippingMethods ?? \App\Support\ShippingFee::methods();
     $user = auth()->user();
     $primaryAddress = trim((string) ($user->address ?? ''));
     $primaryArea = trim((string) ($user->area ?? ''));
     $primaryAddressText = trim(collect([$primaryAddress, $primaryArea])->filter()->implode(', '));
+    $selectedShippingMethod = old('shipping_method_ui', 'standard');
+    $shippingQuote = \App\Support\ShippingFee::quoteForAddress(
+        old('shipping_address_ui', $primaryAddress),
+        old('shipping_area_ui', $primaryArea),
+        $selectedShippingMethod
+    );
+    $shippingFee = $shippingQuote['total_fee'];
+    $discount = 0;
+    $grandTotal = $total + $shippingFee - $discount;
     $paymentOptions = [
         'cod' => [
             'title' => 'Thanh toán khi nhận hàng',
@@ -180,6 +188,24 @@
         transform: translateY(-2px);
         border-color: var(--drink-primary);
         box-shadow: 0 14px 30px rgba(0, 139, 122, 0.12);
+    }
+
+    .shipping-auto-card {
+        border: 1px solid var(--drink-border);
+        border-radius: 18px;
+        background: linear-gradient(135deg, #f7fffd, #ffffff);
+    }
+
+    .shipping-auto-icon {
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: var(--drink-primary);
+        color: #ffffff;
+        flex: 0 0 auto;
     }
 
     .voucher-box {
@@ -643,36 +669,66 @@
                             <span class="checkout-step"><i class="bi bi-truck"></i></span>
                             <div>
                                 <h2 class="h4 fw-bold mb-1">Phương thức giao hàng</h2>
-                                <p class="text-secondary mb-0">Chọn kiểu giao phù hợp. Hiện tại phí giao hàng đang được miễn phí.</p>
+                                <p class="text-secondary mb-0">Phí giao hàng được tính theo khoảng cách từ cửa hàng đến địa chỉ nhận.</p>
+                            </div>
+                        </div>
+
+                        <div class="shipping-auto-card p-3 p-md-4 mb-4">
+                            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                                <div class="d-flex gap-3">
+                                    <span class="shipping-auto-icon"><i class="bi bi-geo-alt"></i></span>
+                                    <div>
+                                        <div class="fw-bold">Phí giao tự động theo địa chỉ</div>
+                                        <div class="text-secondary small">
+                                            <span id="shippingEstimateDetail">{{ $shippingQuote['estimate_label'] }} · {{ $shippingQuote['estimate_detail'] }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-secondary small">Phí dự kiến</div>
+                                    <div class="h5 text-primary fw-bold mb-0" id="shippingInlineFee">{{ number_format($shippingFee, 0, ',', '.') }}đ</div>
+                                </div>
+                            </div>
+                            <div class="border-top mt-3 pt-3 d-flex flex-wrap justify-content-between gap-2 small">
+                                <span class="text-secondary">Hệ thống tự tính sau khi bạn chọn hoặc cập nhật địa chỉ nhận hàng.</span>
+                                <span class="fw-semibold" id="shippingDistanceLabel">{{ $shippingQuote['distance_label'] }}</span>
                             </div>
                         </div>
 
                         <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="shipping-option d-block h-100">
-                                    <input type="radio" name="shipping_method_ui" value="standard" checked>
+                            @foreach($shippingMethods as $methodValue => $method)
+                                <div class="col-md-6">
+                                    <label class="shipping-option d-block h-100">
+                                        <input
+                                            type="radio"
+                                            name="shipping_method_ui"
+                                            value="{{ $methodValue }}"
+                                            data-method-label="{{ $method['label'] }}"
+                                            data-method-fee="{{ $method['surcharge'] }}"
+                                            data-method-eta="{{ $method['eta'] }}"
+                                            {{ $selectedShippingMethod === $methodValue ? 'checked' : '' }}
+                                        >
                                     <div class="shipping-card p-3 h-100">
                                         <div class="d-flex justify-content-between gap-3 mb-2">
-                                            <span class="fw-bold">Giao tiêu chuẩn</span>
-                                            <span class="text-primary fw-bold">Miễn phí</span>
+                                            <span class="fw-bold">{{ $method['label'] }}</span>
+                                            <span class="text-primary fw-bold">
+                                                {{ $method['surcharge'] > 0 ? '+' . number_format($method['surcharge'], 0, ',', '.') . 'đ' : 'Theo km' }}
+                                            </span>
                                         </div>
-                                        <p class="text-secondary small mb-0">Dự kiến 30-45 phút tùy khu vực.</p>
+                                        <p class="text-secondary small mb-0">{{ $method['description'] }}</p>
                                     </div>
-                                </label>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="shipping-option d-block h-100">
-                                    <input type="radio" name="shipping_method_ui" value="fast">
-                                    <div class="shipping-card p-3 h-100">
-                                        <div class="d-flex justify-content-between gap-3 mb-2">
-                                            <span class="fw-bold">Giao nhanh</span>
-                                            <span class="text-primary fw-bold">Miễn phí</span>
-                                        </div>
-                                        <p class="text-secondary small mb-0">Ưu tiên chuẩn bị đơn, phù hợp khi cần gấp.</p>
-                                    </div>
-                                </label>
-                            </div>
+                                    </label>
+                                </div>
+                            @endforeach
                         </div>
+
+                        <div class="alert alert-info border-0 rounded-4 mt-4 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Thời gian dự kiến <span id="shippingEta">{{ $shippingQuote['method_eta'] }}</span>. Nhân viên sẽ xác nhận lại nếu địa chỉ nằm ngoài vùng giao.
+                        </div>
+                        @error('shipping_method_ui')
+                            <div class="text-danger small mt-2">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="checkout-voucher-panel p-4 mb-4">
@@ -786,7 +842,11 @@
                             </div>
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-secondary">Phí vận chuyển</span>
-                                <span class="text-primary fw-semibold">{{ $shippingFee > 0 ? number_format($shippingFee, 0, ',', '.') . 'đ' : 'Miễn phí' }}</span>
+                                <span class="text-primary fw-semibold" id="summaryShippingFee">{{ number_format($shippingFee, 0, ',', '.') }}đ</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3 small">
+                                <span class="text-secondary">Khoảng cách</span>
+                                <span id="summaryShippingDistance">{{ $shippingQuote['distance_label'] }} · {{ $shippingQuote['method_label'] }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-secondary">Voucher</span>
@@ -794,7 +854,7 @@
                             </div>
                             <div class="d-flex justify-content-between h4 fw-bold mb-4">
                                 <span>Tổng cộng</span>
-                                <span class="text-primary">{{ number_format($grandTotal, 0, ',', '.') }}đ</span>
+                                <span class="text-primary" id="summaryGrandTotal">{{ number_format($grandTotal, 0, ',', '.') }}đ</span>
                             </div>
                         </div>
 
@@ -972,22 +1032,22 @@
                 </div>
 
                 <div class="mb-2">
-                    <div class="voucher-group-title">Mã miễn phí vận chuyển</div>
+                    <div class="voucher-group-title">Mã hỗ trợ vận chuyển</div>
                     <div class="text-secondary">Có thể chọn 1 voucher</div>
                 </div>
 
                 <div class="vstack gap-3">
-                    <div class="voucher-ticket active" data-voucher-card data-voucher-code="FREESHIP" data-voucher-label="FREESHIP - Miễn phí vận chuyển">
+                    <div class="voucher-ticket active" data-voucher-card data-voucher-code="SHIP15" data-voucher-label="SHIP15 - Giảm 15k phí vận chuyển">
                         <div class="voucher-ticket-brand">
                             <span class="brand-circle"><i class="bi bi-truck"></i></span>
-                            <strong>Freeship</strong>
+                            <strong>Ship 15k</strong>
                         </div>
                         <div class="voucher-ticket-body">
                             <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                 <span class="voucher-limit">Số lượng có hạn</span>
                                 <span class="fw-semibold text-secondary">Giảm tối đa 15kđ</span>
                             </div>
-                            <div class="text-secondary mb-2">Đơn tối thiểu 40kđ</div>
+                            <div class="text-secondary mb-2">Đơn tối thiểu 40kđ, không miễn phí toàn bộ ship</div>
                             <span class="voucher-only mb-2">Chỉ có trên Chill Drink</span>
                             <div class="voucher-progress mt-2 mb-1"><span></span></div>
                             <div class="small text-secondary">
@@ -995,7 +1055,7 @@
                                 <a href="#" class="text-decoration-none ms-1">Điều kiện</a>
                             </div>
                         </div>
-                        <button type="button" class="voucher-radio" aria-label="Chọn voucher FREESHIP"></button>
+                        <button type="button" class="voucher-radio" aria-label="Chọn voucher SHIP15"></button>
                     </div>
                     <div class="voucher-warning">
                         <i class="bi bi-info-circle me-1"></i> Voucher này đang là giao diện demo, chưa trừ tiền thật vào đơn hàng.
@@ -1070,6 +1130,18 @@
         const selectedVoucherText = document.getElementById('selectedVoucherText');
         const summaryVoucherText = document.getElementById('summaryVoucherText');
         const voucherCodeInput = document.getElementById('voucherCodeInput');
+        const shippingConfig = {
+            subtotal: {{ (int) $total }},
+        };
+        const shippingTiers = @json($shippingDistanceOptions);
+        const shippingRules = @json(\App\Support\ShippingFee::estimationRules());
+        const shippingDistanceLabel = document.getElementById('shippingDistanceLabel');
+        const shippingEstimateDetail = document.getElementById('shippingEstimateDetail');
+        const shippingInlineFee = document.getElementById('shippingInlineFee');
+        const shippingEta = document.getElementById('shippingEta');
+        const summaryShippingFee = document.getElementById('summaryShippingFee');
+        const summaryShippingDistance = document.getElementById('summaryShippingDistance');
+        const summaryGrandTotal = document.getElementById('summaryGrandTotal');
 
         let selectedAddressId = 'primary';
         let pendingVoucher = {
@@ -1102,6 +1174,73 @@
             })[char]);
         }
 
+        function formatVnd(amount) {
+            return `${Math.max(0, Number(amount) || 0).toLocaleString('vi-VN')}đ`;
+        }
+
+        function normalizeAddressText(value) {
+            return String(value || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd');
+        }
+
+        function estimateDistanceFromAddress() {
+            const text = normalizeAddressText(`${shippingAddressInput.value} ${shippingAreaInput.value}`);
+
+            if (!text.trim()) {
+                return {
+                    distance: 3.5,
+                    label: 'Chờ địa chỉ',
+                    detail: 'chưa có địa chỉ cụ thể',
+                };
+            }
+
+            for (const rule of shippingRules) {
+                const matched = (rule.keywords || []).some((keyword) => text.includes(normalizeAddressText(keyword)));
+
+                if (matched) {
+                    return rule;
+                }
+            }
+
+            return {
+                distance: 3.5,
+                label: 'Ước tính mặc định',
+                detail: 'cần nhân viên xác nhận lại',
+            };
+        }
+
+        function tierForDistance(distance) {
+            return shippingTiers.find((tier) => Number(distance) <= Number(tier.max)) || shippingTiers[shippingTiers.length - 1];
+        }
+
+        function updateShippingSummary() {
+            const methodInput = document.querySelector('input[name="shipping_method_ui"]:checked');
+
+            if (!methodInput) {
+                return;
+            }
+
+            const estimate = estimateDistanceFromAddress();
+            const tier = tierForDistance(estimate.distance);
+            const distanceFee = Number(tier.base_fee || 0);
+            const methodFee = Number(methodInput.dataset.methodFee || 0);
+            const shippingFee = distanceFee + methodFee;
+            const grandTotal = shippingConfig.subtotal + shippingFee;
+            const distanceLabel = tier.label || '';
+            const methodLabel = methodInput.dataset.methodLabel || '';
+
+            shippingDistanceLabel.textContent = distanceLabel;
+            shippingEstimateDetail.textContent = `${estimate.label} · ${estimate.detail}`;
+            shippingInlineFee.textContent = formatVnd(shippingFee);
+            shippingEta.textContent = methodInput.dataset.methodEta || '';
+            summaryShippingFee.textContent = formatVnd(shippingFee);
+            summaryShippingDistance.textContent = `${distanceLabel} · ${methodLabel}`;
+            summaryGrandTotal.textContent = formatVnd(grandTotal);
+        }
+
         function getAddressById(id) {
             return addressBook.find((item) => item.id === id) || addressBook[0];
         }
@@ -1115,6 +1254,7 @@
             shippingAddressInput.value = address.street || '';
             shippingAreaInput.value = address.area || '';
             renderAddressList();
+            updateShippingSummary();
         }
 
         function renderAddressList() {
@@ -1304,6 +1444,10 @@
             voucherModal.hide();
         });
 
+        document.querySelectorAll('input[name="shipping_method_ui"]').forEach((input) => {
+            input.addEventListener('change', updateShippingSummary);
+        });
+
         async function reverseGeocode(lat, lng, scope) {
             const status = document.getElementById(scope === 'edit' ? 'editAddressStatus' : 'newAddressStatus');
             const streetInput = document.getElementById(scope === 'edit' ? 'editAddressStreet' : 'newAddressStreet');
@@ -1366,6 +1510,7 @@
 
         renderAddressList();
         applyAddress(getAddressById(selectedAddressId));
+        updateShippingSummary();
     });
 </script>
 @endsection
