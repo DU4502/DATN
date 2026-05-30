@@ -76,7 +76,7 @@ class ProductController extends Controller
     {
         $product = Product::where('slug', $slug)
             ->where('status', true)
-            ->with(['category', 'sizes' => fn ($query) => $query->orderBy('sizes.id')])
+            ->with('category')
             ->first();
 
         if (! $product) {
@@ -160,16 +160,14 @@ class ProductController extends Controller
                 'image_url' => $item['image'],
                 'gallery_images' => [$item['image']],
                 'description' => $item['description'],
+                'stock' => 20,
                 'category' => (object) ['name' => $item['category']],
             ];
-            $sizeOptions = $this->buildStaticSizeOptions((int) $item['price']);
 
             $relatedProducts = new Collection();
 
-            return view('client.products.show', compact('product', 'relatedProducts', 'sizeOptions'));
+            return view('client.products.show', compact('product', 'relatedProducts'));
         }
-
-        $sizeOptions = $this->buildProductSizeOptions($product);
 
         // Get related products
         $relatedProducts = Product::where('category_id', $product->category_id)
@@ -178,81 +176,6 @@ class ProductController extends Controller
             ->take(4)
             ->get();
 
-        return view('client.products.show', compact('product', 'relatedProducts', 'sizeOptions'));
-    }
-
-    private function buildStaticSizeOptions(int $basePrice): array
-    {
-        $sizeMap = [
-            ['code' => 'S', 'price' => max(0, $basePrice - 5000)],
-            ['code' => 'M', 'price' => $basePrice],
-            ['code' => 'L', 'price' => $basePrice + 5000],
-        ];
-
-        return $this->normalizeSizeOptions($sizeMap, 'M');
-    }
-
-    private function buildProductSizeOptions(Product $product): array
-    {
-        if (! Schema::hasTable('sizes') || ! Schema::hasTable('product_sizes')) {
-            return $this->buildStaticSizeOptions((int) ($product->price ?? 0));
-        }
-
-        $options = [];
-
-        foreach ($product->sizes as $size) {
-            $sizeName = trim((string) $size->name);
-            $label = str_starts_with(mb_strtolower($sizeName), 'size') ? $sizeName : 'Size '.$sizeName;
-            $price = max(0, (int) ($size->pivot->price ?? $product->price ?? 0));
-
-            $options[] = [
-                'code' => $sizeName !== '' ? $sizeName : 'M',
-                'token' => 'db:'.$size->id,
-                'label' => $label,
-                'price' => $price,
-                'size_id' => (int) $size->id,
-            ];
-        }
-
-        if ($options === []) {
-            return $this->buildStaticSizeOptions((int) ($product->price ?? 0));
-        }
-
-        return $this->normalizeSizeOptions($options, 'M');
-    }
-
-    private function normalizeSizeOptions(array $options, string $preferredCode = 'M'): array
-    {
-        $minPrice = (int) collect($options)->min('price');
-        $preferredCode = mb_strtoupper($preferredCode);
-        $hasPreferred = false;
-
-        $normalized = [];
-
-        foreach ($options as $index => $option) {
-            $code = mb_strtoupper((string) ($option['code'] ?? 'M'));
-            $price = max(0, (int) ($option['price'] ?? 0));
-            $token = (string) ($option['token'] ?? $code);
-            $label = (string) ($option['label'] ?? ('Size '.$code));
-
-            $isSelected = $code === $preferredCode;
-            $hasPreferred = $hasPreferred || $isSelected;
-
-            $normalized[] = [
-                'code' => $code,
-                'token' => $token,
-                'label' => $label,
-                'price' => $price,
-                'extra' => $price - $minPrice,
-                'selected' => $isSelected,
-                'size_id' => $option['size_id'] ?? null,
-            ];
-        }
-
-        if (! $hasPreferred && isset($normalized[0])) {
-            $normalized[0]['selected'] = true;
-        }
-
-        return $normalized;
+        return view('client.products.show', compact('product', 'relatedProducts'));
     }
 }

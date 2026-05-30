@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
-use App\Models\User;
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
 use PHPMailer\PHPMailer\PHPMailer;
 use RuntimeException;
@@ -26,22 +27,13 @@ class PasswordResetLinkController extends Controller
      */
     public function store(ForgotPasswordRequest $request): RedirectResponse
     {
-        $user = User::query()
-            ->where('email', $request->string('email')->toString())
-            ->first();
-
-        // Always return the same message to avoid leaking account existence.
-        if (! $user) {
-            return back()->with('status', 'Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi.');
-        }
-
-        $expireMinutes = (int) (config('auth.passwords.users.expire') ?? 60);
-        $token = $user->generatePasswordResetToken($expireMinutes);
-
         try {
-            if ($this->usesCustomSmtp()) {
-                $this->sendCustomResetEmail($user, $token);
-            }
+            $status = $this->usesCustomSmtp()
+                ? Password::sendResetLink(
+                    $request->only('email'),
+                    fn (CanResetPassword $user, string $token) => $this->sendCustomResetEmail($user, $token)
+                )
+                : Password::sendResetLink($request->only('email'));
         } catch (Throwable $exception) {
             report($exception);
 
@@ -50,7 +42,10 @@ class PasswordResetLinkController extends Controller
                 ->withErrors(['email' => 'Không gửi được email đặt lại mật khẩu. Vui lòng kiểm tra cấu hình SMTP.']);
         }
 
-        return back()->with('status', 'Nếu email tồn tại trong hệ thống, liên kết đặt lại mật khẩu đã được gửi.');
+        return $status == Password::RESET_LINK_SENT
+                    ? back()->with('status', __($status))
+                    : back()->withInput($request->only('email'))
+                        ->withErrors(['email' => __($status)]);
     }
 
     private function usesCustomSmtp(): bool
@@ -63,7 +58,7 @@ class PasswordResetLinkController extends Controller
             && filled($config['from_address'] ?? null);
     }
 
-    private function sendCustomResetEmail(User $user, string $token): void
+    private function sendCustomResetEmail(CanResetPassword $user, string $token): string
     {
         $config = config('services.password_reset');
         $email = $user->getEmailForPasswordReset();
@@ -103,5 +98,7 @@ class PasswordResetLinkController extends Controller
         if (! $mail->send()) {
             throw new RuntimeException('PHPMailer could not send the password reset email.');
         }
+
+        return Password::RESET_LINK_SENT;
     }
 }

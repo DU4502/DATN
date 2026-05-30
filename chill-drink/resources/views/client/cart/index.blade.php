@@ -3,7 +3,10 @@
 @section('title', 'Giỏ Hàng')
 
 @section('content')
-@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
+@php
+    extract(require resource_path('views/partials/ui-product-data.php'));
+    $shippingTiers = \App\Support\ShippingFee::distanceOptions();
+@endphp
 <script>
     document.body.dataset.page = 'cart';
 </script>
@@ -21,6 +24,7 @@
     }
 
     .cart-item-card,
+    .cart-select-toolbar,
     .cart-summary-card,
     .cart-recommend-card,
     .cart-free-card {
@@ -37,6 +41,44 @@
         object-fit: cover;
         background: var(--drink-soft);
         flex: 0 0 auto;
+    }
+
+    .cart-select-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.1rem;
+        border-radius: 20px;
+    }
+
+    .cart-select-check {
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--drink-border);
+        border-radius: 50%;
+        background: var(--drink-soft);
+        flex: 0 0 auto;
+        cursor: pointer;
+    }
+
+    .cart-select-check .form-check-input {
+        width: 1.15rem;
+        height: 1.15rem;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .cart-item-card {
+        transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .cart-item-card.is-unselected {
+        opacity: 0.58;
+        border-color: rgba(100, 123, 120, 0.12);
     }
 
     .cart-qty {
@@ -133,6 +175,12 @@
             width: 92px;
             height: 92px;
         }
+
+        .cart-select-toolbar {
+            align-items: flex-start;
+            flex-direction: column;
+            border-radius: 18px;
+        }
     }
 </style>
 
@@ -146,12 +194,21 @@
         @if(session('cart') && count(session('cart')) > 0)
             @php
                 $total = 0;
-                $shipping = 0;
                 $tax = 0;
             @endphp
 
             <div class="row g-5 align-items-start">
                 <div class="col-lg-8">
+                    <div class="cart-select-toolbar mb-3">
+                        <label class="d-inline-flex align-items-center gap-3 fw-bold mb-0" for="cartSelectAll">
+                            <input class="form-check-input m-0" type="checkbox" id="cartSelectAll" checked>
+                            Chọn tất cả sản phẩm
+                        </label>
+                        <div class="text-secondary">
+                            Đã chọn <strong class="text-primary" data-selected-count>{{ count(session('cart')) }}</strong> sản phẩm
+                        </div>
+                    </div>
+
                     <div class="vstack gap-4">
                         @foreach(session('cart') as $id => $item)
                             @php
@@ -159,9 +216,14 @@
                                 $total += $subtotal;
                             @endphp
 
-                            <div class="cart-item-card p-3 p-md-4" data-cart-row>
-                                <div class="d-flex flex-column flex-md-row align-items-md-center gap-4">
+                            <div class="cart-item-card p-3 p-md-4" data-cart-row data-cart-key="{{ $id }}" data-cart-subtotal-value="{{ $subtotal }}">
+                                <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 gap-md-4">
+                                    <label class="cart-select-check" aria-label="Chọn {{ $item['name'] }}">
+                                        <input class="form-check-input" type="checkbox" name="items[]" value="{{ $id }}" checked data-cart-select-item>
+                                    </label>
+
                                     <x-product-image
+                                        :src="$item['image'] ?? null"
                                         :sku="$item['sku'] ?? null"
                                         :name="$item['name']"
                                         :alt="$item['name']"
@@ -177,10 +239,6 @@
                                             @if(($item['size_extra'] ?? 0) > 0)
                                                 · +{{ number_format($item['size_extra'], 0, ',', '.') }}đ
                                             @endif
-                                        </p>
-                                        <p class="text-secondary small mb-1">
-                                            Đường: {{ $item['sugar_label'] ?? (($item['sugar_level'] ?? 30).'%') }}
-                                            · Đá: {{ $item['ice_label'] ?? (($item['ice_level'] ?? 100).'%') }}
                                         </p>
                                         <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
                                     </div>
@@ -227,12 +285,16 @@
                         <h2 class="h4 fw-bold mb-4">Tóm tắt đơn</h2>
 
                         <div class="d-flex justify-content-between mb-3">
-                            <span class="text-secondary">Tạm tính</span>
-                            <strong data-cart-total>{{ number_format($total, 0, ',', '.') }}đ</strong>
+                            <span class="text-secondary">Sản phẩm đã chọn</span>
+                            <strong><span data-selected-count>{{ count(session('cart')) }}</span> món</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-secondary">Tạm tính đã chọn</span>
+                            <strong data-selected-total>{{ number_format($total, 0, ',', '.') }}đ</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Phí vận chuyển</span>
-                            <strong class="text-primary">{{ $shipping > 0 ? number_format($shipping, 0, ',', '.') . 'đ' : 'Miễn phí' }}</strong>
+                            <strong class="text-primary">Tính theo km</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-4">
                             <span class="text-secondary">Thuế ước tính</span>
@@ -240,8 +302,8 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center h4 fw-bold mb-4">
-                            <span>Tổng</span>
-                            <span class="text-primary" data-cart-total>{{ number_format($total + $shipping + $tax, 0, ',', '.') }}đ</span>
+                            <span>Tạm tính</span>
+                            <span class="text-primary" data-selected-grand-total>{{ number_format($total + $tax, 0, ',', '.') }}đ</span>
                         </div>
 
                         <div class="promo-control d-flex align-items-center mb-4">
@@ -250,9 +312,12 @@
                         </div>
 
                         @auth
-                            <a href="{{ route('checkout.index') }}" class="btn btn-primary btn-lg w-100 rounded-pill">
+                            <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}">
                                 Thanh toán ngay <i class="bi bi-arrow-right ms-2"></i>
-                            </a>
+                            </button>
+                            <p class="small text-danger text-center mt-3 mb-0 d-none" data-cart-selection-warning>
+                                Vui lòng chọn ít nhất một sản phẩm để thanh toán.
+                            </p>
                         @else
                             <a href="{{ route('login') }}" class="btn btn-primary btn-lg w-100 rounded-pill">
                                 Đăng nhập để thanh toán
@@ -266,11 +331,15 @@
                         </div>
                     </div>
 
-                    <div class="cart-free-card p-4 mt-4 d-flex align-items-center gap-3">
+                    <div class="cart-free-card p-4 mt-4 d-flex align-items-start gap-3">
                         <i class="bi bi-truck fs-4"></i>
                         <div>
-                            <div class="fw-bold">Đã mở khóa miễn phí giao hàng!</div>
-                            <div class="small">Đơn hàng của bạn đang được miễn phí ship.</div>
+                            <div class="fw-bold">Phí giao hàng theo khoảng cách</div>
+                            <div class="small mb-2">Chọn mốc km ở bước thanh toán để hệ thống cộng phí ship vào đơn.</div>
+                            <div class="small">
+                                Từ {{ number_format($shippingTiers[0]['base_fee'] ?? 10000, 0, ',', '.') }}đ
+                                đến {{ number_format($shippingTiers[array_key_last($shippingTiers)]['base_fee'] ?? 50000, 0, ',', '.') }}đ.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -280,10 +349,11 @@
                 <section class="mt-5 pt-5">
                     <h2 class="section-title h1 mb-4">Gợi ý thêm</h2>
                     <div class="row g-4">
-                        @foreach($suggestions->take(4) as $product)
+                        @foreach($suggestions->filter(fn ($product) => $uiProductVisible($product->sku ?? null))->take(4) as $product)
                             <div class="col-sm-6 col-lg-3">
                                 <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
                                     <x-product-image
+                                        :src="$product->image_url ?? null"
                                         :sku="$product->sku"
                                         :name="$product->name"
                                         :alt="$product->name"
@@ -310,4 +380,99 @@
         @endif
     </div>
 </section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectAll = document.getElementById('cartSelectAll');
+        const checkoutButton = document.querySelector('[data-cart-checkout-button]');
+        const selectionWarning = document.querySelector('[data-cart-selection-warning]');
+        const moneyFormatter = new Intl.NumberFormat('vi-VN');
+
+        function itemChecks() {
+            return Array.from(document.querySelectorAll('[data-cart-select-item]'));
+        }
+
+        function formatMoney(value) {
+            return `${moneyFormatter.format(Math.max(0, Math.round(value)))}đ`;
+        }
+
+        function selectedItems() {
+            return itemChecks().filter((input) => input.checked && input.closest('[data-cart-row]'));
+        }
+
+        function updateSelectionSummary() {
+            const checks = itemChecks();
+            let total = 0;
+            let selectedCount = 0;
+
+            checks.forEach((input) => {
+                const row = input.closest('[data-cart-row]');
+
+                if (!row) {
+                    return;
+                }
+
+                row.classList.toggle('is-unselected', !input.checked);
+
+                if (input.checked) {
+                    selectedCount += 1;
+                    total += Number(row.dataset.cartSubtotalValue || 0);
+                }
+            });
+
+            document.querySelectorAll('[data-selected-count]').forEach((element) => {
+                element.textContent = selectedCount;
+            });
+
+            document.querySelectorAll('[data-selected-total], [data-selected-grand-total]').forEach((element) => {
+                element.textContent = formatMoney(total);
+            });
+
+            if (selectAll) {
+                selectAll.checked = checks.length > 0 && selectedCount === checks.length;
+                selectAll.indeterminate = selectedCount > 0 && selectedCount < checks.length;
+            }
+
+            if (checkoutButton) {
+                checkoutButton.disabled = selectedCount < 1;
+                checkoutButton.classList.toggle('disabled', selectedCount < 1);
+            }
+
+            selectionWarning?.classList.toggle('d-none', selectedCount > 0);
+        }
+
+        selectAll?.addEventListener('change', function () {
+            itemChecks().forEach((input) => {
+                input.checked = selectAll.checked;
+            });
+
+            updateSelectionSummary();
+        });
+
+        document.addEventListener('change', function (event) {
+            if (event.target.matches('[data-cart-select-item]')) {
+                updateSelectionSummary();
+            }
+        });
+
+        checkoutButton?.addEventListener('click', function () {
+            const checkedItems = selectedItems();
+
+            if (checkedItems.length < 1) {
+                updateSelectionSummary();
+                return;
+            }
+
+            const url = new URL(checkoutButton.dataset.checkoutUrl, window.location.origin);
+            checkedItems.forEach((input) => {
+                url.searchParams.append('items[]', input.value);
+            });
+
+            window.location.href = url.toString();
+        });
+
+        document.addEventListener('cart:updated', updateSelectionSummary);
+        updateSelectionSummary();
+    });
+</script>
 @endsection

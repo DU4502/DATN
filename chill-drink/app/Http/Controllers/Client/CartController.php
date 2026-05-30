@@ -5,81 +5,18 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class CartController extends Controller
 {
-    private function buildStaticSizeOptions(int $basePrice): array
+    private function sizeOptions(): array
     {
-        $options = [
-            'S' => [
-                'token' => 'S',
-                'label' => 'Size S',
-                'price' => max(0, $basePrice - 5000),
-                'size_id' => null,
-                'size_name' => 'S',
-            ],
-            'M' => [
-                'token' => 'M',
-                'label' => 'Size M',
-                'price' => $basePrice,
-                'size_id' => null,
-                'size_name' => 'M',
-            ],
-            'L' => [
-                'token' => 'L',
-                'label' => 'Size L',
-                'price' => $basePrice + 5000,
-                'size_id' => null,
-                'size_name' => 'L',
-            ],
+        return [
+            'S' => ['label' => 'Size S', 'extra' => 0],
+            'M' => ['label' => 'Size M', 'extra' => 5000],
+            'L' => ['label' => 'Size L', 'extra' => 10000],
+            'XL' => ['label' => 'Size XL', 'extra' => 15000],
+            'XXL' => ['label' => 'Size XXL', 'extra' => 20000],
         ];
-
-        $base = (int) ($options['M']['price'] ?? $basePrice);
-
-        foreach ($options as $key => $option) {
-            $options[$key]['extra'] = (int) $option['price'] - $base;
-        }
-
-        return $options;
-    }
-
-    private function buildProductSizeOptions(Product $product): array
-    {
-        if (! Schema::hasTable('sizes') || ! Schema::hasTable('product_sizes')) {
-            return $this->buildStaticSizeOptions((int) ($product->price ?? 0));
-        }
-
-        $product->loadMissing('sizes');
-
-        $options = [];
-
-        foreach ($product->sizes as $size) {
-            $sizeName = trim((string) $size->name);
-            $label = str_starts_with(mb_strtolower($sizeName), 'size') ? $sizeName : 'Size '.$sizeName;
-            $token = 'db:'.$size->id;
-            $price = max(0, (int) ($size->pivot->price ?? $product->price ?? 0));
-
-            $options[$token] = [
-                'token' => $token,
-                'label' => $label,
-                'price' => $price,
-                'size_id' => (int) $size->id,
-                'size_name' => $sizeName,
-            ];
-        }
-
-        if ($options === []) {
-            return $this->buildStaticSizeOptions((int) ($product->price ?? 0));
-        }
-
-        $base = min(array_map(fn ($option) => (int) $option['price'], $options));
-
-        foreach ($options as $key => $option) {
-            $options[$key]['extra'] = (int) $option['price'] - $base;
-        }
-
-        return $options;
     }
 
     private function demoProducts(): array
@@ -149,22 +86,12 @@ class CartController extends Controller
             : Product::findOrFail($id);
         
         $cart = session()->get('cart', []);
+        $sizes = $this->sizeOptions();
+        $sizeCode = strtoupper((string) $request->input('size', 'M'));
+        $size = $sizes[$sizeCode] ?? $sizes['M'];
+        $cartKey = $id . ':' . $sizeCode;
         $basePrice = (int) ($product->price ?? 0);
-        $sizes = $product instanceof Product
-            ? $this->buildProductSizeOptions($product)
-            : $this->buildStaticSizeOptions($basePrice);
-
-        $requestedSizeToken = (string) $request->input('size', 'M');
-        $size = $sizes[$requestedSizeToken]
-            ?? $sizes['M']
-            ?? reset($sizes)
-            ?? ['token' => 'M', 'label' => 'Size M', 'price' => $basePrice, 'extra' => 0, 'size_id' => null, 'size_name' => 'M'];
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
-        $sugarLevel = max(0, min(150, (int) $request->input('sugar_level', 30)));
-        $iceLevel = max(0, min(150, (int) $request->input('ice_level', 100)));
-        $sugarLabel = trim((string) $request->input('sugar_label', $sugarLevel.'%')) ?: ($sugarLevel.'%');
-        $iceLabel = trim((string) $request->input('ice_label', $iceLevel.'%')) ?: ($iceLevel.'%');
-        $cartKey = implode(':', [$id, $size['token'], $sugarLevel, $iceLevel]);
         
         // If the same product and size already exist, increase quantity.
         if (isset($cart[$cartKey])) {
@@ -179,16 +106,10 @@ class CartController extends Controller
                 'product_id' => $id,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => (int) $size['price'],
-                'size' => (string) $size['token'],
+                'price' => $basePrice + $size['extra'],
+                'size' => $sizeCode,
                 'size_label' => $size['label'],
-                'size_extra' => (int) ($size['extra'] ?? 0),
-                'size_id' => $size['size_id'],
-                'size_name' => $size['size_name'],
-                'sugar_level' => $sugarLevel,
-                'sugar_label' => $sugarLabel,
-                'ice_level' => $iceLevel,
-                'ice_label' => $iceLabel,
+                'size_extra' => $size['extra'],
                 'image' => $image,
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,

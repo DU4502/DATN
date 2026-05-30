@@ -16,9 +16,6 @@ class Order extends Model
      */
     protected $fillable = [
         'user_id',
-        'address_id',
-        'coupon_id',
-        'shipping_zone_id',
         'subtotal',
         'shipping_fee',
         'discount',
@@ -26,10 +23,7 @@ class Order extends Model
         'total_price',
         'payment_method',
         'status',
-        'payment_status',
-        'vnpay_transaction_id',
         'note',
-        'cancel_reason',
     ];
 
     /**
@@ -38,11 +32,11 @@ class Order extends Model
      * @var array
      */
     protected $casts = [
+        'total_price' => 'decimal:2',
         'subtotal' => 'integer',
         'shipping_fee' => 'integer',
         'discount' => 'integer',
         'total' => 'integer',
-        'total_price' => 'decimal:2',
     ];
 
     /**
