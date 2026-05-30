@@ -254,8 +254,13 @@
             box-shadow: var(--shadow-xs);
         }
 
-        .admin-table-card, .admin-table-card .table-responsive {
-            overflow: visible;
+        .admin-table-card {
+            overflow: hidden;
+        }
+
+        .admin-table-card .table-responsive {
+            overflow-x: auto;
+            overflow-y: hidden;
         }
 
         /* ─── Metrics ─── */
@@ -315,6 +320,18 @@
 
         .admin-table tbody tr { transition: background-color 0.15s ease; }
         .admin-table tbody tr:hover { background: var(--a-bg-subtle); }
+
+        .admin-products-table {
+            min-width: 860px;
+        }
+
+        .admin-products-filters {
+            min-width: 0;
+        }
+
+        .admin-stock-summary {
+            flex: 0 0 auto;
+        }
 
         /* ─── Thumbnails ─── */
         .admin-thumb {
@@ -406,6 +423,66 @@
         .admin-action:hover {
             background: var(--a-primary-light);
             color: var(--a-primary);
+        }
+
+        /* Pagination */
+        .admin-pagination-footer {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--a-border);
+            background: var(--a-bg-subtle);
+        }
+
+        .admin-pagination-footer p {
+            flex: 1 1 180px;
+        }
+
+        .admin-pagination-footer nav {
+            flex: 0 1 auto;
+        }
+
+        .admin-pagination-footer .pagination {
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            justify-content: flex-end;
+            margin: 0;
+        }
+
+        .admin-pagination-footer .page-link {
+            min-width: 36px;
+            min-height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--a-border);
+            border-radius: var(--radius-sm) !important;
+            color: var(--a-primary);
+            font-size: 0.8125rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.45rem 0.75rem;
+            box-shadow: none;
+        }
+
+        .admin-pagination-footer .page-item.active .page-link {
+            background: var(--a-primary);
+            border-color: var(--a-primary);
+            color: #fff;
+        }
+
+        .admin-pagination-footer .page-item.disabled .page-link {
+            color: var(--a-subtle);
+            background: var(--a-surface);
+        }
+
+        .admin-pagination-footer svg {
+            width: 1rem;
+            height: 1rem;
         }
 
         /* ─── Dropdown ─── */
@@ -528,6 +605,49 @@
             .admin-page { padding: 20px; }
             .admin-table-card .table-responsive {
                 overflow-x: auto; overflow-y: visible;
+            }
+            .admin-products-header {
+                align-items: stretch !important;
+            }
+            .admin-stock-summary {
+                align-self: flex-start;
+            }
+            .admin-pagination-footer {
+                align-items: stretch;
+                padding: 0.9rem;
+            }
+            .admin-pagination-footer nav,
+            .admin-pagination-footer p {
+                width: 100%;
+                flex-basis: 100%;
+            }
+            .admin-pagination-footer .pagination {
+                justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .admin-page { padding: 14px; }
+            .admin-products-filters {
+                flex-wrap: nowrap !important;
+                overflow-x: auto;
+                padding-bottom: 0.25rem;
+                scrollbar-width: thin;
+            }
+            .admin-products-filters .btn {
+                flex: 0 0 auto;
+            }
+            .admin-stock-summary {
+                width: 100%;
+            }
+            .admin-table thead th,
+            .admin-table tbody td {
+                padding: 0.65rem 0.8rem;
+            }
+            .admin-pagination-footer .page-link {
+                min-width: 34px;
+                min-height: 34px;
+                padding-inline: 0.65rem;
             }
         }
 
