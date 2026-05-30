@@ -3,19 +3,18 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use App\Models\Product;
-<<<<<<< Updated upstream
+use App\Models\Category;
 use Illuminate\Http\Request;
-=======
-use App\Models\Size;
-use Illuminate\Support\Collection;
->>>>>>> Stashed changes
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    /**
+     * Display a listing of the resource.
+     */
     public function index()
     {
         $products = Product::with('category')->latest()->paginate(12);
@@ -23,35 +22,68 @@ class ProductController extends Controller
         return view('admin.products.index', compact('products'));
     }
 
+    /**
+     * Show the form for creating a new resource.
+     */
     public function create()
     {
         $categories = Category::orderBy('name')->get();
-        $sizes = $this->availableSizes();
-        $product = new Product([
-            'price' => 0,
-            'stock' => 0,
-            'status' => true,
-        ]);
-        $sizePriceMap = [];
 
-        return view('admin.products.create', compact('categories', 'product', 'sizes', 'sizePriceMap'));
+        return view('admin.products.create', compact('categories'));
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
-        $product = Product::create($this->productData($request));
-        $this->syncSizePrices($product, $request->validated());
+        $validated = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'gallery_images' => 'nullable|array|max:6',
+            'gallery_images.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'price' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'stock' => 'required|integer|min:0',
+            'status' => 'nullable|boolean',
+        ]);
 
-        return redirect()
-            ->route('admin.products.show', $product)
-            ->with('success', 'Thêm sản phẩm thành công!');
+        $data = [
+            'category_id' => $validated['category_id'],
+            'name' => $validated['name'],
+            'slug' => Str::slug($validated['name']),
+            'price' => $validated['price'],
+            'description' => $validated['description'] ?? null,
+            'stock' => $validated['stock'],
+            'status' => $validated['status'] ?? true,
+        ];
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        if (Schema::hasColumn('products', 'gallery_images')) {
+            $galleryImages = $this->storeGalleryImages($request);
+
+            if (! empty($galleryImages)) {
+                $data['gallery_images'] = $galleryImages;
+            }
+        }
+
+        Product::create($data);
+
+        return redirect()->route('admin.products.index')->with('success', 'Thêm sản phẩm thành công!');
     }
 
-    public function show(string $product)
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
     {
-        $product = $this->findProduct($product)
-            ->load(['category', 'sizes'])
-            ->loadCount('orderItems');
+        $product = Product::with('category')
+            ->withCount('orderItems')
+            ->findOrFail($id);
 
         if (Schema::hasTable('reviews')) {
             $product->loadCount('reviews');
@@ -62,149 +94,124 @@ class ProductController extends Controller
         return view('admin.products.show', compact('product'));
     }
 
-    public function edit(string $product)
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
     {
-        $product = $this->findProduct($product);
+        $product = Product::findOrFail($id);
         $categories = Category::orderBy('name')->get();
-        $sizes = $this->availableSizes();
-        $sizePriceMap = $product->sizes()
-            ->pluck('product_sizes.price', 'sizes.id')
-            ->map(fn ($price) => (int) $price)
-            ->all();
 
-        return view('admin.products.edit', compact('product', 'categories', 'sizes', 'sizePriceMap'));
+        return view('admin.products.edit', compact('product', 'categories'));
     }
 
-    public function update(Request $request, string $product)
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
     {
-        $product = $this->findProduct($product);
-<<<<<<< Updated upstream
-        $product->update($this->productData($request));
-=======
-        $validated = $request->validated();
+        $product = Product::findOrFail($id);
 
-        $product->update($this->productData($request, $product, $validated));
-        $this->syncSizePrices($product, $validated);
->>>>>>> Stashed changes
-
-        return redirect()
-            ->route('admin.products.show', $product)
-            ->with('success', 'Cập nhật sản phẩm thành công!');
-    }
-
-    public function destroy(string $product)
-    {
-        $product = $this->findProduct($product);
-        $product->delete();
-
-        return redirect()
-            ->route('admin.products.index')
-            ->with('success', 'Xóa sản phẩm thành công!');
-    }
-
-<<<<<<< Updated upstream
-    private function productData(Request $request): array
-    {
-        $name = (string) $request->input('name', '');
-        $slug = (string) $request->input('slug', '');
-
-        return [
-            'category_id' => $request->input('category_id') ?: null,
-            'name' => $name,
-            'slug' => Str::slug($slug ?: $name),
-            'price' => (float) ($request->input('price') ?: 0),
-            'description' => $request->input('description'),
-            'stock' => (int) ($request->input('stock') ?: 0),
-            'status' => $request->boolean('status'),
-=======
-    private function productData(ProductRequest $request, ?Product $product = null, ?array $validated = null): array
-    {
-        $validated ??= $request->validated();
+        $validated = $request->validate([
+            'category_id' => 'required|exists:categories,id',
+            'name' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'gallery_images' => 'nullable|array|max:6',
+            'gallery_images.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'remove_gallery_images' => 'nullable|array',
+            'remove_gallery_images.*' => 'string',
+            'price' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+            'stock' => 'required|integer|min:0',
+            'status' => 'nullable|boolean',
+        ]);
 
         $data = [
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
-            'slug' => $validated['slug'],
-            'price' => (float) $validated['price'],
+            'slug' => Str::slug($validated['name']),
+            'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
-            'stock' => isset($validated['stock'])
-                ? (int) $validated['stock']
-                : (int) ($product?->stock ?? 0),
-            'status' => (bool) $validated['status'],
->>>>>>> Stashed changes
+            'stock' => $validated['stock'],
+            'status' => $validated['status'] ?? true,
         ];
-    }
 
-    private function findProduct(string $product): Product
-    {
-        return Product::query()
-            ->whereKey($product)
-            ->orWhere('slug', $product)
-            ->firstOrFail();
-    }
-<<<<<<< Updated upstream
-=======
-
-    private function availableSizes(): Collection
-    {
-        if (! Schema::hasTable('sizes')) {
-            return collect();
+        if ($request->hasFile('image')) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $data['image'] = $request->file('image')->store('products', 'public');
         }
 
-        return Size::query()->orderBy('id')->get();
-    }
+        if (Schema::hasColumn('products', 'gallery_images')) {
+            $galleryImages = $this->galleryImagePaths($product);
+            $removeGalleryImages = array_filter((array) $request->input('remove_gallery_images', []));
 
-    private function syncSizePrices(Product $product, array $validated): void
-    {
-        if (! Schema::hasTable('sizes') || ! Schema::hasTable('product_sizes')) {
-            return;
-        }
+            if (! empty($removeGalleryImages)) {
+                foreach ($removeGalleryImages as $image) {
+                    if (in_array($image, $galleryImages, true) && ! str_starts_with($image, 'http')) {
+                        Storage::disk('public')->delete($image);
+                    }
+                }
 
-        $basePrice = (float) ($validated['price'] ?? $product->price ?? 0);
-        $inputSizePrices = $validated['size_prices'] ?? [];
-        $sizes = $this->availableSizes();
-
-        if ($sizes->isEmpty()) {
-            return;
-        }
-
-        $syncData = [];
-
-        foreach ($sizes as $size) {
-            $rawPrice = $inputSizePrices[$size->id] ?? null;
-
-            if ($rawPrice !== null && $rawPrice !== '') {
-                $price = (float) $rawPrice;
-            } else {
-                $price = $this->defaultSizePrice((string) $size->name, $basePrice);
+                $galleryImages = array_values(array_diff($galleryImages, $removeGalleryImages));
             }
 
-            $syncData[$size->id] = [
-                'price' => max(0, (int) round($price)),
-            ];
+            $galleryImages = array_values(array_unique(array_merge(
+                $galleryImages,
+                $this->storeGalleryImages($request)
+            )));
+
+            $data['gallery_images'] = $galleryImages;
         }
 
-        $product->sizes()->sync($syncData);
+        $product->update($data);
+
+        return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
     }
 
-    private function defaultSizePrice(string $sizeName, float $basePrice): float
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
     {
-        $normalized = mb_strtoupper(trim((string) preg_replace('/^size\s*/i', '', $sizeName)));
+        $product = Product::findOrFail($id);
 
-        return match ($normalized) {
-            'M' => $basePrice + 5000,
-            'L' => $basePrice + 10000,
-            default => $basePrice,
-        };
-    }
-
-    private function deleteStoredImage(?string $imagePath): void
-    {
-        if (! $imagePath || str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
-            return;
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
         }
 
-        Storage::disk('public')->delete($imagePath);
+        foreach ($this->galleryImagePaths($product) as $image) {
+            if (! str_starts_with($image, 'http')) {
+                Storage::disk('public')->delete($image);
+            }
+        }
+
+        $product->delete();
+
+        return redirect()->route('admin.products.index')->with('success', 'Xóa sản phẩm thành công!');
     }
->>>>>>> Stashed changes
+
+    private function storeGalleryImages(Request $request): array
+    {
+        if (! $request->hasFile('gallery_images')) {
+            return [];
+        }
+
+        return collect($request->file('gallery_images'))
+            ->filter()
+            ->map(fn ($file) => $file->store('products/gallery', 'public'))
+            ->values()
+            ->all();
+    }
+
+    private function galleryImagePaths(Product $product): array
+    {
+        $galleryImages = $product->getRawOriginal('gallery_images');
+        $galleryImages = is_string($galleryImages) ? json_decode($galleryImages, true) : $galleryImages;
+
+        return is_array($galleryImages)
+            ? array_values(array_filter($galleryImages))
+            : [];
+    }
 }
