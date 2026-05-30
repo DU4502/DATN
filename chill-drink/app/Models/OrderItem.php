@@ -65,6 +65,6 @@ class OrderItem extends Model
      */
     public function getSubtotal()
     {
-        return $this->quantity * $this->price;
+        return $this->total_price ?? ((int) $this->quantity * (int) $this->unit_price);
     }
 }
