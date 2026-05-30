@@ -10,14 +10,13 @@ return new class extends Migration {
     {
         Schema::create('roles', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
-            $table->string('name', 50)->unique()->comment('user, admin, staff');
+            $table->string('name', 50)->unique()->comment('user, admin');
             $table->string('description', 255)->nullable();
         });
 
         DB::table('roles')->insert([
             ['id' => 1, 'name' => 'user', 'description' => 'Khach hang'],
             ['id' => 2, 'name' => 'admin', 'description' => 'Quan tri'],
-            ['id' => 3, 'name' => 'staff', 'description' => 'Nhan vien'],
         ]);
     }
 
