@@ -263,14 +263,23 @@
             <div class="col-lg-5">
                 @php
                     $detailCategory = $product->category->name ?? null;
-                    $detailGalleryImages = $uiGetProductGallery(
-                        $product->sku ?? null,
-                        $detailCategory,
-                        $product->name,
-                        6
-                    );
+                    $detailGalleryImages = $product instanceof \App\Models\Product
+                        ? $product->gallery_images
+                        : ($product->gallery_images ?? []);
+
+                    if (empty($detailGalleryImages)) {
+                        $detailGalleryImages = $uiGetProductGallery(
+                            $product->sku ?? null,
+                            $detailCategory,
+                            $product->name,
+                            6,
+                            $product->image_url ?? $product->image ?? null
+                        );
+                    }
+
                     $detailMainImage = $detailGalleryImages[0]
                         ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
+                    $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
                 @endphp
                 <div class="detail-gallery">
                     <div class="detail-photo-card">
@@ -279,7 +288,8 @@
                             src="{{ $detailMainImage }}"
                             alt="{{ $product->name }}"
                             style="width:100%;height:100%;object-fit:cover;"
-                            onerror="this.onerror=null;this.src='{{ $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000) }}';"
+                            data-detail-fallback="{{ $detailFallbackImage }}"
+                            onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';"
                         >
                         @if(count($detailGalleryImages) > 1)
                             <button type="button" class="detail-gallery-nav prev" data-gallery-prev aria-label="Ảnh trước">
@@ -299,7 +309,7 @@
                                     data-detail-thumb="{{ $image }}"
                                     aria-label="Xem ảnh {{ $index + 1 }}"
                                 >
-                                    <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy">
+                                    <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
                                 </button>
                             @endforeach
                         </div>
@@ -344,6 +354,14 @@
                                 <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
                                     L
                                     <small>+10.000đ</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice" data-size-option="XL" data-size-extra="15000">
+                                    XL
+                                    <small>+15.000đ</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice" data-size-option="XXL" data-size-extra="20000">
+                                    XXL
+                                    <small>+20.000đ</small>
                                 </button>
                             </div>
                         </div>
@@ -407,6 +425,7 @@
                         <div class="related-card drink-card card border-0 h-100 overflow-hidden">
                             <a href="{{ route('products.show', $item->slug) }}">
                                 <x-product-image
+                                    :src="$item->image_url ?? null"
                                     :sku="$item->sku ?? null"
                                     :name="$item->name"
                                     :alt="$item->name"
@@ -525,6 +544,10 @@
             mainImage.style.opacity = '0';
 
             setTimeout(function () {
+                mainImage.onerror = function () {
+                    mainImage.onerror = null;
+                    mainImage.src = mainImage.dataset.detailFallback || '';
+                };
                 mainImage.src = activeThumb.dataset.detailThumb;
                 mainImage.style.opacity = '1';
             }, 120);

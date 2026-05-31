@@ -17,6 +17,13 @@
                 :width="800"
             />
         </div>
+        @if(!empty($product->gallery_images))
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                @foreach(array_slice($product->gallery_images, 0, 6) as $galleryImage)
+                    <img src="{{ $galleryImage }}" alt="{{ $product->name }} ảnh con {{ $loop->iteration }}" class="admin-thumb" style="object-fit: cover; padding: 0;">
+                @endforeach
+            </div>
+        @endif
     </div>
 
     <div class="col-lg-7">

@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,17 +17,33 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Admin User
-        User::create([
+        // Ensure roles exist before creating users
+        $this->call(RoleSeeder::class);
+
+        // Create Admin User once and avoid overwriting existing credentials
+        $adminData = [
             'name' => 'Admin',
-            'email' => 'admin@chilldrink.com',
             'password' => Hash::make('12345678'),
-            'role' => 'admin',
             'role_id' => 2,
             'phone' => '0123456789',
-            'address' => 'Hà Nội, Việt Nam',
-            'points' => 0,
-        ]);
+        ];
+
+        if (Schema::hasColumn('users', 'role')) {
+            $adminData['role'] = 'admin';
+        }
+
+        if (Schema::hasColumn('users', 'address')) {
+            $adminData['address'] = 'Hà Nội, Việt Nam';
+        }
+
+        if (Schema::hasColumn('users', 'points')) {
+            $adminData['points'] = 0;
+        }
+
+        User::firstOrCreate(
+            ['email' => 'admin@chilldrink.com'],
+            $adminData
+        );
 
         // Create Categories
         $categories = [
@@ -38,16 +56,37 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($categories as $category) {
-            Category::create([
+            $categorySlug = Str::slug($category['name']);
+            $categoryLookup = Schema::hasColumn('categories', 'slug')
+                ? ['slug' => $categorySlug]
+                : ['name' => $category['name']];
+            $categoryData = [
                 'name' => $category['name'],
-                'slug' => \Illuminate\Support\Str::slug($category['name']),
-                'description' => $category['description'],
-                'status' => true,
-            ]);
+            ];
+
+            if (Schema::hasColumn('categories', 'status')) {
+                $categoryData['status'] = true;
+            }
+
+            if (Schema::hasColumn('categories', 'slug')) {
+                $categoryData['slug'] = $categorySlug;
+            }
+
+            if (Schema::hasColumn('categories', 'description')) {
+                $categoryData['description'] = $category['description'];
+            }
+
+            Category::updateOrCreate($categoryLookup, $categoryData);
         }
 
-        // Create Products
-        Product::factory(30)->create();
+        // Create Products only if schema matches factory expectations
+        if (Product::count() === 0) {
+            if (Schema::hasColumn('products', 'price')) {
+                Product::factory(30)->create();
+            } else {
+                $this->command->info('Skipping Product factory: `products.price` column not found.');
+            }
+        }
 
         $this->command->info('Database seeded successfully!');
     }
