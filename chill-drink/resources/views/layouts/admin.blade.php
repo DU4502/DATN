@@ -506,6 +506,10 @@
             color: #991B1B; background: #FEE2E2;
         }
 
+        .badge-soft-info {
+            color: #1D4ED8; background: #DBEAFE;
+        }
+
         .text-primary { color: var(--a-primary) !important; }
 
         /* ─── Responsive ─── */
