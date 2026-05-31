@@ -9,9 +9,7 @@ return new class extends Migration {
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
-            $table->string('name', 100);
-            $table->string('slug', 150)->unique();
-            $table->text('description')->nullable();
+            $table->string('name');
             // Thêm dòng này để tạo cột status cố định cho bảng
             $table->tinyInteger('status')->default(1);
             $table->timestamps();

@@ -6,7 +6,6 @@
 @php
     extract(require resource_path('views/partials/ui-product-data.php'));
     $shippingTiers = \App\Support\ShippingFee::distanceOptions();
-    $cart = $cart ?? session('cart', []);
 @endphp
 <script>
     document.body.dataset.page = 'cart';
@@ -192,7 +191,7 @@
             <h1 class="cart-title mb-0">Giỏ hàng của bạn</h1>
         </div>
 
-        @if(!empty($cart))
+        @if(session('cart') && count(session('cart')) > 0)
             @php
                 $total = 0;
                 $tax = 0;
@@ -206,12 +205,12 @@
                             Chọn tất cả sản phẩm
                         </label>
                         <div class="text-secondary">
-                            Đã chọn <strong class="text-primary" data-selected-count>{{ count($cart) }}</strong> sản phẩm
+                            Đã chọn <strong class="text-primary" data-selected-count>{{ count(session('cart')) }}</strong> sản phẩm
                         </div>
                     </div>
 
                     <div class="vstack gap-4">
-                        @foreach($cart as $id => $item)
+                        @foreach(session('cart') as $id => $item)
                             @php
                                 $subtotal = $item['price'] * $item['quantity'];
                                 $total += $subtotal;
@@ -287,7 +286,7 @@
 
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Sản phẩm đã chọn</span>
-                            <strong><span data-selected-count>{{ count($cart) }}</span> món</strong>
+                            <strong><span data-selected-count>{{ count(session('cart')) }}</span> món</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Tạm tính đã chọn</span>
@@ -350,7 +349,7 @@
                 <section class="mt-5 pt-5">
                     <h2 class="section-title h1 mb-4">Gợi ý thêm</h2>
                     <div class="row g-4">
-                        @foreach($suggestions->filter(fn ($product) => $uiProductVisible($product->sku ?? null))->take(4) as $product)
+                        @foreach($suggestions->take(4) as $product)
                             <div class="col-sm-6 col-lg-3">
                                 <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
                                     <x-product-image

@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -20,6 +19,7 @@ class ProductManagementTest extends TestCase
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Trà Sữa',
+            'slug' => 'tra-sua',
             'status' => true,
         ]);
 
@@ -35,7 +35,7 @@ class ProductManagementTest extends TestCase
 
         $this->assertNotNull($product);
         $this->assertSame($category->id, $product->category_id);
-        $response->assertRedirect(route('admin.products.index'));
+        $response->assertRedirect(route('admin.products.show', $product));
     }
 
     public function test_admin_can_upload_image_when_creating_product(): void
@@ -45,6 +45,7 @@ class ProductManagementTest extends TestCase
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Trà Trái Cây',
+            'slug' => 'tra-trai-cay',
             'status' => true,
         ]);
 
@@ -54,7 +55,7 @@ class ProductManagementTest extends TestCase
             'price' => 49000,
             'stock' => 10,
             'status' => '1',
-            'image' => UploadedFile::fake()->create('tra-dao-cam-sa.png', 120, 'image/png'),
+            'image' => UploadedFile::fake()->image('tra-dao-cam-sa.png'),
         ]);
 
         $product = Product::firstWhere('slug', 'tra-dao-cam-sa');
@@ -63,7 +64,7 @@ class ProductManagementTest extends TestCase
         $this->assertNotNull($product->image);
         $this->assertStringStartsWith('products/', $product->image);
         Storage::disk('public')->assertExists($product->image);
-        $response->assertRedirect(route('admin.products.index'));
+        $response->assertRedirect(route('admin.products.show', $product));
     }
 
     public function test_admin_can_update_product(): void
@@ -71,6 +72,7 @@ class ProductManagementTest extends TestCase
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Cà Phê',
+            'slug' => 'ca-phe',
             'status' => true,
         ]);
         $product = Product::create([
@@ -82,7 +84,7 @@ class ProductManagementTest extends TestCase
             'status' => true,
         ]);
 
-        $response = $this->actingAs($admin)->put(route('admin.products.update', $product->id), [
+        $response = $this->actingAs($admin)->put(route('admin.products.update', $product), [
             'category_id' => $category->id,
             'name' => 'Cà Phê Mới',
             'slug' => 'ca-phe-moi',
@@ -96,7 +98,7 @@ class ProductManagementTest extends TestCase
         $this->assertSame('Cà Phê Mới', $product->name);
         $this->assertSame('ca-phe-moi', $product->slug);
         $this->assertFalse($product->status);
-        $response->assertRedirect(route('admin.products.index'));
+        $response->assertRedirect(route('admin.products.show', $product));
     }
 
     public function test_admin_can_replace_old_image_when_updating_product(): void
@@ -106,10 +108,11 @@ class ProductManagementTest extends TestCase
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Soda',
+            'slug' => 'soda',
             'status' => true,
         ]);
 
-        $oldPath = UploadedFile::fake()->create('old-image.jpg', 120, 'image/jpeg')->store('products', 'public');
+        $oldPath = UploadedFile::fake()->image('old-image.jpg')->store('products', 'public');
 
         $product = Product::create([
             'category_id' => $category->id,
@@ -128,7 +131,7 @@ class ProductManagementTest extends TestCase
             'price' => 37000,
             'stock' => 12,
             'status' => '1',
-            'image' => UploadedFile::fake()->create('new-image.jpg', 120, 'image/jpeg'),
+            'image' => UploadedFile::fake()->image('new-image.jpg'),
         ]);
 
         $product->refresh();
@@ -136,7 +139,7 @@ class ProductManagementTest extends TestCase
         Storage::disk('public')->assertMissing($oldPath);
         Storage::disk('public')->assertExists($product->image);
         $this->assertNotSame($oldPath, $product->image);
-        $response->assertRedirect(route('admin.products.index'));
+        $response->assertRedirect(route('admin.products.show', $product));
     }
 
     public function test_admin_can_delete_product_without_orders(): void
@@ -144,6 +147,7 @@ class ProductManagementTest extends TestCase
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Soda',
+            'slug' => 'soda',
             'status' => true,
         ]);
         $product = Product::create([
@@ -155,7 +159,7 @@ class ProductManagementTest extends TestCase
             'status' => true,
         ]);
 
-        $response = $this->actingAs($admin)->delete(route('admin.products.destroy', $product->id));
+        $response = $this->actingAs($admin)->delete(route('admin.products.destroy', $product));
 
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
         $response->assertRedirect(route('admin.products.index'));
@@ -168,6 +172,7 @@ class ProductManagementTest extends TestCase
         $admin = $this->admin();
         $category = Category::create([
             'name' => 'Nước Ép',
+            'slug' => 'nuoc-ep',
             'status' => true,
         ]);
 
@@ -189,17 +194,8 @@ class ProductManagementTest extends TestCase
 
     private function admin(): User
     {
-        DB::table('roles')->updateOrInsert(
-            ['id' => 2],
-            ['name' => 'admin', 'description' => 'Administrator']
-        );
-
-        return User::create([
-            'name' => 'Admin Test',
-            'email' => 'admin-test-'.uniqid().'@example.com',
-            'password' => bcrypt('password'),
-            'role_id' => 2,
-            'is_active' => 1,
+        return User::factory()->create([
+            'role' => 'admin',
         ]);
     }
 }

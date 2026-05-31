@@ -282,9 +282,6 @@
 
                 <div class="row g-4">
                     @forelse($products as $product)
-                        @if(!$uiProductVisible($product->sku ?? null))
-                            @continue
-                        @endif
                         <div class="col-sm-6 col-xl-4">
                             <article class="shop-product-card">
                                 <a href="{{ route('products.show', $product->slug) }}" class="shop-product-image d-block mb-3">
