@@ -9,6 +9,10 @@ class Voucher extends Model
 {
     use HasFactory;
 
+    protected $table = 'coupons';
+
+    public $timestamps = false;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -16,10 +20,19 @@ class Voucher extends Model
      */
     protected $fillable = [
         'code',
-        'discount_percent',
-        'quantity',
-        'expired_date',
+        'type',
+        'value',
+        'max_discount',
+        'description',
+        'min_order',
+        'usage_limit',
+        'used_count',
+        'starts_at',
+        'expires_at',
         'status',
+        'required_rank',
+        'point_cost',
+        'is_redeemable',
     ];
 
     /**
@@ -28,8 +41,10 @@ class Voucher extends Model
      * @var array
      */
     protected $casts = [
-        'expired_date' => 'date',
+        'starts_at' => 'datetime',
+        'expires_at' => 'datetime',
         'status' => 'boolean',
+        'is_redeemable' => 'boolean',
     ];
 
     /**
@@ -38,7 +53,8 @@ class Voucher extends Model
     public function isValid()
     {
         return $this->status 
-            && $this->quantity > 0 
-            && $this->expired_date->isFuture();
+            && $this->used_count < $this->usage_limit
+            && (! $this->starts_at || $this->starts_at->isPast())
+            && (! $this->expires_at || $this->expires_at->isFuture());
     }
 }
