@@ -31,6 +31,13 @@
         border: 1px solid var(--a-border); border-radius: var(--radius-xl);
         background: var(--a-surface); transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+    .stat-card.chart-trigger {
+        cursor: pointer;
+    }
+    .stat-card.chart-trigger.active {
+        border-color: rgba(13, 147, 115, 0.45);
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.1);
+    }
 
     .stat-card:hover {
         transform: translateY(-4px);
@@ -54,6 +61,7 @@
     .stat-trend { font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--radius-full); }
     .stat-trend.up { background: #D1FAE5; color: #059669; }
     .stat-trend.down { background: #FEE2E2; color: #DC2626; }
+    .stat-trend.flat { background: #E5E7EB; color: #4B5563; }
 
     /* CSS Mini Chart / Sparkline */
     .sparkline {
@@ -70,9 +78,62 @@
         padding: 2rem 1rem 0; border: 1px dashed var(--a-border);
     }
     .chart-col {
-        width: calc(100% / 12 - 10px); background: linear-gradient(180deg, var(--a-primary-light) 0%, var(--a-primary) 100%);
+        width: calc(100% / var(--bar-count, 12) - 10px); background: linear-gradient(180deg, var(--a-primary-light) 0%, var(--a-primary) 100%);
         border-radius: 6px 6px 0 0; position: relative; opacity: 0.8;
         transform-origin: bottom; animation: growBar 1.5s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+        transition: transform 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
+        cursor: pointer;
+        outline: none;
+    }
+    .chart-col:hover,
+    .chart-col:focus,
+    .chart-col:focus-visible,
+    .chart-col:active {
+        opacity: 1;
+        transform: translateY(-2px);
+        filter: saturate(1.08);
+        z-index: 5;
+    }
+    .chart-col.active {
+        opacity: 1;
+        filter: saturate(1.1);
+    }
+    .chart-tooltip {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: translate3d(0, 0, 0);
+        white-space: pre-line;
+        text-align: left;
+        min-width: 110px;
+        max-width: 180px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(13, 147, 115, 0.18);
+        background: rgba(18, 25, 38, 0.94);
+        box-shadow: 0 12px 30px rgba(18, 25, 38, 0.25);
+        color: #fff;
+        font-size: 0.76rem;
+        line-height: 1.45;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        opacity: 0;
+        visibility: visible;
+        pointer-events: none;
+        transition: opacity 0.18s ease;
+        z-index: 7;
+    }
+    .chart-tooltip.show {
+        opacity: 1;
+    }
+    .chart-tooltip .label {
+        color: rgba(255, 255, 255, 0.85);
+        display: block;
+        margin-bottom: 2px;
+    }
+    .chart-tooltip .value {
+        font-weight: 700;
+        color: #ffffff;
     }
     
     @keyframes growBar {
@@ -95,23 +156,25 @@
         <p class="text-secondary mb-0">Đây là hoạt động kinh doanh hôm nay của cửa hàng.</p>
     </div>
     <div class="period-segmented-control">
-        <div class="period-segment">Hôm nay</div>
-        <div class="period-segment active">Tuần này</div>
-        <div class="period-segment">Tháng này</div>
-        <div class="period-segment">Năm nay</div>
+        <a href="{{ route('admin.dashboard', ['period' => 'today']) }}" class="period-segment text-decoration-none {{ $selectedPeriod === 'today' ? 'active' : '' }}">Hôm nay</a>
+        <a href="{{ route('admin.dashboard', ['period' => 'week']) }}" class="period-segment text-decoration-none {{ $selectedPeriod === 'week' ? 'active' : '' }}">Tuần này</a>
+        <a href="{{ route('admin.dashboard', ['period' => 'month']) }}" class="period-segment text-decoration-none {{ $selectedPeriod === 'month' ? 'active' : '' }}">Tháng này</a>
+        <a href="{{ route('admin.dashboard', ['period' => 'year']) }}" class="period-segment text-decoration-none {{ $selectedPeriod === 'year' ? 'active' : '' }}">Năm nay</a>
     </div>
 </div>
 
 <div class="row g-4 mb-5">
     <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
+        <div class="stat-card chart-trigger active" data-chart-type="revenue" tabindex="0" role="button" aria-label="Xem biểu đồ doanh thu">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="stat-icon primary"><i class="bi bi-wallet2"></i></div>
-                <span class="stat-trend up"><i class="bi bi-arrow-up-short"></i> 12.5%</span>
+                <span class="stat-trend {{ $cardTrends['revenue']['direction'] ?? 'flat' }}">
+                    <i class="bi {{ $cardTrends['revenue']['icon'] ?? 'bi-dash' }}"></i> {{ $cardTrends['revenue']['value'] ?? '0%' }}
+                </span>
             </div>
             <div class="stat-label">Tổng doanh thu</div>
             <div class="stat-value">{{ number_format($totalRevenue, 0, ',', '.') }}đ</div>
-            <div class="text-secondary small">So với tuần trước</div>
+            <div class="text-secondary small">{{ $comparisonLabel ?? 'So với tuần trước' }}</div>
             
             <div class="sparkline">
                 <div class="spark-bar" style="height: 30%"></div>
@@ -126,14 +189,16 @@
     </div>
     
     <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
+        <div class="stat-card chart-trigger" data-chart-type="orders" tabindex="0" role="button" aria-label="Xem biểu đồ đơn hàng">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="stat-icon info"><i class="bi bi-bag-check"></i></div>
-                <span class="stat-trend up"><i class="bi bi-arrow-up-short"></i> 8.2%</span>
+                <span class="stat-trend {{ $cardTrends['orders']['direction'] ?? 'flat' }}">
+                    <i class="bi {{ $cardTrends['orders']['icon'] ?? 'bi-dash' }}"></i> {{ $cardTrends['orders']['value'] ?? '0%' }}
+                </span>
             </div>
             <div class="stat-label">Đơn hàng mới</div>
-            <div class="stat-value">{{ $totalOrders }}</div>
-            <div class="text-secondary small">Đơn hàng giao thành công</div>
+            <div class="stat-value">{{ $selectedPeriodStat['orders'] ?? 0 }}</div>
+            <div class="text-secondary small">{{ $selectedPeriodStat['label'] ?? 'Kỳ hiện tại' }}</div>
             
             <div class="sparkline" style="opacity: 0.15; filter: hue-rotate(180deg);">
                 <div class="spark-bar" style="height: 40%"></div>
@@ -148,10 +213,12 @@
     </div>
     
     <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
+        <div class="stat-card chart-trigger" data-chart-type="users" tabindex="0" role="button" aria-label="Xem biểu đồ người dùng mới">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="stat-icon warning"><i class="bi bi-people"></i></div>
-                <span class="stat-trend up"><i class="bi bi-arrow-up-short"></i> 5.1%</span>
+                <span class="stat-trend {{ $cardTrends['users']['direction'] ?? 'flat' }}">
+                    <i class="bi {{ $cardTrends['users']['icon'] ?? 'bi-dash' }}"></i> {{ $cardTrends['users']['value'] ?? '0%' }}
+                </span>
             </div>
             <div class="stat-label">Khách hàng</div>
             <div class="stat-value">{{ $totalUsers }}</div>
@@ -163,7 +230,9 @@
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="stat-icon success"><i class="bi bi-cup-straw"></i></div>
-                <span class="stat-trend down"><i class="bi bi-arrow-down-short"></i> 1.2%</span>
+                <span class="stat-trend {{ $cardTrends['products']['direction'] ?? 'flat' }}">
+                    <i class="bi {{ $cardTrends['products']['icon'] ?? 'bi-dash' }}"></i> {{ $cardTrends['products']['value'] ?? '0%' }}
+                </span>
             </div>
             <div class="stat-label">Sản phẩm menu</div>
             <div class="stat-value">{{ $totalProducts }}</div>
@@ -177,27 +246,30 @@
         <div class="admin-card p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h3 class="h5 fw-bold mb-1">Phân tích doanh thu</h3>
-                    <p class="text-secondary small mb-0">Thống kê doanh thu theo 7 ngày gần nhất</p>
+                    <h3 id="chart-title" class="h5 fw-bold mb-1">Phân tích doanh thu</h3>
+                    <p id="chart-description" class="text-secondary small mb-0">Thống kê doanh thu theo kỳ đang chọn</p>
                 </div>
                 <div class="dropdown">
-                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3 dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        Tuần này
-                    </button>
+                    <span class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                        {{ $selectedPeriodStat['label'] ?? 'Tuần này' }}
+                    </span>
                 </div>
             </div>
             
-            <div class="chart-mockup d-none d-md-flex">
-                <div class="chart-col" style="height: 30%"></div>
-                <div class="chart-col" style="height: 50%"></div>
-                <div class="chart-col" style="height: 40%"></div>
-                <div class="chart-col" style="height: 80%"></div>
-                <div class="chart-col" style="height: 60%"></div>
-                <div class="chart-col" style="height: 75%"></div>
-                <div class="chart-col" style="height: 100%"></div>
-            </div>
-            <div class="d-md-none text-center py-5 rounded text-secondary bg-light mt-3">
-                Vui lòng xem biểu đồ trên màn hình lớn
+            <div id="dashboard-chart" class="chart-mockup d-flex" style="--bar-count: {{ max(count($chartBars ?? []), 1) }};">
+                @forelse(($chartBars ?? []) as $bar)
+                    <div
+                        class="chart-col"
+                        style="height: {{ $bar['height'] }}%"
+                        tabindex="0"
+                        role="img"
+                        aria-label="{{ $bar['label'] }} - {{ $bar['tooltip_value'] ?? number_format($bar['value'], 0, ',', '.').'đ' }}"
+                        data-label="{{ $bar['label'] }}"
+                        data-value="{{ $bar['tooltip_value'] ?? number_format($bar['value'], 0, ',', '.').'đ' }}">
+                    </div>
+                @empty
+                    <div class="chart-col" style="height: 15%"></div>
+                @endforelse
             </div>
         </div>
     </div>
@@ -210,20 +282,22 @@
             </div>
             
             <div class="d-flex flex-column gap-3">
-                @for($i=1; $i<=4; $i++)
-                <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='var(--a-bg-subtle)'" onmouseout="this.style.background='transparent'">
-                    <div class="admin-thumb" style="width: 50px; height: 50px; border-radius: var(--radius-md);">
-                        <img src="https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=100&q=85" alt="Product">
+                @forelse(($topProducts ?? []) as $topProduct)
+                    <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='var(--a-bg-subtle)'" onmouseout="this.style.background='transparent'">
+                        <div class="admin-thumb" style="width: 50px; height: 50px; border-radius: var(--radius-md);">
+                            <img src="{{ $topProduct['image_url'] }}" alt="{{ $topProduct['name'] }}">
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold fs-6">{{ $topProduct['name'] }}</div>
+                            <div class="text-secondary small">{{ $topProduct['sku'] }}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold text-primary">{{ number_format($topProduct['sold_qty']) }} <span class="fw-normal text-secondary small">ly</span></div>
+                        </div>
                     </div>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold fs-6">Trà Sữa Trân Châu</div>
-                        <div class="text-secondary small">#CD-TS-00{{$i}}</div>
-                    </div>
-                    <div class="text-end">
-                        <div class="fw-bold text-primary">{{ 150 - ($i*20) }} <span class="fw-normal text-secondary small">ly</span></div>
-                    </div>
-                </div>
-                @endfor
+                @empty
+                    <div class="text-secondary small">Chưa đủ dữ liệu bán hàng để xếp hạng.</div>
+                @endforelse
             </div>
         </div>
     </div>
@@ -295,4 +369,214 @@
         </table>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const chartDatasets = @json($chartDatasets ?? []);
+    const chartContainer = document.getElementById('dashboard-chart');
+    const chartTitle = document.getElementById('chart-title');
+    const chartDescription = document.getElementById('chart-description');
+    const triggerCards = Array.from(document.querySelectorAll('.chart-trigger'));
+
+    if (!chartContainer || !chartTitle || !chartDescription || triggerCards.length === 0) {
+        return;
+    }
+
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'chart-tooltip';
+    chartContainer.appendChild(tooltipEl);
+
+    const getBars = () => Array.from(chartContainer.querySelectorAll('.chart-col'));
+
+    const clearActiveBars = () => {
+        getBars().forEach((barEl) => barEl.classList.remove('active'));
+    };
+
+    const hideTooltip = () => {
+        tooltipEl.classList.remove('show');
+        clearActiveBars();
+    };
+
+    const createBarEl = (bar, index) => {
+        const barEl = document.createElement('div');
+        barEl.className = 'chart-col';
+        barEl.style.height = `${Math.max(10, Number(bar.height || 0))}%`;
+        barEl.style.animationDelay = `${index * 0.04}s`;
+        barEl.setAttribute('tabindex', '0');
+        barEl.setAttribute('role', 'img');
+        barEl.setAttribute('aria-label', `${bar.label || ''} - ${bar.tooltip_value || '0'}`);
+        barEl.dataset.label = bar.label || '';
+        barEl.dataset.value = bar.tooltip_value || '0';
+        return barEl;
+    };
+
+    const showTooltipAtPoint = (clientX, clientY) => {
+        const bars = getBars();
+        if (bars.length === 0) {
+            hideTooltip();
+            return;
+        }
+
+        const rect = chartContainer.getBoundingClientRect();
+        const isInside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+        if (!isInside) {
+            hideTooltip();
+            return;
+        }
+
+        let closestBar = bars[0];
+        let closestDistance = Number.MAX_SAFE_INTEGER;
+
+        bars.forEach((barEl) => {
+            const barRect = barEl.getBoundingClientRect();
+            const centerX = (barRect.left + barRect.right) / 2;
+            const distance = Math.abs(centerX - clientX);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestBar = barEl;
+            }
+        });
+
+        bars.forEach((barEl) => barEl.classList.toggle('active', barEl === closestBar));
+
+        const label = closestBar.dataset.label || '';
+        const value = closestBar.dataset.value || '0';
+        tooltipEl.innerHTML = `<span class="label">${label}</span><span class="value">${value}</span>`;
+
+        const tooltipGap = 12;
+        const maxX = rect.width - tooltipEl.offsetWidth - 8;
+        const maxY = rect.height - tooltipEl.offsetHeight - 8;
+
+        let x = clientX - rect.left + tooltipGap;
+        let y = clientY - rect.top + tooltipGap;
+
+        if (x > maxX) {
+            x = clientX - rect.left - tooltipEl.offsetWidth - tooltipGap;
+        }
+        if (x < 8) {
+            x = 8;
+        }
+        if (y > maxY) {
+            y = clientY - rect.top - tooltipEl.offsetHeight - tooltipGap;
+        }
+        if (y < 8) {
+            y = 8;
+        }
+
+        tooltipEl.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+        tooltipEl.classList.add('show');
+    };
+
+    const renderChart = (type) => {
+        const dataset = chartDatasets[type];
+        if (!dataset) {
+            return;
+        }
+
+        const bars = Array.isArray(dataset.bars) ? dataset.bars : [];
+        chartContainer.style.setProperty('--bar-count', String(Math.max(bars.length, 1)));
+        chartTitle.textContent = dataset.title || 'Phân tích dữ liệu';
+        chartDescription.textContent = dataset.description || '';
+        chartContainer.innerHTML = '';
+        chartContainer.appendChild(tooltipEl);
+        hideTooltip();
+
+        if (bars.length === 0) {
+            const emptyBar = document.createElement('div');
+            emptyBar.className = 'chart-col';
+            emptyBar.style.height = '15%';
+            chartContainer.appendChild(emptyBar);
+            return;
+        }
+
+        bars.forEach((bar, index) => chartContainer.appendChild(createBarEl(bar, index)));
+    };
+
+    const setActiveTrigger = (targetType) => {
+        triggerCards.forEach((card) => {
+            const isActive = card.dataset.chartType === targetType;
+            card.classList.toggle('active', isActive);
+            card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    };
+
+    triggerCards.forEach((card) => {
+        const activate = () => {
+            const type = card.dataset.chartType;
+            if (!type) {
+                return;
+            }
+
+            renderChart(type);
+            setActiveTrigger(type);
+        };
+
+        card.addEventListener('click', activate);
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activate();
+            }
+        });
+    });
+
+    chartContainer.addEventListener('mousemove', (event) => {
+        showTooltipAtPoint(event.clientX, event.clientY);
+    });
+
+    chartContainer.addEventListener('mouseleave', () => {
+        hideTooltip();
+    });
+
+    chartContainer.addEventListener('click', (event) => {
+        showTooltipAtPoint(event.clientX, event.clientY);
+    });
+
+    chartContainer.addEventListener('focusin', (event) => {
+        const targetBar = event.target.closest('.chart-col');
+        if (!targetBar) {
+            return;
+        }
+
+        const barRect = targetBar.getBoundingClientRect();
+        showTooltipAtPoint(barRect.left + (barRect.width / 2), barRect.top + 10);
+    });
+
+    chartContainer.addEventListener('focusout', () => {
+        window.setTimeout(() => {
+            if (!chartContainer.contains(document.activeElement)) {
+                hideTooltip();
+            }
+        }, 0);
+    });
+
+    chartContainer.addEventListener('touchstart', (event) => {
+        const touch = event.touches[0];
+        if (!touch) {
+            return;
+        }
+        showTooltipAtPoint(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    chartContainer.addEventListener('touchmove', (event) => {
+        const touch = event.touches[0];
+        if (!touch) {
+            return;
+        }
+        showTooltipAtPoint(touch.clientX, touch.clientY);
+    }, { passive: true });
+
+    chartContainer.addEventListener('touchend', () => {
+        hideTooltip();
+    }, { passive: true });
+
+    chartContainer.addEventListener('touchcancel', () => {
+        hideTooltip();
+    }, { passive: true });
+
+    renderChart('revenue');
+    setActiveTrigger('revenue');
+});
+</script>
+
 @endsection

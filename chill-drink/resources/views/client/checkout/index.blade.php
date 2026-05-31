@@ -20,7 +20,28 @@
     $shippingFee = $shippingQuote['total_fee'];
     $discount = 0;
     $grandTotal = $total + $shippingFee - $discount;
-    $paymentOptions = $paymentOptions ?? [];
+    $paymentOptions = [
+        'cod' => [
+            'title' => 'Thanh toán khi nhận hàng',
+            'desc' => 'Trả tiền mặt sau khi nhận đồ uống.',
+            'icon' => 'bi-cash-coin',
+        ],
+        'bank_transfer' => [
+            'title' => 'Chuyển khoản ngân hàng',
+            'desc' => 'Nhân viên xác nhận sau khi nhận chuyển khoản.',
+            'icon' => 'bi-bank',
+        ],
+        'momo' => [
+            'title' => 'Ví Momo',
+            'desc' => 'Thanh toán nhanh qua ví điện tử Momo.',
+            'icon' => 'bi-phone',
+        ],
+        'vnpay' => [
+            'title' => 'VNPay',
+            'desc' => 'Hỗ trợ thẻ ATM, QR và ngân hàng nội địa.',
+            'icon' => 'bi-credit-card',
+        ],
+    ];
 @endphp
 
 <style>
@@ -582,10 +603,6 @@
                 </div>
             </div>
         </div>
-
-        @if(session('error'))
-            <div class="alert alert-danger rounded-4 border-0">{{ session('error') }}</div>
-        @endif
 
         <form method="POST" action="{{ route('checkout.process') }}">
             @csrf
