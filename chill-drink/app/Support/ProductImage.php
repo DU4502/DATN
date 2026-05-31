@@ -48,6 +48,7 @@ class ProductImage
         'Nước Ép' => 'photo-1622597467836-f3285f2131b8',
         'Trà Trái Cây' => 'photo-1556679343-c7306c1976bc',
         'Soda' => 'photo-1544145945-f90425340c7e',
+        'Đá Xay' => 'photo-1515823064-d6e0c04616a7',
     ];
 
     private const DEFAULT = 'photo-1515823064-d6e0c04616a7';

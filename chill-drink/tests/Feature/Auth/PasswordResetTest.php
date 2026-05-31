@@ -12,6 +12,16 @@ class PasswordResetTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('services.password_reset.smtp_host', null);
+        config()->set('services.password_reset.smtp_username', null);
+        config()->set('services.password_reset.smtp_password', null);
+        config()->set('services.password_reset.from_address', null);
+    }
+
     public function test_reset_password_link_screen_can_be_rendered(): void
     {
         $response = $this->get('/forgot-password');
