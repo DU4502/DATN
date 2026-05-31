@@ -93,12 +93,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is admin
-     * Giả sử role_id = 1 là Admin (Bạn tự thay đổi số này theo logic của bạn nhé)
+     * Check if user is admin by role_id.
      */
     public function isAdmin(): bool
     {
-        return (int) ($this->role_id ?? 1) === 2 || $this->role === 'admin';
+        return (int) ($this->role_id ?? 1) === 2;
     }
 
     public function isCustomer(): bool
@@ -113,9 +112,7 @@ class User extends Authenticatable
 
     public function scopeAdmins($query)
     {
-        return $query->where(function ($q) {
-            $q->where('role_id', 2)->orWhere('role', 'admin');
-        });
+        return $query->where('role_id', 2);
     }
 
     /**

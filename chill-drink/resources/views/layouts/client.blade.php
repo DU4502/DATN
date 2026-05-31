@@ -8,210 +8,261 @@
 
     <title>{{ config('app.name', 'Chill Drink') }} - @yield('title', 'Đồ Uống Online')</title>
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
+        /* ─── Design Tokens ─── */
         :root {
-            --font-ui: Figtree, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            --drink-primary: #008b7a;
-            --drink-primary-dark: #006f62;
-            --drink-primary-soft: #edf9f6;
-            --drink-accent: #b8eadf;
-            --drink-coral: #7fd8c7;
-            --drink-ink: #071b19;
-            --drink-muted: #647b78;
-            --drink-soft: #eefaf7;
-            --drink-border: #d5eee8;
-            --drink-shadow: 0 18px 45px rgba(79, 183, 168, 0.15);
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --c-primary: #0D9373;
+            --c-primary-dark: #067A5F;
+            --c-primary-light: #E6F7F2;
+            --c-primary-glow: rgba(13, 147, 115, 0.15);
+            --c-accent: #10B981;
+            --c-ink: #111827;
+            --c-ink-secondary: #374151;
+            --c-muted: #6B7280;
+            --c-subtle: #9CA3AF;
+            --c-surface: #FFFFFF;
+            --c-bg: #F9FAFB;
+            --c-bg-warm: #F0FDF9;
+            --c-border: #E5E7EB;
+            --c-border-light: #F3F4F6;
+            --c-danger: #EF4444;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --radius-2xl: 24px;
+            --radius-full: 9999px;
+            --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+            --shadow-glow: 0 0 20px rgba(13,147,115,0.12);
         }
+
+        /* ─── Base Reset ─── */
+        *, *::before, *::after { box-sizing: border-box; }
 
         body {
-            font-family: var(--font-ui);
-            color: var(--drink-ink);
-            background:
-                radial-gradient(circle at top left, rgba(184, 234, 223, 0.38), transparent 34rem),
-                linear-gradient(180deg, #f4fffc 0%, #edf9f6 100%);
+            font-family: var(--font-sans);
+            color: var(--c-ink);
+            background: var(--c-bg);
+            font-size: 15px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
         }
 
-        body,
-        button,
-        input,
-        select,
-        textarea,
-        table,
-        .btn,
-        .form-control,
-        .form-select,
-        .dropdown-menu {
-            font-family: var(--font-ui) !important;
-            letter-spacing: 0 !important;
+        body, button, input, select, textarea, table,
+        .btn, .form-control, .form-select, .dropdown-menu {
+            font-family: var(--font-sans) !important;
+            letter-spacing: -0.011em !important;
         }
 
         h1, h2, h3, h4, h5, h6,
         .h1, .h2, .h3, .h4, .h5, .h6 {
-            font-family: var(--font-ui);
-            letter-spacing: 0 !important;
-            line-height: 1.18;
+            font-family: var(--font-sans);
+            color: var(--c-ink);
+            font-weight: 700;
+            letter-spacing: -0.025em !important;
+            line-height: 1.2;
         }
 
+        p { color: var(--c-ink-secondary); line-height: 1.65; }
+
+        a { color: var(--c-primary); transition: color 0.2s ease; }
+        a:hover { color: var(--c-primary-dark); }
+
+        /* ─── Buttons ─── */
         .btn {
-            border-radius: 999px;
-            font-weight: 700;
-            padding-inline: 1.1rem;
-            min-height: 42px;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.625rem 1.25rem;
+            min-height: 40px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1.5px solid transparent;
         }
+
+        .btn:active { transform: scale(0.97); }
 
         .btn-primary {
-            --bs-btn-bg: var(--drink-primary);
-            --bs-btn-border-color: var(--drink-primary);
-            --bs-btn-hover-bg: var(--drink-primary-dark);
-            --bs-btn-hover-border-color: var(--drink-primary-dark);
-            --bs-btn-active-bg: var(--drink-primary-dark);
-            --bs-btn-active-border-color: var(--drink-primary-dark);
-            box-shadow: 0 10px 24px rgba(79, 183, 168, 0.20);
+            --bs-btn-bg: var(--c-primary);
+            --bs-btn-border-color: var(--c-primary);
+            --bs-btn-hover-bg: var(--c-primary-dark);
+            --bs-btn-hover-border-color: var(--c-primary-dark);
+            --bs-btn-active-bg: var(--c-primary-dark);
+            --bs-btn-active-border-color: var(--c-primary-dark);
+            box-shadow: 0 1px 3px rgba(13,147,115,0.3), 0 1px 2px rgba(13,147,115,0.2);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 4px 12px rgba(13,147,115,0.35);
+            transform: translateY(-1px);
         }
 
         .btn-outline-primary {
-            --bs-btn-color: var(--drink-primary);
-            --bs-btn-border-color: rgba(79, 183, 168, 0.45);
-            --bs-btn-hover-bg: var(--drink-primary);
-            --bs-btn-hover-border-color: var(--drink-primary);
+            --bs-btn-color: var(--c-primary);
+            --bs-btn-border-color: var(--c-border);
+            --bs-btn-hover-bg: var(--c-primary);
+            --bs-btn-hover-border-color: var(--c-primary);
+            --bs-btn-hover-color: #fff;
+            background: var(--c-surface);
         }
 
-        .text-primary {
-            color: var(--drink-primary) !important;
-        }
+        .text-primary { color: var(--c-primary) !important; }
+        .bg-primary { background-color: var(--c-primary) !important; }
 
-        .bg-primary {
-            background-color: var(--drink-primary) !important;
-        }
-
-        .form-control,
-        .form-select {
-            border-color: var(--drink-border);
-            border-radius: 999px;
-            padding: 0.72rem 1rem;
-            color: var(--drink-ink);
+        /* ─── Form Controls ─── */
+        .form-control, .form-select {
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--radius-md);
+            padding: 0.65rem 0.9rem;
+            color: var(--c-ink);
             font-weight: 500;
+            font-size: 0.9rem;
+            background: var(--c-surface);
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
 
         .form-label {
-            color: var(--drink-ink);
-            font-weight: 700;
+            color: var(--c-ink);
+            font-weight: 600;
+            font-size: 0.8125rem;
+            margin-bottom: 0.375rem;
         }
 
-        textarea.form-control {
-            border-radius: 18px;
+        textarea.form-control { border-radius: var(--radius-md); }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--c-primary);
+            box-shadow: 0 0 0 3px var(--c-primary-glow);
         }
 
-        .form-control:focus,
-        .form-select:focus {
-            border-color: var(--drink-primary);
-            box-shadow: 0 0 0 0.22rem rgba(79, 183, 168, 0.16);
-        }
-
-        .card,
-        .dropdown-menu,
-        .list-group-item {
-            border-color: var(--drink-border) !important;
-        }
-
-        .list-group-item {
-            color: var(--drink-ink);
-            padding: 0.9rem 1.1rem;
-        }
-
-        .list-group-item:hover {
-            color: var(--drink-primary);
-            background: var(--drink-soft);
-        }
-
-        .list-group-item.active {
-            color: #ffffff;
-            background: linear-gradient(135deg, var(--drink-primary), var(--drink-primary-dark));
-            border-color: var(--drink-primary) !important;
-            box-shadow: 0 10px 22px rgba(15, 139, 141, 0.22);
+        /* ─── Cards ─── */
+        .card, .dropdown-menu, .list-group-item {
+            border-color: var(--c-border) !important;
         }
 
         .drink-card {
-            border: 1px solid var(--drink-border);
-            border-radius: 18px;
-            box-shadow: 0 12px 30px rgba(18, 56, 63, 0.08);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius-xl);
+            background: var(--c-surface);
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                        box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                        border-color 0.25s ease;
         }
 
         .drink-card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(79, 183, 168, 0.35);
-            box-shadow: var(--drink-shadow);
+            transform: translateY(-4px);
+            border-color: rgba(13,147,115,0.2);
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
         }
 
+        .list-group-item {
+            color: var(--c-ink);
+            padding: 0.8rem 1rem;
+            font-weight: 500;
+            border-color: var(--c-border-light) !important;
+        }
+
+        .list-group-item:hover {
+            color: var(--c-primary);
+            background: var(--c-primary-light);
+        }
+
+        .list-group-item.active {
+            color: #fff;
+            background: var(--c-primary);
+            border-color: var(--c-primary) !important;
+        }
+
+        /* ─── Section Typography ─── */
         .section-kicker {
-            color: var(--drink-primary);
-            font-size: 0.78rem;
-            font-weight: 800;
-            letter-spacing: 0.08em;
+            color: var(--c-primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.06em !important;
             text-transform: uppercase;
         }
 
         .section-title {
-            color: var(--drink-ink);
+            color: var(--c-ink);
             font-weight: 800;
-            letter-spacing: 0;
+            letter-spacing: -0.03em !important;
         }
 
+        /* ─── Header ─── */
         .site-header {
-            background: rgba(239, 252, 248, 0.94);
-            border-bottom: 1px solid rgba(213, 238, 232, 0.95);
-            backdrop-filter: blur(18px);
+            background: rgba(255, 255, 255, 0.82);
+            border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+            backdrop-filter: blur(20px) saturate(1.8);
+            -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            transition: padding 0.3s ease, box-shadow 0.3s ease;
         }
+
+        .site-header.scrolled {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .site-header.scrolled .navbar { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
 
         .brand-mark {
-            width: 42px;
-            height: 42px;
+            width: 38px;
+            height: 38px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 16px;
-            background: var(--drink-primary);
-            color: #ffffff;
+            border-radius: var(--radius-md);
+            background: var(--c-surface);
+            border: 1.5px solid var(--c-border);
             font-weight: 800;
-            box-shadow: 0 12px 28px rgba(0, 107, 95, 0.18);
-            font-size: 1.15rem;
+            font-size: 1rem;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s;
         }
 
         .brand-text {
-            color: var(--drink-ink);
-            letter-spacing: 0;
-            font-size: 1.25rem;
+            color: var(--c-ink);
+            font-size: 1.125rem;
+            font-weight: 800;
+            letter-spacing: -0.03em !important;
         }
 
+        /* ─── Navigation ─── */
         .nav-link {
-            border-radius: 999px;
-            font-weight: 700;
-            padding: 0.65rem 1rem !important;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.5rem 0.875rem !important;
+            color: var(--c-muted) !important;
+            transition: all 0.2s ease;
         }
 
         .nav-link:hover {
-            color: var(--drink-primary) !important;
-            background: rgba(79, 183, 168, 0.10);
+            color: var(--c-ink) !important;
+            background: var(--c-border-light);
         }
 
-        .nav-link.active,
-        .nav-link.fw-semibold {
-            color: var(--drink-primary) !important;
-            background: rgba(79, 183, 168, 0.14);
+        .nav-link.active {
+            color: var(--c-primary) !important;
+            background: var(--c-primary-light);
         }
 
-        .client-search {
-            width: clamp(220px, 24vw, 300px);
-        }
+        .client-search { width: clamp(200px, 22vw, 280px); }
 
-        /* Tailwind/Bootstrap conflict: luôn hiện menu trên màn hình >= md */
         @media (min-width: 768px) {
             #clientNavbar.navbar-collapse {
                 display: flex !important;
@@ -223,10 +274,7 @@
         }
 
         @media (max-width: 767.98px) {
-            #clientNavbar.navbar-collapse:not(.show) {
-                display: none !important;
-            }
-
+            #clientNavbar.navbar-collapse:not(.show) { display: none !important; }
             #clientNavbar.navbar-collapse.show {
                 display: flex !important;
                 flex-direction: column;
@@ -236,308 +284,402 @@
         }
 
         .navbar-toggler {
-            border-color: var(--drink-border);
-            border-radius: 999px;
-            padding: 0.55rem 0.75rem;
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--radius-sm);
+            padding: 0.45rem 0.65rem;
         }
 
-        .navbar-toggler:focus {
-            box-shadow: 0 0 0 0.22rem rgba(79, 183, 168, 0.16);
-        }
+        .navbar-toggler:focus { box-shadow: 0 0 0 3px var(--c-primary-glow); }
 
+        /* ─── Cart Button ─── */
         .cart-button {
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            background: #ffffff;
-            border-color: var(--drink-border);
-            color: var(--drink-primary);
+            border-radius: var(--radius-md);
+            background: var(--c-surface);
+            border: 1.5px solid var(--c-border);
+            color: var(--c-ink-secondary);
             padding: 0;
+            transition: all 0.2s ease;
         }
 
-        .cart-button svg {
-            width: 21px;
-            height: 21px;
-            display: block;
+        .cart-button:hover {
+            border-color: var(--c-primary);
+            color: var(--c-primary);
+            background: var(--c-primary-light);
+        }
+
+        .cart-button svg { width: 18px; height: 18px; display: block; flex: 0 0 auto; }
+
+        .cart-bump { animation: cartBump 0.55s ease; }
+
+        .cart-button [data-cart-badge] { transition: transform 0.18s ease; }
+        .cart-bump [data-cart-badge] { transform: scale(1.12); }
+
+        .cart-fly-dot {
+            position: fixed; z-index: 1080;
+            width: 32px; height: 32px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: var(--c-primary); color: #fff;
+            box-shadow: 0 8px 24px rgba(13,147,115,0.35);
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(1);
+            transition: transform 0.72s cubic-bezier(.22,.88,.22,1), opacity 0.72s ease;
+        }
+
+        .cart-feedback {
+            position: fixed; right: 1.25rem; top: 5rem; z-index: 1081;
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            max-width: min(340px, calc(100vw - 2rem));
+            padding: 0.7rem 1rem;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius-lg);
+            background: var(--c-surface); color: var(--c-ink);
+            box-shadow: var(--shadow-xl);
+            font-weight: 600; font-size: 0.875rem;
+            opacity: 0; transform: translateY(-10px);
+            transition: opacity 0.25s ease, transform 0.25s ease;
+            pointer-events: none;
+        }
+
+        .cart-feedback.show { opacity: 1; transform: translateY(0); }
+
+        .cart-feedback-icon {
+            width: 28px; height: 28px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: var(--radius-sm);
+            background: var(--c-primary-light); color: var(--c-primary);
             flex: 0 0 auto;
         }
 
+        [data-ajax-cart].is-adding button[type="submit"],
+        [data-ajax-cart].is-added button[type="submit"] { transform: translateY(-1px); }
+
+        @keyframes cartBump {
+            0% { transform: scale(1); }
+            35% { transform: scale(1.12); }
+            70% { transform: scale(0.96); }
+            100% { transform: scale(1); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .cart-button.cart-bump, .cart-fly-dot, .cart-feedback {
+                animation: none; transition: none;
+            }
+        }
+
+        /* ─── Avatar & Profile ─── */
         .user-avatar {
-            width: 58px;
-            height: 58px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 0;
+            width: 40px; height: 40px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 2px solid var(--c-border);
             border-radius: 50%;
-            background: linear-gradient(135deg, #9fe2d5, var(--drink-primary));
-            color: #ffffff;
-            font-weight: 800;
-            font-size: 1.2rem;
-            box-shadow: 0 14px 32px rgba(79, 183, 168, 0.28);
-            padding: 0;
+            background: linear-gradient(135deg, var(--c-primary-light), var(--c-primary));
+            color: #fff; font-weight: 700; font-size: 0.875rem;
             overflow: hidden;
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
+            transition: all 0.2s ease;
+            padding: 0;
         }
 
-        .user-avatar.show {
-            transform: translateY(-1px);
-            box-shadow: 0 18px 36px rgba(79, 183, 168, 0.34);
+        .user-avatar:hover, .user-avatar.show {
+            border-color: var(--c-primary);
+            box-shadow: 0 0 0 3px var(--c-primary-glow);
         }
 
-        .user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
-        .avatar-preset-mint {
-            background: linear-gradient(135deg, #9fe2d5, #008b7a);
-        }
+        .avatar-preset-mint { background: linear-gradient(135deg, #A7F3D0, #059669); }
+        .avatar-preset-sky { background: linear-gradient(135deg, #BAE6FD, #0284C7); }
+        .avatar-preset-berry { background: linear-gradient(135deg, #FBCFE8, #BE185D); }
+        .avatar-preset-orange { background: linear-gradient(135deg, #FED7AA, #EA580C); }
 
-        .avatar-preset-sky {
-            background: linear-gradient(135deg, #9ddcff, #1d8bd6);
-        }
+        .user-avatar::after { display: none; }
 
-        .avatar-preset-berry {
-            background: linear-gradient(135deg, #f6a6c8, #b83280);
-        }
-
-        .avatar-preset-orange {
-            background: linear-gradient(135deg, #ffd08a, #e97828);
-        }
-
-        .user-avatar::after {
-            display: none;
-        }
-
+        /* ─── Notification ─── */
         .notification-button {
             position: relative;
-            width: 42px;
-            height: 42px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid var(--drink-border);
-            border-radius: 50%;
-            background: #ffffff;
-            color: var(--drink-primary);
-            box-shadow: 0 12px 26px rgba(8, 42, 38, 0.08);
-            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            width: 40px; height: 40px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--radius-md);
+            background: var(--c-surface); color: var(--c-muted);
+            transition: all 0.2s ease;
         }
 
-        .notification-button:hover,
-        .notification-button.show {
-            border-color: rgba(0, 139, 122, 0.35);
-            color: var(--drink-primary-dark);
-            transform: translateY(-1px);
-            box-shadow: 0 16px 32px rgba(0, 107, 95, 0.14);
+        .notification-button:hover, .notification-button.show {
+            border-color: var(--c-primary);
+            color: var(--c-primary);
+            background: var(--c-primary-light);
         }
 
-        .notification-button::after {
-            display: none;
-        }
+        .notification-button::after { display: none; }
 
         .notification-dot {
-            position: absolute;
-            top: 5px;
-            right: 6px;
-            width: 10px;
-            height: 10px;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            background: #f26a4f;
+            position: absolute; top: 6px; right: 7px;
+            width: 8px; height: 8px;
+            border: 1.5px solid var(--c-surface);
+            border-radius: 50%; background: var(--c-danger);
         }
 
         .notification-menu {
-            width: min(360px, calc(100vw - 2rem));
-            margin-top: 0.6rem !important;
-            padding: 0;
-            border: 1px solid var(--drink-border);
-            border-radius: 14px;
+            width: min(380px, calc(100vw - 2rem));
+            margin-top: 0.5rem !important; padding: 0;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius-xl);
             overflow: hidden;
-            box-shadow: 0 22px 52px rgba(8, 42, 38, 0.16);
+            box-shadow: var(--shadow-xl);
         }
 
         .notification-head {
-            padding: 1rem 1.1rem;
-            background: linear-gradient(135deg, var(--drink-primary-soft), #ffffff);
-            border-bottom: 1px solid var(--drink-border);
+            padding: 1rem 1.15rem;
+            background: var(--c-bg);
+            border-bottom: 1px solid var(--c-border);
         }
 
-        .notification-list {
-            max-height: 330px;
-            overflow-y: auto;
-        }
+        .notification-list { max-height: 330px; overflow-y: auto; }
 
         .notification-item {
-            display: flex;
-            gap: 0.85rem;
-            padding: 1rem 1.1rem;
-            border-bottom: 1px solid rgba(213, 238, 232, 0.65);
-            background: #ffffff;
+            display: flex; gap: 0.75rem;
+            padding: 0.9rem 1.15rem;
+            border-bottom: 1px solid var(--c-border-light);
+            background: var(--c-surface);
+            transition: background 0.15s;
         }
 
-        .notification-item:last-child {
-            border-bottom: 0;
-        }
+        .notification-item:hover { background: var(--c-bg); }
+        .notification-item:last-child { border-bottom: 0; }
 
         .notification-icon {
-            width: 38px;
-            height: 38px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            width: 36px; height: 36px;
+            display: inline-flex; align-items: center; justify-content: center;
             flex: 0 0 auto;
-            border-radius: 12px;
-            background: var(--drink-primary-soft);
-            color: var(--drink-primary);
+            border-radius: var(--radius-sm);
+            background: var(--c-primary-light); color: var(--c-primary);
+            font-size: 0.9rem;
         }
 
         .notification-time {
-            color: var(--drink-muted);
-            font-size: 0.8rem;
-            font-weight: 600;
+            color: var(--c-subtle); font-size: 0.75rem; font-weight: 500;
         }
 
+        /* ─── Profile Menu ─── */
         .profile-menu {
             min-width: 200px;
-            margin-top: 0.45rem !important;
-            padding: 0.55rem 0;
-            border: 1px solid var(--drink-border);
-            border-radius: 10px;
-            box-shadow: 0 18px 44px rgba(8, 42, 38, 0.14);
+            margin-top: 0.4rem !important; padding: 0.4rem;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
         }
 
-        .dropdown:hover > .profile-menu:not(.show) {
-            display: none !important;
-        }
-
-        .profile-menu.show {
-            display: block;
-        }
+        .dropdown:hover > .profile-menu:not(.show) { display: none !important; }
+        .profile-menu.show { display: block; }
 
         .profile-menu .dropdown-item {
-            color: #2f3b3a;
-            font-size: 1.05rem;
-            font-weight: 500;
-            padding: 0.72rem 1.15rem;
-            border-radius: 8px;
-            transition: color 0.16s ease, background-color 0.16s ease;
+            color: var(--c-ink-secondary);
+            font-size: 0.875rem; font-weight: 500;
+            padding: 0.55rem 0.85rem;
+            border-radius: var(--radius-sm);
+            transition: all 0.15s ease;
         }
 
         .profile-menu .dropdown-item:hover,
         .profile-menu .dropdown-item:focus {
-            color: var(--drink-primary);
-            background: var(--drink-primary-soft);
+            color: var(--c-primary);
+            background: var(--c-primary-light);
         }
 
-        .profile-menu form {
-            margin: 0;
-        }
+        .profile-menu form { margin: 0; }
 
-        .profile-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.65rem;
-            margin-bottom: 1.5rem;
-        }
+        /* ─── Profile Tabs ─── */
+        .profile-tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
 
         .profile-tab {
-            border: 1px solid var(--drink-border);
-            border-radius: 999px;
-            padding: 0.65rem 1.15rem;
-            font-weight: 700;
-            color: var(--drink-muted);
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--radius-full);
+            padding: 0.5rem 1rem;
+            font-weight: 600; font-size: 0.875rem;
+            color: var(--c-muted);
             text-decoration: none;
-            background: #ffffff;
-            transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
+            background: var(--c-surface);
+            transition: all 0.2s ease;
         }
 
-        .profile-tab:hover,
-        .profile-tab.active {
-            border-color: var(--drink-primary);
-            color: var(--drink-primary-dark);
-            background: var(--drink-primary-soft);
+        .profile-tab:hover, .profile-tab.active {
+            border-color: var(--c-primary);
+            color: var(--c-primary);
+            background: var(--c-primary-light);
         }
 
+        /* ─── Auth Pages ─── */
+        .auth-page {
+            padding: 3rem 0 5rem;
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .auth-card {
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--c-border);
+            background: var(--c-surface);
+        }
+
+        .auth-brand-mark {
+            width: 52px; height: 52px;
+            margin-left: auto; margin-right: auto;
+            display: block;
+            border-radius: var(--radius-lg);
+        }
+
+        .auth-divider {
+            display: flex; align-items: center; gap: 1rem;
+            margin: 1.5rem 0;
+            color: var(--c-subtle); font-size: 0.8rem; font-weight: 500;
+        }
+
+        .auth-divider::before, .auth-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--c-border);
+        }
+
+        .auth-social-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+        .auth-social-btn {
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.65rem 1rem;
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--radius-md);
+            background: var(--c-surface); color: var(--c-ink-secondary);
+            font-weight: 600; font-size: 0.8125rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .auth-social-btn:hover {
+            border-color: var(--c-muted);
+            background: var(--c-bg);
+        }
+
+        .auth-social-btn.facebook:hover { color: #1877F2; border-color: #1877F2; }
+        .auth-social-btn.google:hover { color: #EA4335; border-color: #EA4335; }
+
+        .auth-section-label {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-weight: 700; font-size: 0.8125rem;
+            color: var(--c-primary);
+            letter-spacing: 0.02em !important;
+            text-transform: uppercase;
+        }
+
+        .auth-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .auth-form-grid .full-span { grid-column: 1 / -1; }
+
+        .auth-note {
+            display: flex; align-items: flex-start; gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            background: var(--c-primary-light);
+            color: var(--c-primary-dark);
+            font-size: 0.8125rem; font-weight: 500;
+        }
+
+        @media (max-width: 575.98px) {
+            .auth-form-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ─── Footer ─── */
         .site-footer {
-            position: relative;
-            overflow: hidden;
-            color: var(--drink-ink) !important;
-            background: #f8fffd;
-            border-top: 1px solid var(--drink-border);
-            border-top-left-radius: 22px;
-            border-top-right-radius: 22px;
-            box-shadow: 0 -10px 28px rgba(0, 107, 95, 0.04);
+            position: relative; overflow: hidden;
+            color: var(--c-ink) !important;
+            background: var(--c-surface);
+            border-top: 1px solid var(--c-border);
         }
 
-        .site-footer .container {
-            position: relative;
-            z-index: 1;
-        }
+        .site-footer .container { position: relative; z-index: 1; }
 
         .footer-link {
-            color: var(--drink-muted);
+            color: var(--c-muted);
             text-decoration: none;
-            font-weight: 600;
-            transition: color 0.18s ease, transform 0.18s ease;
+            font-weight: 500; font-size: 0.875rem;
+            transition: color 0.2s ease;
         }
 
-        .footer-link:hover {
-            color: var(--drink-primary);
-            transform: translateX(3px);
+        .footer-link:hover { color: var(--c-primary); }
+
+        .footer-social-btn {
+            width: 36px; height: 36px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: var(--radius-sm);
+            background: var(--c-bg);
+            color: var(--c-muted);
+            text-decoration: none;
+            font-size: 1rem;
+            transition: all 0.2s ease;
         }
 
+        .footer-social-btn:hover {
+            background: var(--c-primary);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .footer-heading {
+            font-size: 0.75rem; font-weight: 700;
+            letter-spacing: 0.06em !important;
+            text-transform: uppercase;
+            color: var(--c-ink);
+            margin-bottom: 1rem;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid var(--c-border);
+            padding-top: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        /* ─── Nav Actions ─── */
         .nav-actions .btn-outline-primary,
         .nav-actions .btn-primary {
-            min-height: 42px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            min-height: 40px;
+            display: inline-flex; align-items: center; justify-content: center;
         }
 
+        /* ─── Responsive ─── */
         @media (max-width: 991.98px) {
-            .client-search {
-                width: 100%;
-                margin-top: 0.75rem;
-            }
-
+            .client-search { width: 100%; margin-top: 0.75rem; }
             .navbar-collapse {
-                margin-top: 1rem;
-                padding-top: 1rem;
-                border-top: 1px solid var(--drink-border);
+                margin-top: 1rem; padding-top: 1rem;
+                border-top: 1px solid var(--c-border);
             }
-
             .nav-actions {
-                width: 100%;
-                align-items: stretch !important;
+                width: 100%; align-items: stretch !important;
             }
-
             .nav-actions .btn:not(.cart-button),
-            .nav-actions .dropdown {
-                width: 100%;
-            }
-
-            .notification-button {
-                margin-inline: auto;
-            }
-
+            .nav-actions .dropdown { width: 100%; }
+            .notification-button { margin-inline: auto; }
             .nav-actions .dropdown .user-avatar {
-                margin-left: auto;
-                margin-right: auto;
+                margin-left: auto; margin-right: auto;
             }
+        }
+
+        /* ─── Page Transition ─── */
+        main { animation: fadeInUp 0.4s ease-out; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
-<body class="bg-light">
-    <header class="site-header sticky-top">
-        <nav class="navbar navbar-expand-md container py-3">
+<body>
+    <header class="site-header sticky-top" id="siteHeader">
+        <nav class="navbar navbar-expand-md container py-2">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
-                <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 3px;">
                 <span class="brand-text">Chill Drink</span>
             </a>
 
@@ -548,27 +690,23 @@
             <div class="collapse navbar-collapse flex-grow-1" id="clientNavbar">
                 <ul class="navbar-nav ms-lg-4 gap-lg-1">
                     <li class="nav-item">
-                        <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : 'text-dark' }}">Trang Chủ</a>
+                        <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Trang Chủ</a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : 'text-dark' }}">Sản Phẩm</a>
+                        <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
                     </li>
                 </ul>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
-                    <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search" role="search">
-                        <input
-                            type="search"
-                            name="search"
-                            class="form-control"
-                            placeholder="Tìm kiếm đồ uống..."
-                            aria-label="Tìm kiếm sản phẩm"
-                            value="{{ request('search') }}"
-                        >
-                        <button type="submit" class="btn btn-primary">Tìm</button>
+                    <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
+                        <div class="position-relative flex-grow-1">
+                            <i class="bi bi-search position-absolute" style="left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--c-subtle); font-size: 0.85rem;"></i>
+                            <input type="search" name="search" class="form-control" placeholder="Tìm đồ uống..." aria-label="Tìm kiếm sản phẩm" value="{{ request('search') }}" style="padding-left: 2.4rem; border-radius: var(--radius-md);">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Tìm</button>
                     </form>
 
-                    <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng">
+                    <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng" data-cart-button>
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
@@ -587,47 +725,47 @@
                         @endphp
                         <div class="dropdown">
                             <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng">
-                                <i class="bi bi-bell"></i>
+                                <i class="bi bi-bell" style="font-size: 1.05rem;"></i>
                                 <span class="notification-dot" aria-hidden="true"></span>
                             </button>
                             <div class="dropdown-menu dropdown-menu-end notification-menu">
                                 <div class="notification-head">
                                     <div class="d-flex justify-content-between align-items-center gap-3">
                                         <div>
-                                            <div class="fw-bold">Thông báo đơn hàng</div>
-                                            <div class="text-secondary small">Cập nhật khi đơn chuẩn bị giao tới bạn.</div>
+                                            <div class="fw-bold" style="font-size: 0.9rem;">Thông báo</div>
+                                            <div class="text-secondary" style="font-size: 0.8rem;">Cập nhật đơn hàng của bạn</div>
                                         </div>
-                                        <span class="badge rounded-pill text-bg-success">Mới</span>
+                                        <span class="badge rounded-pill" style="background: var(--c-primary-light); color: var(--c-primary); font-size: 0.7rem;">3 mới</span>
                                     </div>
                                 </div>
                                 <div class="notification-list">
                                     <div class="notification-item">
                                         <span class="notification-icon"><i class="bi bi-truck"></i></span>
                                         <div>
-                                            <div class="fw-bold">Shipper sắp đến</div>
-                                            <div class="text-secondary small">Đơn hàng đang ở gần địa chỉ nhận. Bạn chuẩn bị nhận đồ uống nhé.</div>
+                                            <div class="fw-semibold" style="font-size: 0.85rem;">Shipper sắp đến</div>
+                                            <div class="text-secondary" style="font-size: 0.8rem;">Đơn hàng đang ở gần địa chỉ nhận.</div>
                                             <div class="notification-time mt-1">Vừa xong</div>
                                         </div>
                                     </div>
                                     <div class="notification-item">
                                         <span class="notification-icon"><i class="bi bi-cup-straw"></i></span>
                                         <div>
-                                            <div class="fw-bold">Đơn đang được giao</div>
-                                            <div class="text-secondary small">Đồ uống đã rời cửa hàng và đang trên đường tới bạn.</div>
+                                            <div class="fw-semibold" style="font-size: 0.85rem;">Đơn đang được giao</div>
+                                            <div class="text-secondary" style="font-size: 0.8rem;">Đồ uống đã rời cửa hàng.</div>
                                             <div class="notification-time mt-1">10 phút trước</div>
                                         </div>
                                     </div>
                                     <div class="notification-item">
                                         <span class="notification-icon"><i class="bi bi-check2-circle"></i></span>
                                         <div>
-                                            <div class="fw-bold">Giao hàng thành công</div>
-                                            <div class="text-secondary small">Cảm ơn bạn đã đặt hàng tại Chill Drink.</div>
+                                            <div class="fw-semibold" style="font-size: 0.85rem;">Giao hàng thành công</div>
+                                            <div class="text-secondary" style="font-size: 0.8rem;">Cảm ơn bạn đã đặt tại Chill Drink.</div>
                                             <div class="notification-time mt-1">Hôm nay</div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="p-3 border-top">
-                                    <a href="{{ route('profile.orders') }}" class="btn btn-primary w-100">Xem đơn hàng của tôi</a>
+                                    <a href="{{ route('profile.orders') }}" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
                                 </div>
                             </div>
                         </div>
@@ -641,12 +779,13 @@
                                 @endif
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end profile-menu">
-                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Tài khoản</a></li>
-                                <li><a class="dropdown-item" href="{{ route('profile.orders') }}">Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.orders') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                                <li><hr class="dropdown-divider" style="margin: 0.25rem 0;"></li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}">
                                         @csrf
-                                        <button type="submit" class="dropdown-item">Đăng Xuất</button>
+                                        <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất</button>
                                     </form>
                                 </li>
                             </ul>
@@ -663,7 +802,7 @@
     <main style="min-height: 100vh;">
         @if(session('error'))
             <div class="container mt-4">
-                <div class="alert alert-danger mb-0">{{ session('error') }}</div>
+                <div class="alert alert-danger mb-0" style="border-radius: var(--radius-md);">{{ session('error') }}</div>
             </div>
         @endif
 
@@ -672,43 +811,74 @@
 
     <footer class="site-footer mt-5">
         <div class="container py-5">
-            <div class="row g-4">
-                <div class="col-md-4">
+            <div class="row g-4 g-lg-5">
+                <div class="col-lg-4">
                     <div class="d-flex align-items-center gap-2 mb-3">
-                        <span class="brand-mark"><i class="bi bi-cup-straw"></i></span>
-                        <h3 class="h5 fw-bold mb-0">Chill Drink</h3>
+                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 3px;">
+                        <span class="brand-text">Chill Drink</span>
                     </div>
-                    <p class="text-secondary mb-3">Đồ uống tươi mát, giao nhanh và đặt hàng dễ dàng mỗi ngày.</p>
-                    <div class="d-flex gap-3">
-                        <a href="#" class="footer-link">◎</a>
-                        <a href="#" class="footer-link">@</a>
+                    <p class="text-secondary mb-4" style="font-size: 0.875rem; max-width: 300px;">Đồ uống tươi mát, giao nhanh tận nơi. Đặt hàng dễ dàng mỗi ngày với Chill Drink.</p>
+                    <div class="d-flex gap-2">
+                        <a href="#" class="footer-social-btn" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="footer-social-btn" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="footer-social-btn" aria-label="Tiktok"><i class="bi bi-tiktok"></i></a>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <h3 class="h6 fw-bold text-uppercase mb-3">Liên Hệ</h3>
-                    <ul class="list-unstyled text-secondary mb-0">
-                        <li class="mb-2">Hotline: 1900-xxxx</li>
-                        <li class="mb-2">Email: contact@chilldrink.com</li>
-                        <li>Địa chỉ: Hà Nội, Việt Nam</li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <h3 class="h6 fw-bold text-uppercase mb-3">Mạng Xã Hội</h3>
+                <div class="col-6 col-lg-2">
+                    <h3 class="footer-heading">Sản phẩm</h3>
                     <div class="d-flex flex-column gap-2">
-                        <a href="#" class="footer-link">Facebook</a>
-                        <a href="#" class="footer-link">Instagram</a>
-                        <a href="#" class="footer-link">Zalo</a>
+                        <a href="{{ route('products.index') }}" class="footer-link">Tất cả</a>
+                        <a href="#" class="footer-link">Trà sữa</a>
+                        <a href="#" class="footer-link">Cà phê</a>
+                        <a href="#" class="footer-link">Nước ép</a>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <h3 class="footer-heading">Hỗ trợ</h3>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="#" class="footer-link">Liên hệ</a>
+                        <a href="#" class="footer-link">Câu hỏi thường gặp</a>
+                        <a href="#" class="footer-link">Chính sách đổi trả</a>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <h3 class="footer-heading">Liên hệ</h3>
+                    <div class="d-flex flex-column gap-2">
+                        <span class="footer-link" style="cursor: default;">
+                            <i class="bi bi-telephone me-2"></i>1900-xxxx
+                        </span>
+                        <span class="footer-link" style="cursor: default;">
+                            <i class="bi bi-envelope me-2"></i>contact@chilldrink.com
+                        </span>
+                        <span class="footer-link" style="cursor: default;">
+                            <i class="bi bi-geo-alt me-2"></i>Hà Nội, Việt Nam
+                        </span>
                     </div>
                 </div>
             </div>
-            <div class="border-top mt-4 pt-4 text-center text-secondary">
-                <p class="mb-0">&copy; 2026 Chill Drink. All rights reserved.</p>
+            <div class="footer-bottom text-center">
+                <p class="mb-0 text-secondary" style="font-size: 0.8rem;">&copy; 2026 Chill Drink. All rights reserved.</p>
             </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        /* Header shrink on scroll */
+        const header = document.getElementById('siteHeader');
+        if (header) {
+            let ticking = false;
+            window.addEventListener('scroll', () => {
+                if (!ticking) {
+                    window.requestAnimationFrame(() => {
+                        header.classList.toggle('scrolled', window.scrollY > 20);
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             if (window.bootstrap) {
                 return;
@@ -767,11 +937,125 @@
 
             const submitter = event.submitter;
             const formData = new FormData(form);
+            const isAddAction = form.action.includes('/cart/add/');
+            const originalSubmitterHtml = submitter?.innerHTML;
+
+            function cartButton() {
+                const buttons = Array.from(document.querySelectorAll('[data-cart-button]'));
+                const visibleButtons = buttons.filter((button) => {
+                    const rect = button.getBoundingClientRect();
+                    return rect.width > 0 && rect.height > 0;
+                });
+
+                return visibleButtons.at(-1) || document.querySelector('.cart-button');
+            }
+
+            function setAddButtonState(state) {
+                if (!isAddAction || !submitter) {
+                    return;
+                }
+
+                form.classList.toggle('is-adding', state === 'loading');
+                form.classList.toggle('is-added', state === 'success');
+                submitter.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
+
+                const hasText = submitter.textContent.trim().length > 0;
+
+                if (state === 'loading' && hasText) {
+                    submitter.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang thêm';
+                }
+
+                if (state === 'success' && hasText) {
+                    submitter.innerHTML = '<i class="bi bi-check2-circle me-2"></i>Đã thêm';
+                }
+
+                if (state === 'idle' && typeof originalSubmitterHtml === 'string') {
+                    submitter.innerHTML = originalSubmitterHtml;
+                    submitter.removeAttribute('aria-busy');
+                    form.classList.remove('is-adding', 'is-added');
+                }
+            }
+
+            function animateCartButton() {
+                const target = cartButton();
+
+                if (!target) {
+                    return;
+                }
+
+                target.classList.remove('cart-bump');
+                void target.offsetWidth;
+                target.classList.add('cart-bump');
+                window.setTimeout(() => target.classList.remove('cart-bump'), 620);
+            }
+
+            function flyToCart() {
+                const target = cartButton();
+                const source = submitter || form;
+
+                if (!isAddAction || !target || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                    animateCartButton();
+                    return;
+                }
+
+                const sourceRect = source.getBoundingClientRect();
+                const targetRect = target.getBoundingClientRect();
+                const dot = document.createElement('span');
+
+                dot.className = 'cart-fly-dot';
+                dot.innerHTML = '<i class="bi bi-cup-straw" aria-hidden="true"></i>';
+                dot.style.left = `${sourceRect.left + sourceRect.width / 2}px`;
+                dot.style.top = `${sourceRect.top + sourceRect.height / 2}px`;
+                document.body.appendChild(dot);
+
+                requestAnimationFrame(() => {
+                    dot.style.transform = `translate(${targetRect.left + targetRect.width / 2 - (sourceRect.left + sourceRect.width / 2)}px, ${targetRect.top + targetRect.height / 2 - (sourceRect.top + sourceRect.height / 2)}px) scale(0.35)`;
+                    dot.style.opacity = '0.15';
+                });
+
+                window.setTimeout(() => {
+                    dot.remove();
+                    animateCartButton();
+                }, 760);
+            }
+
+            function showCartFeedback(message) {
+                if (!isAddAction) {
+                    return;
+                }
+
+                let feedback = document.querySelector('[data-cart-feedback]');
+
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.className = 'cart-feedback';
+                    feedback.dataset.cartFeedback = 'true';
+                    feedback.setAttribute('role', 'status');
+                    feedback.setAttribute('aria-live', 'polite');
+                    document.body.appendChild(feedback);
+                }
+
+                feedback.innerHTML = `
+                    <span class="cart-feedback-icon"><i class="bi bi-bag-check"></i></span>
+                    <span>${message || 'Đã thêm vào giỏ hàng'}</span>
+                `;
+                feedback.classList.add('show');
+
+                window.clearTimeout(feedback._hideTimer);
+                feedback._hideTimer = window.setTimeout(() => {
+                    feedback.classList.remove('show');
+                }, 1800);
+            }
 
             if (submitter && submitter.name) {
                 formData.set(submitter.name, submitter.value);
+            }
+
+            if (submitter) {
                 submitter.disabled = true;
             }
+
+            setAddButtonState('loading');
 
             try {
                 const response = await fetch(form.action, {
@@ -788,11 +1072,17 @@
                 }
 
                 const data = await response.json();
-                const badge = document.querySelector('[data-cart-badge]');
+                const badges = document.querySelectorAll('[data-cart-badge]');
 
-                if (badge) {
+                badges.forEach((badge) => {
                     badge.textContent = data.count;
                     badge.classList.toggle('d-none', data.count < 1);
+                });
+
+                if (isAddAction) {
+                    setAddButtonState('success');
+                    flyToCart();
+                    showCartFeedback(data.message);
                 }
 
                 if (document.body.dataset.page === 'cart') {
@@ -837,6 +1127,10 @@
                         document.querySelectorAll(`[data-cart-subtotal="${CSS.escape(id)}"]`).forEach((element) => {
                             element.textContent = item.subtotal_formatted;
                         });
+
+                        document.querySelectorAll(`[data-cart-row][data-cart-key="${CSS.escape(id)}"]`).forEach((row) => {
+                            row.dataset.cartSubtotalValue = item.subtotal;
+                        });
                     });
 
                     document.querySelectorAll('[data-cart-total]').forEach((element) => {
@@ -846,12 +1140,17 @@
                     if (form.dataset.cartRemove === 'true') {
                         form.closest('[data-cart-row]')?.remove();
                     }
+
+                    document.dispatchEvent(new CustomEvent('cart:updated', { detail: data }));
                 }
             } catch (error) {
                 console.error('Không thể cập nhật giỏ hàng.', error);
             } finally {
                 if (submitter) {
-                    submitter.disabled = false;
+                    window.setTimeout(() => {
+                        submitter.disabled = false;
+                        setAddButtonState('idle');
+                    }, isAddAction ? 900 : 0);
                 }
             }
         });

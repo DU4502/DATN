@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductRequest;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -76,6 +77,13 @@ class ProductController extends Controller
     {
         $product = $this->findProduct($product);
         $this->deleteStoredImage($product->image);
+
+        foreach ($this->galleryImagePaths($product) as $image) {
+            if (! str_starts_with($image, 'http')) {
+                Storage::disk('public')->delete($image);
+            }
+        }
+
         $product->delete();
 
         return redirect()
@@ -107,6 +115,28 @@ class ProductController extends Controller
             $data['image'] = $validated['image'];
         }
 
+        if (Schema::hasColumn('products', 'gallery_images')) {
+            $galleryImages = $this->galleryImagePaths($product);
+            $removeGalleryImages = array_filter((array) $request->input('remove_gallery_images', []));
+
+            if ($product && ! empty($removeGalleryImages)) {
+                foreach ($removeGalleryImages as $image) {
+                    if (in_array($image, $galleryImages, true) && ! str_starts_with($image, 'http')) {
+                        Storage::disk('public')->delete($image);
+                    }
+                }
+
+                $galleryImages = array_values(array_diff($galleryImages, $removeGalleryImages));
+            }
+
+            $galleryImages = array_values(array_unique(array_merge(
+                $galleryImages,
+                $this->storeGalleryImages($request)
+            )));
+
+            $data['gallery_images'] = $galleryImages;
+        }
+
         return $data;
     }
 
@@ -125,5 +155,32 @@ class ProductController extends Controller
         }
 
         Storage::disk('public')->delete($imagePath);
+    }
+
+    private function storeGalleryImages(Request $request): array
+    {
+        if (! $request->hasFile('gallery_images')) {
+            return [];
+        }
+
+        return collect($request->file('gallery_images'))
+            ->filter()
+            ->map(fn ($file) => $file->store('products/gallery', 'public'))
+            ->values()
+            ->all();
+    }
+
+    private function galleryImagePaths(?Product $product): array
+    {
+        if (! $product) {
+            return [];
+        }
+
+        $galleryImages = $product->getRawOriginal('gallery_images');
+        $galleryImages = is_string($galleryImages) ? json_decode($galleryImages, true) : $galleryImages;
+
+        return is_array($galleryImages)
+            ? array_values(array_filter($galleryImages))
+            : [];
     }
 }

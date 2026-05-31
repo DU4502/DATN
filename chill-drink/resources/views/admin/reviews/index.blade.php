@@ -80,6 +80,7 @@
                                 <div class="admin-review-thumb">
                                     @if($review->product)
                                         <x-product-image
+                                            :src="$review->product->image_url"
                                             :sku="$review->product->sku ?? null"
                                             :name="$review->product->name"
                                             :alt="$review->product->name"
