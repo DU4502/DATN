@@ -29,6 +29,15 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
         }
 
+        if (! empty($this->invalidCheckoutCartKeys($cart))) {
+            session()->forget('checkout_cart_keys');
+
+            return redirect()->route('cart.index')->with(
+                'error',
+                'Giỏ hàng có sản phẩm demo chưa thể thanh toán. Vui lòng xóa sản phẩm đó và chọn lại từ danh sách sản phẩm thật.'
+            );
+        }
+
         if ($request->query->has('items')) {
             $selectedKeys = $this->selectedCartKeys($request->query('items', []), $cart);
 
@@ -74,6 +83,13 @@ class CheckoutController extends Controller
         
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
+        }
+
+        if (! empty($this->invalidCheckoutCartKeys($cart))) {
+            return redirect()->route('cart.index')->with(
+                'error',
+                'Giỏ hàng có sản phẩm demo chưa thể thanh toán. Vui lòng xóa sản phẩm đó và chọn lại từ danh sách sản phẩm thật.'
+            );
         }
 
         try {
@@ -360,5 +376,20 @@ class CheckoutController extends Controller
         }
 
         return array_intersect_key($cart, array_flip($this->selectedCartKeys($selectedKeys, $cart)));
+    }
+
+    private function invalidCheckoutCartKeys(array $cart): array
+    {
+        $invalidKeys = [];
+
+        foreach ($cart as $cartKey => $item) {
+            $productId = $item['product_id'] ?? $cartKey;
+
+            if (! is_numeric($productId)) {
+                $invalidKeys[] = (string) $cartKey;
+            }
+        }
+
+        return $invalidKeys;
     }
 }

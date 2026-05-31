@@ -604,10 +604,6 @@
             </div>
         </div>
 
-        @if(session('error'))
-            <div class="alert alert-danger rounded-4 border-0">{{ session('error') }}</div>
-        @endif
-
         <form method="POST" action="{{ route('checkout.process') }}">
             @csrf
             <div class="row g-4 align-items-start">
