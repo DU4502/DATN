@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -9,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Legacy duplicate. The canonical order_items schema is created by
-        // 2026_05_17_121748_create_order_items_table.php after products/orders exist.
+        // Legacy migration kept for history only.
+        // `order_items` is created by 2026_05_17_121748_create_order_items_table.
+        return;
     }
 
     /**
@@ -18,6 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        // Keep legacy migration fully no-op to avoid dropping the active `order_items` table.
+        return;
     }
 };
