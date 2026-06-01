@@ -35,7 +35,7 @@ class ProductManagementTest extends TestCase
 
         $this->assertNotNull($product);
         $this->assertSame($category->id, $product->category_id);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.show', $product->id));
     }
 
     public function test_admin_can_upload_image_when_creating_product(): void
@@ -55,7 +55,7 @@ class ProductManagementTest extends TestCase
             'price' => 49000,
             'stock' => 10,
             'status' => '1',
-            'image' => UploadedFile::fake()->image('tra-dao-cam-sa.png'),
+            'image' => $this->imageUpload('tra-dao-cam-sa.png'),
         ]);
 
         $product = Product::firstWhere('slug', 'tra-dao-cam-sa');
@@ -64,7 +64,7 @@ class ProductManagementTest extends TestCase
         $this->assertNotNull($product->image);
         $this->assertStringStartsWith('products/', $product->image);
         Storage::disk('public')->assertExists($product->image);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.show', $product->id));
     }
 
     public function test_admin_can_update_product(): void
@@ -98,7 +98,7 @@ class ProductManagementTest extends TestCase
         $this->assertSame('Cà Phê Mới', $product->name);
         $this->assertSame('ca-phe-moi', $product->slug);
         $this->assertFalse($product->status);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.show', $product->id));
     }
 
     public function test_admin_can_replace_old_image_when_updating_product(): void
@@ -112,7 +112,7 @@ class ProductManagementTest extends TestCase
             'status' => true,
         ]);
 
-        $oldPath = UploadedFile::fake()->image('old-image.jpg')->store('products', 'public');
+        $oldPath = $this->imageUpload('old-image.png')->store('products', 'public');
 
         $product = Product::create([
             'category_id' => $category->id,
@@ -131,7 +131,7 @@ class ProductManagementTest extends TestCase
             'price' => 37000,
             'stock' => 12,
             'status' => '1',
-            'image' => UploadedFile::fake()->image('new-image.jpg'),
+            'image' => $this->imageUpload('new-image.png'),
         ]);
 
         $product->refresh();
@@ -139,7 +139,7 @@ class ProductManagementTest extends TestCase
         Storage::disk('public')->assertMissing($oldPath);
         Storage::disk('public')->assertExists($product->image);
         $this->assertNotSame($oldPath, $product->image);
-        $response->assertRedirect(route('admin.products.show', $product));
+        $response->assertRedirect(route('admin.products.show', $product->id));
     }
 
     public function test_admin_can_delete_product_without_orders(): void
@@ -195,7 +195,18 @@ class ProductManagementTest extends TestCase
     private function admin(): User
     {
         return User::factory()->create([
-            'role' => 'admin',
+            'role_id' => 2,
+            'is_active' => 1,
         ]);
+    }
+
+    private function imageUpload(string $name): UploadedFile
+    {
+        $path = tempnam(sys_get_temp_dir(), 'product-test-image-');
+        file_put_contents($path, base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lYx3VwAAAABJRU5ErkJggg=='
+        ));
+
+        return new UploadedFile($path, $name, 'image/png', null, true);
     }
 }

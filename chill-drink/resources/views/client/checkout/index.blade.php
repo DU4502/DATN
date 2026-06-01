@@ -18,8 +18,12 @@
         $selectedShippingMethod
     );
     $shippingFee = $shippingQuote['total_fee'];
-    $discount = 0;
-    $grandTotal = $total + $shippingFee - $discount;
+    $availableVouchers = collect($availableVouchers ?? []);
+    $selectedVoucherCode = strtoupper(trim((string) old('voucher_code', '')));
+    $selectedVoucher = $availableVouchers->first(fn ($voucher) => $voucher->code === $selectedVoucherCode);
+    $discount = $selectedVoucher ? $selectedVoucher->discountFor((int) $total) : 0;
+    $selectedVoucherLabel = $selectedVoucher ? $selectedVoucher->code . ' - ' . $selectedVoucher->formattedValue() : '';
+    $grandTotal = max(0, $total + $shippingFee - $discount);
     $paymentOptions = [
         'cod' => [
             'title' => 'Thanh toán khi nhận hàng',
@@ -728,19 +732,24 @@
                     </div>
 
                     <div class="checkout-voucher-panel p-4 mb-4">
-                        <input type="hidden" name="voucher_code_ui" id="selectedVoucherCode" value="">
+                        <input type="hidden" name="voucher_code" id="selectedVoucherCode" value="{{ $selectedVoucherCode }}">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                             <div class="d-flex align-items-center gap-3">
                                 <span class="voucher-icon"><i class="bi bi-ticket-perforated"></i></span>
                                 <div>
                                     <h2 class="h5 fw-bold mb-1">Chill Drink Voucher</h2>
-                                    <div class="voucher-selected-text" id="selectedVoucherText">Chưa chọn voucher</div>
+                                    <div class="voucher-selected-text" id="selectedVoucherText">
+                                        {{ $selectedVoucherLabel ? 'Đã chọn: ' . $selectedVoucherLabel : 'Chưa chọn voucher' }}
+                                    </div>
                                 </div>
                             </div>
                             <button type="button" class="voucher-select-link" data-bs-toggle="modal" data-bs-target="#voucherModal">
                                 Chọn voucher
                             </button>
                         </div>
+                        @error('voucher_code')
+                            <div class="text-danger small mt-2">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="checkout-panel p-4 p-md-5 mb-4">
@@ -1023,81 +1032,65 @@
             <div class="modal-body">
                 <div class="voucher-search-box d-flex flex-column flex-md-row align-items-md-center gap-3 mb-3">
                     <label for="voucherCodeInput" class="fw-semibold text-secondary flex-shrink-0">Mã Voucher</label>
-                    <input id="voucherCodeInput" type="text" class="form-control" placeholder="Mã Chill Drink Voucher">
+                    <input id="voucherCodeInput" type="text" class="form-control" placeholder="Mã Chill Drink Voucher" value="{{ $selectedVoucherCode }}">
                     <button type="button" class="btn voucher-apply-btn" id="voucherManualApply">Áp dụng</button>
                 </div>
 
                 <div class="mb-2">
-                    <div class="voucher-group-title">Mã hỗ trợ vận chuyển</div>
-                    <div class="text-secondary">Có thể chọn 1 voucher</div>
+                    <div class="voucher-group-title">Mã có thể áp dụng</div>
+                    <div class="text-secondary">Có thể chọn 1 voucher cho đơn hàng này</div>
                 </div>
 
                 <div class="vstack gap-3">
-                    <div class="voucher-ticket active" data-voucher-card data-voucher-code="SHIP15" data-voucher-label="SHIP15 - Giảm 15k phí vận chuyển">
-                        <div class="voucher-ticket-brand">
-                            <span class="brand-circle"><i class="bi bi-truck"></i></span>
-                            <strong>Ship 15k</strong>
-                        </div>
-                        <div class="voucher-ticket-body">
-                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                <span class="voucher-limit">Số lượng có hạn</span>
-                                <span class="fw-semibold text-secondary">Giảm tối đa 15kđ</span>
+                    @forelse($availableVouchers as $voucher)
+                        @php
+                            $voucherDiscount = $voucher->discountFor((int) $total);
+                            $usageLimit = (int) ($voucher->usage_limit ?? 0);
+                            $usagePercent = $usageLimit > 0 ? min(100, (int) round(($voucher->used_count / max(1, $usageLimit)) * 100)) : 22;
+                            $voucherLabel = $voucher->code . ' - ' . $voucher->formattedValue();
+                            $voucherIcon = $voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated');
+                        @endphp
+                        <div
+                            class="voucher-ticket {{ $selectedVoucherCode === $voucher->code ? 'active' : '' }}"
+                            data-voucher-card
+                            data-voucher-code="{{ $voucher->code }}"
+                            data-voucher-label="{{ $voucherLabel }}"
+                            data-voucher-discount="{{ $voucherDiscount }}"
+                        >
+                            <div class="voucher-ticket-brand">
+                                <span class="brand-circle"><i class="bi {{ $voucherIcon }}"></i></span>
+                                <strong>{{ $voucher->code }}</strong>
                             </div>
-                            <div class="text-secondary mb-2">Đơn tối thiểu 40kđ, không miễn phí toàn bộ ship</div>
-                            <span class="voucher-only mb-2">Chỉ có trên Chill Drink</span>
-                            <div class="voucher-progress mt-2 mb-1"><span></span></div>
-                            <div class="small text-secondary">
-                                Đang hết nhanh · HSD: 31.05.2026
-                                <a href="#" class="text-decoration-none ms-1">Điều kiện</a>
+                            <div class="voucher-ticket-body">
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                    <span class="voucher-limit">{{ $voucher->usage_limit > 0 ? 'Số lượng có hạn' : 'Không giới hạn' }}</span>
+                                    <span class="fw-semibold text-secondary">Giảm {{ $voucher->formattedValue() }}</span>
+                                    @if($voucher->max_discount)
+                                        <span class="fw-semibold text-secondary">tối đa {{ number_format($voucher->max_discount, 0, ',', '.') }}đ</span>
+                                    @endif
+                                </div>
+                                <div class="text-secondary mb-2">
+                                    Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
+                                    @if($voucher->required_rank)
+                                        · Rank {{ $voucher->rankLabel() }}
+                                    @endif
+                                    @if($voucher->is_redeemable && $voucher->point_cost > 0)
+                                        · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
+                                    @endif
+                                </div>
+                                <span class="voucher-only mb-2">Giảm {{ number_format($voucherDiscount, 0, ',', '.') }}đ cho đơn hiện tại</span>
+                                <div class="voucher-progress mt-2 mb-1"><span style="width: {{ $usagePercent }}%"></span></div>
+                                <div class="small text-secondary">
+                                    HSD: {{ optional($voucher->expires_at)->format('d/m/Y H:i') ?: 'Không giới hạn' }}
+                                </div>
                             </div>
+                            <button type="button" class="voucher-radio" aria-label="Chọn voucher {{ $voucher->code }}"></button>
                         </div>
-                        <button type="button" class="voucher-radio" aria-label="Chọn voucher SHIP15"></button>
-                    </div>
-                    <div class="voucher-warning">
-                        <i class="bi bi-info-circle me-1"></i> Voucher này đang là giao diện demo, chưa trừ tiền thật vào đơn hàng.
-                    </div>
-
-                    <div class="voucher-ticket" data-voucher-card data-voucher-code="CHILL10" data-voucher-label="CHILL10 - Giảm 10% đồ uống">
-                        <div class="voucher-ticket-brand">
-                            <span class="brand-circle"><i class="bi bi-cup-straw"></i></span>
-                            <strong>Đồ uống</strong>
+                    @empty
+                        <div class="voucher-warning">
+                            <i class="bi bi-info-circle me-1"></i> Hiện chưa có voucher phù hợp với giá trị đơn hàng này.
                         </div>
-                        <div class="voucher-ticket-body">
-                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                <span class="voucher-limit">Số lượng có hạn</span>
-                                <span class="fw-semibold text-secondary">Giảm 10%, tối đa 20kđ</span>
-                            </div>
-                            <div class="text-secondary mb-2">Đơn tối thiểu 80kđ</div>
-                            <span class="voucher-only mb-2">Áp dụng cho sản phẩm trong giỏ</span>
-                            <div class="voucher-progress mt-2 mb-1"><span style="width: 58%"></span></div>
-                            <div class="small text-secondary">
-                                Đang hết nhanh · HSD: 31.05.2026
-                                <a href="#" class="text-decoration-none ms-1">Điều kiện</a>
-                            </div>
-                        </div>
-                        <button type="button" class="voucher-radio" aria-label="Chọn voucher CHILL10"></button>
-                    </div>
-
-                    <div class="voucher-ticket" data-voucher-card data-voucher-code="NEWORDER" data-voucher-label="NEWORDER - Ưu đãi đơn mới">
-                        <div class="voucher-ticket-brand">
-                            <span class="brand-circle"><i class="bi bi-gift"></i></span>
-                            <strong>Ưu đãi</strong>
-                        </div>
-                        <div class="voucher-ticket-body">
-                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                <span class="voucher-limit">Số lượng có hạn</span>
-                                <span class="fw-semibold text-secondary">Giảm tối đa 25kđ</span>
-                            </div>
-                            <div class="text-secondary mb-2">Đơn tối thiểu 120kđ</div>
-                            <span class="voucher-only mb-2">Dành cho đơn hàng mới</span>
-                            <div class="voucher-progress mt-2 mb-1"><span style="width: 35%"></span></div>
-                            <div class="small text-secondary">
-                                HSD: 31.05.2026
-                                <a href="#" class="text-decoration-none ms-1">Điều kiện</a>
-                            </div>
-                        </div>
-                        <button type="button" class="voucher-radio" aria-label="Chọn voucher NEWORDER"></button>
-                    </div>
+                    @endforelse
                 </div>
             </div>
             <div class="modal-footer border-top">
@@ -1128,6 +1121,7 @@
         const voucherCodeInput = document.getElementById('voucherCodeInput');
         const shippingConfig = {
             subtotal: {{ (int) $total }},
+            discount: {{ (int) $discount }},
         };
         const shippingTiers = @json($shippingDistanceOptions);
         const shippingRules = @json(\App\Support\ShippingFee::estimationRules());
@@ -1143,6 +1137,7 @@
         let pendingVoucher = {
             code: document.querySelector('[data-voucher-card].active')?.dataset.voucherCode || '',
             label: document.querySelector('[data-voucher-card].active')?.dataset.voucherLabel || '',
+            discount: Number(document.querySelector('[data-voucher-card].active')?.dataset.voucherDiscount || {{ (int) $discount }}),
         };
         const addressBook = [
             {
@@ -1224,7 +1219,7 @@
             const distanceFee = Number(tier.base_fee || 0);
             const methodFee = Number(methodInput.dataset.methodFee || 0);
             const shippingFee = distanceFee + methodFee;
-            const grandTotal = shippingConfig.subtotal + shippingFee;
+            const grandTotal = shippingConfig.subtotal + shippingFee - Number(shippingConfig.discount || 0);
             const distanceLabel = tier.label || '';
             const methodLabel = methodInput.dataset.methodLabel || '';
 
@@ -1330,6 +1325,7 @@
             pendingVoucher = {
                 code: card.dataset.voucherCode || '',
                 label: card.dataset.voucherLabel || '',
+                discount: Number(card.dataset.voucherDiscount || 0),
             };
         }
 
@@ -1426,17 +1422,30 @@
                 return;
             }
 
+            const matchedCard = Array.from(document.querySelectorAll('[data-voucher-card]'))
+                .find((item) => item.dataset.voucherCode === code);
+
+            if (matchedCard) {
+                setVoucherActive(matchedCard);
+                return;
+            }
+
             document.querySelectorAll('[data-voucher-card]').forEach((item) => item.classList.remove('active'));
             pendingVoucher = {
                 code,
                 label: `${code} - Mã nhập thủ công`,
+                discount: 0,
             };
         });
 
         document.getElementById('confirmVoucher')?.addEventListener('click', function () {
             selectedVoucherCode.value = pendingVoucher.code || '';
             selectedVoucherText.textContent = pendingVoucher.label ? `Đã chọn: ${pendingVoucher.label}` : 'Chưa chọn voucher';
-            summaryVoucherText.textContent = pendingVoucher.code ? 'Đã chọn voucher' : 'Chưa áp dụng';
+            shippingConfig.discount = Number(pendingVoucher.discount || 0);
+            summaryVoucherText.textContent = shippingConfig.discount > 0
+                ? `-${formatVnd(shippingConfig.discount)}`
+                : (pendingVoucher.code ? 'Sẽ kiểm tra khi đặt hàng' : 'Chưa áp dụng');
+            updateShippingSummary();
             voucherModal.hide();
         });
 
