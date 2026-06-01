@@ -45,6 +45,8 @@ class DatabaseSeeder extends Seeder
             $adminData
         );
 
+        $this->call(VoucherSeeder::class);
+
         // Create Categories
         $categories = [
             ['name' => 'Trà Sữa', 'description' => 'Các loại trà sữa thơm ngon'],
