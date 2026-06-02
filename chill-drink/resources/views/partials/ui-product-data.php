@@ -14,6 +14,8 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
         'Nước Ép' => 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=700&q=80',
         'Trà Trái Cây' => 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=80',
         'Soda' => 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=80',
+        'Đá Xay' => 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=700&q=80',
+        'Matcha' => 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=80',
     ];
 
     /** Mỗi danh mục nhiều ảnh — gán lần lượt cho từng SKU */
@@ -65,6 +67,16 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             'https://images.unsplash.com/photo-1576092768241-decf85352c69?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?auto=format&fit=crop&w=700&q=80',
             'https://images.unsplash.com/photo-1488900128323-21503983a07e?auto=format&fit=crop&w=700&q=80',
+        ],
+        'Đá Xay' => [
+            'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=80',
+        ],
+        'Matcha' => [
+            'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=700&q=80',
+            'https://images.unsplash.com/photo-1563822249548-9a72b6353cd1?auto=format&fit=crop&w=700&q=80',
         ],
     ];
 
@@ -147,6 +159,8 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
         'NE' => 'Nước Ép',
         'TC' => 'Trà Trái Cây',
         'SD' => 'Soda',
+        'DX' => 'Đá Xay',
+        'MT' => 'Matcha',
     ];
 
     $uiResolveProductImage = static function (?string $sku, ?string $category, ?string $name, int $width = 700) use ($uiProductImageUrls, $uiProductImagesByName, $uiCategoryImages, $uiSkuCategoryPrefixes, $uiResizeImage, $uiDefaultImage): string {
