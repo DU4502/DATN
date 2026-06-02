@@ -166,7 +166,12 @@
     /* ─── Feature Band ─── */
     .feature-band {
         padding: 6rem 0;
-        background: linear-gradient(135deg, var(--c-primary-dark), var(--c-primary));
+        background:
+            linear-gradient(135deg, rgba(255, 246, 225, 0.26), rgba(255, 191, 118, 0.14)),
+            url('https://png.pngtree.com/background/20250106/original/pngtree-bubble-tea-cup-with-splashing-milk-summer-drinks-background-picture-image_15464755.jpg');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
         color: #fff;
         position: relative;
         overflow: hidden;
@@ -174,20 +179,28 @@
 
     .feature-band::before {
         content: '';
-        position: absolute; top: -50%; left: -10%;
-        width: 50%; height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-        transform: rotate(30deg);
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.30), transparent 34%),
+            linear-gradient(180deg, rgba(74, 39, 20, 0.14), rgba(74, 39, 20, 0.20));
+        pointer-events: none;
+    }
+
+    .feature-band .container {
+        position: relative;
+        z-index: 1;
     }
 
     .feature-item {
         text-align: center;
         padding: 2rem;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(61, 35, 22, 0.28);
+        border: 1px solid rgba(255, 246, 225, 0.30);
         border-radius: var(--radius-2xl);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 26px 58px rgba(74, 39, 20, 0.24);
         transition: transform 0.3s ease;
     }
 
@@ -196,10 +209,10 @@
     .feature-icon-lg {
         width: 72px; height: 72px; margin: 0 auto 1.5rem;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 246, 225, 0.18);
         border-radius: var(--radius-xl);
         font-size: 2rem; color: #fff;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+        box-shadow: inset 0 0 0 1px rgba(255, 246, 225, 0.34);
     }
 
     /* ─── CTA Section ─── */
@@ -250,7 +263,7 @@
                     <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-card">
                         <img src="{{ $uiCategoryImages[$category->name] ?? $uiDefaultImage }}" alt="{{ $category->name }}" class="category-image">
                         <div class="category-overlay">
-                            <span class="category-icon"><i class="bi bi-cup-straw"></i></span>
+                            <span class="category-icon"><i class="bi bi-arrow-up-right"></i></span>
                             <div class="category-title">{{ $category->name }}</div>
                             <span class="text-white opacity-75 small">Xem lựa chọn</span>
                         </div>
@@ -260,7 +273,7 @@
                 @foreach([
                     ['Trà Sữa', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=500&q=85', 'bi-cup-hot'],
                     ['Cà Phê', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=500&q=85', 'bi-cup'],
-                    ['Nước Ép', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=85', 'bi-cup-straw'],
+                    ['Nước Ép', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=85', 'bi-arrow-up-right'],
                     ['Sinh Tố', 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=500&q=85', 'bi-snow'],
                 ] as $category)
                     <div class="col-md-4 col-lg-3">
@@ -294,19 +307,26 @@
                     'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
                 ];
                 $homeHasSkuColumn = \Illuminate\Support\Facades\Schema::hasColumn('products', 'sku');
+                $homeHasReviewsTable = \Illuminate\Support\Facades\Schema::hasTable('reviews');
+                $homeProductQuery = \App\Models\Product::with('category')
+                    ->when($homeHasReviewsTable, fn ($query) => $query->withAvg('reviews', 'rating')->withCount('reviews'));
                 $homeFeaturedProducts = $homeHasSkuColumn
-                    ? \App\Models\Product::with('category')
+                    ? (clone $homeProductQuery)
                         ->whereIn('sku', $homeFeaturedSkus)
                         ->get()
                         ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
                         ->values()
-                    : \App\Models\Product::with('category')
+                    : (clone $homeProductQuery)
                         ->where('status', true)
                         ->latest()
                         ->limit(8)
                         ->get();
             @endphp
             @forelse($homeFeaturedProducts as $product)
+                @php
+                    $reviewCount = (int) ($product->reviews_count ?? 0);
+                    $rating = $reviewCount > 0 ? round((float) ($product->reviews_avg_rating ?? 0), 1) : 0;
+                @endphp
                 <div class="col-sm-6 col-lg-3">
                     <div class="product-card h-100 d-flex flex-column">
                         <div class="product-img-wrap">
@@ -323,8 +343,15 @@
                         </div>
                         <div class="card-body d-flex flex-column flex-grow-1">
                             <div class="product-rating">
-                                <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i>
-                                <span class="text-secondary ms-1">(4.8)</span>
+                                @if($reviewCount > 0)
+                                    @for($star = 1; $star <= 5; $star++)
+                                        <i class="bi {{ $rating >= $star ? 'bi-star-fill' : ($rating >= $star - 0.5 ? 'bi-star-half' : 'bi-star') }}"></i>
+                                    @endfor
+                                    <span class="text-secondary ms-1">({{ number_format($rating, 1) }} · {{ $reviewCount }})</span>
+                                @else
+                                    <i class="bi bi-star text-secondary"></i>
+                                    <span class="text-secondary ms-1">Chưa có đánh giá</span>
+                                @endif
                             </div>
                             <h3 class="h5 fw-bold mb-1">
                                 <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
@@ -360,7 +387,8 @@
                             </div>
                             <div class="card-body d-flex flex-column flex-grow-1">
                                 <div class="product-rating">
-                                    <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
+                                    <i class="bi bi-star text-secondary"></i>
+                                    <span class="text-secondary ms-1">Chưa có đánh giá</span>
                                 </div>
                                 <h3 class="h5 fw-bold mb-3">
                                     <a href="{{ route('products.show', $item[4]) }}" class="text-dark text-decoration-none">{{ $item[0] }}</a>
