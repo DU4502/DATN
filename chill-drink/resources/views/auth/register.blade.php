@@ -8,22 +8,25 @@
         min-height: calc(100vh - 80px);
         display: flex;
         align-items: center;
-        background: url('https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=2000&q=80') center/cover no-repeat;
+        background:
+            linear-gradient(90deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.34) 46%, rgba(255, 255, 255, 0.08) 100%),
+            url('https://png.pngtree.com/background/20250106/original/pngtree-bubble-tea-cup-with-splashing-milk-summer-drinks-background-picture-image_15464755.jpg') center/cover no-repeat;
         position: relative;
     }
     .auth-page::before {
         content: ''; position: absolute; inset: 0;
-        background: linear-gradient(135deg, rgba(13, 147, 115, 0.85) 0%, rgba(6, 122, 95, 0.95) 100%);
+        background: linear-gradient(135deg, rgba(0, 139, 122, 0.10) 0%, rgba(255, 246, 225, 0.22) 100%);
     }
 
     .auth-container { position: relative; z-index: 1; padding: 4rem 0; width: 100%; }
 
     .auth-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.72);
         border-radius: var(--radius-2xl);
-        box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+        box-shadow: 0 24px 58px rgba(12, 54, 47, 0.22);
         overflow: hidden;
     }
 
