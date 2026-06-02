@@ -28,6 +28,10 @@
         box-shadow: 0 18px 42px rgba(79, 183, 168, 0.10);
     }
 
+    .filter-panel {
+        overflow: hidden;
+    }
+
     .filter-title {
         color: var(--drink-primary);
         font-size: 0.78rem;
@@ -37,7 +41,10 @@
     }
 
     .category-chip {
-        display: block;
+        min-height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
         width: 100%;
         border: 0;
         border-radius: 999px;
@@ -50,6 +57,11 @@
         transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     }
 
+    .category-list {
+        gap: 0.35rem !important;
+        margin-top: 0;
+    }
+
     .category-chip:hover {
         background: var(--drink-primary-soft);
         color: var(--drink-primary-dark);
@@ -58,8 +70,14 @@
     }
 
     .category-chip.active {
-        background: var(--drink-primary);
-        color: #ffffff;
+        background: #008b7a !important;
+        color: #ffffff !important;
+        box-shadow: 0 12px 24px rgba(0, 107, 95, 0.16);
+    }
+
+    .category-chip.active:hover {
+        background: #006b5f !important;
+        color: #ffffff !important;
     }
 
     .range-control {
@@ -106,6 +124,8 @@
     .shop-product-card {
         padding: 1rem;
         height: 100%;
+        display: flex;
+        flex-direction: column;
         transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
     }
 
@@ -151,22 +171,85 @@
         padding: 0.38rem 0.75rem;
     }
 
+    .shop-product-title {
+        min-height: 3.75rem;
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-height: 1.18;
+    }
+
+    .shop-product-sku {
+        min-height: 1.25rem;
+    }
+
+    .shop-product-desc {
+        min-height: 4.75rem;
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+
+    .shop-product-actions {
+        margin-top: auto;
+    }
+
     .add-round {
-        width: 42px;
-        height: 42px;
+        width: 46px;
+        height: 46px;
+        min-width: 46px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border: 0;
         border-radius: 50%;
-        background: var(--drink-primary);
+        background: #008b7a;
         color: #ffffff;
-        transition: background 0.18s ease, transform 0.18s ease;
+        font-size: 1.75rem;
+        font-weight: 900;
+        line-height: 1;
+        text-decoration: none;
+        appearance: none;
+        -webkit-appearance: none;
+        box-shadow: 0 14px 28px rgba(0, 107, 95, 0.22);
+        position: relative;
+        z-index: 2;
+        transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .shop-product-card button.add-round,
+    .shop-product-card a.add-round {
+        background: #008b7a !important;
+        color: #ffffff !important;
+        opacity: 1 !important;
     }
 
     .add-round:hover {
-        background: var(--drink-primary-dark);
+        background: #006b5f;
         transform: scale(1.05);
+        box-shadow: 0 18px 34px rgba(0, 107, 95, 0.28);
+        color: #ffffff;
+    }
+
+    .shop-product-card form[data-ajax-cart] {
+        flex: 0 0 auto;
+        margin: 0;
+    }
+
+    .add-round svg,
+    .add-round i,
+    .add-round .add-round-symbol {
+        display: block;
+        color: currentColor !important;
+        font-size: 1.75rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .add-round .add-round-symbol {
+        transform: translateY(-1px);
     }
 
     .pager-dot {
@@ -295,24 +378,24 @@
                                     <span class="product-tag">{{ $product->category->name ?? 'Đồ uống' }}</span>
                                 </a>
 
-                                <h2 class="h4 fw-bold mb-1">
+                                <h2 class="h4 fw-bold mb-1 shop-product-title">
                                     <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
                                 </h2>
                                 @if(!empty($product->sku))
-                                    <p class="text-secondary small font-monospace mb-2">{{ $product->sku }}</p>
+                                    <p class="text-secondary small font-monospace mb-2 shop-product-sku">{{ $product->sku }}</p>
+                                @else
+                                    <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
                                 @endif
-                                <p class="text-secondary mb-4">{{ \Illuminate\Support\Str::limit($product->display_description, 90) }}</p>
+                                <p class="text-secondary mb-4 shop-product-desc">{{ \Illuminate\Support\Str::limit($product->display_description, 90) }}</p>
 
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex justify-content-between align-items-center shop-product-actions">
                                     <span class="h4 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
                                     @if(($product->stock ?? 1) > 0)
                                         <form action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
                                             @csrf
                                             <input type="hidden" name="size" value="M">
                                             <button type="submit" class="add-round" aria-label="Thêm vào giỏ">
-                                                <svg width="19" height="19" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                                                </svg>
+                                                <span class="add-round-symbol" aria-hidden="true">+</span>
                                             </button>
                                         </form>
                                     @else
@@ -338,17 +421,16 @@
                                             <span class="product-tag">{{ $item[4] }}</span>
                                         @endif
                                     </a>
-                                    <h2 class="h4 fw-bold mb-2">{{ $item[0] }}</h2>
-                                    <p class="text-secondary mb-4">{{ $item[1] }}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <h2 class="h4 fw-bold mb-2 shop-product-title">{{ $item[0] }}</h2>
+                                    <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
+                                    <p class="text-secondary mb-4 shop-product-desc">{{ $item[1] }}</p>
+                                    <div class="d-flex justify-content-between align-items-center shop-product-actions">
                                         <span class="h4 fw-bold text-primary mb-0">{{ $item[2] }}</span>
                                         <form action="{{ route('cart.add', 'demo-' . $item[5]) }}" method="POST" data-ajax-cart>
                                             @csrf
                                             <input type="hidden" name="size" value="M">
                                             <button type="submit" class="add-round" aria-label="Thêm vào giỏ">
-                                                <svg width="19" height="19" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
-                                                </svg>
+                                                <span class="add-round-symbol" aria-hidden="true">+</span>
                                             </button>
                                         </form>
                                     </div>
@@ -360,7 +442,7 @@
 
                 @if($products->count() > 0)
                     <div class="mt-4">
-                        {{ $products->links() }}
+                        {{ $products->links('pagination::bootstrap-5') }}
                     </div>
                 @else
                     <div class="d-flex justify-content-center align-items-center gap-2 mt-5">

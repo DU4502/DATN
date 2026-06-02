@@ -23,7 +23,7 @@
         letter-spacing: 0;
     }
 
-    .cart-item-card,
+    .cart-items-card,
     .cart-select-toolbar,
     .cart-summary-card,
     .cart-recommend-card,
@@ -72,13 +72,44 @@
         cursor: pointer;
     }
 
+    .cart-items-card {
+        max-height: calc(100vh - 265px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scroll-behavior: smooth;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 139, 122, 0.35) transparent;
+    }
+
+    .cart-items-card::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .cart-items-card::-webkit-scrollbar-thumb {
+        background: rgba(0, 139, 122, 0.35);
+        border-radius: 999px;
+    }
+
+    .cart-items-card::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
     .cart-item-card {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        border-bottom: 1px solid rgba(0, 139, 122, 0.10);
         transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .cart-item-card:last-child {
+        border-bottom: 0;
     }
 
     .cart-item-card.is-unselected {
         opacity: 0.58;
-        border-color: rgba(100, 123, 120, 0.12);
+        border-bottom-color: rgba(100, 123, 120, 0.12);
     }
 
     .cart-qty {
@@ -124,22 +155,36 @@
     }
 
     .promo-control {
-        border: 1px solid var(--drink-border);
-        border-radius: 999px;
-        background: var(--drink-soft);
-        overflow: hidden;
-        padding: 0.35rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 0.5rem;
+        border: 1px solid rgba(0, 139, 122, 0.16);
+        border-radius: 18px;
+        background: #f7fffd;
+        padding: 0.45rem;
     }
 
     .promo-control input {
         border: 0;
         background: transparent;
-        padding-left: 0.85rem;
+        height: 44px;
+        padding: 0 0.9rem;
         min-width: 0;
+        font-weight: 600;
     }
 
     .promo-control input:focus {
         box-shadow: none;
+    }
+
+    .promo-control .btn {
+        min-width: 92px;
+        min-height: 44px;
+        border-radius: 14px !important;
+        padding-inline: 1rem !important;
+        box-shadow: none;
+        white-space: nowrap;
     }
 
     .payment-mark {
@@ -167,8 +212,13 @@
     }
 
     @media (max-width: 767.98px) {
-        .cart-item-card {
+        .cart-items-card {
             border-radius: 22px;
+            max-height: 58vh;
+        }
+
+        .cart-item-card {
+            border-radius: 0;
         }
 
         .cart-item-image {
@@ -191,7 +241,7 @@
             <h1 class="cart-title mb-0">Giỏ hàng của bạn</h1>
         </div>
 
-        @if(session('cart') && count(session('cart')) > 0)
+        @if(!empty($cart))
             @php
                 $total = 0;
                 $tax = 0;
@@ -205,12 +255,12 @@
                             Chọn tất cả sản phẩm
                         </label>
                         <div class="text-secondary">
-                            Đã chọn <strong class="text-primary" data-selected-count>{{ count(session('cart')) }}</strong> sản phẩm
+                            Đã chọn <strong class="text-primary" data-selected-count>{{ count($cart) }}</strong> sản phẩm
                         </div>
                     </div>
 
-                    <div class="vstack gap-4">
-                        @foreach(session('cart') as $id => $item)
+                    <div class="cart-items-card">
+                        @foreach($cart as $id => $item)
                             @php
                                 $subtotal = $item['price'] * $item['quantity'];
                                 $total += $subtotal;
@@ -286,7 +336,7 @@
 
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Sản phẩm đã chọn</span>
-                            <strong><span data-selected-count>{{ count(session('cart')) }}</span> món</strong>
+                            <strong><span data-selected-count>{{ count($cart) }}</span> món</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Tạm tính đã chọn</span>
@@ -306,9 +356,9 @@
                             <span class="text-primary" data-selected-grand-total>{{ number_format($total + $tax, 0, ',', '.') }}đ</span>
                         </div>
 
-                        <div class="promo-control d-flex align-items-center mb-4">
+                        <div class="promo-control mb-4">
                             <input type="text" class="form-control" placeholder="Mã voucher">
-                            <button type="button" class="btn btn-primary rounded-pill px-3">Áp dụng</button>
+                            <button type="button" class="btn btn-primary">Áp dụng</button>
                         </div>
 
                         @auth
