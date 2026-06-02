@@ -39,7 +39,9 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cart = session()->get('cart', []);
+        $cart = $this->refreshCartItems(session()->get('cart', []));
+        session()->put('cart', $cart);
+
         $suggestions = Product::query()
             ->where('status', true)
             ->with('category')
@@ -52,7 +54,8 @@ class CartController extends Controller
 
     private function cartPayload(string $message): array
     {
-        $cart = session()->get('cart', []);
+        $cart = $this->refreshCartItems(session()->get('cart', []));
+        session()->put('cart', $cart);
         $total = collect($cart)->sum(fn ($item) => $item['price'] * $item['quantity']);
         $quantityTotal = collect($cart)->sum(fn ($item) => $item['quantity']);
 
@@ -73,6 +76,43 @@ class CartController extends Controller
                 ]];
             })->all(),
         ];
+    }
+
+    private function refreshCartItems(array $cart): array
+    {
+        $productIds = collect($cart)
+            ->pluck('product_id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($productIds->isEmpty()) {
+            return $cart;
+        }
+
+        $products = Product::with('category')
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($cart as $key => $item) {
+            $productId = $item['product_id'] ?? null;
+
+            if (! is_numeric($productId) || ! $products->has((int) $productId)) {
+                continue;
+            }
+
+            $product = $products->get((int) $productId);
+            $cart[$key]['name'] = $product->name;
+            $cart[$key]['image'] = $product->image_url;
+            $cart[$key]['sku'] = $product->sku ?? null;
+            $cart[$key]['category'] = $product->category?->name;
+            $cart[$key]['base_price'] = (int) $product->price;
+            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0);
+        }
+
+        return $cart;
     }
 
     /**
