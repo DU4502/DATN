@@ -39,6 +39,8 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Nước Ép', 'description' => 'Nước ép trái cây tự nhiên'],
             ['name' => 'Trà Trái Cây', 'description' => 'Trà trái cây mát lạnh'],
             ['name' => 'Soda', 'description' => 'Soda các loại'],
+            ['name' => 'Đá Xay', 'description' => 'Đồ uống đá xay mát lạnh, vị ngọt cân bằng'],
+            ['name' => 'Matcha', 'description' => 'Matcha thơm vị trà xanh, béo nhẹ và thanh mát'],
         ];
 
         foreach ($categories as $category) {

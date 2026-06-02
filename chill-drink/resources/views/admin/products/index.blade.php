@@ -4,7 +4,7 @@
 @section('search-placeholder', 'Tìm đồ uống, mã sản phẩm...')
 
 @section('content')
-<section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+<section class="admin-sticky-tools d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
     <div class="d-flex flex-wrap gap-2">
         <button class="btn btn-primary">Tất cả sản phẩm</button>
         <button class="btn btn-outline-primary">Trà sữa</button>
@@ -69,9 +69,9 @@
                             @endif
                         </td>
                         <td class="text-end">
-                            <a href="{{ route('admin.products.show', $product->id) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
-                            <a href="{{ route('admin.products.edit', $product->id) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
-                            <form action="{{ route('admin.products.destroy', $product->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
+                            <a href="{{ route('admin.products.show', ['product' => $product->id, 'page' => request('page')]) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
+                            <a href="{{ route('admin.products.edit', ['product' => $product->id, 'page' => request('page')]) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
+                            <form action="{{ route('admin.products.destroy', ['product' => $product->id, 'page' => request('page')]) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
                                 @csrf
                                 @method('DELETE')
                                 <button class="admin-action" title="Xóa" style="color:var(--admin-danger);"><i class="bi bi-trash3"></i></button>
@@ -91,7 +91,7 @@
     </div>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
         <p class="text-secondary mb-0">Đang hiển thị {{ $products->count() }} sản phẩm</p>
-        {{ $products->links() }}
+        {{ $products->links('pagination::bootstrap-5') }}
     </div>
 </section>
 @endsection

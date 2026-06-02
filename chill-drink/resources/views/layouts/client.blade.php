@@ -187,6 +187,48 @@
             border-color: var(--c-primary) !important;
         }
 
+        .pagination {
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0;
+        }
+
+        .pagination .page-link {
+            min-width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-full) !important;
+            border: 1.5px solid var(--c-border);
+            color: var(--c-primary);
+            font-weight: 700;
+            line-height: 1;
+            box-shadow: none;
+        }
+
+        .pagination .page-link svg {
+            width: 1rem !important;
+            height: 1rem !important;
+            max-width: 1rem !important;
+            max-height: 1rem !important;
+            display: block;
+            flex: 0 0 auto;
+        }
+
+        .pagination .page-item.active .page-link,
+        .pagination .page-link:hover {
+            color: #ffffff;
+            background: var(--c-primary);
+            border-color: var(--c-primary);
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: var(--c-subtle);
+            background: var(--c-bg);
+            border-color: var(--c-border-light);
+        }
+
         /* ─── Section Typography ─── */
         .section-kicker {
             color: var(--c-primary);
@@ -961,7 +1003,16 @@
                 form.classList.toggle('is-added', state === 'success');
                 submitter.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
 
-                const hasText = submitter.textContent.trim().length > 0;
+                const isIconButton = submitter.classList.contains('add-round') || submitter.getAttribute('aria-label') === 'Thêm vào giỏ';
+                const hasText = submitter.textContent.trim().length > 0 && !isIconButton;
+
+                if (state === 'loading' && isIconButton) {
+                    submitter.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>';
+                }
+
+                if (state === 'success' && isIconButton) {
+                    submitter.innerHTML = '<i class="bi bi-check-lg" aria-hidden="true"></i>';
+                }
 
                 if (state === 'loading' && hasText) {
                     submitter.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang thêm';

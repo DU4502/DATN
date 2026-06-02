@@ -76,7 +76,10 @@
                             id="gallery_images"
                             name="gallery_images[]"
                             accept="image/jpeg,image/jpg,image/png,image/webp"
-                            multiple>
+                            multiple
+                            data-gallery-input
+                            data-preview-target="#create-gallery-preview">
+                        <div id="create-gallery-preview" class="admin-gallery-preview mt-3"></div>
                         <small class="text-secondary d-block mt-2">Chọn nhiều ảnh con để hiển thị dưới ảnh chính ở trang chi tiết sản phẩm.</small>
                         @error('gallery_images.*')
                         <div class="invalid-feedback d-block">{{ $message }}</div>

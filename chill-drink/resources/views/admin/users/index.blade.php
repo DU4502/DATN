@@ -127,7 +127,7 @@
                 Chưa có khách hàng đăng ký
             @endif
         </p>
-        {{ $users->links() }}
+        {{ $users->links('pagination::bootstrap-5') }}
     </div>
 </section>
 

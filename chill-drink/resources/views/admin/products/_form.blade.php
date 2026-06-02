@@ -74,7 +74,8 @@
                             @endforeach
                         </div>
                     @endif
-                    <input id="gallery_images" type="file" name="gallery_images[]" class="form-control @error('gallery_images.*') is-invalid @enderror" accept="image/jpeg,image/jpg,image/png,image/webp" multiple>
+                    <input id="gallery_images" type="file" name="gallery_images[]" class="form-control @error('gallery_images.*') is-invalid @enderror" accept="image/jpeg,image/jpg,image/png,image/webp" multiple data-gallery-input data-preview-target="#edit-gallery-preview">
+                    <div id="edit-gallery-preview" class="admin-gallery-preview mt-3"></div>
                     <small class="text-secondary d-block mt-2">Có thể chọn nhiều ảnh con. Các ảnh này sẽ hiện dưới ảnh chính ở trang chi tiết sản phẩm.</small>
                     @error('gallery_images.*')
                         <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -124,7 +125,7 @@
 
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary">{{ $submitLabel }}</button>
-                    <a href="{{ route('admin.products.index') }}" class="btn btn-outline-secondary rounded-pill">Quay lại</a>
+                    <a href="{{ route('admin.products.index', array_filter(['page' => request('page') ?: old('return_page')])) }}" class="btn btn-outline-secondary rounded-pill">Quay lại</a>
                 </div>
             </div>
         </div>

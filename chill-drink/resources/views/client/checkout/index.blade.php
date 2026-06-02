@@ -45,31 +45,49 @@
 @endphp
 
 <style>
+    .checkout-page {
+        background:
+            radial-gradient(circle at 12% 8%, rgba(0, 139, 122, 0.08), transparent 30%),
+            linear-gradient(180deg, #f6fffc 0%, #ffffff 44%, #f7fbfa 100%);
+    }
+
     .checkout-hero {
-        background: linear-gradient(135deg, #effcf9 0%, #ffffff 54%, #e3f7f3 100%);
+        background:
+            radial-gradient(circle at 88% 24%, rgba(0, 139, 122, 0.13), transparent 34%),
+            linear-gradient(135deg, #f2fffb 0%, #ffffff 54%, #e9fbf7 100%);
         border: 1px solid var(--drink-border);
         border-radius: 28px;
         box-shadow: 0 22px 50px rgba(8, 42, 38, 0.08);
     }
 
     .checkout-step {
-        width: 42px;
-        height: 42px;
+        width: 48px;
+        height: 48px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        background: var(--drink-primary);
-        color: #fff;
-        box-shadow: 0 12px 24px rgba(0, 139, 122, 0.18);
+        background: #008b7a !important;
+        color: #ffffff !important;
+        border: 2px solid rgba(255, 255, 255, 0.86);
+        box-shadow: 0 14px 30px rgba(0, 107, 95, 0.24);
         flex: 0 0 auto;
+        font-size: 1.15rem;
+    }
+
+    .checkout-step i,
+    .payment-icon i,
+    .shipping-auto-icon i,
+    .voucher-icon i {
+        display: block;
+        line-height: 1;
     }
 
     .checkout-panel {
         border: 1px solid var(--drink-border);
         border-radius: 24px;
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 18px 45px rgba(8, 42, 38, 0.07);
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 18px 44px rgba(8, 42, 38, 0.06);
     }
 
     .checkout-input {
@@ -124,6 +142,15 @@
         flex: 0 0 auto;
     }
 
+    .checkout-hero .checkout-step {
+        width: 54px;
+        height: 54px;
+        background: linear-gradient(135deg, #008b7a, #006f62) !important;
+        color: #ffffff !important;
+        opacity: 1;
+        font-size: 1.28rem;
+    }
+
     .checkout-item-img {
         width: 64px;
         height: 64px;
@@ -136,6 +163,8 @@
     .summary-card {
         position: sticky;
         top: 96px;
+        border-color: rgba(0, 139, 122, 0.16);
+        box-shadow: 0 24px 62px rgba(8, 42, 38, 0.09);
     }
 
     .delivery-line {
@@ -241,8 +270,9 @@
 
     .voucher-modal .modal-content {
         border: 0;
-        border-radius: 6px;
-        box-shadow: 0 22px 55px rgba(0, 0, 0, 0.22);
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 26px 70px rgba(8, 42, 38, 0.24);
     }
 
     .voucher-modal .modal-header,
@@ -251,30 +281,51 @@
     }
 
     .voucher-modal .modal-body {
-        padding: 1.3rem 1.8rem;
-        max-height: 560px;
+        padding: 1.2rem 1.8rem;
+        max-height: min(62vh, 560px);
         overflow-y: auto;
-        background: #fbfbfb;
+        background: #f7fbfa;
+        overscroll-behavior: contain;
+    }
+
+    .voucher-modal .modal-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        justify-content: space-between;
+        gap: 1rem;
+        background: #ffffff;
+        box-shadow: 0 -12px 28px rgba(8, 42, 38, 0.07);
+    }
+
+    .voucher-modal .modal-footer .btn {
+        min-width: 156px;
+        border-radius: 999px !important;
+        font-weight: 800;
     }
 
     .voucher-search-box {
-        background: #f5f5f5;
+        background: #ffffff;
         padding: 1rem;
+        border: 1px solid var(--drink-border);
+        border-radius: 18px;
     }
 
     .voucher-search-box .form-control {
-        border-radius: 2px;
+        min-height: 46px;
+        border-radius: 14px;
         background: #ffffff;
-        border-color: #d8d8d8;
+        border-color: var(--drink-border);
         box-shadow: none;
     }
 
     .voucher-apply-btn {
         min-width: 116px;
-        border-radius: 2px;
-        background: #e8eeec;
-        color: #8a9693;
-        border-color: #e8eeec;
+        min-height: 46px;
+        border-radius: 14px;
+        background: var(--drink-primary);
+        color: #ffffff;
+        border-color: var(--drink-primary);
         font-weight: 800;
     }
 
@@ -287,10 +338,19 @@
     .voucher-ticket {
         position: relative;
         display: flex;
-        min-height: 136px;
-        border: 1px solid #e5e5e5;
+        min-height: 128px;
+        border: 1px solid rgba(0, 139, 122, 0.14);
+        border-radius: 18px;
         background: #ffffff;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        box-shadow: 0 12px 28px rgba(8, 42, 38, 0.06);
+        transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .voucher-ticket.active {
+        border-color: var(--drink-primary);
+        box-shadow: 0 18px 34px rgba(0, 139, 122, 0.13);
+        transform: translateY(-1px);
     }
 
     .voucher-ticket::before,
@@ -301,8 +361,8 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        background: #fbfbfb;
-        border: 1px solid #e5e5e5;
+        background: #f7fbfa;
+        border: 1px solid rgba(0, 139, 122, 0.14);
         z-index: 2;
     }
 
@@ -321,7 +381,7 @@
         justify-content: center;
         flex-direction: column;
         gap: 0.6rem;
-        background: #8fd8ce;
+        background: linear-gradient(135deg, #8fd8ce, #56bfb0);
         color: #ffffff;
         text-align: center;
         flex: 0 0 auto;
@@ -334,7 +394,7 @@
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        background: var(--drink-primary);
+        background: rgba(255, 255, 255, 0.18);
         font-size: 1.55rem;
     }
 
@@ -404,7 +464,9 @@
 
     .voucher-warning {
         background: #fff8e8;
-        color: #d9502f;
+        color: #9b4a1d;
+        border: 1px solid #ffe2b8;
+        border-radius: 16px;
         padding: 0.75rem 1rem;
         font-weight: 600;
     }
@@ -585,7 +647,7 @@
     }
 </style>
 
-<section class="py-5">
+<section class="checkout-page py-5">
     <div class="container">
         <div class="checkout-hero p-4 p-md-5 mb-4">
             <div class="row g-4 align-items-center">
@@ -1023,6 +1085,7 @@
                     <span>Hỗ trợ</span>
                     <i class="bi bi-question-circle"></i>
                 </div>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
                 <div class="voucher-search-box d-flex flex-column flex-md-row align-items-md-center gap-3 mb-3">
@@ -1105,8 +1168,10 @@
                 </div>
             </div>
             <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-secondary rounded-1 px-5" data-bs-dismiss="modal">Trở lại</button>
-                <button type="button" class="btn btn-address-primary" id="confirmVoucher">Đồng ý</button>
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Trở lại</button>
+                <button type="button" class="btn btn-primary px-4" id="confirmVoucher">
+                    <i class="bi bi-check2 me-2"></i>Áp dụng voucher
+                </button>
             </div>
         </div>
     </div>

@@ -167,7 +167,9 @@ class ProductController extends Controller
 
         $product->update($data);
 
-        return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
+        return redirect()
+            ->route('admin.products.index', $this->returnPageParameters($request))
+            ->with('success', 'Cập nhật sản phẩm thành công!');
     }
 
     /**
@@ -189,7 +191,9 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('success', 'Xóa sản phẩm thành công!');
+        return redirect()
+            ->route('admin.products.index', $this->returnPageParameters(request()))
+            ->with('success', 'Xóa sản phẩm thành công!');
     }
 
     private function storeGalleryImages(Request $request): array
@@ -213,5 +217,12 @@ class ProductController extends Controller
         return is_array($galleryImages)
             ? array_values(array_filter($galleryImages))
             : [];
+    }
+
+    private function returnPageParameters(Request $request): array
+    {
+        $page = (int) ($request->input('return_page') ?: $request->query('page'));
+
+        return $page > 1 ? ['page' => $page] : [];
     }
 }
