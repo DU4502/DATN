@@ -51,20 +51,47 @@ class CheckoutController extends Controller
         } else {
             session()->forget('checkout_cart_keys');
         }
-        
+
+        $cart = $this->hydrateCheckoutCart($cart);
         $shippingDistanceOptions = ShippingFee::distanceOptions();
         $shippingMethods = ShippingFee::methods();
         $paymentOptions = $this->paymentOptions();
-        $subtotal = collect($cart)->sum(fn ($item) => (int) ($item['price'] ?? 0) * max(1, (int) ($item['quantity'] ?? 1)));
         $loyaltyContext = $this->loyaltyContext(false);
+        $subtotal = $this->cartSubtotal($cart);
+        $now = now();
         $availableVouchers = Voucher::query()
             ->where('status', true)
+            ->where(function ($query) use ($now) {
+                $query->whereNull('starts_at')
+                    ->orWhere('starts_at', '<=', $now);
+            })
+            ->where(function ($query) use ($now) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', $now);
+            })
+            ->where('min_order', '<=', $subtotal)
+            ->where(function ($query) {
+                $query->where('usage_limit', '<=', 0)
+                    ->orWhereRaw('used_count < usage_limit');
+            })
             ->latest('created_at')
             ->get()
-            ->filter(fn (Voucher $voucher) => $voucher->isActiveNow() && $voucher->hasRemainingUses())
+            ->filter(fn (Voucher $voucher) => $voucher->isActiveNow()
+                && $voucher->hasRemainingUses()
+                && $voucher->meetsMinimumOrder($subtotal)
+                && $this->userCanUseVoucher($voucher, $loyaltyContext)
+                && $voucher->discountFor($subtotal) > 0)
             ->values();
 
-        return view('client.checkout.index', compact('cart', 'shippingDistanceOptions', 'shippingMethods', 'paymentOptions', 'availableVouchers', 'loyaltyContext'));
+        return view('client.checkout.index', compact(
+            'cart',
+            'shippingDistanceOptions',
+            'shippingMethods',
+            'paymentOptions',
+            'availableVouchers',
+            'loyaltyContext',
+            'subtotal'
+        ));
     }
 
     /**
@@ -393,7 +420,7 @@ class CheckoutController extends Controller
                 $product->decrement('stock', $quantity);
             }
 
-            $unitPrice = max(0, (int) ($item['price'] ?? $product->price ?? 0));
+            $unitPrice = $this->currentUnitPriceForCheckoutItem($item, $product);
 
             $items[] = [
                 'product_id' => (int) $productId,
@@ -411,6 +438,80 @@ class CheckoutController extends Controller
         }
 
         return $items;
+    }
+
+    private function hydrateCheckoutCart(array $cart): array
+    {
+        foreach ($cart as $cartKey => $item) {
+            $productId = $item['product_id'] ?? $cartKey;
+
+            if (! is_numeric($productId)) {
+                continue;
+            }
+
+            $product = Product::query()->whereKey((int) $productId)->first();
+
+            if (! $product) {
+                continue;
+            }
+
+            $cart[$cartKey]['product_id'] = (int) $product->id;
+            $cart[$cartKey]['name'] = $product->name;
+            $cart[$cartKey]['price'] = $this->currentUnitPriceForCheckoutItem($item, $product);
+        }
+
+        return $cart;
+    }
+
+    private function cartSubtotal(array $cart): int
+    {
+        return (int) collect($cart)->sum(
+            fn (array $item) => max(0, (int) ($item['price'] ?? 0)) * max(1, (int) ($item['quantity'] ?? 1))
+        );
+    }
+
+    private function currentUnitPriceForCheckoutItem(array $item, ?Product $product = null): int
+    {
+        $productId = $product?->id ?? (int) ($item['product_id'] ?? 0);
+        $fallbackPrice = max(0, (int) ($item['price'] ?? $product?->price ?? 0));
+
+        if (
+            $productId <= 0
+            || ! Schema::hasTable('product_sizes')
+            || ! Schema::hasTable('sizes')
+        ) {
+            return $fallbackPrice;
+        }
+
+        if (! empty($item['product_size_id'])) {
+            $productSizePrice = ProductSize::query()
+                ->whereKey((int) $item['product_size_id'])
+                ->where('product_id', $productId)
+                ->value('price');
+
+            if (is_numeric($productSizePrice)) {
+                return max(0, (int) $productSizePrice);
+            }
+        }
+
+        $sizeCode = strtoupper(trim((string) ($item['size'] ?? '')));
+        if ($sizeCode !== '') {
+            $sizeNames = array_values(array_unique([$sizeCode, "Size {$sizeCode}"]));
+            $productSizePrice = ProductSize::query()
+                ->where('product_id', $productId)
+                ->whereHas('size', fn ($query) => $query->whereIn('name', $sizeNames))
+                ->value('price');
+
+            if (is_numeric($productSizePrice)) {
+                return max(0, (int) $productSizePrice);
+            }
+        }
+
+        if ($product && is_numeric($product->price ?? null)) {
+            return max(0, (int) $product->price);
+        }
+
+        return $fallbackPrice;
     }
 
     private function resolveProductSizeId(int $productId, array $item, int $unitPrice): ?int

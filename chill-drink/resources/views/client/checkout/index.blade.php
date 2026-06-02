@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $total = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
+    $total = (int) ($subtotal ?? collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']));
     $shippingDistanceOptions = $shippingDistanceOptions ?? \App\Support\ShippingFee::distanceOptions();
     $shippingMethods = $shippingMethods ?? \App\Support\ShippingFee::methods();
     $user = auth()->user();
