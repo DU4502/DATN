@@ -61,10 +61,10 @@ class CheckoutController extends Controller
             ->where('status', true)
             ->latest('created_at')
             ->get()
-            ->filter(fn (Voucher $voucher) => $voucher->discountFor($subtotal) > 0 && $this->userCanUseVoucher($voucher, $loyaltyContext))
+            ->filter(fn (Voucher $voucher) => $voucher->isActiveNow() && $voucher->hasRemainingUses())
             ->values();
 
-        return view('client.checkout.index', compact('cart', 'shippingDistanceOptions', 'shippingMethods', 'paymentOptions', 'availableVouchers'));
+        return view('client.checkout.index', compact('cart', 'shippingDistanceOptions', 'shippingMethods', 'paymentOptions', 'availableVouchers', 'loyaltyContext'));
     }
 
     /**
