@@ -93,7 +93,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is admin by role_id.
+     * Check if user is admin.
      */
     public function isAdmin(): bool
     {
