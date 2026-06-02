@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Order;
+use App\Models\Review;
 use App\Support\ProductCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -76,7 +78,13 @@ class ProductController extends Controller
     {
         $product = Product::where('slug', $slug)
             ->where('status', true)
-            ->with('category')
+            ->with([
+                'category',
+                'reviews' => fn ($query) => $query
+                    ->where('status', true)
+                    ->with('user')
+                    ->latest(),
+            ])
             ->first();
 
         if (! $product) {
@@ -165,8 +173,15 @@ class ProductController extends Controller
             ];
 
             $relatedProducts = new Collection();
+            $approvedReviews = collect();
+            $reviewSummary = $this->emptyReviewSummary();
+            $reviewFormState = [
+                'can_review' => false,
+                'message' => 'Sản phẩm demo chưa hỗ trợ đánh giá.',
+                'remaining_reviews' => 0,
+            ];
 
-            return view('client.products.show', compact('product', 'relatedProducts'));
+            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState'));
         }
 
         // Get related products
@@ -175,7 +190,77 @@ class ProductController extends Controller
             ->where('status', true)
             ->take(4)
             ->get();
+        $approvedReviews = $product->reviews;
+        $reviewSummary = $this->reviewSummary($approvedReviews);
+        $reviewFormState = $this->reviewFormState($request, $product);
 
-        return view('client.products.show', compact('product', 'relatedProducts'));
+        return view('client.products.show', compact(
+            'product',
+            'relatedProducts',
+            'approvedReviews',
+            'reviewSummary',
+            'reviewFormState'
+        ));
+    }
+
+    private function reviewFormState(Request $request, Product $product): array
+    {
+        if (! $request->user()) {
+            return [
+                'can_review' => false,
+                'message' => 'Đăng nhập và mua sản phẩm để gửi đánh giá.',
+                'remaining_reviews' => 0,
+            ];
+        }
+        $remainingReviews = Order::query()
+            ->join('order_items', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.user_id', $request->user()->id)
+            ->where('order_items.product_id', $product->id)
+            ->when(
+                Schema::hasColumn('orders', 'status'),
+                fn ($query) => $query->where('orders.status', 'completed')
+            )
+            ->whereNotExists(function ($subQuery) use ($request, $product) {
+                $subQuery->selectRaw('1')
+                    ->from('reviews')
+                    ->whereColumn('reviews.order_id', 'orders.id')
+                    ->where('reviews.user_id', $request->user()->id)
+                    ->where('reviews.product_id', $product->id);
+            })
+            ->distinct('orders.id')
+            ->count('orders.id');
+
+        return [
+            'can_review' => $remainingReviews > 0,
+            'message' => $remainingReviews > 0
+                ? null
+                : 'Bạn không còn lượt đánh giá nào cho sản phẩm này. Mỗi lần mua chỉ được đánh giá một lần.',
+            'remaining_reviews' => $remainingReviews,
+        ];
+    }
+
+    private function reviewSummary(Collection $approvedReviews): array
+    {
+        if ($approvedReviews->isEmpty()) {
+            return $this->emptyReviewSummary();
+        }
+
+        $counts = collect(range(1, 5))
+            ->mapWithKeys(fn (int $rating) => [$rating => $approvedReviews->where('rating', $rating)->count()]);
+
+        return [
+            'count' => $approvedReviews->count(),
+            'average' => round((float) $approvedReviews->avg('rating'), 1),
+            'counts' => $counts->all(),
+        ];
+    }
+
+    private function emptyReviewSummary(): array
+    {
+        return [
+            'count' => 0,
+            'average' => 0,
+            'counts' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0],
+        ];
     }
 }
