@@ -69,7 +69,6 @@ class CheckoutController extends Controller
                 $query->whereNull('expires_at')
                     ->orWhere('expires_at', '>=', $now);
             })
-            ->where('min_order', '<=', $subtotal)
             ->where(function ($query) {
                 $query->where('usage_limit', '<=', 0)
                     ->orWhereRaw('used_count < usage_limit');
@@ -77,10 +76,7 @@ class CheckoutController extends Controller
             ->latest('created_at')
             ->get()
             ->filter(fn (Voucher $voucher) => $voucher->isActiveNow()
-                && $voucher->hasRemainingUses()
-                && $voucher->meetsMinimumOrder($subtotal)
-                && $this->userCanUseVoucher($voucher, $loyaltyContext)
-                && $voucher->discountFor($subtotal) > 0)
+                && $voucher->hasRemainingUses())
             ->values();
 
         return view('client.checkout.index', compact(
