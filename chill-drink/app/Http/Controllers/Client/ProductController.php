@@ -74,7 +74,7 @@ class ProductController extends Controller
     /**
      * Display product detail
      */
-    public function show($slug)
+    public function show(Request $request, string $slug)
     {
         $product = Product::where('slug', $slug)
             ->where('status', true)
