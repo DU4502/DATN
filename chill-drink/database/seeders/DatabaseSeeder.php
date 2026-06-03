@@ -20,12 +20,13 @@ class DatabaseSeeder extends Seeder
         // Ensure roles exist before creating users
         $this->call(RoleSeeder::class);
 
-        // Create Admin User once and avoid overwriting existing credentials
+        // Keep the default admin account usable after reseeding.
         $adminData = [
             'name' => 'Admin',
             'password' => Hash::make('12345678'),
             'role_id' => 2,
             'phone' => '0123456789',
+            'is_active' => 1,
         ];
 
         if (Schema::hasColumn('users', 'role')) {
@@ -40,7 +41,7 @@ class DatabaseSeeder extends Seeder
             $adminData['points'] = 0;
         }
 
-        User::firstOrCreate(
+        User::updateOrCreate(
             ['email' => 'admin@chilldrink.com'],
             $adminData
         );
