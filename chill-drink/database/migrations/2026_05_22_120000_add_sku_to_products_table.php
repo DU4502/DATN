@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('products', 'sku')) {
+            return;
+        }
+
         Schema::table('products', function (Blueprint $table) {
             $table->string('sku', 32)->nullable()->unique()->after('slug');
         });
@@ -15,6 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasColumn('products', 'sku')) {
+            return;
+        }
+
         Schema::table('products', function (Blueprint $table) {
             $table->dropColumn('sku');
         });

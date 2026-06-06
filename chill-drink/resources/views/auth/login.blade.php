@@ -17,7 +17,7 @@
         content: ''; position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(0, 139, 122, 0.10) 0%, rgba(255, 246, 225, 0.22) 100%);
     }
-
+    
     .auth-container { position: relative; z-index: 1; padding: 4rem 0; width: 100%; }
 
     .auth-card {
@@ -34,11 +34,11 @@
         text-align: center; margin-bottom: 2rem;
     }
     .auth-logo {
-        width: 132px; height: 132px; border-radius: 28px;
+        width: 64px; height: 64px; border-radius: var(--radius-lg);
         background: #fff; display: inline-flex; align-items: center; justify-content: center;
-        box-shadow: var(--shadow-lg); margin-bottom: 1.75rem; border: 1px solid var(--c-border);
+        box-shadow: var(--shadow-md); margin-bottom: 1.5rem; border: 1px solid var(--c-border);
     }
-    .auth-logo img { width: 112px; height: 112px; object-fit: contain; }
+    .auth-logo img { width: 44px; height: 44px; object-fit: contain; }
 
     .form-floating > .form-control {
         border-radius: var(--radius-md); border-color: var(--c-border);
@@ -55,7 +55,7 @@
     .btn-auth-submit:hover { transform: translateY(-3px); box-shadow: 0 12px 20px rgba(13,147,115,0.4); color: #fff; }
 
     .auth-divider { color: var(--c-subtle); margin: 2rem 0; font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; }
-
+    
     .social-btn {
         height: 48px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.95rem;
         background: var(--c-bg); border: 1.5px solid var(--c-border); color: var(--c-ink-secondary);

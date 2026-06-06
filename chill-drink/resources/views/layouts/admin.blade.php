@@ -102,8 +102,8 @@
 
         /* ─── Logo ─── */
         .admin-logo {
-            display: flex; align-items: center; gap: 14px;
-            padding: 0 10px 28px;
+            display: flex; align-items: center; gap: 10px;
+            padding: 0 12px 24px;
             color: var(--a-ink); text-decoration: none;
         }
 
@@ -112,23 +112,23 @@
         }
 
         .admin-logo-mark {
-            width: 86px; height: 86px;
-            border-radius: var(--radius-xl);
+            width: 48px; height: 48px;
+            border-radius: var(--radius-md);
             background: var(--a-surface);
             border: 1.5px solid var(--a-border);
-            box-shadow: var(--shadow-md);
-            font-size: 1.1rem; font-weight: 800;
+            box-shadow: var(--shadow-sm);
+            font-size: 1rem; font-weight: 800;
         }
 
         .admin-logo-title {
-            margin: 0; font-size: 1.25rem;
+            margin: 0; font-size: 1.15rem;
             font-weight: 800; line-height: 1.1;
             color: var(--a-ink);
         }
 
         .admin-logo-subtitle {
             margin: 0; color: var(--a-muted);
-            font-size: 0.8125rem; font-weight: 500;
+            font-size: 0.6875rem; font-weight: 500;
         }
 
         /* ─── Sidebar Nav ─── */
@@ -577,6 +577,10 @@
             color: #991B1B; background: #FEE2E2;
         }
 
+        .badge-soft-info {
+            color: #1D4ED8; background: #DBEAFE;
+        }
+
         .text-primary { color: var(--a-primary) !important; }
 
         /* ─── Responsive ─── */
@@ -621,7 +625,7 @@
     <div class="admin-shell">
         <aside class="admin-sidebar">
             <a href="{{ route('admin.dashboard') }}" class="admin-logo">
-                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 5px;">
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 2px;">
                 <span>
                     <span class="admin-logo-title d-block">Chill Drink</span>
                     <span class="admin-logo-subtitle">Quản trị hệ thống</span>

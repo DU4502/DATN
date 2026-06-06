@@ -14,6 +14,8 @@ return new class extends Migration {
             $table->string('slug', 255)->nullable();
             $table->text('description')->nullable();
             $table->string('image', 255)->nullable();
+            $table->decimal('price', 10, 2)->default(0);
+            $table->integer('stock')->default(100);
             $table->tinyInteger('status')->default(1);
             $table->timestamps();
             $table->softDeletes()->index();

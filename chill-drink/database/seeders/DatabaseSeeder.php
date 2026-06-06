@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -17,19 +17,36 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Admin User without changing an existing account/password.
-        User::firstOrCreate(
+        // Ensure roles exist before creating users
+        $this->call(RoleSeeder::class);
+
+        // Keep the default admin account usable after reseeding.
+        $adminData = [
+            'name' => 'Admin',
+            'password' => Hash::make('12345678'),
+            'role_id' => 2,
+            'phone' => '0123456789',
+            'is_active' => 1,
+        ];
+
+        if (Schema::hasColumn('users', 'role')) {
+            $adminData['role'] = 'admin';
+        }
+
+        if (Schema::hasColumn('users', 'address')) {
+            $adminData['address'] = 'Hà Nội, Việt Nam';
+        }
+
+        if (Schema::hasColumn('users', 'points')) {
+            $adminData['points'] = 0;
+        }
+
+        User::updateOrCreate(
             ['email' => 'admin@chilldrink.com'],
-            [
-                'name' => 'Admin',
-                'password' => Hash::make('password'),
-                'role' => 'admin',
-                'role_id' => 2,
-                'phone' => '0123456789',
-                'address' => 'Hà Nội, Việt Nam',
-                'points' => 0,
-            ]
+            $adminData
         );
+
+        $this->call(VoucherSeeder::class);
 
         // Create Categories
         $categories = [
@@ -50,8 +67,11 @@ class DatabaseSeeder extends Seeder
                 : ['name' => $category['name']];
             $categoryData = [
                 'name' => $category['name'],
-                'status' => true,
             ];
+
+            if (Schema::hasColumn('categories', 'status')) {
+                $categoryData['status'] = true;
+            }
 
             if (Schema::hasColumn('categories', 'slug')) {
                 $categoryData['slug'] = $categorySlug;
@@ -64,9 +84,13 @@ class DatabaseSeeder extends Seeder
             Category::updateOrCreate($categoryLookup, $categoryData);
         }
 
-        // Create Products
+        // Create Products only if schema matches factory expectations
         if (Product::count() === 0) {
-            Product::factory(30)->create();
+            if (Schema::hasColumn('products', 'price')) {
+                Product::factory(30)->create();
+            } else {
+                $this->command->info('Skipping Product factory: `products.price` column not found.');
+            }
         }
 
         $this->command->info('Database seeded successfully!');

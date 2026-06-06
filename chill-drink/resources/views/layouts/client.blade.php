@@ -158,7 +158,7 @@
             border-radius: var(--radius-xl);
             background: var(--c-surface);
             box-shadow: var(--shadow-sm);
-            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
                         box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
                         border-color 0.25s ease;
         }
@@ -262,23 +262,23 @@
         .site-header.scrolled .navbar { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
 
         .brand-mark {
-            width: 64px;
-            height: 64px;
+            width: 48px;
+            height: 48px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: var(--radius-lg);
+            border-radius: var(--radius-md);
             background: var(--c-surface);
             border: 1.5px solid var(--c-border);
             font-weight: 800;
-            font-size: 1.2rem;
+            font-size: 1rem;
             box-shadow: var(--shadow-sm);
             transition: transform 0.2s;
         }
 
         .brand-text {
             color: var(--c-ink);
-            font-size: 1.125rem;
+            font-size: 1.18rem;
             font-weight: 800;
             letter-spacing: -0.03em !important;
         }
@@ -572,12 +572,10 @@
         }
 
         .auth-brand-mark {
-            width: 132px; height: 132px;
+            width: 52px; height: 52px;
             margin-left: auto; margin-right: auto;
             display: block;
-            border-radius: 28px;
-            padding: 8px !important;
-            box-shadow: 0 18px 38px rgba(0, 107, 95, 0.18);
+            border-radius: var(--radius-lg);
         }
 
         .auth-divider {
@@ -723,7 +721,7 @@
     <header class="site-header sticky-top" id="siteHeader">
         <nav class="navbar navbar-expand-md container py-2">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 3px;">
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                 <span class="brand-text">Chill Drink</span>
             </a>
 
@@ -809,7 +807,7 @@
                                     </div>
                                 </div>
                                 <div class="p-3 border-top">
-                                    <a href="{{ route('profile.orders') }}" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
+                                    <a href="{{ route('orders.index') }}" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
                                 </div>
                             </div>
                         </div>
@@ -824,7 +822,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end profile-menu">
                                 <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
-                                <li><a class="dropdown-item" href="{{ route('profile.orders') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                                <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
                                 <li><hr class="dropdown-divider" style="margin: 0.25rem 0;"></li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}">
@@ -858,7 +856,7 @@
             <div class="row g-4 g-lg-5">
                 <div class="col-lg-4">
                     <div class="d-flex align-items-center gap-2 mb-3">
-                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 3px;">
+                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                         <span class="brand-text">Chill Drink</span>
                     </div>
                     <p class="text-secondary mb-4" style="font-size: 0.875rem; max-width: 300px;">Đồ uống tươi mát, giao nhanh tận nơi. Đặt hàng dễ dàng mỗi ngày với Chill Drink.</p>
