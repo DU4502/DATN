@@ -555,6 +555,20 @@
         background: var(--drink-primary);
     }
 
+    .address-selected-mark {
+        width: 22px;
+        height: 22px;
+        margin-top: 0.2rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--drink-primary);
+        color: #ffffff;
+        font-size: 0.78rem;
+        flex: 0 0 auto;
+    }
+
     .address-person {
         color: var(--drink-ink);
         font-size: 1.05rem;
@@ -680,23 +694,6 @@
 
 <section class="checkout-page py-5">
     <div class="container">
-        <div class="checkout-hero p-4 p-md-5 mb-4">
-            <div class="row g-4 align-items-center">
-                <div class="col-lg-8">
-                    <p class="section-kicker mb-2">Thanh toán</p>
-                    <h1 class="display-6 fw-bold mb-3">Hoàn tất đơn hàng của bạn</h1>
-                    <p class="text-secondary fs-5 mb-0">Kiểm tra thông tin nhận hàng, chọn phương thức thanh toán và gửi đơn. Chill Drink sẽ chuẩn bị đồ uống thật gọn cho bạn.</p>
-                </div>
-                <div class="col-lg-4">
-                    <div class="d-flex align-items-center gap-3 justify-content-lg-end">
-                        <span class="checkout-step"><i class="bi bi-bag-check"></i></span>
-                        <span class="checkout-step"><i class="bi bi-truck"></i></span>
-                        <span class="checkout-step"><i class="bi bi-cup-straw"></i></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         @if(session('error'))
             <div class="alert alert-danger rounded-4 border-0">{{ session('error') }}</div>
         @endif
@@ -734,7 +731,7 @@
                             >
 
                             <div class="selected-address-row">
-                                <span class="address-radio active"></span>
+                                <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
                                 <div class="flex-grow-1">
                                     <div class="address-person mb-1">
                                         <span id="selectedReceiver">{{ $user->name }}</span>
@@ -762,16 +759,25 @@
                             <span class="checkout-step"><i class="bi bi-truck"></i></span>
                             <div>
                                 <h2 class="h4 fw-bold mb-1">Phương thức giao hàng</h2>
-                                <p class="text-secondary mb-0">Phí giao hàng được tính theo khoảng cách từ cửa hàng đến địa chỉ nhận.</p>
+                                <p class="text-secondary mb-0">Phí tính tự động theo địa chỉ nhận.</p>
                             </div>
                         </div>
 
-                        <div class="shipping-auto-card p-3 p-md-4 mb-4">
+                        <input
+                            type="hidden"
+                            name="shipping_method_ui"
+                            value="standard"
+                            data-method-label="{{ $shippingMethods['standard']['label'] }}"
+                            data-method-fee="{{ $shippingMethods['standard']['surcharge'] }}"
+                            data-method-eta="{{ $shippingMethods['standard']['eta'] }}"
+                        >
+
+                        <div class="shipping-auto-card p-3 p-md-4">
                             <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
                                 <div class="d-flex gap-3">
                                     <span class="shipping-auto-icon"><i class="bi bi-geo-alt"></i></span>
                                     <div>
-                                        <div class="fw-bold">Phí giao tự động theo địa chỉ</div>
+                                        <div class="fw-bold"><i class="bi bi-truck me-2 text-primary"></i>Giao tiêu chuẩn</div>
                                         <div class="text-secondary small">
                                             <span id="shippingEstimateDetail">{{ $shippingQuote['estimate_label'] }} · {{ $shippingQuote['estimate_detail'] }}</span>
                                         </div>
@@ -786,38 +792,6 @@
                                 <span class="text-secondary">Hệ thống tự tính sau khi bạn chọn hoặc cập nhật địa chỉ nhận hàng.</span>
                                 <span class="fw-semibold" id="shippingDistanceLabel">{{ $shippingQuote['distance_label'] }}</span>
                             </div>
-                        </div>
-
-                        <div class="row g-3">
-                            @foreach($shippingMethods as $methodValue => $method)
-                                <div class="col-md-6">
-                                    <label class="shipping-option d-block h-100">
-                                        <input
-                                            type="radio"
-                                            name="shipping_method_ui"
-                                            value="{{ $methodValue }}"
-                                            data-method-label="{{ $method['label'] }}"
-                                            data-method-fee="{{ $method['surcharge'] }}"
-                                            data-method-eta="{{ $method['eta'] }}"
-                                            {{ $selectedShippingMethod === $methodValue ? 'checked' : '' }}
-                                        >
-                                    <div class="shipping-card p-3 h-100">
-                                        <div class="d-flex justify-content-between gap-3 mb-2">
-                                            <span class="fw-bold">{{ $method['label'] }}</span>
-                                            <span class="text-primary fw-bold">
-                                                {{ $method['surcharge'] > 0 ? '+' . number_format($method['surcharge'], 0, ',', '.') . 'đ' : 'Theo km' }}
-                                            </span>
-                                        </div>
-                                        <p class="text-secondary small mb-0">{{ $method['description'] }}</p>
-                                    </div>
-                                    </label>
-                                </div>
-                            @endforeach
-                        </div>
-
-                        <div class="alert alert-info border-0 rounded-4 mt-4 mb-0">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Thời gian dự kiến <span id="shippingEta">{{ $shippingQuote['method_eta'] }}</span>. Nhân viên sẽ xác nhận lại nếu địa chỉ nằm ngoài vùng giao.
                         </div>
                         @error('shipping_method_ui')
                             <div class="text-danger small mt-2">{{ $message }}</div>
@@ -915,7 +889,7 @@
                         </div>
 
                         <div class="vstack gap-3 mb-4">
-                            @foreach($cart as $item)
+                            @foreach(collect($cart)->take(3) as $item)
                                 <div class="d-flex gap-3 align-items-center">
                                     <img
                                         src="{{ $item['image'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80' }}"
@@ -931,6 +905,34 @@
                                     <strong>{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}đ</strong>
                                 </div>
                             @endforeach
+
+                            @if(count($cart) > 3)
+                                @foreach(collect($cart)->skip(3) as $item)
+                                    <div class="d-flex gap-3 align-items-center d-none" data-checkout-extra-item>
+                                        <img
+                                            src="{{ $item['image'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80' }}"
+                                            alt="{{ $item['name'] }}"
+                                            class="checkout-item-img"
+                                        >
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold">{{ $item['name'] }}</div>
+                                            <div class="text-secondary small">
+                                                {{ $item['size_label'] ?? 'Size M' }} · Số lượng: {{ $item['quantity'] }}
+                                            </div>
+                                        </div>
+                                        <strong>{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}đ</strong>
+                                    </div>
+                                @endforeach
+
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm rounded-pill align-self-start px-3"
+                                    data-toggle-checkout-items
+                                    data-total-items="{{ count($cart) }}"
+                                >
+                                    Xem tất cả {{ count($cart) }} món
+                                </button>
+                            @endif
                         </div>
 
                         <div class="border-top pt-4">
@@ -1318,7 +1320,8 @@
         }
 
         function updateShippingSummary() {
-            const methodInput = document.querySelector('input[name="shipping_method_ui"]:checked');
+            const methodInput = document.querySelector('input[name="shipping_method_ui"]:checked')
+                || document.querySelector('input[name="shipping_method_ui"]');
 
             if (!methodInput) {
                 return;
@@ -1336,7 +1339,9 @@
             shippingDistanceLabel.textContent = distanceLabel;
             shippingEstimateDetail.textContent = `${estimate.label} · ${estimate.detail}`;
             shippingInlineFee.textContent = formatVnd(shippingFee);
-            shippingEta.textContent = methodInput.dataset.methodEta || '';
+            if (shippingEta) {
+                shippingEta.textContent = methodInput.dataset.methodEta || '';
+            }
             summaryShippingFee.textContent = formatVnd(shippingFee);
             summaryShippingDistance.textContent = `${distanceLabel} · ${methodLabel}`;
             summaryGrandTotal.textContent = formatVnd(grandTotal);
@@ -1573,6 +1578,14 @@
 
         document.querySelectorAll('input[name="shipping_method_ui"]').forEach((input) => {
             input.addEventListener('change', updateShippingSummary);
+        });
+
+        document.querySelector('[data-toggle-checkout-items]')?.addEventListener('click', function () {
+            const extraItems = document.querySelectorAll('[data-checkout-extra-item]');
+            const isOpening = Array.from(extraItems).some((item) => item.classList.contains('d-none'));
+
+            extraItems.forEach((item) => item.classList.toggle('d-none', !isOpening));
+            this.textContent = isOpening ? 'Thu gọn' : `Xem tất cả ${this.dataset.totalItems} món`;
         });
 
         async function reverseGeocode(lat, lng, scope) {

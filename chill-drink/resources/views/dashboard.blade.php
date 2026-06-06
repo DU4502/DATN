@@ -100,7 +100,7 @@
                             </a>
                         </div>
                         <div class="col-md-6">
-                            <a href="{{ route('profile.orders') }}" class="action-card">
+                            <a href="{{ route('orders.index') }}" class="action-card">
                                 <div class="action-icon"><i class="bi bi-receipt"></i></div>
                                 <div class="action-content">
                                     <h3>Lịch sử đơn hàng</h3>

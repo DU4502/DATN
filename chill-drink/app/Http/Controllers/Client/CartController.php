@@ -129,7 +129,9 @@ class CartController extends Controller
         $sizes = $this->sizeOptions();
         $sizeCode = strtoupper((string) $request->input('size', 'M'));
         $size = $sizes[$sizeCode] ?? $sizes['M'];
-        $cartKey = $id . ':' . $sizeCode;
+        $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
+        $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
+        $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel;
         $basePrice = (int) ($product->price ?? 0);
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
         
@@ -150,6 +152,8 @@ class CartController extends Controller
                 'size' => $sizeCode,
                 'size_label' => $size['label'],
                 'size_extra' => $size['extra'],
+                'sugar_level' => $sugarLevel,
+                'ice_level' => $iceLevel,
                 'image' => $image,
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
