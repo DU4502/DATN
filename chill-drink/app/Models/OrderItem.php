@@ -9,6 +9,8 @@ class OrderItem extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -17,8 +19,13 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'product_size_id',
+        'ice_level',
+        'sugar_level',
         'quantity',
         'price',
+        'unit_price',
+        'total_price',
     ];
 
     /**
@@ -27,6 +34,8 @@ class OrderItem extends Model
      * @var array
      */
     protected $casts = [
+        'unit_price' => 'integer',
+        'total_price' => 'integer',
         'price' => 'decimal:2',
     ];
 
@@ -46,11 +55,16 @@ class OrderItem extends Model
         return $this->belongsTo(Product::class);
     }
 
+    public function productSize()
+    {
+        return $this->belongsTo(ProductSize::class, 'product_size_id');
+    }
+
     /**
      * Get subtotal for the order item
      */
     public function getSubtotal()
     {
-        return $this->quantity * $this->price;
+        return $this->total_price ?? ((int) $this->quantity * (int) $this->unit_price);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\Order;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,8 +29,13 @@ class ProfileController extends Controller
      */
     public function orders(Request $request): View
     {
+        $orderHistoryData = $this->orderHistoryData($request);
+
         return view('profile.orders', [
             'user' => $request->user(),
+            'profileOrders' => $orderHistoryData['profileOrders'],
+            'orderStatusLabels' => $orderHistoryData['orderStatusLabels'],
+            'paymentLabels' => $orderHistoryData['paymentLabels'],
         ]);
     }
 
@@ -80,5 +86,65 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    private function orderHistoryData(Request $request): array
+    {
+        $profileOrders = $request->user()
+            ->orders()
+            ->with(['orderItems.product.category'])
+            ->latest()
+            ->take(15)
+            ->get()
+            ->map(function (Order $order) {
+                $statusKey = $this->normalizeOrderStatus((string) $order->status);
+                $displayTotal = $this->resolveOrderDisplayTotal($order);
+
+                $order->setAttribute('status_display_key', $statusKey);
+                $order->setAttribute('display_total', $displayTotal);
+
+                return $order;
+            });
+
+        return [
+            'profileOrders' => $profileOrders,
+            'orderStatusLabels' => [
+                'pending' => ['label' => 'Chờ xử lý', 'class' => 'order-status-pending'],
+                'processing' => ['label' => 'Đang xử lý', 'class' => 'order-status-processing'],
+                'shipping' => ['label' => 'Đang giao', 'class' => 'order-status-shipping'],
+                'completed' => ['label' => 'Hoàn tất', 'class' => 'order-status-completed'],
+                'cancelled' => ['label' => 'Đã hủy', 'class' => 'order-status-cancelled'],
+            ],
+            'paymentLabels' => [
+                'cod' => 'Tiền mặt (COD)',
+                'bank_transfer' => 'Chuyển khoản',
+                'momo' => 'MoMo',
+                'vnpay' => 'VNPay',
+                'card' => 'Thẻ',
+                'wallet' => 'Ví điện tử',
+            ],
+        ];
+    }
+
+    private function normalizeOrderStatus(string $status): string
+    {
+        return match ($status) {
+            'preparing' => 'processing',
+            'shipped', 'delivering' => 'shipping',
+            default => $status,
+        };
+    }
+
+    private function resolveOrderDisplayTotal(Order $order): int
+    {
+        if (is_numeric($order->total ?? null)) {
+            return (int) $order->total;
+        }
+
+        if (is_numeric($order->total_price ?? null)) {
+            return (int) $order->total_price;
+        }
+
+        return (int) $order->orderItems->sum(fn ($item) => (int) $item->getSubtotal());
     }
 }

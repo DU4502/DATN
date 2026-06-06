@@ -104,7 +104,7 @@ class LoginRequest extends FormRequest
 
         if (Schema::hasColumn('users', 'is_active') && ! (bool) $user->is_active) {
             throw ValidationException::withMessages([
-                'email' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.',
+                'email' => 'Tài khoản của bạn đã bị khóa.',
             ]);
         }
 

@@ -89,7 +89,7 @@
         transform: scale(1.1) rotate(15deg);
         background: var(--c-primary);
     }
-
+    
     .category-card:hover .category-title {
         transform: translateX(4px);
     }
@@ -229,7 +229,7 @@
 
     .cta-content { padding: 4rem; flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;}
     .cta-image { flex: 1; min-width: 300px; background: var(--c-primary-light); position: relative; }
-
+    
     .cta-image img {
         position: absolute; width: 100%; height: 100%; object-fit: cover;
     }
@@ -405,7 +405,7 @@
                 @endforeach
             @endforelse
         </div>
-
+        
         <div class="text-center mt-5 pt-3">
             <a href="{{ route('products.index') }}" class="btn btn-outline-primary px-5 py-2 rounded-pill fw-bold">Xem toàn bộ menu</a>
         </div>
