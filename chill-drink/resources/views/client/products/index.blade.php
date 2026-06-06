@@ -252,6 +252,68 @@
         transform: translateY(-1px);
     }
 
+    .product-cart-btn {
+        width: 44px;
+        height: 44px;
+        border: 0;
+        border-radius: 999px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--c-primary-light, var(--drink-primary-soft));
+        color: var(--c-primary, var(--drink-primary));
+        transition: all 0.2s ease;
+    }
+
+    .shop-product-card:hover .product-cart-btn,
+    .product-cart-btn:hover {
+        background: var(--c-primary, var(--drink-primary));
+        color: #ffffff;
+        transform: scale(1.1);
+    }
+
+    .product-cart-btn i {
+        line-height: 1;
+    }
+
+    .shop-empty-state {
+        border: 1px solid var(--drink-border);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: 0 18px 42px rgba(79, 183, 168, 0.10);
+    }
+
+    .quick-add-modal .modal-content {
+        border: 0;
+        border-radius: 22px;
+        box-shadow: 0 26px 70px rgba(8, 42, 38, 0.24);
+    }
+
+    .quick-add-thumb {
+        width: 76px;
+        height: 76px;
+        border-radius: 18px;
+        object-fit: cover;
+        background: var(--drink-primary-soft);
+        flex: 0 0 auto;
+    }
+
+    .quick-choice {
+        border: 1px solid var(--drink-border);
+        border-radius: 999px;
+        background: #ffffff;
+        color: var(--drink-muted);
+        font-weight: 800;
+        padding: 0.55rem 0.9rem;
+    }
+
+    .quick-choice.active {
+        border-color: var(--drink-primary);
+        background: var(--drink-primary-soft);
+        color: var(--drink-primary-dark);
+    }
+
     .pager-dot {
         width: 42px;
         height: 42px;
@@ -391,13 +453,18 @@
                                 <div class="d-flex justify-content-between align-items-center shop-product-actions">
                                     <span class="h4 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
                                     @if(($product->stock ?? 1) > 0)
-                                        <form action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
-                                            @csrf
-                                            <input type="hidden" name="size" value="M">
-                                            <button type="submit" class="add-round" aria-label="Thêm vào giỏ">
-                                                <span class="add-round-symbol" aria-hidden="true">+</span>
-                                            </button>
-                                        </form>
+                                        <button
+                                            type="button"
+                                            class="product-cart-btn"
+                                            aria-label="Chọn size và thêm {{ $product->name }}"
+                                            data-quick-add
+                                            data-action="{{ route('cart.add', $product->id) }}"
+                                            data-name="{{ $product->name }}"
+                                            data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
+                                            data-image="{{ $product->image_url }}"
+                                        >
+                                            <i class="bi bi-bag-plus fs-5" aria-hidden="true"></i>
+                                        </button>
                                     @else
                                         <span class="badge text-bg-danger rounded-pill">Hết hàng</span>
                                     @endif
@@ -405,38 +472,56 @@
                             </article>
                         </div>
                     @empty
-                        @foreach(($demoProducts ?? collect())->map(fn ($item) => [
-                            $item['name'],
-                            $item['description'],
-                            number_format($item['price'], 0, ',', '.') . 'đ',
-                            $item['image'],
-                            $item['category'] === request('category') ? 'Đang chọn' : '',
-                            $item['slug'],
-                        ]) as $item)
-                            <div class="col-sm-6 col-xl-4">
-                                <article class="shop-product-card">
-                                    <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}" class="shop-product-image d-block mb-3">
-                                        <img src="{{ $item[3] }}" alt="{{ $item[0] }}">
-                                        @if($item[4])
-                                            <span class="product-tag">{{ $item[4] }}</span>
-                                        @endif
-                                    </a>
-                                    <h2 class="h4 fw-bold mb-2 shop-product-title">{{ $item[0] }}</h2>
-                                    <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
-                                    <p class="text-secondary mb-4 shop-product-desc">{{ $item[1] }}</p>
-                                    <div class="d-flex justify-content-between align-items-center shop-product-actions">
-                                        <span class="h4 fw-bold text-primary mb-0">{{ $item[2] }}</span>
-                                        <form action="{{ route('cart.add', 'demo-' . $item[5]) }}" method="POST" data-ajax-cart>
-                                            @csrf
-                                            <input type="hidden" name="size" value="M">
-                                            <button type="submit" class="add-round" aria-label="Thêm vào giỏ">
-                                                <span class="add-round-symbol" aria-hidden="true">+</span>
+                        @if(($demoProducts ?? collect())->isNotEmpty())
+                            @foreach($demoProducts->map(fn ($item) => [
+                                $item['name'],
+                                $item['description'],
+                                number_format($item['price'], 0, ',', '.') . 'đ',
+                                $item['image'],
+                                $item['category'] === request('category') ? 'Đang chọn' : '',
+                                $item['slug'],
+                            ]) as $item)
+                                <div class="col-sm-6 col-xl-4">
+                                    <article class="shop-product-card">
+                                        <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}" class="shop-product-image d-block mb-3">
+                                            <img src="{{ $item[3] }}" alt="{{ $item[0] }}">
+                                            @if($item[4])
+                                                <span class="product-tag">{{ $item[4] }}</span>
+                                            @endif
+                                        </a>
+                                        <h2 class="h4 fw-bold mb-2 shop-product-title">{{ $item[0] }}</h2>
+                                        <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
+                                        <p class="text-secondary mb-4 shop-product-desc">{{ $item[1] }}</p>
+                                        <div class="d-flex justify-content-between align-items-center shop-product-actions">
+                                            <span class="h4 fw-bold text-primary mb-0">{{ $item[2] }}</span>
+                                            <button
+                                                type="button"
+                                                class="product-cart-btn"
+                                                aria-label="Chọn size và thêm {{ $item[0] }}"
+                                                data-quick-add
+                                                data-action="{{ route('cart.add', 'demo-' . $item[5]) }}"
+                                                data-name="{{ $item[0] }}"
+                                                data-price="{{ $item[2] }}"
+                                                data-image="{{ $item[3] }}"
+                                            >
+                                                <i class="bi bi-bag-plus fs-5" aria-hidden="true"></i>
                                             </button>
-                                        </form>
-                                    </div>
-                                </article>
+                                        </div>
+                                    </article>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="col-12">
+                                <div class="shop-empty-state text-center p-5">
+                                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width:52px;height:52px;background:var(--drink-primary-soft);color:var(--drink-primary);">
+                                        <i class="bi bi-cup-straw fs-4"></i>
+                                    </span>
+                                    <h2 class="h4 fw-bold mb-2">Chưa có sản phẩm trong mục này</h2>
+                                    <p class="text-secondary mb-4">Bạn chọn danh mục khác hoặc quay lại tất cả đồ uống nhé.</p>
+                                    <a href="{{ route('products.index', request()->only('search')) }}" class="btn btn-primary rounded-pill px-4">Xem tất cả</a>
+                                </div>
                             </div>
-                        @endforeach
+                        @endif
                     @endforelse
                 </div>
 
@@ -444,19 +529,77 @@
                     <div class="mt-4">
                         {{ $products->links('pagination::bootstrap-5') }}
                     </div>
-                @else
-                    <div class="d-flex justify-content-center align-items-center gap-2 mt-5">
-                        <span class="pager-dot">‹</span>
-                        <span class="pager-dot active">1</span>
-                        <span class="pager-dot">2</span>
-                        <span class="pager-dot">3</span>
-                        <span class="pager-dot">›</span>
-                    </div>
                 @endif
             </div>
         </div>
     </div>
 </section>
+
+<div class="modal fade quick-add-modal" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="quickAddForm" method="POST" data-ajax-cart>
+                @csrf
+                <input type="hidden" name="size" value="M" data-quick-size-input>
+                <input type="hidden" name="sugar_level" value="50" data-quick-sugar-input>
+                <input type="hidden" name="ice_level" value="100" data-quick-ice-input>
+                <input type="hidden" name="quantity" value="1">
+
+                <div class="modal-header border-0 pb-0">
+                    <h2 class="modal-title h4 fw-bold" id="quickAddTitle">Tùy chọn đồ uống</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="d-flex gap-3 align-items-center mb-4">
+                        <img src="" alt="" class="quick-add-thumb" data-quick-image>
+                        <div>
+                            <div class="fw-bold fs-5" data-quick-name></div>
+                            <div class="text-primary fw-bold" data-quick-price></div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="fw-bold mb-2">Size</div>
+                        <div class="d-flex flex-wrap gap-2" data-quick-group="size">
+                            <button type="button" class="quick-choice" data-value="S">S</button>
+                            <button type="button" class="quick-choice active" data-value="M">M</button>
+                            <button type="button" class="quick-choice" data-value="L">L</button>
+                            <button type="button" class="quick-choice" data-value="XL">XL</button>
+                            <button type="button" class="quick-choice" data-value="XXL">XXL</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="fw-bold mb-2">Mức đường</div>
+                        <div class="d-flex flex-wrap gap-2" data-quick-group="sugar">
+                            <button type="button" class="quick-choice" data-value="0">0%</button>
+                            <button type="button" class="quick-choice" data-value="30">30%</button>
+                            <button type="button" class="quick-choice active" data-value="50">50%</button>
+                            <button type="button" class="quick-choice" data-value="70">70%</button>
+                            <button type="button" class="quick-choice" data-value="100">100%</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="fw-bold mb-2">Mức đá</div>
+                        <div class="d-flex flex-wrap gap-2" data-quick-group="ice">
+                            <button type="button" class="quick-choice" data-value="0">Không đá</button>
+                            <button type="button" class="quick-choice" data-value="50">Ít đá</button>
+                            <button type="button" class="quick-choice active" data-value="100">Bình thường</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pt-0">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-3 fw-bold">
+                        Thêm vào giỏ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <a href="{{ route('cart.index') }}" class="position-fixed bottom-0 end-0 m-4 add-round shadow-lg" style="z-index: 30;" aria-label="Giỏ hàng" data-cart-button>
     <svg width="21" height="21" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -467,4 +610,73 @@
         {{ session('cart') ? count(session('cart')) : 0 }}
     </span>
 </a>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalElement = document.getElementById('quickAddModal');
+        const form = document.getElementById('quickAddForm');
+
+        if (!modalElement || !form || !window.bootstrap) {
+            return;
+        }
+
+        const modal = new bootstrap.Modal(modalElement);
+        const fields = {
+            name: modalElement.querySelector('[data-quick-name]'),
+            price: modalElement.querySelector('[data-quick-price]'),
+            image: modalElement.querySelector('[data-quick-image]'),
+            size: modalElement.querySelector('[data-quick-size-input]'),
+            sugar: modalElement.querySelector('[data-quick-sugar-input]'),
+            ice: modalElement.querySelector('[data-quick-ice-input]'),
+        };
+
+        function setGroupValue(group, value) {
+            modalElement.querySelectorAll(`[data-quick-group="${group}"] .quick-choice`).forEach((button) => {
+                button.classList.toggle('active', button.dataset.value === value);
+            });
+        }
+
+        document.querySelectorAll('[data-quick-add]').forEach((button) => {
+            button.addEventListener('click', () => {
+                form.action = button.dataset.action || '#';
+                fields.name.textContent = button.dataset.name || 'Đồ uống';
+                fields.price.textContent = button.dataset.price || '';
+                fields.image.src = button.dataset.image || '';
+                fields.image.alt = button.dataset.name || 'Đồ uống';
+                fields.size.value = 'M';
+                fields.sugar.value = '50';
+                fields.ice.value = '100';
+                setGroupValue('size', 'M');
+                setGroupValue('sugar', '50');
+                setGroupValue('ice', '100');
+                modal.show();
+            });
+        });
+
+        modalElement.querySelectorAll('[data-quick-group]').forEach((group) => {
+            group.addEventListener('click', (event) => {
+                const button = event.target.closest('.quick-choice');
+
+                if (!button) {
+                    return;
+                }
+
+                group.querySelectorAll('.quick-choice').forEach((item) => item.classList.remove('active'));
+                button.classList.add('active');
+
+                if (group.dataset.quickGroup === 'size') {
+                    fields.size.value = button.dataset.value;
+                }
+
+                if (group.dataset.quickGroup === 'sugar') {
+                    fields.sugar.value = button.dataset.value;
+                }
+
+                if (group.dataset.quickGroup === 'ice') {
+                    fields.ice.value = button.dataset.value;
+                }
+            });
+        });
+    });
+</script>
 @endsection

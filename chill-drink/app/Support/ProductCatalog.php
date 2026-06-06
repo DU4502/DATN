@@ -19,6 +19,7 @@ class ProductCatalog
         'Trà Trái Cây' => 'TC',
         'Soda' => 'SD',
         'Đá Xay' => 'DX',
+        'Matcha' => 'MC',
     ];
 
     /** @var array<string, string> */
@@ -30,6 +31,7 @@ class ProductCatalog
         'Trà Trái Cây' => 'Trà trái cây thanh mát, hương thơm nhẹ, giải khát hiệu quả.',
         'Soda' => 'Soda có gas, vị chua ngọt sảng khoái, uống cực đã khi thức uống.',
         'Đá Xay' => 'Đồ uống đá xay mịn, mát lạnh, vị ngọt cân bằng và dễ uống.',
+        'Matcha' => 'Matcha thơm vị trà xanh, béo nhẹ, hậu vị thanh và dễ uống.',
     ];
 
     /**

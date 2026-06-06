@@ -18,7 +18,15 @@
 
 <style>
     .profile-page {
-        padding: 4rem 0; background: var(--c-bg); min-height: calc(100vh - 80px);
+        padding: 2rem 0 4rem; background: var(--c-bg); min-height: calc(100vh - 80px);
+    }
+
+    .profile-heading {
+        margin-bottom: 1.75rem;
+    }
+
+    .profile-heading h1 {
+        font-size: clamp(1.55rem, 2.4vw, 2.05rem);
     }
 
     .profile-card {
@@ -70,17 +78,9 @@
 
 <section class="profile-page">
     <div class="container">
-        <div class="mb-5 text-center">
-            <span class="badge rounded-pill bg-white text-primary mb-3 px-3 py-2 fw-semibold shadow-sm">Tài khoản</span>
-            <h1 class="display-6 fw-bold mb-2">Cập nhật hồ sơ</h1>
-            <p class="text-secondary">Quản lý thông tin cá nhân và bảo mật tài khoản của bạn.</p>
-        </div>
-
-        <div class="d-flex justify-content-center mb-5">
-            <nav class="profile-tabs d-inline-flex bg-white p-1 rounded-pill shadow-sm" aria-label="Mục tài khoản">
-                <a href="{{ route('profile.edit') }}" class="profile-tab active rounded-pill px-4 py-2">Thông tin</a>
-                <a href="{{ route('profile.orders') }}" class="profile-tab rounded-pill px-4 py-2 text-decoration-none text-secondary">Đơn hàng của tôi</a>
-            </nav>
+        <div class="profile-heading text-center">
+            <h1 class="fw-bold mb-1">Cập nhật hồ sơ</h1>
+            <p class="text-secondary mb-0">Quản lý thông tin cá nhân và bảo mật tài khoản.</p>
         </div>
 
         <div id="profile-info" class="row g-4 justify-content-center">

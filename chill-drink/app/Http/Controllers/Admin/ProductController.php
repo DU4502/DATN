@@ -71,9 +71,11 @@ class ProductController extends Controller
             }
         }
 
-        Product::create($data);
+        $product = Product::create($data);
 
-        return redirect()->route('admin.products.index')->with('success', 'Thêm sản phẩm thành công!');
+        return redirect()
+            ->route('admin.products.show', $product->id)
+            ->with('success', 'Thêm sản phẩm thành công!');
     }
 
     /**
@@ -83,7 +85,9 @@ class ProductController extends Controller
     {
         $product = Product::with('category')
             ->withCount('orderItems')
-            ->findOrFail($id);
+            ->whereKey($id)
+            ->orWhere('slug', $id)
+            ->firstOrFail();
 
         if (Schema::hasTable('reviews')) {
             $product->loadCount('reviews');
@@ -99,7 +103,7 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
-        $product = Product::findOrFail($id);
+        $product = $this->findProduct($id);
         $categories = Category::orderBy('name')->get();
 
         return view('admin.products.edit', compact('product', 'categories'));
@@ -110,7 +114,7 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $product = Product::findOrFail($id);
+        $product = $this->findProduct($id);
 
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
@@ -168,7 +172,7 @@ class ProductController extends Controller
         $product->update($data);
 
         return redirect()
-            ->route('admin.products.index', $this->returnPageParameters($request))
+            ->route('admin.products.show', $product->id)
             ->with('success', 'Cập nhật sản phẩm thành công!');
     }
 
@@ -177,7 +181,7 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        $product = Product::findOrFail($id);
+        $product = $this->findProduct($id);
 
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
@@ -224,5 +228,13 @@ class ProductController extends Controller
         $page = (int) ($request->input('return_page') ?: $request->query('page'));
 
         return $page > 1 ? ['page' => $page] : [];
+    }
+
+    private function findProduct(string $id): Product
+    {
+        return Product::query()
+            ->whereKey($id)
+            ->orWhere('slug', $id)
+            ->firstOrFail();
     }
 }
