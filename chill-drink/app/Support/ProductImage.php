@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Storage;
+
 class ProductImage
 {
     private const BASE = 'https://images.unsplash.com';
@@ -48,6 +50,44 @@ class ProductImage
         'Nước Ép' => 'photo-1622597467836-f3285f2131b8',
         'Trà Trái Cây' => 'photo-1556679343-c7306c1976bc',
         'Soda' => 'photo-1544145945-f90425340c7e',
+        'Đá Xay' => 'photo-1515823064-d6e0c04616a7',
+        'Matcha' => 'photo-1515823064-d6e0c04616a7',
+    ];
+
+    /** @var array<string, string> */
+    private const BY_SLUG = [
+        'tra-sua-tran-chau-duong-den' => 'images/products/tra-sua-tran-chau-duong-den.webp',
+        'tra-sua-khoai-mon' => 'images/products/tra-sua-khoai-mon.jpg',
+        'tra-sua-thai-xanh' => 'images/products/tra-sua-thai-xanh.jpg',
+        'tra-sua-oolong-kem-cheese' => 'images/products/tra-sua-oolong-kem-cheese.jpg',
+        'tra-sua-socola' => 'images/products/tra-sua-socola.jpg',
+        'ca-phe-sua-da' => 'images/products/ca-phe-sua-da.png',
+        'ca-phe-den-da' => 'images/products/ca-phe-den-da.png',
+        'bac-xiu-da' => 'images/products/bac-xiu-da.jpg',
+        'ca-phe-muoi' => 'images/products/ca-phe-muoi.jpg',
+        'ca-phe-u-lanh' => 'images/products/ca-phe-u-lanh.png',
+        'sinh-to-bo' => 'images/products/sinh-to-bo.png',
+        'sinh-to-dau' => 'images/products/sinh-to-dau.png',
+        'sinh-to-xoai' => 'images/products/sinh-to-xoai.png',
+        'sinh-to-viet-quat' => 'images/products/sinh-to-viet-quat.png',
+        'sinh-to-chuoi' => 'images/products/sinh-to-chuoi.jpg',
+        'nuoc-ep-cam' => 'images/products/nuoc-ep-cam.png',
+        'nuoc-ep-dua-hau' => 'images/products/nuoc-ep-dua-hau.jpg',
+        'nuoc-ep-thom' => 'images/products/nuoc-ep-thom.jpg',
+        'nuoc-ep-ca-rot' => 'images/products/nuoc-ep-ca-rot.jpg',
+        'nuoc-ep-tac' => 'images/products/nuoc-ep-tac.jpg',
+        'tra-dao-cam-sa' => 'images/products/tra-dao-cam-sa.png',
+        'tra-vai' => 'images/products/tra-vai.png',
+        'tra-dau' => 'images/products/tra-dau.jpg',
+        'tra-xoai' => 'images/products/tra-xoai.png',
+        'tra-nhiet-doi' => 'images/products/tra-nhiet-doi.png',
+        'soda-chanh-day' => 'images/products/soda-chanh-day.jpg',
+        'soda-blue-curacao' => 'images/products/soda-blue-curacao.png',
+        'soda-viet-quat' => 'images/products/soda-viet-quat.webp',
+        'soda-dua-leo' => 'images/products/soda-dua-leo.jpg',
+        'soda-cam' => 'images/products/soda-cam.webp',
+        'matcha-da-xay' => 'images/products/tra-sua-thai-xanh.jpg',
+        'chocolate-da-xay' => 'images/products/tra-sua-socola.jpg',
     ];
 
     private const DEFAULT = 'photo-1515823064-d6e0c04616a7';
@@ -59,6 +99,10 @@ class ProductImage
 
     public static function forProduct(?int $productId, ?string $slug = null, int $width = 700): string
     {
+        if ($slug && isset(self::BY_SLUG[$slug])) {
+            return self::BY_SLUG[$slug];
+        }
+
         $seed = $productId ?? crc32((string) $slug);
         $index = abs((int) $seed) % count(self::POOL);
 
@@ -72,7 +116,15 @@ class ProductImage
                 return $image;
             }
 
-            return asset('storage/'.ltrim($image, '/'));
+            $path = ltrim($image, '/');
+
+            if (Storage::disk('public')->exists($path)) {
+                return asset('storage/'.$path);
+            }
+
+            if (is_file(public_path($path))) {
+                return asset($path);
+            }
         }
 
         if ($seed !== null) {

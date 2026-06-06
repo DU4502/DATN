@@ -1,53 +1,23 @@
 @php
-    $profileOrders = auth()->user()
-        ->orders()
-        ->with(['orderItems.product.category'])
-        ->latest()
-        ->take(15)
-        ->get();
-
-    $orderStatusLabels = [
+    $profileOrders = $profileOrders ?? collect();
+    $orderStatusLabels = $orderStatusLabels ?? [
         'pending' => ['label' => 'Chờ xử lý', 'class' => 'order-status-pending'],
         'processing' => ['label' => 'Đang xử lý', 'class' => 'order-status-processing'],
         'shipping' => ['label' => 'Đang giao', 'class' => 'order-status-shipping'],
         'completed' => ['label' => 'Hoàn tất', 'class' => 'order-status-completed'],
         'cancelled' => ['label' => 'Đã hủy', 'class' => 'order-status-cancelled'],
     ];
-
-    $paymentLabels = [
+    $paymentLabels = $paymentLabels ?? [
         'cod' => 'Tiền mặt (COD)',
         'bank_transfer' => 'Chuyển khoản',
         'momo' => 'MoMo',
         'vnpay' => 'VNPay',
+        'card' => 'Thẻ',
+        'wallet' => 'Ví điện tử',
     ];
 @endphp
 
 <style>
-    .profile-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .profile-tab {
-        border: 1px solid var(--drink-border);
-        border-radius: 999px;
-        padding: 0.65rem 1.15rem;
-        font-weight: 700;
-        color: var(--drink-muted);
-        text-decoration: none;
-        background: #ffffff;
-        transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
-    }
-
-    .profile-tab:hover,
-    .profile-tab.active {
-        border-color: var(--drink-primary);
-        color: var(--drink-primary-dark);
-        background: var(--drink-primary-soft);
-    }
-
     .order-card {
         border: 1px solid var(--drink-border);
         border-radius: 20px;
@@ -124,17 +94,17 @@
     }
 </style>
 
-<div id="profile-orders" class="mt-5">
+<div id="profile-orders" class="mt-4">
     <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
         <div>
-            <p class="text-primary fw-semibold mb-1">Đơn hàng</p>
             <h2 class="h4 fw-bold mb-0">Lịch sử mua hàng</h2>
         </div>
         <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Tiếp tục mua sắm</a>
     </div>
 
     @forelse($profileOrders as $order)
-        @php($status = $orderStatusLabels[$order->status] ?? ['label' => $order->status, 'class' => 'order-status-pending'])
+        @php($statusKey = $order->status_display_key ?? $order->status)
+        @php($status = $orderStatusLabels[$statusKey] ?? ['label' => $order->status, 'class' => 'order-status-pending'])
         <article class="order-card mb-4">
             <div class="order-card-header">
                 <div>
@@ -178,13 +148,13 @@
                 </div>
                 <div class="text-end">
                     <div class="text-secondary small">Tổng thanh toán</div>
-                    <div class="h5 fw-bold text-primary mb-0">{{ number_format($order->total_price, 0, ',', '.') }}đ</div>
+                    <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
                 </div>
             </div>
         </article>
     @empty
         <div class="orders-empty">
-            <div class="display-6 mb-2">🛒</div>
+            <div class="display-6 mb-2"><i class="bi bi-bag"></i></div>
             <h3 class="h5 fw-bold mb-2">Bạn chưa có đơn hàng nào</h3>
             <p class="text-secondary mb-4">Khám phá menu đồ uống và đặt thử ly đầu tiên nhé.</p>
             <a href="{{ route('products.index') }}" class="btn btn-primary">Xem sản phẩm</a>

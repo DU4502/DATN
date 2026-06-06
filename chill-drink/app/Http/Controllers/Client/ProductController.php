@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Order;
+use App\Models\Review;
 use App\Support\ProductCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -19,6 +21,7 @@ class ProductController extends Controller
     {
         $query = Product::where('status', true)->with('category');
         $hasSkuColumn = Schema::hasColumn('products', 'sku');
+        $hasCatalogProducts = Product::where('status', true)->exists();
 
         // Filter by category
         if ($request->filled('category')) {
@@ -38,7 +41,11 @@ class ProductController extends Controller
         }
 
         $products = $query->paginate(12)->withQueryString();
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::withCount([
+            'products' => fn ($query) => $query->where('status', true),
+        ])
+            ->orderBy('id')
+            ->get();
         $demoCategoryMap = collect([
             'tra-sua' => 'Trà sữa',
             'ca-phe' => 'Cà phê',
@@ -57,13 +64,15 @@ class ProductController extends Controller
             ['name' => 'Trà Trái Cây Nhiệt Đới', 'category' => 'tra-trai-cay', 'price' => 59000, 'slug' => 'tropical-frost', 'description' => 'Xoài, thanh long và trà xanh tạo một ly trái cây rực rỡ.', 'image' => 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=700&q=85'],
         ]);
 
-        if ($products->count() === 0) {
+        if (! $hasCatalogProducts) {
             $demoProducts = $demoProducts
                 ->when($request->filled('category'), fn ($items) => $items->where('category', $request->category))
                 ->when($searchQuery !== '', fn ($items) => $items->filter(fn ($item) => str_contains(mb_strtolower($item['name']), mb_strtolower($searchQuery))))
                 ->values();
 
             $categories = $demoCategoryMap->map(fn ($name, $id) => (object) ['id' => $id, 'name' => $name])->values();
+        } else {
+            $demoProducts = collect();
         }
 
         return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts'));
@@ -72,12 +81,23 @@ class ProductController extends Controller
     /**
      * Display product detail
      */
-    public function show($slug)
+    public function show(Request $request, string $slug)
     {
-        $product = Product::where('slug', $slug)
+        $hasReviewsTable = Schema::hasTable('reviews');
+        $productQuery = Product::where('slug', $slug)
             ->where('status', true)
-            ->with('category')
-            ->first();
+            ->with('category');
+
+        if ($hasReviewsTable) {
+            $productQuery->with([
+                'reviews' => fn ($query) => $query
+                    ->where('status', true)
+                    ->with('user')
+                    ->latest(),
+            ]);
+        }
+
+        $product = $productQuery->first();
 
         if (! $product) {
             $demoProducts = collect([
@@ -165,8 +185,15 @@ class ProductController extends Controller
             ];
 
             $relatedProducts = new Collection();
+            $approvedReviews = collect();
+            $reviewSummary = $this->emptyReviewSummary();
+            $reviewFormState = [
+                'can_review' => false,
+                'message' => 'Sản phẩm demo chưa hỗ trợ đánh giá.',
+                'remaining_reviews' => 0,
+            ];
 
-            return view('client.products.show', compact('product', 'relatedProducts'));
+            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState'));
         }
 
         // Get related products
@@ -175,7 +202,91 @@ class ProductController extends Controller
             ->where('status', true)
             ->take(4)
             ->get();
+        $approvedReviews = $hasReviewsTable ? $product->reviews : collect();
+        $reviewSummary = $this->reviewSummary($approvedReviews);
+        $reviewFormState = $hasReviewsTable
+            ? $this->reviewFormState($request, $product)
+            : [
+                'can_review' => false,
+                'message' => 'Tính năng đánh giá chưa sẵn sàng.',
+                'remaining_reviews' => 0,
+            ];
 
-        return view('client.products.show', compact('product', 'relatedProducts'));
+        return view('client.products.show', compact(
+            'product',
+            'relatedProducts',
+            'approvedReviews',
+            'reviewSummary',
+            'reviewFormState'
+        ));
+    }
+
+    private function reviewFormState(Request $request, Product $product): array
+    {
+        if (! Schema::hasTable('reviews')) {
+            return [
+                'can_review' => false,
+                'message' => 'Tính năng đánh giá chưa sẵn sàng.',
+                'remaining_reviews' => 0,
+            ];
+        }
+
+        if (! $request->user()) {
+            return [
+                'can_review' => false,
+                'message' => 'Đăng nhập và mua sản phẩm để gửi đánh giá.',
+                'remaining_reviews' => 0,
+            ];
+        }
+        $remainingReviews = Order::query()
+            ->join('order_items', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.user_id', $request->user()->id)
+            ->where('order_items.product_id', $product->id)
+            ->when(
+                Schema::hasColumn('orders', 'status'),
+                fn ($query) => $query->where('orders.status', 'completed')
+            )
+            ->whereNotExists(function ($subQuery) use ($request, $product) {
+                $subQuery->selectRaw('1')
+                    ->from('reviews')
+                    ->whereColumn('reviews.order_id', 'orders.id')
+                    ->where('reviews.user_id', $request->user()->id)
+                    ->where('reviews.product_id', $product->id);
+            })
+            ->distinct('orders.id')
+            ->count('orders.id');
+
+        return [
+            'can_review' => $remainingReviews > 0,
+            'message' => $remainingReviews > 0
+                ? null
+                : 'Bạn không còn lượt đánh giá nào cho sản phẩm này. Mỗi lần mua chỉ được đánh giá một lần.',
+            'remaining_reviews' => $remainingReviews,
+        ];
+    }
+
+    private function reviewSummary(Collection $approvedReviews): array
+    {
+        if ($approvedReviews->isEmpty()) {
+            return $this->emptyReviewSummary();
+        }
+
+        $counts = collect(range(1, 5))
+            ->mapWithKeys(fn (int $rating) => [$rating => $approvedReviews->where('rating', $rating)->count()]);
+
+        return [
+            'count' => $approvedReviews->count(),
+            'average' => round((float) $approvedReviews->avg('rating'), 1),
+            'counts' => $counts->all(),
+        ];
+    }
+
+    private function emptyReviewSummary(): array
+    {
+        return [
+            'count' => 0,
+            'average' => 0,
+            'counts' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0],
+        ];
     }
 }

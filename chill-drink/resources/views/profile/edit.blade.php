@@ -18,7 +18,15 @@
 
 <style>
     .profile-page {
-        padding: 4rem 0; background: var(--c-bg); min-height: calc(100vh - 80px);
+        padding: 2rem 0 4rem; background: var(--c-bg); min-height: calc(100vh - 80px);
+    }
+
+    .profile-heading {
+        margin-bottom: 1.75rem;
+    }
+
+    .profile-heading h1 {
+        font-size: clamp(1.55rem, 2.4vw, 2.05rem);
     }
 
     .profile-card {
@@ -53,10 +61,10 @@
         transform: translateY(-3px) scale(1.05);
         box-shadow: 0 0 0 3px var(--c-primary-glow), var(--shadow-md);
     }
-
+    
     .form-floating > .form-control { border-radius: var(--radius-md); border-color: var(--c-border); }
     .form-floating > .form-control:focus { border-color: var(--c-primary); box-shadow: 0 0 0 4px var(--c-primary-glow); }
-
+    
     .section-title-icon {
         display: inline-flex; width: 36px; height: 36px; border-radius: 10px;
         background: var(--c-primary-light); color: var(--c-primary);
@@ -70,17 +78,9 @@
 
 <section class="profile-page">
     <div class="container">
-        <div class="mb-5 text-center">
-            <span class="badge rounded-pill bg-white text-primary mb-3 px-3 py-2 fw-semibold shadow-sm">Tài khoản</span>
-            <h1 class="display-6 fw-bold mb-2">Cập nhật hồ sơ</h1>
-            <p class="text-secondary">Quản lý thông tin cá nhân và bảo mật tài khoản của bạn.</p>
-        </div>
-
-        <div class="d-flex justify-content-center mb-5">
-            <nav class="profile-tabs d-inline-flex bg-white p-1 rounded-pill shadow-sm" aria-label="Mục tài khoản">
-                <a href="{{ route('profile.edit') }}" class="profile-tab active rounded-pill px-4 py-2">Thông tin</a>
-                <a href="{{ route('profile.orders') }}" class="profile-tab rounded-pill px-4 py-2 text-decoration-none text-secondary">Đơn hàng của tôi</a>
-            </nav>
+        <div class="profile-heading text-center">
+            <h1 class="fw-bold mb-1">Cập nhật hồ sơ</h1>
+            <p class="text-secondary mb-0">Quản lý thông tin cá nhân và bảo mật tài khoản.</p>
         </div>
 
         <div id="profile-info" class="row g-4 justify-content-center">
@@ -90,7 +90,7 @@
                         <span class="section-title-icon"><i class="bi bi-person-vcard"></i></span>
                         <h2 class="h4 fw-bold mb-0">Hồ sơ cá nhân</h2>
                     </div>
-
+                    
                     <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data">
                         @csrf
                         @method('PATCH')
@@ -150,7 +150,7 @@
                                     @error('phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>
-
+                            
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input id="email" name="email" type="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $user->email) }}" required autocomplete="username" placeholder="Email">
@@ -173,7 +173,7 @@
                                     @error('area') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                                 <div id="profileLocationStatus" class="form-text small mb-2 text-primary"></div>
-
+                                
                                 <div class="form-floating mb-3">
                                     <input id="address" name="address" type="text" class="form-control @error('address') is-invalid @enderror" value="{{ old('address', $user->address) }}" placeholder="Số nhà, tên đường..." autocomplete="street-address">
                                     <label for="address">Địa chỉ chi tiết (Số nhà, đường...)</label>
@@ -210,9 +210,9 @@
                         <span class="section-title-icon text-warning" style="background: #FEF3C7;"><i class="bi bi-shield-lock"></i></span>
                         <h2 class="h4 fw-bold mb-0">Đổi mật khẩu</h2>
                     </div>
-
+                    
                     <p class="text-secondary mb-4 text-sm">Để đảm bảo an toàn, hãy sử dụng mật khẩu dài, ngẫu nhiên chứa các chữ cái, số và ký tự đặc biệt.</p>
-
+                    
                     <form method="POST" action="{{ route('password.update') }}">
                         @csrf
                         @method('PUT')
@@ -358,7 +358,7 @@
                 maximumAge: 0
             });
         });
-
+        
         // Show map initially if there's data
         if(profileAreaInput.value.trim() !== '') {
             profileMapPreviewWrap.classList.remove('d-none');

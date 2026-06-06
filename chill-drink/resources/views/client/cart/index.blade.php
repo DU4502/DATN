@@ -380,18 +380,6 @@
                             <span class="payment-mark"><i class="bi bi-shield-check"></i></span>
                         </div>
                     </div>
-
-                    <div class="cart-free-card p-4 mt-4 d-flex align-items-start gap-3">
-                        <i class="bi bi-truck fs-4"></i>
-                        <div>
-                            <div class="fw-bold">Phí giao hàng theo khoảng cách</div>
-                            <div class="small mb-2">Chọn mốc km ở bước thanh toán để hệ thống cộng phí ship vào đơn.</div>
-                            <div class="small">
-                                Từ {{ number_format($shippingTiers[0]['base_fee'] ?? 10000, 0, ',', '.') }}đ
-                                đến {{ number_format($shippingTiers[array_key_last($shippingTiers)]['base_fee'] ?? 50000, 0, ',', '.') }}đ.
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -399,7 +387,7 @@
                 <section class="mt-5 pt-5">
                     <h2 class="section-title h1 mb-4">Gợi ý thêm</h2>
                     <div class="row g-4">
-                        @foreach($suggestions->filter(fn ($product) => $uiProductVisible($product->sku ?? null))->take(4) as $product)
+                        @foreach($suggestions->take(4) as $product)
                             <div class="col-sm-6 col-lg-3">
                                 <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
                                     <x-product-image

@@ -12,7 +12,7 @@
             'name' => 'TRÀ SỮA',
             'title' => 'TRÀ SỮA CHÂN TRÂU ĐƯỜNG ĐEN',
             'price' => '75.000₫',
-            'image' => '/images/trasua.png',
+            'image' => '/images/trasua.png', 
             'bg' => '#ffffff',
             'desc' => 'Trà sữa đậm đà hòa quyện với sữa tươi, nổi bật trên nền trắng tinh khôi và chữ đỏ rực.'
         ],
@@ -73,7 +73,7 @@
             --item5-filter: blur(40px);
             --item5-zIndex: 7;
             --item5-opacity: 0;
-
+            
             --transition-speed: 0.9s;
         }
 
@@ -100,7 +100,7 @@
         /* Particles */
         .particles {
             position: absolute; inset: 0; z-index: 1; pointer-events: none;
-            background-image:
+            background-image: 
                 radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0, rgba(255,255,255,0) 2px),
                 radial-gradient(circle at 70% 60%, rgba(255,255,255,0.15) 0, rgba(255,255,255,0) 3px),
                 radial-gradient(circle at 40% 80%, rgba(255,255,255,0.08) 0, rgba(255,255,255,0) 2px),
@@ -258,7 +258,7 @@
             position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
             background: #fff; border-radius: 2px;
         }
-
+        
         .progress-fill.animating {
             transition: width 6s linear;
         }
@@ -290,7 +290,7 @@
             .content .description { display: none; }
             .content .btn-group { justify-content: center; }
             .slider-controls { bottom: 20px; }
-
+            
             /* Adjust positions for small screens */
             --item3-transform: translate(35%, 15%) scale(0.6);
             --item4-transform: translate(70%, 25%) scale(0.4);
@@ -341,7 +341,7 @@
             const bgIncoming = document.getElementById('sliderBgIncoming');
             const progressFill = document.getElementById('progressFill');
             const dotsContainer = document.getElementById('sliderDots');
-
+            
             let isAnimating = false;
             let currentIndex = 0;
             const totalItems = document.querySelectorAll('.list .item').length;
@@ -360,7 +360,7 @@
                 dots.forEach(d => d.classList.remove('active'));
                 const activeDot = document.querySelector(`.dot[data-dot-index="${index}"]`);
                 if(activeDot) activeDot.classList.add('active');
-
+                
                 // Cập nhật màu dot/progress theo slide hiện tại nếu slide sáng màu
                 const activeItem = list.querySelector('.item:nth-child(2)');
                 if (activeItem && activeItem.classList.contains('item-white')) {
@@ -369,16 +369,16 @@
                     sliderEl.classList.remove('theme-light');
                 }
             };
-
+            
             updateDots(currentIndex);
 
             const startProgress = () => {
                 progressFill.classList.remove('animating');
                 progressFill.style.width = '0%';
-
+                
                 // Force reflow
                 void progressFill.offsetWidth;
-
+                
                 progressFill.classList.add('animating');
                 progressFill.style.width = '100%';
             };
@@ -407,7 +407,7 @@
                 } else if (direction === 'prev') {
                     list.prepend(items[items.length - 1]);
                 }
-
+                
                 const newActive = list.querySelector('.item:nth-child(2)');
                 if (newActive) {
                     triggerBgReveal(getBgColor(newActive));
@@ -439,7 +439,7 @@
                     if (isAnimating) return;
                     const targetIdx = parseInt(e.target.dataset.dotIndex);
                     if (targetIdx === currentIndex) return;
-
+                    
                     // Simple next loop
                     moveSlider('next');
                     resetAutoplay();

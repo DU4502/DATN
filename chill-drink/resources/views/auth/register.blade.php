@@ -17,7 +17,7 @@
         content: ''; position: absolute; inset: 0;
         background: linear-gradient(135deg, rgba(0, 139, 122, 0.10) 0%, rgba(255, 246, 225, 0.22) 100%);
     }
-
+    
     .auth-container { position: relative; z-index: 1; padding: 4rem 0; width: 100%; }
 
     .auth-card {
@@ -58,7 +58,7 @@
         display: flex; align-items: center; gap: 0.5rem;
     }
     .auth-section-title i { font-size: 1.1rem; }
-
+    
     .form-check-input:checked { background-color: var(--c-primary); border-color: var(--c-primary); }
 </style>
 

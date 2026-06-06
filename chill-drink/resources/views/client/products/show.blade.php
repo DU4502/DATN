@@ -216,6 +216,89 @@
         object-fit: cover;
     }
 
+    .review-shell {
+        border: 1px solid var(--drink-border);
+        border-radius: 24px;
+        background: #ffffff;
+        box-shadow: 0 18px 40px rgba(7, 52, 58, 0.06);
+    }
+
+    .review-score-box {
+        border-radius: 20px;
+        background: linear-gradient(135deg, #f4fffb, #ffffff);
+        border: 1px solid rgba(13, 147, 115, 0.12);
+    }
+
+    .review-star-row {
+        display: inline-flex;
+        gap: 0.22rem;
+        color: #f59e0b;
+    }
+
+    .review-meter {
+        height: 8px;
+        border-radius: 999px;
+        background: #edf2f7;
+        overflow: hidden;
+    }
+
+    .review-meter > span {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .review-card {
+        border: 1px solid var(--drink-border);
+        border-radius: 18px;
+        background: #ffffff;
+    }
+
+    .review-avatar {
+        width: 46px;
+        height: 46px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #dff4ef, #8fd8ce);
+        color: var(--drink-primary-dark);
+        font-weight: 800;
+    }
+
+    .review-form-panel {
+        border-radius: 20px;
+        background: #fbfffe;
+        border: 1px solid var(--drink-border);
+    }
+
+    .review-rating-input {
+        display: inline-flex;
+        flex-direction: row-reverse;
+        justify-content: flex-end;
+        gap: 0.4rem;
+    }
+
+    .review-rating-input input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .review-rating-input label {
+        cursor: pointer;
+        font-size: 1.45rem;
+        color: #cbd5e1;
+        transition: transform 0.15s ease, color 0.15s ease;
+    }
+
+    .review-rating-input label:hover,
+    .review-rating-input label:hover ~ label,
+    .review-rating-input input:checked ~ label {
+        color: #f59e0b;
+        transform: translateY(-1px);
+    }
+
     @media (max-width: 991.98px) {
         .detail-photo-card {
             height: auto;
@@ -409,6 +492,152 @@
                 </div>
             </div>
         </div>
+
+        <section class="mt-5 pt-2">
+            @php
+                $reviewSummary = $reviewSummary ?? ['count' => 0, 'average' => 0, 'counts' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0]];
+                $approvedReviews = $approvedReviews ?? collect();
+                $reviewFormState = $reviewFormState ?? ['can_review' => false, 'message' => null, 'remaining_reviews' => 0];
+                $reviewCount = (int) ($reviewSummary['count'] ?? 0);
+                $reviewAverage = (float) ($reviewSummary['average'] ?? 0);
+                $remainingReviews = (int) ($reviewFormState['remaining_reviews'] ?? 0);
+            @endphp
+            <div class="review-shell p-4 p-lg-5">
+                <div class="row g-4 align-items-start">
+                    <div class="col-lg-4">
+                        <div class="review-score-box p-4 h-100">
+                            <p class="section-kicker mb-2">Đánh giá sản phẩm</p>
+                            <div class="display-6 fw-bold text-primary mb-2">{{ number_format($reviewAverage, 1, ',', '.') }}</div>
+                            <div class="review-star-row mb-2" aria-label="Điểm trung bình {{ $reviewAverage }} trên 5">
+                                @for($star = 1; $star <= 5; $star++)
+                                    <i class="bi {{ $reviewAverage >= $star ? 'bi-star-fill' : ($reviewAverage >= ($star - 0.5) ? 'bi-star-half' : 'bi-star') }}"></i>
+                                @endfor
+                            </div>
+                            <p class="text-secondary mb-4">{{ $reviewCount > 0 ? number_format($reviewCount) . ' lượt đánh giá từ khách đã mua' : 'Chưa có đánh giá nào cho sản phẩm này.' }}</p>
+
+                            <div class="d-flex flex-column gap-3">
+                                @for($star = 5; $star >= 1; $star--)
+                                    @php
+                                        $starCount = (int) ($reviewSummary['counts'][$star] ?? 0);
+                                        $starPercent = $reviewCount > 0 ? (int) round(($starCount / $reviewCount) * 100) : 0;
+                                    @endphp
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="small fw-semibold text-secondary" style="width: 54px;">{{ $star }} sao</div>
+                                        <div class="review-meter flex-grow-1"><span style="width: {{ $starPercent }}%"></span></div>
+                                        <div class="small fw-semibold text-secondary" style="width: 42px;">{{ $starCount }}</div>
+                                    </div>
+                                @endfor
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-8">
+                        <div class="review-form-panel p-4 mb-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                                <div>
+                                    <h2 class="h4 fw-bold mb-1">Viết đánh giá</h2>
+                                    <p class="text-secondary mb-0">Mỗi lần mua chỉ được gửi một đánh giá cho sản phẩm này.</p>
+                                </div>
+                                @if($remainingReviews > 0)
+                                    <span class="badge text-bg-light border">Còn {{ $remainingReviews }} lượt đánh giá</span>
+                                @endif
+                            </div>
+
+                            @if(session('success'))
+                                <div class="alert alert-success">{{ session('success') }}</div>
+                            @endif
+
+                            @auth
+                                @if($reviewFormState['can_review'])
+                                    <form method="POST" action="{{ route('products.reviews.store', $product) }}">
+                                        @csrf
+                                        <div class="mb-3">
+                                            <label class="form-label">Số sao</label>
+                                            <div class="review-rating-input">
+                                                @for($star = 5; $star >= 1; $star--)
+                                                    <input
+                                                        type="radio"
+                                                        id="rating-{{ $star }}"
+                                                        name="rating"
+                                                        value="{{ $star }}"
+                                                        @checked((int) old('rating', $userReview->rating ?? 0) === $star)
+                                                    >
+                                                    <label for="rating-{{ $star }}" title="{{ $star }} sao"><i class="bi bi-star-fill"></i></label>
+                                                @endfor
+                                            </div>
+                                            @error('rating')
+                                                <div class="text-danger small mt-2">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="review-comment" class="form-label">Nhận xét</label>
+                                            <textarea
+                                                id="review-comment"
+                                                name="comment"
+                                                rows="4"
+                                                class="form-control"
+                                                placeholder="Chia sẻ cảm nhận về hương vị, chất lượng và trải nghiệm của bạn..."
+                                            >{{ old('comment', $userReview->comment ?? '') }}</textarea>
+                                            @error('comment')
+                                                <div class="text-danger small mt-2">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary">
+                                            Gửi đánh giá
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="alert alert-warning mb-0">
+                                        {{ $reviewFormState['message'] ?? 'Bạn chưa đủ điều kiện để đánh giá sản phẩm này.' }}
+                                    </div>
+                                @endif
+                            @else
+                                <div class="alert alert-info mb-0">
+                                    <a href="{{ route('login') }}" class="fw-semibold text-decoration-none">Đăng nhập</a> để đánh giá sau khi bạn đã mua sản phẩm.
+                                </div>
+                            @endauth
+                        </div>
+
+                        <div class="d-flex flex-column gap-3">
+                            @forelse($approvedReviews as $review)
+                                <article class="review-card p-4">
+                                    <div class="d-flex gap-3">
+                                        <span class="review-avatar">{{ mb_substr($review->user?->name ?? 'U', 0, 1) }}</span>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                                <div>
+                                                    <div class="fw-bold">{{ $review->user?->name ?? 'Khách hàng' }}</div>
+                                                    <div class="review-star-row small">
+                                                        @for($star = 1; $star <= 5; $star++)
+                                                            <i class="bi {{ (int) $review->rating >= $star ? 'bi-star-fill' : 'bi-star' }}"></i>
+                                                        @endfor
+                                                    </div>
+                                                </div>
+                                                <div class="text-secondary small">
+                                                    {{ optional($review->created_at)->format('d/m/Y H:i') }}
+                                                </div>
+                                            </div>
+
+                                            @if(filled($review->comment))
+                                                <p class="mb-0 text-secondary">{{ $review->comment }}</p>
+                                            @else
+                                                <p class="mb-0 text-secondary fst-italic">Khách hàng đã để lại đánh giá sao mà không viết nhận xét.</p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </article>
+                            @empty
+                                <div class="review-card p-4 text-secondary">
+                                    Chưa có nhận xét nào. Hãy là người đầu tiên đánh giá sản phẩm này sau khi nhận hàng.
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <section class="mt-5 pt-4">
             <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
