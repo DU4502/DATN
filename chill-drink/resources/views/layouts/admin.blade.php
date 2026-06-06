@@ -112,7 +112,7 @@
         }
 
         .admin-logo-mark {
-            width: 38px; height: 38px;
+            width: 48px; height: 48px;
             border-radius: var(--radius-md);
             background: var(--a-surface);
             border: 1.5px solid var(--a-border);
@@ -121,7 +121,7 @@
         }
 
         .admin-logo-title {
-            margin: 0; font-size: 1.0625rem;
+            margin: 0; font-size: 1.15rem;
             font-weight: 800; line-height: 1.1;
             color: var(--a-ink);
         }
@@ -625,7 +625,7 @@
     <div class="admin-shell">
         <aside class="admin-sidebar">
             <a href="{{ route('admin.dashboard') }}" class="admin-logo">
-                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 3px;">
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 2px;">
                 <span>
                     <span class="admin-logo-title d-block">Chill Drink</span>
                     <span class="admin-logo-subtitle">Quản trị hệ thống</span>

@@ -380,18 +380,6 @@
                             <span class="payment-mark"><i class="bi bi-shield-check"></i></span>
                         </div>
                     </div>
-
-                    <div class="cart-free-card p-4 mt-4 d-flex align-items-start gap-3">
-                        <i class="bi bi-truck fs-4"></i>
-                        <div>
-                            <div class="fw-bold">Phí giao hàng theo khoảng cách</div>
-                            <div class="small mb-2">Chọn mốc km ở bước thanh toán để hệ thống cộng phí ship vào đơn.</div>
-                            <div class="small">
-                                Từ {{ number_format($shippingTiers[0]['base_fee'] ?? 10000, 0, ',', '.') }}đ
-                                đến {{ number_format($shippingTiers[array_key_last($shippingTiers)]['base_fee'] ?? 50000, 0, ',', '.') }}đ.
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
