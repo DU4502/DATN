@@ -94,7 +94,7 @@
     </div>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
         <p class="text-secondary mb-0">Đang hiển thị {{ $orders->count() }} đơn hàng</p>
-        {{ $orders->links() }}
+        {{ $orders->links('pagination::bootstrap-5') }}
     </div>
 </section>
 @endsection

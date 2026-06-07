@@ -187,6 +187,48 @@
             border-color: var(--c-primary) !important;
         }
 
+        .pagination {
+            align-items: center;
+            gap: 0.35rem;
+            margin-bottom: 0;
+        }
+
+        .pagination .page-link {
+            min-width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-full) !important;
+            border: 1.5px solid var(--c-border);
+            color: var(--c-primary);
+            font-weight: 700;
+            line-height: 1;
+            box-shadow: none;
+        }
+
+        .pagination .page-link svg {
+            width: 1rem !important;
+            height: 1rem !important;
+            max-width: 1rem !important;
+            max-height: 1rem !important;
+            display: block;
+            flex: 0 0 auto;
+        }
+
+        .pagination .page-item.active .page-link,
+        .pagination .page-link:hover {
+            color: #ffffff;
+            background: var(--c-primary);
+            border-color: var(--c-primary);
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: var(--c-subtle);
+            background: var(--c-bg);
+            border-color: var(--c-border-light);
+        }
+
         /* ─── Section Typography ─── */
         .section-kicker {
             color: var(--c-primary);
@@ -220,8 +262,8 @@
         .site-header.scrolled .navbar { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
 
         .brand-mark {
-            width: 38px;
-            height: 38px;
+            width: 48px;
+            height: 48px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -236,7 +278,7 @@
 
         .brand-text {
             color: var(--c-ink);
-            font-size: 1.125rem;
+            font-size: 1.18rem;
             font-weight: 800;
             letter-spacing: -0.03em !important;
         }
@@ -679,7 +721,7 @@
     <header class="site-header sticky-top" id="siteHeader">
         <nav class="navbar navbar-expand-md container py-2">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 3px;">
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                 <span class="brand-text">Chill Drink</span>
             </a>
 
@@ -765,7 +807,7 @@
                                     </div>
                                 </div>
                                 <div class="p-3 border-top">
-                                    <a href="{{ route('profile.orders') }}" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
+                                    <a href="{{ route('orders.index') }}" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
                                 </div>
                             </div>
                         </div>
@@ -780,7 +822,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end profile-menu">
                                 <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
-                                <li><a class="dropdown-item" href="{{ route('profile.orders') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                                <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
                                 <li><hr class="dropdown-divider" style="margin: 0.25rem 0;"></li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}">
@@ -814,7 +856,7 @@
             <div class="row g-4 g-lg-5">
                 <div class="col-lg-4">
                     <div class="d-flex align-items-center gap-2 mb-3">
-                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 3px;">
+                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                         <span class="brand-text">Chill Drink</span>
                     </div>
                     <p class="text-secondary mb-4" style="font-size: 0.875rem; max-width: 300px;">Đồ uống tươi mát, giao nhanh tận nơi. Đặt hàng dễ dàng mỗi ngày với Chill Drink.</p>
@@ -959,7 +1001,16 @@
                 form.classList.toggle('is-added', state === 'success');
                 submitter.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
 
-                const hasText = submitter.textContent.trim().length > 0;
+                const isIconButton = submitter.classList.contains('add-round') || submitter.getAttribute('aria-label') === 'Thêm vào giỏ';
+                const hasText = submitter.textContent.trim().length > 0 && !isIconButton;
+
+                if (state === 'loading' && isIconButton) {
+                    submitter.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span>';
+                }
+
+                if (state === 'success' && isIconButton) {
+                    submitter.innerHTML = '<i class="bi bi-check-lg" aria-hidden="true"></i>';
+                }
 
                 if (state === 'loading' && hasText) {
                     submitter.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang thêm';

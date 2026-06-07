@@ -18,31 +18,6 @@
 @endphp
 
 <style>
-    .profile-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .profile-tab {
-        border: 1px solid var(--drink-border);
-        border-radius: 999px;
-        padding: 0.65rem 1.15rem;
-        font-weight: 700;
-        color: var(--drink-muted);
-        text-decoration: none;
-        background: #ffffff;
-        transition: border-color 0.18s ease, color 0.18s ease, background 0.18s ease;
-    }
-
-    .profile-tab:hover,
-    .profile-tab.active {
-        border-color: var(--drink-primary);
-        color: var(--drink-primary-dark);
-        background: var(--drink-primary-soft);
-    }
-
     .order-card {
         border: 1px solid var(--drink-border);
         border-radius: 20px;
@@ -119,10 +94,9 @@
     }
 </style>
 
-<div id="profile-orders" class="mt-5">
+<div id="profile-orders" class="mt-4">
     <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
         <div>
-            <p class="text-primary fw-semibold mb-1">Đơn hàng</p>
             <h2 class="h4 fw-bold mb-0">Lịch sử mua hàng</h2>
         </div>
         <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Tiếp tục mua sắm</a>
@@ -180,7 +154,7 @@
         </article>
     @empty
         <div class="orders-empty">
-            <div class="display-6 mb-2">🛒</div>
+            <div class="display-6 mb-2"><i class="bi bi-bag"></i></div>
             <h3 class="h5 fw-bold mb-2">Bạn chưa có đơn hàng nào</h3>
             <p class="text-secondary mb-4">Khám phá menu đồ uống và đặt thử ly đầu tiên nhé.</p>
             <a href="{{ route('products.index') }}" class="btn btn-primary">Xem sản phẩm</a>

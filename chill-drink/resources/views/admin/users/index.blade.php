@@ -183,9 +183,34 @@
             </tbody>
         </table>
     </div>
-    <div class="admin-pagination-footer">
-        <p class="text-secondary mb-0">Đang hiển thị {{ $users->count() }} / {{ $users->total() }} người dùng</p>
-        {{ $users->onEachSide(1)->links() }}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
+        <p class="text-secondary mb-0">
+            @if($totalCustomers > 0)
+                Đang hiển thị {{ $users->count() }} / {{ $totalCustomers }} khách hàng
+            @else
+                Chưa có khách hàng đăng ký
+            @endif
+        </p>
+        {{ $users->links('pagination::bootstrap-5') }}
+    </div>
+</section>
+
+<section class="row g-4 mt-4">
+    <div class="col-lg-8">
+        <div class="admin-card p-4">
+            <h3 class="h4 fw-bold text-primary mb-2">Phân tích khách hàng</h3>
+            <div class="admin-empty-state">
+                <span class="admin-icon-dot mx-auto mb-3"><i class="bi bi-graph-up"></i></span>
+                <div class="fw-bold text-dark mb-1">Chưa có thống kê hành vi thật</div>
+                <p class="mb-0">Không hiển thị chỉ số phân tích khi chưa có dữ liệu thật từ đơn hàng.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="admin-card p-4 h-100">
+            <h3 class="h4 fw-bold mb-2">Ghi chú dữ liệu</h3>
+            <p class="text-secondary mb-0">Trang này chỉ hiển thị thông tin đang có trong bảng người dùng: tên, email, số điện thoại, vai trò và ngày tạo.</p>
+        </div>
     </div>
 </section>
 @endsection
