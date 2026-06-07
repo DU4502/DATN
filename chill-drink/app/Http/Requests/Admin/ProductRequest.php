@@ -42,14 +42,7 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         $product = $this->route('product');
-        $productId = $product instanceof Product
-            ? $product->id
-            : (is_numeric($product)
-                ? (int) $product
-                : Product::query()->where('slug', (string) $product)->value('id'));
-        $imageRules = $this->hasFile('image')
-            ? ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048']
-            : ['nullable', 'string', 'url', 'max:2048'];
+        $productId = $product instanceof Product ? $product->id : $product;
 
         return [
             'category_id' => ['required', 'integer', 'exists:categories,id'],
@@ -60,16 +53,12 @@ class ProductRequest extends FormRequest
                 'max:255',
                 Rule::unique('products', 'slug')->ignore($productId),
             ],
-            'image' => $imageRules,
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
             'gallery_images' => ['nullable', 'array', 'max:6'],
             'gallery_images.*' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
-            'remove_gallery_images' => ['nullable', 'array'],
-            'remove_gallery_images.*' => ['string'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'stock' => ['nullable', 'integer', 'min:0', 'max:100000'],
-            'size_prices' => ['nullable', 'array'],
-            'size_prices.*' => ['nullable', 'numeric', 'min:0', 'max:99999999.99'],
+            'stock' => ['required', 'integer', 'min:0', 'max:100000'],
             'status' => ['required', 'boolean'],
         ];
     }
@@ -88,23 +77,15 @@ class ProductRequest extends FormRequest
             'name.max' => 'Tên sản phẩm không được vượt quá :max ký tự.',
             'slug.required' => 'Vui lòng nhập đường dẫn sản phẩm.',
             'slug.unique' => 'Đường dẫn sản phẩm đã tồn tại.',
-            'image.url' => 'Ảnh sản phẩm phải là một URL hợp lệ.',
-            'image.image' => 'Tệp tải lên phải là hình ảnh.',
-            'image.mimes' => 'Ảnh sản phẩm chỉ chấp nhận định dạng: jpeg, jpg, png, webp.',
-            'image.max' => 'Ảnh sản phẩm không được vượt quá 2MB hoặc URL quá dài.',
-            'gallery_images.array' => 'Ảnh gallery không hợp lệ.',
-            'gallery_images.max' => 'Tối đa :max ảnh gallery cho mỗi sản phẩm.',
-            'gallery_images.*.image' => 'Mỗi ảnh gallery phải là hình ảnh hợp lệ.',
-            'gallery_images.*.mimes' => 'Ảnh gallery chỉ chấp nhận định dạng: jpeg, jpg, png, webp.',
-            'gallery_images.*.max' => 'Mỗi ảnh gallery không được vượt quá 2MB.',
+            'image.image' => 'Ảnh sản phẩm phải là tệp hình ảnh hợp lệ.',
+            'image.mimes' => 'Ảnh sản phẩm chỉ nhận JPG, JPEG, PNG hoặc WEBP.',
+            'image.max' => 'Ảnh sản phẩm không được vượt quá 2MB.',
             'price.required' => 'Vui lòng nhập giá bán.',
             'price.numeric' => 'Giá bán phải là số.',
             'price.min' => 'Giá bán không được âm.',
+            'stock.required' => 'Vui lòng nhập tồn kho.',
             'stock.integer' => 'Tồn kho phải là số nguyên.',
             'stock.min' => 'Tồn kho không được âm.',
-            'size_prices.array' => 'Danh sách giá theo size không hợp lệ.',
-            'size_prices.*.numeric' => 'Giá theo size phải là số.',
-            'size_prices.*.min' => 'Giá theo size không được âm.',
             'description.max' => 'Mô tả không được vượt quá :max ký tự.',
         ];
     }

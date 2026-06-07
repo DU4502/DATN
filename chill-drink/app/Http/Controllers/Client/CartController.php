@@ -4,15 +4,10 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-use App\Models\ProductSize;
-use App\Support\ProductImage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 
 class CartController extends Controller
 {
-    private const MAX_QUANTITY = 99;
-
     private function sizeOptions(): array
     {
         return [
@@ -44,7 +39,9 @@ class CartController extends Controller
      */
     public function index()
     {
-        $cart = session()->get('cart', []);
+        $cart = $this->refreshCartItems(session()->get('cart', []));
+        session()->put('cart', $cart);
+
         $suggestions = Product::query()
             ->where('status', true)
             ->with('category')
@@ -57,9 +54,10 @@ class CartController extends Controller
 
     private function cartPayload(string $message): array
     {
-        $cart = session()->get('cart', []);
-        $total = collect($cart)->sum(fn ($item) => (int) $item['price'] * (int) $item['quantity']);
-        $quantityTotal = collect($cart)->sum(fn ($item) => (int) $item['quantity']);
+        $cart = $this->refreshCartItems(session()->get('cart', []));
+        session()->put('cart', $cart);
+        $total = collect($cart)->sum(fn ($item) => $item['price'] * $item['quantity']);
+        $quantityTotal = collect($cart)->sum(fn ($item) => $item['quantity']);
 
         return [
             'success' => true,
@@ -69,10 +67,10 @@ class CartController extends Controller
             'total' => $total,
             'total_formatted' => number_format($total, 0, ',', '.') . 'đ',
             'items' => collect($cart)->mapWithKeys(function ($item, $id) {
-                $subtotal = (int) $item['price'] * (int) $item['quantity'];
+                $subtotal = $item['price'] * $item['quantity'];
 
                 return [$id => [
-                    'quantity' => (int) $item['quantity'],
+                    'quantity' => $item['quantity'],
                     'subtotal' => $subtotal,
                     'subtotal_formatted' => number_format($subtotal, 0, ',', '.') . 'đ',
                 ]];
@@ -80,73 +78,86 @@ class CartController extends Controller
         ];
     }
 
+    private function refreshCartItems(array $cart): array
+    {
+        $productIds = collect($cart)
+            ->pluck('product_id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($productIds->isEmpty()) {
+            return $cart;
+        }
+
+        $products = Product::with('category')
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($cart as $key => $item) {
+            $productId = $item['product_id'] ?? null;
+
+            if (! is_numeric($productId) || ! $products->has((int) $productId)) {
+                continue;
+            }
+
+            $product = $products->get((int) $productId);
+            $cart[$key]['name'] = $product->name;
+            $cart[$key]['image'] = $product->image_url;
+            $cart[$key]['sku'] = $product->sku ?? null;
+            $cart[$key]['category'] = $product->category?->name;
+            $cart[$key]['base_price'] = (int) $product->price;
+            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0);
+        }
+
+        return $cart;
+    }
+
     /**
      * Add product to cart
      */
     public function add(Request $request, $id)
     {
-        $request->validate([
-            'quantity' => ['nullable', 'integer', 'min:1', 'max:' . self::MAX_QUANTITY],
-        ]);
-
         $demoProducts = $this->demoProducts();
         $product = isset($demoProducts[$id])
             ? (object) $demoProducts[$id]
-            : Product::query()
-                ->with('category')
-                ->whereKey($id)
-                ->where('status', true)
-                ->firstOrFail();
+            : Product::findOrFail($id);
         
         $cart = session()->get('cart', []);
         $sizes = $this->sizeOptions();
         $sizeCode = strtoupper((string) $request->input('size', 'M'));
         $size = $sizes[$sizeCode] ?? $sizes['M'];
-        $sizeCode = array_key_exists($sizeCode, $sizes) ? $sizeCode : 'M';
-        $cartKey = $id . ':' . $sizeCode;
-        $productSize = $product instanceof Product ? $this->productSizeFor($product, $sizeCode) : null;
+        $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
+        $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
+        $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel;
         $basePrice = (int) ($product->price ?? 0);
-        $unitPrice = $productSize
-            ? (int) $productSize->price
-            : $basePrice + $size['extra'];
-        $displaySizeExtra = $productSize
-            ? max(0, $unitPrice - $basePrice)
-            : $size['extra'];
-        $quantity = max(1, min(self::MAX_QUANTITY, (int) $request->input('quantity', 1)));
-        $maxAvailable = $product instanceof Product
-            ? max(0, (int) ($product->stock ?? self::MAX_QUANTITY))
-            : self::MAX_QUANTITY;
-
-        if ($maxAvailable < 1) {
-            return $this->cartError($request, 'Sản phẩm này hiện đã hết hàng.');
-        }
+        $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
         
         // If the same product and size already exist, increase quantity.
         if (isset($cart[$cartKey])) {
-            $cart[$cartKey]['quantity'] = min(
-                self::MAX_QUANTITY,
-                $maxAvailable,
-                (int) $cart[$cartKey]['quantity'] + $quantity
-            );
+            $cart[$cartKey]['quantity'] = min(99, $cart[$cartKey]['quantity'] + $quantity);
         } else {
             // Add new product to cart
             $image = $product instanceof Product
                 ? $product->image_url
-                : ($product->image ?? ProductImage::forCategory(null, crc32((string) $id)));
+                : ($product->image ?? \App\Support\ProductImage::forCategory(null, crc32((string) $id)));
 
             $cart[$cartKey] = [
                 'product_id' => $id,
-                'product_size_id' => $productSize?->id,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => $unitPrice,
+                'price' => $basePrice + $size['extra'],
                 'size' => $sizeCode,
                 'size_label' => $size['label'],
-                'size_extra' => $displaySizeExtra,
+                'size_extra' => $size['extra'],
+                'sugar_level' => $sugarLevel,
+                'ice_level' => $iceLevel,
                 'image' => $image,
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
-                'quantity' => min($quantity, $maxAvailable),
+                'quantity' => $quantity,
             ];
         }
         
@@ -164,26 +175,10 @@ class CartController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'quantity' => ['required', 'integer', 'min:1', 'max:' . self::MAX_QUANTITY],
-        ]);
-
         $cart = session()->get('cart', []);
         
         if (isset($cart[$id])) {
-            $maxAvailable = self::MAX_QUANTITY;
-
-            if (is_numeric($cart[$id]['product_id'] ?? null)) {
-                $stock = Product::query()
-                    ->whereKey($cart[$id]['product_id'])
-                    ->value('stock');
-
-                if ($stock !== null) {
-                    $maxAvailable = max(1, min(self::MAX_QUANTITY, (int) $stock));
-                }
-            }
-
-            $cart[$id]['quantity'] = max(1, min($maxAvailable, (int) $request->input('quantity', 1)));
+            $cart[$id]['quantity'] = max(1, min(99, (int) $request->input('quantity', 1)));
             session()->put('cart', $cart);
         }
 
@@ -225,29 +220,5 @@ class CartController extends Controller
         }
 
         return redirect()->back();
-    }
-
-    private function productSizeFor(Product $product, string $sizeCode): ?ProductSize
-    {
-        if (! Schema::hasTable('product_sizes') || ! Schema::hasTable('sizes')) {
-            return null;
-        }
-
-        return ProductSize::query()
-            ->where('product_id', $product->id)
-            ->whereHas('size', fn ($query) => $query->whereIn('name', [$sizeCode, "Size {$sizeCode}"]))
-            ->first();
-    }
-
-    private function cartError(Request $request, string $message)
-    {
-        if ($request->expectsJson()) {
-            return response()->json([
-                'success' => false,
-                'message' => $message,
-            ], 422);
-        }
-
-        return redirect()->back()->with('error', $message);
     }
 }
