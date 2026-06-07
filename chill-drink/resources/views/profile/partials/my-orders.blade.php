@@ -1,19 +1,19 @@
 @php
 $profileOrders = $profileOrders ?? collect();
 $orderStatusLabels = $orderStatusLabels ?? [
-    'pending' => ['label' => 'Chờ xử lý', 'class' => 'order-status-pending'],
-    'processing' => ['label' => 'Đang xử lý', 'class' => 'order-status-processing'],
-    'shipping' => ['label' => 'Đang giao', 'class' => 'order-status-shipping'],
-    'completed' => ['label' => 'Hoàn tất', 'class' => 'order-status-completed'],
-    'cancelled' => ['label' => 'Đã hủy', 'class' => 'order-status-cancelled'],
+'pending' => ['label' => 'Chờ xử lý', 'class' => 'order-status-pending'],
+'processing' => ['label' => 'Đang xử lý', 'class' => 'order-status-processing'],
+'shipping' => ['label' => 'Đang giao', 'class' => 'order-status-shipping'],
+'completed' => ['label' => 'Hoàn tất', 'class' => 'order-status-completed'],
+'cancelled' => ['label' => 'Đã hủy', 'class' => 'order-status-cancelled'],
 ];
 $paymentLabels = $paymentLabels ?? [
-    'cod' => 'Tiền mặt (COD)',
-    'bank_transfer' => 'Chuyển khoản',
-    'momo' => 'MoMo',
-    'vnpay' => 'VNPay',
-    'card' => 'Thẻ',
-    'wallet' => 'Ví điện tử',
+'cod' => 'Tiền mặt (COD)',
+'bank_transfer' => 'Chuyển khoản',
+'momo' => 'MoMo',
+'vnpay' => 'VNPay',
+'card' => 'Thẻ',
+'wallet' => 'Ví điện tử',
 ];
 @endphp
 
@@ -135,9 +135,22 @@ $paymentLabels = $paymentLabels ?? [
             <span class="order-status-badge {{ $status['class'] }}">{{ $status['label'] }}</span>
         </div>
 
-        @foreach($order->orderItems as $item)
-        <?php $product = $item->product; ?>
-        <?php $productReviewUrl = $product ? route('products.show', $product->slug) . '#reviews' : null; ?>
+        @php
+        $reviewedProducts = $order->reviewed_products ?? [];
+        $groupedItems = $order->orderItems->groupBy(function ($item) {
+        return $item->product?->id ? 'product-' . $item->product->id : 'item-' . $item->id;
+        });
+        @endphp
+
+        @foreach($groupedItems as $group)
+        @php
+        $item = $group->first();
+        $product = $item->product;
+        $productReviewUrl = $product ? route('products.show', $product->slug) . '#reviews' : null;
+        $totalQuantity = $group->sum('quantity');
+        $totalSubtotal = $group->sum(fn($subItem) => $subItem->getSubtotal());
+        $hasReviewedForThisItem = $product ? isset($reviewedProducts[$product->id]) : false;
+        @endphp
         <div class="order-item-row">
             <div class="order-item-thumb">
                 @if($product)
@@ -162,22 +175,17 @@ $paymentLabels = $paymentLabels ?? [
                     {{ 'Sản phẩm đã xóa' }}
                     @endif
                 </div>
-                <div class="text-secondary small">Số lượng: {{ $item->quantity }}</div>
+                <div class="text-secondary small">Số lượng: {{ $totalQuantity }}</div>
             </div>
             <div class="d-flex flex-column align-items-end">
-                <div class="fw-bold text-primary">{{ number_format($item->getSubtotal(), 0, ',', '.') }}đ</div>
-
-                @php
-                $reviewedProducts = $order->reviewed_products ?? [];
-                $hasReviewedForThisItem = $product ? isset($reviewedProducts[$product->id]) : false;
-                @endphp
+                <div class="fw-bold text-primary">{{ number_format($totalSubtotal, 0, ',', '.') }}đ</div>
 
                 @if(($statusKey ?? '') === 'completed' && $product)
-                    @if(auth()->check() && ! $hasReviewedForThisItem)
-                    <a href="{{ $productReviewUrl }}" class="badge bg-primary text-white mt-2 py-2 px-3">Đánh giá</a>
-                    @else
-                    <span class="badge bg-light text-secondary mt-2">Đã đánh giá</span>
-                    @endif
+                @if(auth()->check() && ! $hasReviewedForThisItem)
+                <a href="{{ $productReviewUrl }}" class="badge bg-primary text-white mt-2 py-2 px-3">Đánh giá</a>
+                @else
+                <span class="badge bg-light text-secondary mt-2">Đã đánh giá</span>
+                @endif
                 @endif
             </div>
         </div>
