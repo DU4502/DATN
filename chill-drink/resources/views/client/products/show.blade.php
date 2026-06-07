@@ -505,13 +505,13 @@
                     <div class="col-lg-4">
                         <div class="review-score-box p-4 h-100">
                             <p class="section-kicker mb-2">Đánh giá sản phẩm</p>
-                            <div class="display-6 fw-bold text-primary mb-2">{{ number_format($reviewAverage, 1, ',', '.') }}</div>
-                            <div class="review-star-row mb-2" aria-label="Điểm trung bình {{ $reviewAverage }} trên 5">
+                            <div class="display-6 fw-bold text-primary mb-2" data-review-average>{{ number_format($reviewAverage, 1, ',', '.') }}</div>
+                            <div class="review-star-row mb-2" data-review-average-stars aria-label="Điểm trung bình {{ $reviewAverage }} trên 5">
                                 @for($star = 1; $star <= 5; $star++)
                                     <i class="bi {{ $reviewAverage >= $star ? 'bi-star-fill' : ($reviewAverage >= ($star - 0.5) ? 'bi-star-half' : 'bi-star') }}"></i>
                                     @endfor
                             </div>
-                            <p class="text-secondary mb-4">{{ $reviewCount > 0 ? number_format($reviewCount) . ' lượt đánh giá từ khách đã mua' : 'Chưa có đánh giá nào cho sản phẩm này.' }}</p>
+                            <p class="text-secondary mb-4" data-review-total>{{ $reviewCount > 0 ? number_format($reviewCount) . ' lượt đánh giá từ khách đã mua' : 'Chưa có đánh giá nào cho sản phẩm này.' }}</p>
 
                             <div class="d-flex flex-column gap-3">
                                 @for($star = 5; $star >= 1; $star--)
@@ -519,10 +519,10 @@
                                 $starCount = (int) ($reviewSummary['counts'][$star] ?? 0);
                                 $starPercent = $reviewCount > 0 ? (int) round(($starCount / $reviewCount) * 100) : 0;
                                 @endphp
-                                <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex align-items-center gap-3" data-review-star-row="{{ $star }}">
                                     <div class="small fw-semibold text-secondary" style="width: 54px;">{{ $star }} sao</div>
-                                    <div class="review-meter flex-grow-1"><span style="width: {{ $starPercent }}%"></span></div>
-                                    <div class="small fw-semibold text-secondary" style="width: 42px;">{{ $starCount }}</div>
+                                    <div class="review-meter flex-grow-1"><span data-review-star-meter="{{ $star }}" style="width: {{ $starPercent }}%"></span></div>
+                                    <div class="small fw-semibold text-secondary" style="width: 42px;" data-review-star-count="{{ $star }}">{{ $starCount }}</div>
                                 </div>
                                 @endfor
                             </div>
@@ -537,17 +537,24 @@
                                     <p class="text-secondary mb-0">Mỗi lần mua chỉ được gửi một đánh giá cho sản phẩm này.</p>
                                 </div>
                                 @if($remainingReviews > 0)
-                                <span class="badge text-bg-light border">Còn {{ $remainingReviews }} lượt đánh giá</span>
+                                <span class="badge text-bg-light border" data-review-remaining-badge>Còn {{ $remainingReviews }} lượt đánh giá</span>
+                                @else
+                                <span class="badge text-bg-light border d-none" data-review-remaining-badge></span>
                                 @endif
                             </div>
 
-                            @if(session('success'))
-                            <div class="alert alert-success">{{ session('success') }}</div>
-                            @endif
+                            <div data-review-alerts>
+                                @if(session('success'))
+                                <div class="alert alert-success">{{ session('success') }}</div>
+                                @endif
+                                @if(session('error'))
+                                <div class="alert alert-danger">{{ session('error') }}</div>
+                                @endif
+                            </div>
 
                             @auth
                             @if($reviewFormState['can_review'])
-                            <form method="POST" action="{{ route('products.reviews.store', $product) }}">
+                            <form method="POST" action="{{ route('products.reviews.store', $product) }}" data-review-form>
                                 @csrf
                                 <div class="mb-3">
                                     <label class="form-label">Số sao</label>
@@ -563,9 +570,9 @@
                                         <label for="rating-{{ $star }}" title="{{ $star }} sao"><i class="bi bi-star-fill"></i></label>
                                         @endfor
                                     </div>
-                                    @error('rating')
-                                    <div class="text-danger small mt-2">{{ $message }}</div>
-                                    @enderror
+                                    <div class="text-danger small mt-2 {{ $errors->has('rating') ? '' : 'd-none' }}" data-error-target="rating">
+                                        {{ $errors->first('rating') }}
+                                    </div>
                                 </div>
 
                                 <div class="mb-3">
@@ -576,19 +583,22 @@
                                         rows="4"
                                         class="form-control"
                                         placeholder="Chia sẻ cảm nhận về hương vị, chất lượng và trải nghiệm của bạn...">{{ old('comment', $userReview->comment ?? '') }}</textarea>
-                                    @error('comment')
-                                    <div class="text-danger small mt-2">{{ $message }}</div>
-                                    @enderror
+                                    <div class="text-danger small mt-2 {{ $errors->has('comment') ? '' : 'd-none' }}" data-error-target="comment">
+                                        {{ $errors->first('comment') }}
+                                    </div>
                                 </div>
 
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary" data-review-submit>
                                     Gửi đánh giá
                                 </button>
                             </form>
+                            <div class="alert alert-warning mt-3 d-none" data-review-info></div>
                             @else
-                            <div class="alert alert-warning mb-0">
-                                {{ $reviewFormState['message'] ?? 'Bạn chưa đủ điều kiện để đánh giá sản phẩm này.' }}
+                            @if($reviewFormState['message'])
+                            <div class="alert alert-warning mb-0" data-review-info>
+                                {{ $reviewFormState['message'] }}
                             </div>
+                            @endif
                             @endif
                             @else
                             <div class="alert alert-info mb-0">
@@ -597,7 +607,7 @@
                             @endauth
                         </div>
 
-                        <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-column gap-3" data-review-list>
                             @forelse($approvedReviews as $review)
                             <article class="review-card p-4">
                                 <div class="d-flex gap-3">
@@ -626,7 +636,7 @@
                                 </div>
                             </article>
                             @empty
-                            <div class="review-card p-4 text-secondary">
+                            <div class="review-card p-4 text-secondary" data-review-empty>
                                 Chưa có nhận xét nào. Hãy là người đầu tiên đánh giá sản phẩm này sau khi nhận hàng.
                             </div>
                             @endforelse
@@ -813,6 +823,275 @@
 
             nextButton?.addEventListener('click', function() {
                 setActiveImage(activeImageIndex + 1);
+            });
+        }
+
+        const reviewForm = document.querySelector('[data-review-form]');
+
+        if (reviewForm) {
+            const submitButton = reviewForm.querySelector('[data-review-submit]');
+            const alertContainer = document.querySelector('[data-review-alerts]');
+            const ratingInputs = reviewForm.querySelectorAll('input[name="rating"]');
+            const commentField = reviewForm.querySelector('[name="comment"]');
+            const ratingError = reviewForm.querySelector('[data-error-target="rating"]');
+            const commentError = reviewForm.querySelector('[data-error-target="comment"]');
+            const remainingBadge = document.querySelector('[data-review-remaining-badge]');
+            const infoAlert = document.querySelector('[data-review-info]');
+            const reviewList = document.querySelector('[data-review-list]');
+            const emptyState = document.querySelector('[data-review-empty]');
+            const summaryAverage = document.querySelector('[data-review-average]');
+            const summaryAverageStars = document.querySelector('[data-review-average-stars]');
+            const summaryTotalText = document.querySelector('[data-review-total]');
+
+            const starRows = Array.from(document.querySelectorAll('[data-review-star-row]'));
+
+            const renderStars = function(average) {
+                const starIcons = Array.from({
+                    length: 5
+                }, function(_, index) {
+                    const starNumber = index + 1;
+                    if (average >= starNumber) {
+                        return '<i class="bi bi-star-fill"></i>';
+                    }
+                    if (average >= starNumber - 0.5) {
+                        return '<i class="bi bi-star-half"></i>';
+                    }
+
+                    return '<i class="bi bi-star"></i>';
+                }).join('');
+
+                if (summaryAverageStars) {
+                    summaryAverageStars.innerHTML = starIcons;
+                }
+            };
+
+            const formatNumber = function(number, minimumFractionDigits = 0) {
+                return Number(number || 0).toLocaleString('vi-VN', {
+                    minimumFractionDigits,
+                    maximumFractionDigits: minimumFractionDigits,
+                });
+            };
+
+            const clearErrors = function() {
+                [ratingError, commentError].forEach(function(element) {
+                    if (element) {
+                        element.classList.add('d-none');
+                        element.textContent = '';
+                    }
+                });
+
+                ratingInputs.forEach(function(input) {
+                    input.classList.remove('is-invalid');
+                });
+
+                if (commentField) {
+                    commentField.classList.remove('is-invalid');
+                }
+            };
+
+            let alertTimeoutId = null;
+
+            const showAlert = function(message, type) {
+                if (!alertContainer) {
+                    return;
+                }
+
+                if (alertTimeoutId) {
+                    clearTimeout(alertTimeoutId);
+                }
+
+                alertContainer.innerHTML = '';
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-' + type;
+                alert.textContent = message;
+                alertContainer.appendChild(alert);
+
+                alertTimeoutId = setTimeout(function() {
+                    alert.classList.add('fade');
+                    setTimeout(function() {
+                        alert.remove();
+                    }, 150);
+                }, 5000);
+            };
+
+            const resetButtonState = function() {
+                if (!submitButton) {
+                    return;
+                }
+
+                submitButton.disabled = false;
+                submitButton.innerHTML = 'Gửi đánh giá';
+            };
+
+            reviewForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+
+                if (!submitButton) {
+                    return;
+                }
+
+                clearErrors();
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang gửi...';
+
+                const formData = new FormData(reviewForm);
+
+                fetch(reviewForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                }).then(function(response) {
+                    return response.json().then(function(data) {
+                        if (!response.ok) {
+                            const error = new Error('Đã xảy ra lỗi');
+                            error.response = response;
+                            error.data = data;
+                            throw error;
+                        }
+
+                        return data;
+                    });
+                }).then(function(data) {
+                    showAlert(data.message || 'Đánh giá của bạn đã được lưu.', 'success');
+
+                    if (ratingInputs.length) {
+                        ratingInputs.forEach(function(input) {
+                            input.checked = false;
+                        });
+                    }
+
+                    if (commentField) {
+                        commentField.value = '';
+                    }
+
+                    if (data.review && reviewList) {
+                        if (emptyState) {
+                            emptyState.remove();
+                        }
+
+                        const reviewItem = document.createElement('article');
+                        reviewItem.className = 'review-card p-4';
+                        const starsHtml = Array.from({
+                            length: 5
+                        }, function(_, index) {
+                            const starNumber = index + 1;
+                            return '<i class="bi ' + (data.review.rating >= starNumber ? 'bi-star-fill' : 'bi-star') + '"></i>';
+                        }).join('');
+
+                        reviewItem.innerHTML = `
+                            <div class="d-flex gap-3">
+                                <span class="review-avatar">${data.review.initial || 'U'}</span>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                        <div>
+                                            <div class="fw-bold">${data.review.user_name || 'Khách hàng'}</div>
+                                            <div class="review-star-row small">${starsHtml}</div>
+                                        </div>
+                                        <div class="text-secondary small">${data.review.created_at || ''}</div>
+                                    </div>
+                                    ${data.review.comment ? `<p class="mb-0 text-secondary"></p>` : `<p class="mb-0 text-secondary fst-italic">Khách hàng đã để lại đánh giá sao mà không viết nhận xét.</p>`}
+                                </div>
+                            </div>
+                        `;
+
+                        const commentParagraph = reviewItem.querySelector('p.mb-0.text-secondary');
+                        if (commentParagraph && data.review.comment) {
+                            commentParagraph.textContent = data.review.comment;
+                        }
+
+                        reviewList.prepend(reviewItem);
+                    }
+
+                    if (data.summary) {
+                        const average = Number(data.summary.average || 0);
+
+                        if (summaryAverage) {
+                            summaryAverage.textContent = formatNumber(average, 1);
+                        }
+
+                        renderStars(average);
+
+                        if (summaryTotalText) {
+                            const totalText = Number(data.summary.count || 0) > 0 ?
+                                `${formatNumber(data.summary.count)} lượt đánh giá từ khách đã mua` :
+                                'Chưa có đánh giá nào cho sản phẩm này.';
+                            summaryTotalText.textContent = totalText;
+                        }
+
+                        starRows.forEach(function(row) {
+                            const starValue = Number(row.dataset.reviewStarRow || 0);
+                            const totalStarCount = Number(data.summary.counts?.[starValue] || 0);
+                            const percent = Number(data.summary.count || 0) > 0 ?
+                                Math.round((totalStarCount / Number(data.summary.count)) * 100) :
+                                0;
+
+                            const meter = row.querySelector(`[data-review-star-meter="${starValue}"]`);
+                            const countEl = row.querySelector(`[data-review-star-count="${starValue}"]`);
+
+                            if (meter) {
+                                meter.style.width = `${percent}%`;
+                            }
+
+                            if (countEl) {
+                                countEl.textContent = formatNumber(totalStarCount);
+                            }
+                        });
+                    }
+
+                    if (remainingBadge) {
+                        const remaining = Number(data.remaining_reviews || 0);
+                        if (remaining > 0) {
+                            remainingBadge.textContent = `Còn ${formatNumber(remaining)} lượt đánh giá`;
+                            remainingBadge.classList.remove('d-none');
+                        } else {
+                            remainingBadge.textContent = '';
+                            remainingBadge.classList.add('d-none');
+                        }
+                    }
+
+                    if (infoAlert) {
+                        infoAlert.textContent = '';
+                        infoAlert.classList.add('d-none');
+                    }
+
+                    if (data.can_review === false && reviewForm) {
+                        reviewForm.classList.add('d-none');
+                    }
+                }).catch(function(error) {
+                    const errors = error?.data?.errors;
+
+                    if (error?.response?.status === 422 && errors) {
+                        if (errors.rating && ratingError) {
+                            ratingError.textContent = errors.rating[0];
+                            ratingError.classList.remove('d-none');
+                        }
+
+                        if (errors.comment && commentError) {
+                            commentError.textContent = errors.comment[0];
+                            commentError.classList.remove('d-none');
+                        }
+
+                        if (errors.rating) {
+                            ratingInputs.forEach(function(input) {
+                                input.classList.add('is-invalid');
+                            });
+                        }
+
+                        if (errors.comment && commentField) {
+                            commentField.classList.add('is-invalid');
+                        }
+
+                        showAlert('Vui lòng kiểm tra lại thông tin trước khi gửi.', 'danger');
+                    } else if (error?.data?.message) {
+                        showAlert(error.data.message, 'danger');
+                    } else {
+                        showAlert('Không thể gửi đánh giá ngay lúc này. Vui lòng thử lại sau.', 'danger');
+                    }
+                }).finally(function() {
+                    resetButtonState();
+                });
             });
         }
     });
