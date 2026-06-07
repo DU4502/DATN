@@ -18,12 +18,59 @@ class CheckoutVoucherTest extends TestCase
 {
     use DatabaseTransactions;
 
+    public function test_checkout_page_renders_database_vouchers_not_demo_vouchers(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        Voucher::factory()->create([
+            'code' => 'PAGE10',
+            'type' => Voucher::TYPE_PERCENT,
+            'value' => 10,
+            'max_discount' => 20000,
+            'min_order' => 50000,
+            'usage_limit' => 100,
+            'status' => true,
+        ]);
+        Voucher::factory()->create([
+            'code' => 'MIN200',
+            'type' => Voucher::TYPE_FIXED,
+            'value' => 20000,
+            'min_order' => 200000,
+            'usage_limit' => 10,
+            'status' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    'cart-1' => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                    ],
+                ],
+            ])
+            ->get(route('checkout.index'));
+
+        $response->assertOk();
+        $response->assertSee('name="voucher_code"', false);
+        $response->assertDontSee('voucher_code_ui');
+        $response->assertSee('PAGE10');
+        $response->assertSee('MIN200');
+        $response->assertDontSee('Voucher này đang là giao diện demo');
+        $response->assertDontSee('SHIP15');
+    }
+
     public function test_customer_can_apply_valid_voucher_during_checkout(): void
     {
         $user = $this->customer();
         [$product, $productSize] = $this->sellableProduct();
         $voucher = Voucher::factory()->create([
-            'code' => 'CHILL10',
+            'code' => 'TESTCHILL10',
             'type' => Voucher::TYPE_PERCENT,
             'value' => 10,
             'max_discount' => 20000,
@@ -60,7 +107,7 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => $shippingAddress,
                 'shipping_area_ui' => $shippingArea,
-                'voucher_code' => 'CHILL10',
+                'voucher_code' => 'TESTCHILL10',
                 'note' => '',
             ]);
 
@@ -86,6 +133,7 @@ class CheckoutVoucherTest extends TestCase
     {
         $user = $this->customer();
         [$product, $productSize] = $this->sellableProduct();
+        $ordersBefore = Order::count();
         Voucher::factory()->create([
             'code' => 'MIN200',
             'type' => Voucher::TYPE_FIXED,
@@ -120,7 +168,7 @@ class CheckoutVoucherTest extends TestCase
             ->assertRedirect(route('checkout.index'))
             ->assertSessionHas('error');
 
-        $this->assertDatabaseCount('orders', 0);
+        $this->assertSame($ordersBefore, Order::count());
     }
 
     public function test_checkout_uses_current_database_price_instead_of_session_price(): void

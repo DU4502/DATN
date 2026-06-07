@@ -21,6 +21,7 @@ class ProductController extends Controller
     {
         $query = Product::where('status', true)->with('category');
         $hasSkuColumn = Schema::hasColumn('products', 'sku');
+        $hasCatalogProducts = Product::where('status', true)->exists();
 
         // Filter by category
         if ($request->filled('category')) {
@@ -40,7 +41,11 @@ class ProductController extends Controller
         }
 
         $products = $query->paginate(12)->withQueryString();
-        $categories = Category::orderBy('name')->get();
+        $categories = Category::withCount([
+            'products' => fn ($query) => $query->where('status', true),
+        ])
+            ->orderBy('id')
+            ->get();
         $demoCategoryMap = collect([
             'tra-sua' => 'Trà sữa',
             'ca-phe' => 'Cà phê',
@@ -59,13 +64,15 @@ class ProductController extends Controller
             ['name' => 'Trà Trái Cây Nhiệt Đới', 'category' => 'tra-trai-cay', 'price' => 59000, 'slug' => 'tropical-frost', 'description' => 'Xoài, thanh long và trà xanh tạo một ly trái cây rực rỡ.', 'image' => 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=700&q=85'],
         ]);
 
-        if ($products->count() === 0) {
+        if (! $hasCatalogProducts) {
             $demoProducts = $demoProducts
                 ->when($request->filled('category'), fn ($items) => $items->where('category', $request->category))
                 ->when($searchQuery !== '', fn ($items) => $items->filter(fn ($item) => str_contains(mb_strtolower($item['name']), mb_strtolower($searchQuery))))
                 ->values();
 
             $categories = $demoCategoryMap->map(fn ($name, $id) => (object) ['id' => $id, 'name' => $name])->values();
+        } else {
+            $demoProducts = collect();
         }
 
         return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts'));
@@ -74,18 +81,23 @@ class ProductController extends Controller
     /**
      * Display product detail
      */
-    public function show($slug)
+    public function show(Request $request, string $slug)
     {
-        $product = Product::where('slug', $slug)
+        $hasReviewsTable = Schema::hasTable('reviews');
+        $productQuery = Product::where('slug', $slug)
             ->where('status', true)
-            ->with([
-                'category',
+            ->with('category');
+
+        if ($hasReviewsTable) {
+            $productQuery->with([
                 'reviews' => fn ($query) => $query
                     ->where('status', true)
                     ->with('user')
                     ->latest(),
-            ])
-            ->first();
+            ]);
+        }
+
+        $product = $productQuery->first();
 
         if (! $product) {
             $demoProducts = collect([
@@ -190,9 +202,15 @@ class ProductController extends Controller
             ->where('status', true)
             ->take(4)
             ->get();
-        $approvedReviews = $product->reviews;
+        $approvedReviews = $hasReviewsTable ? $product->reviews : collect();
         $reviewSummary = $this->reviewSummary($approvedReviews);
-        $reviewFormState = $this->reviewFormState($request, $product);
+        $reviewFormState = $hasReviewsTable
+            ? $this->reviewFormState($request, $product)
+            : [
+                'can_review' => false,
+                'message' => 'Tính năng đánh giá chưa sẵn sàng.',
+                'remaining_reviews' => 0,
+            ];
 
         return view('client.products.show', compact(
             'product',
@@ -205,6 +223,14 @@ class ProductController extends Controller
 
     private function reviewFormState(Request $request, Product $product): array
     {
+        if (! Schema::hasTable('reviews')) {
+            return [
+                'can_review' => false,
+                'message' => 'Tính năng đánh giá chưa sẵn sàng.',
+                'remaining_reviews' => 0,
+            ];
+        }
+
         if (! $request->user()) {
             return [
                 'can_review' => false,

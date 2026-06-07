@@ -22,13 +22,14 @@
     $loyaltyContext = $loyaltyContext ?? ['rank' => 'bronze', 'points' => 0];
     $rankOrder = ['bronze' => 1, 'silver' => 2, 'gold' => 3, 'diamond' => 4];
     $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext, $rankOrder) {
+        $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
         $hasRank = ! $voucher->required_rank
             || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
         $hasPoints = ! $voucher->is_redeemable
             || (int) $voucher->point_cost <= 0
             || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
 
-        return $voucher->discountFor((int) $total) > 0 && $hasRank && $hasPoints;
+        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
     };
     $selectedVoucherCode = strtoupper(trim((string) old('voucher_code', '')));
     $selectedVoucher = $availableVouchers->first(fn ($voucher) => $voucher->code === $selectedVoucherCode && $canUseCheckoutVoucher($voucher));
@@ -60,31 +61,49 @@
 @endphp
 
 <style>
+    .checkout-page {
+        background:
+            radial-gradient(circle at 12% 8%, rgba(0, 139, 122, 0.08), transparent 30%),
+            linear-gradient(180deg, #f6fffc 0%, #ffffff 44%, #f7fbfa 100%);
+    }
+
     .checkout-hero {
-        background: linear-gradient(135deg, #effcf9 0%, #ffffff 54%, #e3f7f3 100%);
+        background:
+            radial-gradient(circle at 88% 24%, rgba(0, 139, 122, 0.13), transparent 34%),
+            linear-gradient(135deg, #f2fffb 0%, #ffffff 54%, #e9fbf7 100%);
         border: 1px solid var(--drink-border);
         border-radius: 28px;
         box-shadow: 0 22px 50px rgba(8, 42, 38, 0.08);
     }
 
     .checkout-step {
-        width: 42px;
-        height: 42px;
+        width: 48px;
+        height: 48px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        background: var(--drink-primary);
-        color: #fff;
-        box-shadow: 0 12px 24px rgba(0, 139, 122, 0.18);
+        background: #008b7a !important;
+        color: #ffffff !important;
+        border: 2px solid rgba(255, 255, 255, 0.86);
+        box-shadow: 0 14px 30px rgba(0, 107, 95, 0.24);
         flex: 0 0 auto;
+        font-size: 1.15rem;
+    }
+
+    .checkout-step i,
+    .payment-icon i,
+    .shipping-auto-icon i,
+    .voucher-icon i {
+        display: block;
+        line-height: 1;
     }
 
     .checkout-panel {
         border: 1px solid var(--drink-border);
         border-radius: 24px;
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: 0 18px 45px rgba(8, 42, 38, 0.07);
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 18px 44px rgba(8, 42, 38, 0.06);
     }
 
     .checkout-input {
@@ -139,6 +158,15 @@
         flex: 0 0 auto;
     }
 
+    .checkout-hero .checkout-step {
+        width: 54px;
+        height: 54px;
+        background: linear-gradient(135deg, #008b7a, #006f62) !important;
+        color: #ffffff !important;
+        opacity: 1;
+        font-size: 1.28rem;
+    }
+
     .checkout-item-img {
         width: 64px;
         height: 64px;
@@ -151,6 +179,8 @@
     .summary-card {
         position: sticky;
         top: 96px;
+        border-color: rgba(0, 139, 122, 0.16);
+        box-shadow: 0 24px 62px rgba(8, 42, 38, 0.09);
     }
 
     .delivery-line {
@@ -256,66 +286,63 @@
 
     .voucher-modal .modal-content {
         border: 0;
-        border-radius: 6px;
-        box-shadow: 0 22px 55px rgba(0, 0, 0, 0.22);
-    }
-
-    .voucher-modal .modal-dialog {
-        max-height: calc(100vh - 1rem);
-    }
-
-    .voucher-modal .modal-content {
-        max-height: calc(100vh - 1rem);
-        display: flex;
+        border-radius: 22px;
         overflow: hidden;
+        box-shadow: 0 26px 70px rgba(8, 42, 38, 0.24);
     }
 
     .voucher-modal .modal-header,
     .voucher-modal .modal-footer {
         padding: 1.4rem 1.8rem;
-        background: #ffffff;
-        z-index: 3;
     }
 
     .voucher-modal .modal-body {
-        padding: 1.3rem 1.8rem;
-        flex: 1 1 auto;
-        max-height: none;
+        padding: 1.2rem 1.8rem;
+        max-height: min(62vh, 560px);
         overflow-y: auto;
-        background: #fbfbfb;
+        background: #f7fbfa;
+        overscroll-behavior: contain;
     }
 
     .voucher-modal .modal-footer {
         position: sticky;
         bottom: 0;
-        justify-content: flex-end;
+        z-index: 2;
+        justify-content: space-between;
+        gap: 1rem;
+        background: #ffffff;
+        box-shadow: 0 -12px 28px rgba(8, 42, 38, 0.07);
+    }
+
+    .voucher-modal .modal-footer .btn {
+        min-width: 156px;
+        border-radius: 999px !important;
+        font-weight: 800;
     }
 
     .voucher-search-box {
-        background: #f5f5f5;
+        background: #ffffff;
         padding: 1rem;
+        border: 1px solid var(--drink-border);
+        border-radius: 18px;
     }
 
     .voucher-search-box .form-control {
-        border-radius: 2px;
+        min-height: 46px;
+        border-radius: 14px;
         background: #ffffff;
-        border-color: #d8d8d8;
+        border-color: var(--drink-border);
         box-shadow: none;
     }
 
     .voucher-apply-btn {
         min-width: 116px;
-        border-radius: 2px;
+        min-height: 46px;
+        border-radius: 14px;
         background: var(--drink-primary);
         color: #ffffff;
         border-color: var(--drink-primary);
         font-weight: 800;
-    }
-
-    .voucher-apply-btn:hover {
-        background: #04795f;
-        border-color: #04795f;
-        color: #ffffff;
     }
 
     .voucher-group-title {
@@ -327,24 +354,29 @@
     .voucher-ticket {
         position: relative;
         display: flex;
-        min-height: 136px;
-        border: 1px solid #e5e5e5;
+        min-height: 128px;
+        border: 1px solid rgba(0, 139, 122, 0.14);
+        border-radius: 18px;
         background: #ffffff;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+        box-shadow: 0 12px 28px rgba(8, 42, 38, 0.06);
+        transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .voucher-ticket.active {
+        border-color: var(--drink-primary);
+        box-shadow: 0 18px 34px rgba(0, 139, 122, 0.13);
+        transform: translateY(-1px);
     }
 
     .voucher-ticket[data-voucher-card] {
         cursor: pointer;
     }
 
-    .voucher-ticket.active {
-        border-color: var(--drink-primary);
-        box-shadow: 0 8px 20px rgba(0, 132, 103, 0.16);
-    }
-
     .voucher-ticket.is-disabled {
         opacity: 0.58;
         cursor: not-allowed;
+        box-shadow: none;
     }
 
     .voucher-ticket::before,
@@ -355,8 +387,8 @@
         width: 16px;
         height: 16px;
         border-radius: 50%;
-        background: #fbfbfb;
-        border: 1px solid #e5e5e5;
+        background: #f7fbfa;
+        border: 1px solid rgba(0, 139, 122, 0.14);
         z-index: 2;
     }
 
@@ -375,7 +407,7 @@
         justify-content: center;
         flex-direction: column;
         gap: 0.6rem;
-        background: #8fd8ce;
+        background: linear-gradient(135deg, #8fd8ce, #56bfb0);
         color: #ffffff;
         text-align: center;
         flex: 0 0 auto;
@@ -388,7 +420,7 @@
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        background: var(--drink-primary);
+        background: rgba(255, 255, 255, 0.18);
         font-size: 1.55rem;
     }
 
@@ -456,9 +488,16 @@
         background: var(--drink-primary);
     }
 
+    .voucher-radio:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+    }
+
     .voucher-warning {
         background: #fff8e8;
-        color: #d9502f;
+        color: #9b4a1d;
+        border: 1px solid #ffe2b8;
+        border-radius: 16px;
         padding: 0.75rem 1rem;
         font-weight: 600;
     }
@@ -514,6 +553,20 @@
         inset: 4px;
         border-radius: 50%;
         background: var(--drink-primary);
+    }
+
+    .address-selected-mark {
+        width: 22px;
+        height: 22px;
+        margin-top: 0.2rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--drink-primary);
+        color: #ffffff;
+        font-size: 0.78rem;
+        flex: 0 0 auto;
     }
 
     .address-person {
@@ -639,24 +692,11 @@
     }
 </style>
 
-<section class="py-5">
+<section class="checkout-page py-5">
     <div class="container">
-        <div class="checkout-hero p-4 p-md-5 mb-4">
-            <div class="row g-4 align-items-center">
-                <div class="col-lg-8">
-                    <p class="section-kicker mb-2">Thanh toán</p>
-                    <h1 class="display-6 fw-bold mb-3">Hoàn tất đơn hàng của bạn</h1>
-                    <p class="text-secondary fs-5 mb-0">Kiểm tra thông tin nhận hàng, chọn phương thức thanh toán và gửi đơn. Chill Drink sẽ chuẩn bị đồ uống thật gọn cho bạn.</p>
-                </div>
-                <div class="col-lg-4">
-                    <div class="d-flex align-items-center gap-3 justify-content-lg-end">
-                        <span class="checkout-step"><i class="bi bi-bag-check"></i></span>
-                        <span class="checkout-step"><i class="bi bi-truck"></i></span>
-                        <span class="checkout-step"><i class="bi bi-cup-straw"></i></span>
-                    </div>
-                </div>
-            </div>
-        </div>
+        @if(session('error'))
+            <div class="alert alert-danger rounded-4 border-0">{{ session('error') }}</div>
+        @endif
 
         <form method="POST" action="{{ route('checkout.process') }}">
             @csrf
@@ -691,7 +731,7 @@
                             >
 
                             <div class="selected-address-row">
-                                <span class="address-radio active"></span>
+                                <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
                                 <div class="flex-grow-1">
                                     <div class="address-person mb-1">
                                         <span id="selectedReceiver">{{ $user->name }}</span>
@@ -719,16 +759,25 @@
                             <span class="checkout-step"><i class="bi bi-truck"></i></span>
                             <div>
                                 <h2 class="h4 fw-bold mb-1">Phương thức giao hàng</h2>
-                                <p class="text-secondary mb-0">Phí giao hàng được tính theo khoảng cách từ cửa hàng đến địa chỉ nhận.</p>
+                                <p class="text-secondary mb-0">Phí tính tự động theo địa chỉ nhận.</p>
                             </div>
                         </div>
 
-                        <div class="shipping-auto-card p-3 p-md-4 mb-4">
+                        <input
+                            type="hidden"
+                            name="shipping_method_ui"
+                            value="standard"
+                            data-method-label="{{ $shippingMethods['standard']['label'] }}"
+                            data-method-fee="{{ $shippingMethods['standard']['surcharge'] }}"
+                            data-method-eta="{{ $shippingMethods['standard']['eta'] }}"
+                        >
+
+                        <div class="shipping-auto-card p-3 p-md-4">
                             <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
                                 <div class="d-flex gap-3">
                                     <span class="shipping-auto-icon"><i class="bi bi-geo-alt"></i></span>
                                     <div>
-                                        <div class="fw-bold">Phí giao tự động theo địa chỉ</div>
+                                        <div class="fw-bold"><i class="bi bi-truck me-2 text-primary"></i>Giao tiêu chuẩn</div>
                                         <div class="text-secondary small">
                                             <span id="shippingEstimateDetail">{{ $shippingQuote['estimate_label'] }} · {{ $shippingQuote['estimate_detail'] }}</span>
                                         </div>
@@ -743,38 +792,6 @@
                                 <span class="text-secondary">Hệ thống tự tính sau khi bạn chọn hoặc cập nhật địa chỉ nhận hàng.</span>
                                 <span class="fw-semibold" id="shippingDistanceLabel">{{ $shippingQuote['distance_label'] }}</span>
                             </div>
-                        </div>
-
-                        <div class="row g-3">
-                            @foreach($shippingMethods as $methodValue => $method)
-                                <div class="col-md-6">
-                                    <label class="shipping-option d-block h-100">
-                                        <input
-                                            type="radio"
-                                            name="shipping_method_ui"
-                                            value="{{ $methodValue }}"
-                                            data-method-label="{{ $method['label'] }}"
-                                            data-method-fee="{{ $method['surcharge'] }}"
-                                            data-method-eta="{{ $method['eta'] }}"
-                                            {{ $selectedShippingMethod === $methodValue ? 'checked' : '' }}
-                                        >
-                                    <div class="shipping-card p-3 h-100">
-                                        <div class="d-flex justify-content-between gap-3 mb-2">
-                                            <span class="fw-bold">{{ $method['label'] }}</span>
-                                            <span class="text-primary fw-bold">
-                                                {{ $method['surcharge'] > 0 ? '+' . number_format($method['surcharge'], 0, ',', '.') . 'đ' : 'Theo km' }}
-                                            </span>
-                                        </div>
-                                        <p class="text-secondary small mb-0">{{ $method['description'] }}</p>
-                                    </div>
-                                    </label>
-                                </div>
-                            @endforeach
-                        </div>
-
-                        <div class="alert alert-info border-0 rounded-4 mt-4 mb-0">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Thời gian dự kiến <span id="shippingEta">{{ $shippingQuote['method_eta'] }}</span>. Nhân viên sẽ xác nhận lại nếu địa chỉ nằm ngoài vùng giao.
                         </div>
                         @error('shipping_method_ui')
                             <div class="text-danger small mt-2">{{ $message }}</div>
@@ -872,7 +889,7 @@
                         </div>
 
                         <div class="vstack gap-3 mb-4">
-                            @foreach($cart as $item)
+                            @foreach(collect($cart)->take(3) as $item)
                                 <div class="d-flex gap-3 align-items-center">
                                     <img
                                         src="{{ $item['image'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80' }}"
@@ -888,6 +905,34 @@
                                     <strong>{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}đ</strong>
                                 </div>
                             @endforeach
+
+                            @if(count($cart) > 3)
+                                @foreach(collect($cart)->skip(3) as $item)
+                                    <div class="d-flex gap-3 align-items-center d-none" data-checkout-extra-item>
+                                        <img
+                                            src="{{ $item['image'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80' }}"
+                                            alt="{{ $item['name'] }}"
+                                            class="checkout-item-img"
+                                        >
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold">{{ $item['name'] }}</div>
+                                            <div class="text-secondary small">
+                                                {{ $item['size_label'] ?? 'Size M' }} · Số lượng: {{ $item['quantity'] }}
+                                            </div>
+                                        </div>
+                                        <strong>{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}đ</strong>
+                                    </div>
+                                @endforeach
+
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-primary btn-sm rounded-pill align-self-start px-3"
+                                    data-toggle-checkout-items
+                                    data-total-items="{{ count($cart) }}"
+                                >
+                                    Xem tất cả {{ count($cart) }} món
+                                </button>
+                            @endif
                         </div>
 
                         <div class="border-top pt-4">
@@ -1078,6 +1123,7 @@
                     <span>Hỗ trợ</span>
                     <i class="bi bi-question-circle"></i>
                 </div>
+                <button type="button" class="btn-close ms-3" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <div class="modal-body">
                 <div class="voucher-search-box d-flex flex-column flex-md-row align-items-md-center gap-3 mb-3">
@@ -1152,14 +1198,16 @@
                         </div>
                     @empty
                         <div class="voucher-warning">
-                            <i class="bi bi-info-circle me-1"></i> Hiện chưa có voucher phù hợp với giá trị đơn hàng này.
+                            <i class="bi bi-info-circle me-1"></i> Hiện chưa có voucher đang hoạt động.
                         </div>
                     @endforelse
                 </div>
             </div>
             <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-secondary rounded-1 px-5" data-bs-dismiss="modal">Trở lại</button>
-                <button type="button" class="btn btn-address-primary" id="confirmVoucher">Đồng ý</button>
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Trở lại</button>
+                <button type="button" class="btn btn-primary px-4" id="confirmVoucher">
+                    <i class="bi bi-check2 me-2"></i>Áp dụng voucher
+                </button>
             </div>
         </div>
     </div>
@@ -1272,7 +1320,8 @@
         }
 
         function updateShippingSummary() {
-            const methodInput = document.querySelector('input[name="shipping_method_ui"]:checked');
+            const methodInput = document.querySelector('input[name="shipping_method_ui"]:checked')
+                || document.querySelector('input[name="shipping_method_ui"]');
 
             if (!methodInput) {
                 return;
@@ -1290,7 +1339,9 @@
             shippingDistanceLabel.textContent = distanceLabel;
             shippingEstimateDetail.textContent = `${estimate.label} · ${estimate.detail}`;
             shippingInlineFee.textContent = formatVnd(shippingFee);
-            shippingEta.textContent = methodInput.dataset.methodEta || '';
+            if (shippingEta) {
+                shippingEta.textContent = methodInput.dataset.methodEta || '';
+            }
             summaryShippingFee.textContent = formatVnd(shippingFee);
             summaryShippingDistance.textContent = `${distanceLabel} · ${methodLabel}`;
             summaryGrandTotal.textContent = formatVnd(grandTotal);
@@ -1527,6 +1578,14 @@
 
         document.querySelectorAll('input[name="shipping_method_ui"]').forEach((input) => {
             input.addEventListener('change', updateShippingSummary);
+        });
+
+        document.querySelector('[data-toggle-checkout-items]')?.addEventListener('click', function () {
+            const extraItems = document.querySelectorAll('[data-checkout-extra-item]');
+            const isOpening = Array.from(extraItems).some((item) => item.classList.contains('d-none'));
+
+            extraItems.forEach((item) => item.classList.toggle('d-none', !isOpening));
+            this.textContent = isOpening ? 'Thu gọn' : `Xem tất cả ${this.dataset.totalItems} món`;
         });
 
         async function reverseGeocode(lat, lng, scope) {
