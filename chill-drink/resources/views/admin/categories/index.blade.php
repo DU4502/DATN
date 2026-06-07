@@ -69,36 +69,36 @@
             </thead>
             <tbody>
                 @forelse($categories as $category)
-                    @php($categoryImage = $uiCategoryImages[$category->name] ?? $uiDefaultImage)
-                    <tr>
-                        <td>
-                            <img src="{{ $categoryImage }}" alt="{{ $category->name }}" class="admin-thumb" style="object-fit: cover; padding: 0;">
-                        </td>
-                        <td>
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="admin-icon-dot" style="width: 42px; height: 42px;"><i class="bi bi-grid"></i></span>
-                                <span>
-                                    <span class="fw-bold d-block">{{ $category->name }}</span>
-                                    <small class="text-secondary">{{ $category->slug }}</small>
-                                </span>
-                            </div>
-                        </td>
-                        <td class="text-secondary">{{ $category->description ?? 'Chưa có mô tả' }}</td>
-                        <td class="text-center"><span class="badge badge-soft-primary">{{ $category->products_count }}</span></td>
-                        <td class="text-center">
-                            <span class="badge {{ $category->status ? 'badge-soft-primary' : 'badge-soft-muted' }}">
-                                {{ $category->status ? 'Hiển thị' : 'Chưa bật' }}
+                <?php $categoryImage = $uiCategoryImages[$category->name] ?? $uiDefaultImage; ?>
+                <tr>
+                    <td>
+                        <img src="{{ $categoryImage }}" alt="{{ $category->name }}" class="admin-thumb" style="object-fit: cover; padding: 0;">
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="admin-icon-dot" style="width: 42px; height: 42px;"><i class="bi bi-grid"></i></span>
+                            <span>
+                                <span class="fw-bold d-block">{{ $category->name }}</span>
+                                <small class="text-secondary">{{ $category->slug }}</small>
                             </span>
-                        </td>
-                        <td class="text-secondary">{{ optional($category->created_at)->format('d/m/Y') }}</td>
-                    </tr>
+                        </div>
+                    </td>
+                    <td class="text-secondary">{{ $category->description ?? 'Chưa có mô tả' }}</td>
+                    <td class="text-center"><span class="badge badge-soft-primary">{{ $category->products_count }}</span></td>
+                    <td class="text-center">
+                        <span class="badge {{ $category->status ? 'badge-soft-primary' : 'badge-soft-muted' }}">
+                            {{ $category->status ? 'Hiển thị' : 'Chưa bật' }}
+                        </span>
+                    </td>
+                    <td class="text-secondary">{{ optional($category->created_at)->format('d/m/Y') }}</td>
+                </tr>
                 @empty
-                    <tr>
-                        <td colspan="6" class="text-center text-secondary py-5">
-                            <div class="fw-bold text-dark mb-1">Chưa có danh mục</div>
-                            <div>Các nhóm đồ uống sẽ hiển thị tại đây khi có dữ liệu.</div>
-                        </td>
-                    </tr>
+                <tr>
+                    <td colspan="6" class="text-center text-secondary py-5">
+                        <div class="fw-bold text-dark mb-1">Chưa có danh mục</div>
+                        <div>Các nhóm đồ uống sẽ hiển thị tại đây khi có dữ liệu.</div>
+                    </td>
+                </tr>
                 @endforelse
             </tbody>
         </table>

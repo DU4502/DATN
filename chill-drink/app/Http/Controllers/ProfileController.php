@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use App\Models\Review;
 
 class ProfileController extends Controller
 {
@@ -106,6 +107,26 @@ class ProfileController extends Controller
                 return $order;
             });
 
+        // Attach a simple map of reviewed products for the current user per order
+        $orderIds = $profileOrders->pluck('id')->filter()->all();
+        $reviewedMap = [];
+
+        if (! empty($orderIds)) {
+            $userId = $request->user()->id;
+            $reviews = Review::query()
+                ->where('user_id', $userId)
+                ->whereIn('order_id', $orderIds)
+                ->get();
+
+            foreach ($reviews as $r) {
+                $reviewedMap[$r->order_id][$r->product_id] = true;
+            }
+
+            foreach ($profileOrders as $order) {
+                $order->setAttribute('reviewed_products', $reviewedMap[$order->id] ?? []);
+            }
+        }
+
         return [
             'profileOrders' => $profileOrders,
             'orderStatusLabels' => [
@@ -145,6 +166,6 @@ class ProfileController extends Controller
             return (int) $order->total_price;
         }
 
-        return (int) $order->orderItems->sum(fn ($item) => (int) $item->getSubtotal());
+        return (int) $order->orderItems->sum(fn($item) => (int) $item->getSubtotal());
     }
 }

@@ -21,6 +21,15 @@
             </div>
         </div>
 
+        <nav class="profile-tabs" aria-label="Mục tài khoản">
+            <a href="{{ route('profile.edit') }}" class="profile-tab">Thông tin</a>
+            <a href="{{ route('profile.orders') }}" class="profile-tab active">Đơn hàng của tôi</a>
+        </nav>
+
+        @if(session('success'))
+            <div class="alert alert-success rounded-4 border-0 mb-4">{{ session('success') }}</div>
+        @endif
+
         @include('profile.partials.my-orders')
     </div>
 </section>
