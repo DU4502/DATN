@@ -75,12 +75,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // JSON endpoint for dashboard data (AJAX)
+    Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('admin.dashboard.data');
+
     // Voucher Management
     Route::resource('vouchers', VoucherController::class)->except(['show']);
 
     // Product Management
     Route::resource('products', AdminProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
-    
+
     Route::resource('products', AdminProductController::class)->only(['index']);
 
     // Category Management
@@ -91,7 +94,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Review Management
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
-    
+
     // User Management
     Route::patch('/users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'update']);
