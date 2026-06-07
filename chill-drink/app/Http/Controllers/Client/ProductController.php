@@ -32,17 +32,17 @@ class ProductController extends Controller
         $searchQuery = trim((string) $request->input('search', ''));
         if ($searchQuery !== '') {
             $query->where(function ($q) use ($searchQuery, $hasSkuColumn) {
-                $q->where('name', 'like', '%'.$searchQuery.'%');
+                $q->where('name', 'like', '%' . $searchQuery . '%');
 
                 if ($hasSkuColumn) {
-                    $q->orWhere('sku', 'like', '%'.$searchQuery.'%');
+                    $q->orWhere('sku', 'like', '%' . $searchQuery . '%');
                 }
             });
         }
 
         $products = $query->paginate(12)->withQueryString();
         $categories = Category::withCount([
-            'products' => fn ($query) => $query->where('status', true),
+            'products' => fn($query) => $query->where('status', true),
         ])
             ->orderBy('id')
             ->get();
@@ -66,11 +66,11 @@ class ProductController extends Controller
 
         if (! $hasCatalogProducts) {
             $demoProducts = $demoProducts
-                ->when($request->filled('category'), fn ($items) => $items->where('category', $request->category))
-                ->when($searchQuery !== '', fn ($items) => $items->filter(fn ($item) => str_contains(mb_strtolower($item['name']), mb_strtolower($searchQuery))))
+                ->when($request->filled('category'), fn($items) => $items->where('category', $request->category))
+                ->when($searchQuery !== '', fn($items) => $items->filter(fn($item) => str_contains(mb_strtolower($item['name']), mb_strtolower($searchQuery))))
                 ->values();
 
-            $categories = $demoCategoryMap->map(fn ($name, $id) => (object) ['id' => $id, 'name' => $name])->values();
+            $categories = $demoCategoryMap->map(fn($name, $id) => (object) ['id' => $id, 'name' => $name])->values();
         } else {
             $demoProducts = collect();
         }
@@ -90,7 +90,7 @@ class ProductController extends Controller
 
         if ($hasReviewsTable) {
             $productQuery->with([
-                'reviews' => fn ($query) => $query
+                'reviews' => fn($query) => $query
                     ->where('status', true)
                     ->with('user')
                     ->latest(),
@@ -171,7 +171,7 @@ class ProductController extends Controller
             $item = $demoProducts->get($slug);
             $codes = ProductCatalog::codesFor($item['name'], $item['category']);
             $product = (object) [
-                'id' => 'demo-'.$slug,
+                'id' => 'demo-' . $slug,
                 'name' => $item['name'],
                 'slug' => $codes['slug'],
                 'sku' => $codes['sku'],
@@ -244,7 +244,7 @@ class ProductController extends Controller
             ->where('order_items.product_id', $product->id)
             ->when(
                 Schema::hasColumn('orders', 'status'),
-                fn ($query) => $query->where('orders.status', 'completed')
+                fn($query) => $query->where('orders.status', 'completed')
             )
             ->whereNotExists(function ($subQuery) use ($request, $product) {
                 $subQuery->selectRaw('1')
@@ -258,9 +258,7 @@ class ProductController extends Controller
 
         return [
             'can_review' => $remainingReviews > 0,
-            'message' => $remainingReviews > 0
-                ? null
-                : 'Bạn không còn lượt đánh giá nào cho sản phẩm này. Mỗi lần mua chỉ được đánh giá một lần.',
+            'message' => null,
             'remaining_reviews' => $remainingReviews,
         ];
     }
@@ -272,7 +270,7 @@ class ProductController extends Controller
         }
 
         $counts = collect(range(1, 5))
-            ->mapWithKeys(fn (int $rating) => [$rating => $approvedReviews->where('rating', $rating)->count()]);
+            ->mapWithKeys(fn(int $rating) => [$rating => $approvedReviews->where('rating', $rating)->count()]);
 
         return [
             'count' => $approvedReviews->count(),
