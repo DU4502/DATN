@@ -22,14 +22,20 @@ class DashboardController extends Controller
             ? $request->query('period')
             : 'week';
 
-        // Get statistics
-        $totalUsers = User::customers()->count();
-        $totalProducts = Product::count();
-        $totalOrders = Order::count();
+        // Get statistics (period-aware)
         $amountColumn = $this->orderAmountColumn();
-        $totalRevenue = $this->revenueFor(null, null, $amountColumn);
         $periodStats = $this->periodStats($amountColumn);
         $selectedPeriodStat = collect($periodStats)->firstWhere('key', $selectedPeriod) ?? $periodStats[1] ?? null;
+
+        // Determine the current period range (used to compute KPI values for the selected period)
+        [$currentFrom, $currentTo, $previousFrom, $previousTo] = $this->periodComparisonRange($selectedPeriod);
+
+        // KPI values should reflect the selected period
+        $totalRevenue = $this->revenueFor($currentFrom, $currentTo, $amountColumn);
+        $totalOrders = $this->orderCountFor($currentFrom, $currentTo);
+        $totalUsers = $this->newUsersBetween($currentFrom, $currentTo);
+        $totalProducts = $this->productsCountUntil($currentTo);
+
         $cardTrends = $this->cardTrends($selectedPeriod, $amountColumn);
         $comparisonLabel = $this->comparisonLabel($selectedPeriod);
         $chartDatasets = [
