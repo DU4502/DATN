@@ -21,16 +21,80 @@ class DashboardController extends Controller
         $selectedPeriod = in_array($request->query('period'), ['today', 'week', 'month', 'year'], true)
             ? $request->query('period')
             : 'week';
+        $data = $this->gatherDashboardData($selectedPeriod);
 
-        // Get statistics (period-aware)
+        extract($data);
+        $comparisonLabel = $this->comparisonLabel($selectedPeriod);
+        $chartBars = $chartDatasets['revenue']['bars'] ?? [];
+        $topProducts = $topProducts ?? $this->topProducts();
+
+        // Get recent orders
+        $recentOrdersQuery = Order::with('user');
+
+        if (Schema::hasColumn('orders', 'created_at')) {
+            $recentOrdersQuery->latest();
+        } else {
+            $recentOrdersQuery->orderByDesc('id');
+        }
+
+        $recentOrders = $recentOrdersQuery->take(5)->get();
+        // Đảm bảo tất cả các biến đã được định nghĩa đầy đủ ở trên
+        return view('admin.dashboard', compact(
+            'totalUsers',
+            'totalProducts',
+            'totalOrders',
+            'totalRevenue',
+            'periodStats',
+            'selectedPeriod',
+            'selectedPeriodStat',
+            'cardTrends',
+            'comparisonLabel',
+            'chartBars',
+            'chartDatasets',
+            'topProducts',
+            'recentOrders'
+        ));
+    }
+
+    /**
+     * Return dashboard data as JSON for AJAX clients.
+     */
+    public function data(Request $request)
+    {
+        $selectedPeriod = in_array($request->query('period'), ['today', 'week', 'month', 'year'], true)
+            ? $request->query('period')
+            : 'week';
+
+        $data = $this->gatherDashboardData($selectedPeriod);
+
+        // Convert Eloquent collections/models to arrays for JSON
+        $data['topProducts'] = array_values($data['topProducts']);
+        $data['recentOrders'] = $data['recentOrders']->map(function ($o) {
+            return [
+                'id' => $o->id,
+                'user' => ['name' => $o->user->name ?? null],
+                'created_at' => optional($o->created_at)->format('d/m/Y H:i'),
+                'payment_method' => $o->payment_method ?? null,
+                'status' => $o->status ?? null,
+                'total' => (float) ($o->total_price ?? $o->total ?? 0),
+            ];
+        })->all();
+
+        return response()->json($data);
+    }
+
+    /**
+     * Gather dashboard data array for a given period key.
+     * Used by both `index` (view) and `data` (API JSON) methods.
+     */
+    private function gatherDashboardData(string $selectedPeriod): array
+    {
         $amountColumn = $this->orderAmountColumn();
         $periodStats = $this->periodStats($amountColumn);
         $selectedPeriodStat = collect($periodStats)->firstWhere('key', $selectedPeriod) ?? $periodStats[1] ?? null;
 
-        // Determine the current period range (used to compute KPI values for the selected period)
         [$currentFrom, $currentTo, $previousFrom, $previousTo] = $this->periodComparisonRange($selectedPeriod);
 
-        // KPI values should reflect the selected period
         $totalRevenue = $this->revenueFor($currentFrom, $currentTo, $amountColumn);
         $totalOrders = $this->orderCountFor($currentFrom, $currentTo);
         $totalUsers = $this->newUsersBetween($currentFrom, $currentTo);
@@ -56,21 +120,17 @@ class DashboardController extends Controller
             ],
         ];
         $chartBars = $chartDatasets['revenue']['bars'];
-        $topProducts = $this->topProducts();
+        $topProducts = $this->topProducts($currentFrom, $currentTo);
 
-        // Get recent orders
         $recentOrdersQuery = Order::with('user');
-
         if (Schema::hasColumn('orders', 'created_at')) {
             $recentOrdersQuery->latest();
         } else {
             $recentOrdersQuery->orderByDesc('id');
         }
-
         $recentOrders = $recentOrdersQuery->take(5)->get();
 
-        // Đảm bảo tất cả các biến đã được định nghĩa đầy đủ ở trên
-        return view('admin.dashboard', compact(
+        return compact(
             'totalUsers',
             'totalProducts',
             'totalOrders',
@@ -84,7 +144,7 @@ class DashboardController extends Controller
             'chartDatasets',
             'topProducts',
             'recentOrders'
-        ));
+        );
     }
 
     private function orderAmountColumn(): ?string
@@ -102,6 +162,13 @@ class DashboardController extends Controller
     {
         if (! $amountColumn) {
             return 0;
+        }
+
+        if ($from && $to) {
+            $to = $this->capToNow($to);
+            if ($from->greaterThan($to)) {
+                return 0;
+            }
         }
 
         $query = Order::query();
@@ -123,6 +190,11 @@ class DashboardController extends Controller
             return 0;
         }
 
+        $to = $this->capToNow($to);
+        if ($from->greaterThan($to)) {
+            return 0;
+        }
+
         $query = Order::query()->whereBetween('created_at', [$from, $to]);
 
         if (Schema::hasColumn('orders', 'status')) {
@@ -134,6 +206,13 @@ class DashboardController extends Controller
 
     private function orderCountFor(?Carbon $from, ?Carbon $to): int
     {
+        if ($from && $to) {
+            $to = $this->capToNow($to);
+            if ($from->greaterThan($to)) {
+                return 0;
+            }
+        }
+
         $query = Order::query();
 
         if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
@@ -141,6 +220,13 @@ class DashboardController extends Controller
         }
 
         return $query->count();
+    }
+
+    private function capToNow(Carbon $date): Carbon
+    {
+        $now = Carbon::now();
+
+        return $date->greaterThan($now) ? $now : $date;
     }
 
     private function periodStats(?string $amountColumn): array
@@ -408,7 +494,7 @@ class DashboardController extends Controller
             ->count();
     }
 
-    private function topProducts(int $limit = 4): array
+    private function topProducts(?Carbon $from = null, ?Carbon $to = null, int $limit = 4): array
     {
         if (! Schema::hasTable('order_items') || ! Schema::hasColumn('order_items', 'product_id')) {
             return [];
@@ -419,22 +505,35 @@ class DashboardController extends Controller
             return [];
         }
 
+        if ($to) {
+            $to = $this->capToNow($to);
+            if ($from && $from->greaterThan($to)) {
+                return [];
+            }
+        }
+
         $salesQuery = DB::table('order_items')
             ->select('product_id', DB::raw('SUM(' . $quantityColumn . ') as sold_qty'))
-            ->whereNotNull('product_id')
-            ->groupBy('product_id')
+            ->whereNotNull('product_id');
+
+        $orderJoinAvailable = Schema::hasTable('orders') && Schema::hasColumn('order_items', 'order_id');
+        $orderCreatedAtAvailable = $orderJoinAvailable && Schema::hasColumn('orders', 'created_at');
+
+        if ($orderJoinAvailable) {
+            $salesQuery->join('orders', 'orders.id', '=', 'order_items.order_id');
+        }
+
+        if ($orderCreatedAtAvailable && $from && $to) {
+            $salesQuery->whereBetween('orders.created_at', [$from, $to]);
+        }
+
+        if ($orderJoinAvailable && Schema::hasColumn('orders', 'status')) {
+            $salesQuery->where('orders.status', 'completed');
+        }
+
+        $salesQuery->groupBy('product_id')
             ->orderByDesc('sold_qty')
             ->limit($limit);
-
-        if (
-            Schema::hasTable('orders')
-            && Schema::hasColumn('orders', 'status')
-            && Schema::hasColumn('order_items', 'order_id')
-        ) {
-            $salesQuery
-                ->join('orders', 'orders.id', '=', 'order_items.order_id')
-                ->where('orders.status', 'completed');
-        }
 
         $sales = $salesQuery->get();
         if ($sales->isEmpty()) {
