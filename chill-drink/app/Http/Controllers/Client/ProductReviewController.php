@@ -9,6 +9,7 @@ use App\Models\Review;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class ProductReviewController extends Controller
 {
@@ -38,38 +39,46 @@ class ProductReviewController extends Controller
             'status' => true,
         ]);
 
+        // After storing review, if all products in the order have been reviewed by the user,
+        // mark any related review reminder notifications as read.
+        try {
+            $orderId = $eligibleOrderId;
+            $order = Order::with('orderItems')->find($orderId);
+
+            if ($order) {
+                $productIds = $order->orderItems->pluck('product_id')->filter()->unique()->values()->all();
+
+                $remaining = Review::query()
+                    ->where('user_id', $request->user()->id)
+                    ->where('order_id', $orderId)
+                    ->whereIn('product_id', $productIds)
+                    ->pluck('product_id')
+                    ->unique()
+                    ->count();
+
+                $totalProducts = count($productIds);
+
+                if ($totalProducts > 0 && $remaining >= $totalProducts) {
+                    $request->user()->notifications()
+                        ->where('type', \App\Notifications\ReviewAvailableNotification::class)
+                        ->whereJsonContains('data->order_id', $orderId)
+                        ->get()
+                        ->each(function ($n) {
+                            if (is_null($n->read_at)) {
+                                $n->markAsRead();
+                            }
+                        });
+                }
+            }
+        } catch (\Throwable $e) {
+            // non-fatal; notification cleanup best-effort
+        }
+
         return back()->with('success', 'Đánh giá của bạn đã được lưu.');
     }
 
     private function nextEligibleCompletedOrderId(int $userId, int $productId): ?int
     {
-        if (! Schema::hasTable('orders') || ! Schema::hasTable('order_items')) {
-            return null;
-        }
-
-        $query = Order::query()
-            ->select('orders.id')
-            ->join('order_items', 'order_items.order_id', '=', 'orders.id')
-            ->where('orders.user_id', $userId)
-            ->where('order_items.product_id', $productId)
-            ->whereNotExists(function ($subQuery) use ($userId, $productId) {
-                $subQuery->selectRaw('1')
-                    ->from('reviews')
-                    ->whereColumn('reviews.order_id', 'orders.id')
-                    ->where('reviews.user_id', $userId)
-                    ->where('reviews.product_id', $productId);
-            });
-
-        if (Schema::hasColumn('orders', 'status')) {
-            $query->where('orders.status', 'completed');
-        }
-
-        if (Schema::hasColumn('orders', 'created_at')) {
-            $query->latest('orders.created_at');
-        } else {
-            $query->orderByDesc('orders.id');
-        }
-
-        return $query->value('orders.id');
+        return \App\Models\Review::nextEligibleCompletedOrderId($userId, $productId);
     }
 }

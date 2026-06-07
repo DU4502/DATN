@@ -176,7 +176,7 @@ class DashboardController extends Controller
                 ...$period,
                 'range' => $period['from']->isSameDay($period['to'])
                     ? $period['from']->format('d/m/Y')
-                    : $period['from']->format('d/m/Y').' - '.$period['to']->format('d/m/Y'),
+                    : $period['from']->format('d/m/Y') . ' - ' . $period['to']->format('d/m/Y'),
                 'orders' => $this->orderCountFor($period['from'], $period['to']),
                 'revenue' => $this->revenueFor($period['from'], $period['to'], $amountColumn),
             ];
@@ -269,7 +269,7 @@ class DashboardController extends Controller
 
         $delta = $currentValue - $previousValue;
         $percent = abs(($delta / $previousValue) * 100);
-        $formattedPercent = number_format($percent, 1, ',', '.').'%';
+        $formattedPercent = number_format($percent, 1, ',', '.') . '%';
 
         if (abs($delta) < 0.00001) {
             return [
@@ -320,7 +320,7 @@ class DashboardController extends Controller
             for ($i = 0; $i < 7; $i++) {
                 $slotStart = $start->copy()->addDays($i)->startOfDay();
                 $slotEnd = $slotStart->copy()->endOfDay();
-                $slots[] = ['label' => 'T'.($i + 2), 'from' => $slotStart, 'to' => $slotEnd];
+                $slots[] = ['label' => 'T' . ($i + 2), 'from' => $slotStart, 'to' => $slotEnd];
             }
         } elseif ($period === 'month') {
             $cursor = $now->copy()->startOfMonth();
@@ -342,7 +342,7 @@ class DashboardController extends Controller
                 $slotStart = $now->copy()->startOfYear()->month($m)->startOfMonth();
                 $slotEnd = $slotStart->copy()->endOfMonth();
 
-                $slots[] = ['label' => 'T'.$m, 'from' => $slotStart, 'to' => $slotEnd];
+                $slots[] = ['label' => 'T' . $m, 'from' => $slotStart, 'to' => $slotEnd];
             }
         }
 
@@ -352,13 +352,13 @@ class DashboardController extends Controller
 
             if ($metric === 'revenue') {
                 $value = $this->revenueBetween($slot['from'], $slot['to'], $amountColumn);
-                $tooltipValue = number_format($value, 0, ',', '.').'đ';
+                $tooltipValue = number_format($value, 0, ',', '.') . 'đ';
             } elseif ($metric === 'orders') {
                 $value = $this->orderCountFor($slot['from'], $slot['to']);
-                $tooltipValue = number_format($value, 0, ',', '.').' đơn';
+                $tooltipValue = number_format($value, 0, ',', '.') . ' đơn';
             } elseif ($metric === 'users') {
                 $value = $this->newUsersBetween($slot['from'], $slot['to']);
-                $tooltipValue = number_format($value, 0, ',', '.').' tài khoản';
+                $tooltipValue = number_format($value, 0, ',', '.') . ' tài khoản';
             }
 
             return [
@@ -414,7 +414,7 @@ class DashboardController extends Controller
         }
 
         $salesQuery = DB::table('order_items')
-            ->select('product_id', DB::raw('SUM('.$quantityColumn.') as sold_qty'))
+            ->select('product_id', DB::raw('SUM(' . $quantityColumn . ') as sold_qty'))
             ->whereNotNull('product_id')
             ->groupBy('product_id')
             ->orderByDesc('sold_qty')
@@ -451,7 +451,7 @@ class DashboardController extends Controller
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
-                    'sku' => $product->sku ?? ('#'.$product->id),
+                    'sku' => $product->sku ?? ('#' . $product->id),
                     'image_url' => $product->image_url,
                     'sold_qty' => (int) $row->sold_qty,
                 ];

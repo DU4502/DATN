@@ -205,7 +205,7 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            return redirect()->route('home')->with('success', 'Đặt hàng thành công!');
+            return redirect()->route('profile.orders')->with('success', 'Đặt hàng thành công!');
             
         } catch (Throwable $e) {
             if (DB::transactionLevel() > 0) {

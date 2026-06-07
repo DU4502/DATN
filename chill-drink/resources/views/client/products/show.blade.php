@@ -242,7 +242,7 @@
         overflow: hidden;
     }
 
-    .review-meter > span {
+    .review-meter>span {
         display: block;
         height: 100%;
         background: linear-gradient(90deg, #f59e0b, #fbbf24);
@@ -293,8 +293,8 @@
     }
 
     .review-rating-input label:hover,
-    .review-rating-input label:hover ~ label,
-    .review-rating-input input:checked ~ label {
+    .review-rating-input label:hover~label,
+    .review-rating-input input:checked~label {
         color: #f59e0b;
         transform: translateY(-1px);
     }
@@ -345,24 +345,24 @@
         <div class="row g-4 g-xl-5 align-items-start">
             <div class="col-lg-5">
                 @php
-                    $detailCategory = $product->category->name ?? null;
-                    $detailGalleryImages = $product instanceof \App\Models\Product
-                        ? $product->gallery_images
-                        : ($product->gallery_images ?? []);
+                $detailCategory = $product->category->name ?? null;
+                $detailGalleryImages = $product instanceof \App\Models\Product
+                ? $product->gallery_images
+                : ($product->gallery_images ?? []);
 
-                    if (empty($detailGalleryImages)) {
-                        $detailGalleryImages = $uiGetProductGallery(
-                            $product->sku ?? null,
-                            $detailCategory,
-                            $product->name,
-                            6,
-                            $product->image_url ?? $product->image ?? null
-                        );
-                    }
+                if (empty($detailGalleryImages)) {
+                $detailGalleryImages = $uiGetProductGallery(
+                $product->sku ?? null,
+                $detailCategory,
+                $product->name,
+                6,
+                $product->image_url ?? $product->image ?? null
+                );
+                }
 
-                    $detailMainImage = $detailGalleryImages[0]
-                        ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
-                    $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
+                $detailMainImage = $detailGalleryImages[0]
+                ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
+                $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
                 @endphp
                 <div class="detail-gallery">
                     <div class="detail-photo-card">
@@ -372,30 +372,28 @@
                             alt="{{ $product->name }}"
                             style="width:100%;height:100%;object-fit:cover;"
                             data-detail-fallback="{{ $detailFallbackImage }}"
-                            onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';"
-                        >
+                            onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
                         @if(count($detailGalleryImages) > 1)
-                            <button type="button" class="detail-gallery-nav prev" data-gallery-prev aria-label="Ảnh trước">
-                                <i class="bi bi-chevron-left"></i>
-                            </button>
-                            <button type="button" class="detail-gallery-nav next" data-gallery-next aria-label="Ảnh tiếp theo">
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
+                        <button type="button" class="detail-gallery-nav prev" data-gallery-prev aria-label="Ảnh trước">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button type="button" class="detail-gallery-nav next" data-gallery-next aria-label="Ảnh tiếp theo">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
                         @endif
                     </div>
                     @if(count($detailGalleryImages) > 1)
-                        <div class="detail-thumbs" aria-label="Ảnh sản phẩm">
-                            @foreach($detailGalleryImages as $index => $image)
-                                <button
-                                    type="button"
-                                    class="detail-thumb {{ $index === 0 ? 'active' : '' }}"
-                                    data-detail-thumb="{{ $image }}"
-                                    aria-label="Xem ảnh {{ $index + 1 }}"
-                                >
-                                    <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
-                                </button>
-                            @endforeach
-                        </div>
+                    <div class="detail-thumbs" aria-label="Ảnh sản phẩm">
+                        @foreach($detailGalleryImages as $index => $image)
+                        <button
+                            type="button"
+                            class="detail-thumb {{ $index === 0 ? 'active' : '' }}"
+                            data-detail-thumb="{{ $image }}"
+                            aria-label="Xem ảnh {{ $index + 1 }}">
+                            <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
+                        </button>
+                        @endforeach
+                    </div>
                     @endif
                 </div>
             </div>
@@ -406,7 +404,7 @@
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
                         <h1 class="display-5 fw-bold mb-3">{{ $product->name }}</h1>
                         @if(!empty($product->sku))
-                            <p class="text-secondary small font-monospace mb-2">Mã sản phẩm: {{ $product->sku }}</p>
+                        <p class="text-secondary small font-monospace mb-2">Mã sản phẩm: {{ $product->sku }}</p>
                         @endif
                         <p class="h2 text-primary fw-bold mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
                     </div>
@@ -478,14 +476,14 @@
                             </div>
 
                             @if(($product->stock ?? 1) > 0)
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
-                                    @csrf
-                                    <input type="hidden" name="size" value="M" data-size-input>
-                                    <input type="hidden" name="quantity" value="1" data-qty-input>
-                                    <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
-                                </form>
+                            <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
+                                @csrf
+                                <input type="hidden" name="size" value="M" data-size-input>
+                                <input type="hidden" name="quantity" value="1" data-qty-input>
+                                <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
+                            </form>
                             @else
-                                <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
+                            <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
                             @endif
                         </div>
                     </div>
@@ -493,14 +491,14 @@
             </div>
         </div>
 
-        <section class="mt-5 pt-2">
+        <section id="reviews" class="mt-5 pt-2">
             @php
-                $reviewSummary = $reviewSummary ?? ['count' => 0, 'average' => 0, 'counts' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0]];
-                $approvedReviews = $approvedReviews ?? collect();
-                $reviewFormState = $reviewFormState ?? ['can_review' => false, 'message' => null, 'remaining_reviews' => 0];
-                $reviewCount = (int) ($reviewSummary['count'] ?? 0);
-                $reviewAverage = (float) ($reviewSummary['average'] ?? 0);
-                $remainingReviews = (int) ($reviewFormState['remaining_reviews'] ?? 0);
+            $reviewSummary = $reviewSummary ?? ['count' => 0, 'average' => 0, 'counts' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0]];
+            $approvedReviews = $approvedReviews ?? collect();
+            $reviewFormState = $reviewFormState ?? ['can_review' => false, 'message' => null, 'remaining_reviews' => 0];
+            $reviewCount = (int) ($reviewSummary['count'] ?? 0);
+            $reviewAverage = (float) ($reviewSummary['average'] ?? 0);
+            $remainingReviews = (int) ($reviewFormState['remaining_reviews'] ?? 0);
             @endphp
             <div class="review-shell p-4 p-lg-5">
                 <div class="row g-4 align-items-start">
@@ -511,21 +509,21 @@
                             <div class="review-star-row mb-2" aria-label="Điểm trung bình {{ $reviewAverage }} trên 5">
                                 @for($star = 1; $star <= 5; $star++)
                                     <i class="bi {{ $reviewAverage >= $star ? 'bi-star-fill' : ($reviewAverage >= ($star - 0.5) ? 'bi-star-half' : 'bi-star') }}"></i>
-                                @endfor
+                                    @endfor
                             </div>
                             <p class="text-secondary mb-4">{{ $reviewCount > 0 ? number_format($reviewCount) . ' lượt đánh giá từ khách đã mua' : 'Chưa có đánh giá nào cho sản phẩm này.' }}</p>
 
                             <div class="d-flex flex-column gap-3">
                                 @for($star = 5; $star >= 1; $star--)
-                                    @php
-                                        $starCount = (int) ($reviewSummary['counts'][$star] ?? 0);
-                                        $starPercent = $reviewCount > 0 ? (int) round(($starCount / $reviewCount) * 100) : 0;
-                                    @endphp
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="small fw-semibold text-secondary" style="width: 54px;">{{ $star }} sao</div>
-                                        <div class="review-meter flex-grow-1"><span style="width: {{ $starPercent }}%"></span></div>
-                                        <div class="small fw-semibold text-secondary" style="width: 42px;">{{ $starCount }}</div>
-                                    </div>
+                                @php
+                                $starCount = (int) ($reviewSummary['counts'][$star] ?? 0);
+                                $starPercent = $reviewCount > 0 ? (int) round(($starCount / $reviewCount) * 100) : 0;
+                                @endphp
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="small fw-semibold text-secondary" style="width: 54px;">{{ $star }} sao</div>
+                                    <div class="review-meter flex-grow-1"><span style="width: {{ $starPercent }}%"></span></div>
+                                    <div class="small fw-semibold text-secondary" style="width: 42px;">{{ $starCount }}</div>
+                                </div>
                                 @endfor
                             </div>
                         </div>
@@ -539,99 +537,98 @@
                                     <p class="text-secondary mb-0">Mỗi lần mua chỉ được gửi một đánh giá cho sản phẩm này.</p>
                                 </div>
                                 @if($remainingReviews > 0)
-                                    <span class="badge text-bg-light border">Còn {{ $remainingReviews }} lượt đánh giá</span>
+                                <span class="badge text-bg-light border">Còn {{ $remainingReviews }} lượt đánh giá</span>
                                 @endif
                             </div>
 
                             @if(session('success'))
-                                <div class="alert alert-success">{{ session('success') }}</div>
+                            <div class="alert alert-success">{{ session('success') }}</div>
                             @endif
 
                             @auth
-                                @if($reviewFormState['can_review'])
-                                    <form method="POST" action="{{ route('products.reviews.store', $product) }}">
-                                        @csrf
-                                        <div class="mb-3">
-                                            <label class="form-label">Số sao</label>
-                                            <div class="review-rating-input">
-                                                @for($star = 5; $star >= 1; $star--)
-                                                    <input
-                                                        type="radio"
-                                                        id="rating-{{ $star }}"
-                                                        name="rating"
-                                                        value="{{ $star }}"
-                                                        @checked((int) old('rating', $userReview->rating ?? 0) === $star)
-                                                    >
-                                                    <label for="rating-{{ $star }}" title="{{ $star }} sao"><i class="bi bi-star-fill"></i></label>
-                                                @endfor
-                                            </div>
-                                            @error('rating')
-                                                <div class="text-danger small mt-2">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-
-                                        <div class="mb-3">
-                                            <label for="review-comment" class="form-label">Nhận xét</label>
-                                            <textarea
-                                                id="review-comment"
-                                                name="comment"
-                                                rows="4"
-                                                class="form-control"
-                                                placeholder="Chia sẻ cảm nhận về hương vị, chất lượng và trải nghiệm của bạn..."
-                                            >{{ old('comment', $userReview->comment ?? '') }}</textarea>
-                                            @error('comment')
-                                                <div class="text-danger small mt-2">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-
-                                        <button type="submit" class="btn btn-primary">
-                                            Gửi đánh giá
-                                        </button>
-                                    </form>
-                                @else
-                                    <div class="alert alert-warning mb-0">
-                                        {{ $reviewFormState['message'] ?? 'Bạn chưa đủ điều kiện để đánh giá sản phẩm này.' }}
+                            @if($reviewFormState['can_review'])
+                            <form method="POST" action="{{ route('products.reviews.store', $product) }}">
+                                @csrf
+                                <div class="mb-3">
+                                    <label class="form-label">Số sao</label>
+                                    <div class="review-rating-input">
+                                        @for($star = 5; $star >= 1; $star--)
+                                        <input
+                                            type="radio"
+                                            id="rating-{{ $star }}"
+                                            name="rating"
+                                            value="{{ $star }}"
+                                            @checked((int) old('rating', $userReview->rating ?? 0) === $star)
+                                        >
+                                        <label for="rating-{{ $star }}" title="{{ $star }} sao"><i class="bi bi-star-fill"></i></label>
+                                        @endfor
                                     </div>
-                                @endif
-                            @else
-                                <div class="alert alert-info mb-0">
-                                    <a href="{{ route('login') }}" class="fw-semibold text-decoration-none">Đăng nhập</a> để đánh giá sau khi bạn đã mua sản phẩm.
+                                    @error('rating')
+                                    <div class="text-danger small mt-2">{{ $message }}</div>
+                                    @enderror
                                 </div>
+
+                                <div class="mb-3">
+                                    <label for="review-comment" class="form-label">Nhận xét</label>
+                                    <textarea
+                                        id="review-comment"
+                                        name="comment"
+                                        rows="4"
+                                        class="form-control"
+                                        placeholder="Chia sẻ cảm nhận về hương vị, chất lượng và trải nghiệm của bạn...">{{ old('comment', $userReview->comment ?? '') }}</textarea>
+                                    @error('comment')
+                                    <div class="text-danger small mt-2">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <button type="submit" class="btn btn-primary">
+                                    Gửi đánh giá
+                                </button>
+                            </form>
+                            @else
+                            <div class="alert alert-warning mb-0">
+                                {{ $reviewFormState['message'] ?? 'Bạn chưa đủ điều kiện để đánh giá sản phẩm này.' }}
+                            </div>
+                            @endif
+                            @else
+                            <div class="alert alert-info mb-0">
+                                <a href="{{ route('login') }}" class="fw-semibold text-decoration-none">Đăng nhập</a> để đánh giá sau khi bạn đã mua sản phẩm.
+                            </div>
                             @endauth
                         </div>
 
                         <div class="d-flex flex-column gap-3">
                             @forelse($approvedReviews as $review)
-                                <article class="review-card p-4">
-                                    <div class="d-flex gap-3">
-                                        <span class="review-avatar">{{ mb_substr($review->user?->name ?? 'U', 0, 1) }}</span>
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                                                <div>
-                                                    <div class="fw-bold">{{ $review->user?->name ?? 'Khách hàng' }}</div>
-                                                    <div class="review-star-row small">
-                                                        @for($star = 1; $star <= 5; $star++)
-                                                            <i class="bi {{ (int) $review->rating >= $star ? 'bi-star-fill' : 'bi-star' }}"></i>
+                            <article class="review-card p-4">
+                                <div class="d-flex gap-3">
+                                    <span class="review-avatar">{{ mb_substr($review->user?->name ?? 'U', 0, 1) }}</span>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                            <div>
+                                                <div class="fw-bold">{{ $review->user?->name ?? 'Khách hàng' }}</div>
+                                                <div class="review-star-row small">
+                                                    @for($star = 1; $star <= 5; $star++)
+                                                        <i class="bi {{ (int) $review->rating >= $star ? 'bi-star-fill' : 'bi-star' }}"></i>
                                                         @endfor
-                                                    </div>
-                                                </div>
-                                                <div class="text-secondary small">
-                                                    {{ optional($review->created_at)->format('d/m/Y H:i') }}
                                                 </div>
                                             </div>
-
-                                            @if(filled($review->comment))
-                                                <p class="mb-0 text-secondary">{{ $review->comment }}</p>
-                                            @else
-                                                <p class="mb-0 text-secondary fst-italic">Khách hàng đã để lại đánh giá sao mà không viết nhận xét.</p>
-                                            @endif
+                                            <div class="text-secondary small">
+                                                {{ optional($review->created_at)->format('d/m/Y H:i') }}
+                                            </div>
                                         </div>
+
+                                        @if(filled($review->comment))
+                                        <p class="mb-0 text-secondary">{{ $review->comment }}</p>
+                                        @else
+                                        <p class="mb-0 text-secondary fst-italic">Khách hàng đã để lại đánh giá sao mà không viết nhận xét.</p>
+                                        @endif
                                     </div>
-                                </article>
-                            @empty
-                                <div class="review-card p-4 text-secondary">
-                                    Chưa có nhận xét nào. Hãy là người đầu tiên đánh giá sản phẩm này sau khi nhận hàng.
                                 </div>
+                            </article>
+                            @empty
+                            <div class="review-card p-4 text-secondary">
+                                Chưa có nhận xét nào. Hãy là người đầu tiên đánh giá sản phẩm này sau khi nhận hàng.
+                            </div>
                             @endforelse
                         </div>
                     </div>
@@ -650,48 +647,47 @@
 
             <div class="row g-4">
                 @forelse($relatedProducts as $item)
-                    <div class="col-sm-6 col-lg-3">
-                        <div class="related-card drink-card card border-0 h-100 overflow-hidden">
-                            <a href="{{ route('products.show', $item->slug) }}">
-                                <x-product-image
-                                    :src="$item->image_url ?? null"
-                                    :sku="$item->sku ?? null"
-                                    :name="$item->name"
-                                    :alt="$item->name"
-                                    :category="$item->category?->name"
-                                    class="card-img-top"
-                                    style="aspect-ratio: 4/3;"
-                                />
-                            </a>
-                            <div class="card-body">
-                                <h3 class="h5">
-                                    <a href="{{ route('products.show', $item->slug) }}" class="text-dark text-decoration-none">{{ $item->name }}</a>
-                                </h3>
-                                <strong class="text-primary">{{ number_format($item->price ?? 0, 0, ',', '.') }}đ</strong>
-                            </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="related-card drink-card card border-0 h-100 overflow-hidden">
+                        <a href="{{ route('products.show', $item->slug) }}">
+                            <x-product-image
+                                :src="$item->image_url ?? null"
+                                :sku="$item->sku ?? null"
+                                :name="$item->name"
+                                :alt="$item->name"
+                                :category="$item->category?->name"
+                                class="card-img-top"
+                                style="aspect-ratio: 4/3;" />
+                        </a>
+                        <div class="card-body">
+                            <h3 class="h5">
+                                <a href="{{ route('products.show', $item->slug) }}" class="text-dark text-decoration-none">{{ $item->name }}</a>
+                            </h3>
+                            <strong class="text-primary">{{ number_format($item->price ?? 0, 0, ',', '.') }}đ</strong>
                         </div>
                     </div>
+                </div>
                 @empty
-                    @foreach([
-                        ['Cà phê ủ lạnh vani', '55.000đ', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85', 'cold-brew-arctic'],
-                        ['Trà Earl Grey Đá', '45.000đ', 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=85', 'tropical-frost'],
-                        ['Trà hoa bụp giấm mát lạnh', '52.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85', 'citrus-sunset'],
-                        ['Trà Sữa Khoai Môn', '60.000đ', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85', 'tra-sua-tran-chau-demo'],
-                    ] as $item)
-                        <div class="col-sm-6 col-lg-3">
-                            <div class="related-card drink-card card border-0 h-100 overflow-hidden">
-                                <a href="{{ route('products.show', $item[3]) }}">
-                                    <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
-                                </a>
-                                <div class="card-body">
-                                    <h3 class="h5">
-                                        <a href="{{ route('products.show', $item[3]) }}" class="text-dark text-decoration-none">{{ $item[0] }}</a>
-                                    </h3>
-                                    <strong class="text-primary">{{ $item[1] }}</strong>
-                                </div>
-                            </div>
+                @foreach([
+                ['Cà phê ủ lạnh vani', '55.000đ', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=85', 'cold-brew-arctic'],
+                ['Trà Earl Grey Đá', '45.000đ', 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=85', 'tropical-frost'],
+                ['Trà hoa bụp giấm mát lạnh', '52.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85', 'citrus-sunset'],
+                ['Trà Sữa Khoai Môn', '60.000đ', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=85', 'tra-sua-tran-chau-demo'],
+                ] as $item)
+                <div class="col-sm-6 col-lg-3">
+                    <div class="related-card drink-card card border-0 h-100 overflow-hidden">
+                        <a href="{{ route('products.show', $item[3]) }}">
+                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
+                        </a>
+                        <div class="card-body">
+                            <h3 class="h5">
+                                <a href="{{ route('products.show', $item[3]) }}" class="text-dark text-decoration-none">{{ $item[0] }}</a>
+                            </h3>
+                            <strong class="text-primary">{{ $item[1] }}</strong>
                         </div>
-                    @endforeach
+                    </div>
+                </div>
+                @endforeach
                 @endforelse
             </div>
         </section>
@@ -699,11 +695,11 @@
 </section>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('[data-choice-group]').forEach(function (group) {
-            group.querySelectorAll('.choice-btn').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    group.querySelectorAll('.choice-btn').forEach(function (item) {
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-choice-group]').forEach(function(group) {
+            group.querySelectorAll('.choice-btn').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    group.querySelectorAll('.choice-btn').forEach(function(item) {
                         item.classList.remove('active');
                     });
                     button.classList.add('active');
@@ -718,31 +714,53 @@
 
         if (minus && plus && value) {
             let qty = 1;
-            const render = function () {
+            const render = function() {
                 value.textContent = qty;
                 if (qtyInput) {
                     qtyInput.value = qty;
                 }
             };
 
-            minus.addEventListener('click', function () {
+            minus.addEventListener('click', function() {
                 qty = Math.max(1, qty - 1);
                 render();
             });
 
-            plus.addEventListener('click', function () {
+            plus.addEventListener('click', function() {
                 qty += 1;
                 render();
             });
+        }
+
+        // If user navigated with #reviews, scroll to review form and focus
+        if (window.location.hash === '#reviews') {
+            const reviewPanel = document.querySelector('.review-form-panel');
+            const reviewComment = document.getElementById('review-comment');
+            if (reviewPanel) {
+                // Scroll the review panel into view and focus the textarea when possible
+                reviewPanel.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                setTimeout(function() {
+                    if (reviewComment) {
+                        reviewComment.focus();
+                    } else {
+                        // fallback: focus first input inside the panel
+                        const firstInput = reviewPanel.querySelector('input, textarea, button');
+                        firstInput?.focus();
+                    }
+                }, 450);
+            }
         }
 
         const sizeGroup = document.querySelector('[data-size-group]');
         const sizeInput = document.querySelector('[data-size-input]');
 
         if (sizeGroup && sizeInput) {
-            sizeGroup.querySelectorAll('[data-size-option]').forEach(function (button) {
-                button.addEventListener('click', function () {
-                    sizeGroup.querySelectorAll('[data-size-option]').forEach(function (item) {
+            sizeGroup.querySelectorAll('[data-size-option]').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    sizeGroup.querySelectorAll('[data-size-option]').forEach(function(item) {
                         item.classList.remove('active');
                     });
                     button.classList.add('active');
@@ -757,14 +775,14 @@
         const nextButton = document.querySelector('[data-gallery-next]');
         let activeImageIndex = 0;
 
-        const setActiveImage = function (index) {
+        const setActiveImage = function(index) {
             if (!mainImage || !thumbs.length) {
                 return;
             }
 
             activeImageIndex = (index + thumbs.length) % thumbs.length;
 
-            thumbs.forEach(function (item) {
+            thumbs.forEach(function(item) {
                 item.classList.remove('active');
             });
 
@@ -772,8 +790,8 @@
             activeThumb.classList.add('active');
             mainImage.style.opacity = '0';
 
-            setTimeout(function () {
-                mainImage.onerror = function () {
+            setTimeout(function() {
+                mainImage.onerror = function() {
                     mainImage.onerror = null;
                     mainImage.src = mainImage.dataset.detailFallback || '';
                 };
@@ -783,17 +801,17 @@
         };
 
         if (mainImage && thumbs.length) {
-            thumbs.forEach(function (thumb, index) {
-                thumb.addEventListener('click', function () {
+            thumbs.forEach(function(thumb, index) {
+                thumb.addEventListener('click', function() {
                     setActiveImage(index);
                 });
             });
 
-            prevButton?.addEventListener('click', function () {
+            prevButton?.addEventListener('click', function() {
                 setActiveImage(activeImageIndex - 1);
             });
 
-            nextButton?.addEventListener('click', function () {
+            nextButton?.addEventListener('click', function() {
                 setActiveImage(activeImageIndex + 1);
             });
         }
