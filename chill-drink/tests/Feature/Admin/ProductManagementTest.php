@@ -63,8 +63,14 @@ class ProductManagementTest extends TestCase
         $this->assertNotNull($product);
         $this->assertNotNull($product->image);
         $this->assertStringStartsWith('products/', $product->image);
+        $this->assertStringContainsString('/storage/products/', $product->image_url);
         Storage::disk('public')->assertExists($product->image);
         $response->assertRedirect(route('admin.products.show', $product->id));
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.show', $product->id))
+            ->assertOk()
+            ->assertSee('/storage/products/', false);
     }
 
     public function test_admin_can_update_product(): void
@@ -139,7 +145,45 @@ class ProductManagementTest extends TestCase
         Storage::disk('public')->assertMissing($oldPath);
         Storage::disk('public')->assertExists($product->image);
         $this->assertNotSame($oldPath, $product->image);
+        $this->assertStringContainsString('/storage/products/', $product->image_url);
         $response->assertRedirect(route('admin.products.show', $product->id));
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.edit', $product->id))
+            ->assertOk()
+            ->assertSee('/storage/products/', false);
+    }
+
+    public function test_uploaded_product_gallery_does_not_append_generated_placeholder_images(): void
+    {
+        Storage::fake('public');
+
+        $category = Category::create([
+            'name' => 'Cà Phê',
+            'slug' => 'ca-phe',
+            'status' => true,
+        ]);
+
+        $mainPath = $this->imageUpload('main.png')->store('products', 'public');
+        $galleryPath = $this->imageUpload('gallery.png')->store('products/gallery', 'public');
+
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Cà phê upload',
+            'slug' => 'ca-phe-upload',
+            'image' => $mainPath,
+            'gallery_images' => [$galleryPath],
+            'price' => 30000,
+            'stock' => 10,
+            'status' => true,
+        ]);
+
+        $galleryImages = $product->fresh()->gallery_images;
+
+        $this->assertCount(2, $galleryImages);
+        $this->assertStringContainsString('/storage/products/', $galleryImages[0]);
+        $this->assertStringContainsString('/storage/products/gallery/', $galleryImages[1]);
+        $this->assertFalse(collect($galleryImages)->contains(fn (string $image) => str_contains($image, 'images.unsplash.com')));
     }
 
     public function test_admin_can_delete_product_without_orders(): void
