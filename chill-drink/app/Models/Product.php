@@ -140,6 +140,17 @@ class Product extends Model
             ))
             ->all();
 
+        $mainImage = $this->image_url;
+
+        if (! empty($this->image) || ! empty($manualImages)) {
+            return collect([$mainImage])
+                ->merge($manualImages)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
         $generatedImages = ProductImage::gallery(
             $this->image,
             $this->category?->name,
@@ -147,11 +158,9 @@ class Product extends Model
             1000,
         );
 
-        $mainImage = $generatedImages[0] ?? $this->image_url;
-
         return collect([$mainImage])
-            ->merge($manualImages)
             ->merge($generatedImages)
+            ->filter()
             ->unique()
             ->values()
             ->all();
