@@ -185,10 +185,10 @@
     </div>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
         <p class="text-secondary mb-0">
-            @if($totalCustomers > 0)
-                Đang hiển thị {{ $users->count() }} / {{ $totalCustomers }} khách hàng
+            @if($users->total() > 0)
+                Đang hiển thị {{ $users->count() }} / {{ $users->total() }} người dùng
             @else
-                Chưa có khách hàng đăng ký
+                Chưa có người dùng phù hợp
             @endif
         </p>
         {{ $users->links('pagination::bootstrap-5') }}

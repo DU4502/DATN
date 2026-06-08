@@ -10,9 +10,9 @@
         <h2 class="h2 fw-bold mb-1">Danh mục đồ uống</h2>
         <p class="text-secondary mb-0">Nhóm sản phẩm để khách hàng tìm kiếm nhanh hơn.</p>
     </div>
-    <button type="button" class="btn btn-primary align-self-start align-self-lg-auto">
+    <a href="{{ route('admin.categories.create') }}" class="btn btn-primary align-self-start align-self-lg-auto">
         <i class="bi bi-plus-circle me-1"></i>Thêm danh mục
-    </button>
+    </a>
 </section>
 
 <section class="row g-4 mb-4">
@@ -65,11 +65,12 @@
                     <th class="text-center">Sản phẩm</th>
                     <th class="text-center">Trạng thái</th>
                     <th>Ngày tạo</th>
+                    <th class="text-end">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($categories as $category)
-                    @php($categoryImage = $uiCategoryImages[$category->name] ?? $uiDefaultImage)
+                    @php($categoryImage = $category->image ? asset('storage/' . $category->image) : ($uiCategoryImages[$category->name] ?? $uiDefaultImage))
                     <tr>
                         <td>
                             <img src="{{ $categoryImage }}" alt="{{ $category->name }}" class="admin-thumb" style="object-fit: cover; padding: 0;">
@@ -91,10 +92,24 @@
                             </span>
                         </td>
                         <td class="text-secondary">{{ optional($category->created_at)->format('d/m/Y') }}</td>
+                        <td class="text-end text-nowrap">
+                            <a href="{{ route('admin.categories.edit', $category) }}" class="admin-action text-decoration-none" title="Sửa danh mục">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            @if((int) $category->products_count === 0)
+                                <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline" onsubmit="return confirm('Xóa danh mục này?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="admin-action" title="Xóa danh mục" style="color: var(--a-danger);">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-secondary py-5">
+                        <td colspan="7" class="text-center text-secondary py-5">
                             <div class="fw-bold text-dark mb-1">Chưa có danh mục</div>
                             <div>Các nhóm đồ uống sẽ hiển thị tại đây khi có dữ liệu.</div>
                         </td>
