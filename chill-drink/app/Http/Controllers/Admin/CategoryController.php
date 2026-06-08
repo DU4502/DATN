@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
@@ -35,9 +37,18 @@ class CategoryController extends Controller
         // Validation dữ liệu đầu vào (Đã bổ sung ràng buộc cho status và slug)
         $validated = $request->validate([
             'name'   => 'required|string|max:255|unique:categories,name',
-            'slug'   => 'required|string|max:255|unique:categories,slug',
-            'status' => 'required|in:0,1',
+            'slug'   => 'nullable|string|max:255|unique:categories,slug',
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
+            'status' => 'nullable|in:0,1',
         ]);
+
+        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['status'] = $request->boolean('status');
+
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('categories', 'public');
+        }
 
         // Tạo danh mục (Dữ liệu status lấy trực tiếp từ giá trị select option)
         Category::create($validated);
@@ -71,9 +82,22 @@ class CategoryController extends Controller
         // Validation khi cập nhật (Bỏ qua trùng tên và trùng slug của chính bản ghi hiện tại)
         $validated = $request->validate([
             'name'   => 'required|string|max:255|unique:categories,name,' . $category->id,
-            'slug'   => 'required|string|max:255|unique:categories,slug,' . $category->id,
-            'status' => 'required|in:0,1',
+            'slug'   => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
+            'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
+            'status' => 'nullable|in:0,1',
         ]);
+
+        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['status'] = $request->boolean('status');
+
+        if ($request->hasFile('image')) {
+            if ($category->image) {
+                Storage::disk('public')->delete($category->image);
+            }
+
+            $validated['image'] = $request->file('image')->store('categories', 'public');
+        }
 
         // Cập nhật toàn bộ mảng dữ liệu đã qua kiểm tra bảo mật
         $category->update($validated);
@@ -92,6 +116,10 @@ class CategoryController extends Controller
         if ($category->products()->exists()) {
             return redirect()->route('admin.categories.index')
                 ->with('error', 'Không thể xóa! Danh mục này đang chứa sản phẩm.');
+        }
+
+        if ($category->image) {
+            Storage::disk('public')->delete($category->image);
         }
 
         $category->delete();
