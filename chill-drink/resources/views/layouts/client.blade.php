@@ -966,8 +966,6 @@
             }
         }
 
-<<<<<<< Updated upstream
-=======
         /* ─── Mini Bar Chart ─── */
         /* COMMENTED OUT - Mini chart decoration (not used) - Có thể xóa sau
         .mini-chart {
@@ -1062,7 +1060,6 @@
             }
         }
         END COMMENT */
->>>>>>> Stashed changes
     </style>
 </head>
 
@@ -1088,8 +1085,6 @@
                     </li>
                 </ul>
 
-<<<<<<< Updated upstream
-=======
                 {{-- COMMENTED OUT - Mini chart decoration (not used) - Có thể xóa sau
                 <div class="d-none d-lg-flex align-items-end ms-lg-5 me-lg-4" aria-hidden="true">
                     <div class="mini-chart">
@@ -1102,7 +1097,6 @@
                 </div>
                 --}}
 
->>>>>>> Stashed changes
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
                         <div class="position-relative flex-grow-1">
