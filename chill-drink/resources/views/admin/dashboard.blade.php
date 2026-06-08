@@ -56,10 +56,33 @@
         box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.1);
     }
 
+    .stat-card.chart-trigger.active[data-chart-type="orders"],
+    .stat-card.chart-trigger.active[data-chart-type="users"] {
+        border-color: var(--chart-accent-strong);
+        box-shadow: 0 0 0 3px var(--chart-accent-soft);
+    }
+
     .stat-card:hover {
         transform: translateY(-4px);
         box-shadow: var(--shadow-md);
         border-color: rgba(13, 147, 115, 0.3);
+    }
+
+    .stat-card[data-chart-type="orders"] {
+        --chart-accent: #F9A8D4;
+        --chart-accent-strong: #EC4899;
+        --chart-accent-soft: rgba(249, 168, 212, 0.32);
+    }
+
+    .stat-card[data-chart-type="orders"] .stat-icon.info {
+        background: rgba(249, 168, 212, 0.28);
+        color: #EC4899;
+    }
+
+    .stat-card[data-chart-type="users"] {
+        --chart-accent: #FDE68A;
+        --chart-accent-strong: #F59E0B;
+        --chart-accent-soft: rgba(253, 230, 138, 0.36);
     }
 
     .stat-icon {
@@ -152,8 +175,21 @@
         border-radius: 4px 4px 0 0;
     }
 
+    .stat-card[data-chart-type="orders"] .sparkline,
+    .stat-card[data-chart-type="users"] .sparkline {
+        opacity: 0.42 !important;
+        filter: none !important;
+    }
+
+    .stat-card[data-chart-type="orders"] .spark-bar,
+    .stat-card[data-chart-type="users"] .spark-bar {
+        background: var(--chart-accent);
+    }
+
     /* Animated Chart Mockup */
     .chart-mockup {
+        --chart-accent: var(--a-primary-light);
+        --chart-accent-strong: var(--a-primary);
         height: 300px;
         width: 100%;
         border-radius: var(--radius-lg);
@@ -169,7 +205,7 @@
 
     .chart-col {
         width: calc(100% / var(--bar-count, 12) - 10px);
-        background: linear-gradient(180deg, var(--a-primary-light) 0%, var(--a-primary) 100%);
+        background: linear-gradient(180deg, var(--chart-accent) 0%, var(--chart-accent-strong) 100%);
         border-radius: 6px 6px 0 0;
         position: relative;
         opacity: 0.8;
@@ -193,6 +229,16 @@
     .chart-col.active {
         opacity: 1;
         filter: saturate(1.1);
+    }
+
+    .chart-mockup[data-active-chart="orders"] {
+        --chart-accent: #F9A8D4;
+        --chart-accent-strong: #EC4899;
+    }
+
+    .chart-mockup[data-active-chart="users"] {
+        --chart-accent: #FDE68A;
+        --chart-accent-strong: #F59E0B;
     }
 
     .chart-tooltip {
@@ -355,6 +401,16 @@ $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
             <div class="stat-label">Khách hàng</div>
             <div id="kpi-users-value" class="stat-value">{{ $totalUsers }}</div>
             <div class="text-secondary small">Khách hàng đăng ký mới</div>
+
+            <div class="sparkline">
+                <div class="spark-bar" style="height: 35%"></div>
+                <div class="spark-bar" style="height: 45%"></div>
+                <div class="spark-bar" style="height: 55%"></div>
+                <div class="spark-bar" style="height: 70%"></div>
+                <div class="spark-bar" style="height: 50%"></div>
+                <div class="spark-bar" style="height: 80%"></div>
+                <div class="spark-bar" style="height: 65%"></div>
+            </div>
         </div>
     </div>
 
@@ -755,6 +811,7 @@ $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
             }
 
             const bars = Array.isArray(dataset.bars) ? dataset.bars : [];
+            chartContainer.dataset.activeChart = type;
             chartContainer.style.setProperty('--bar-count', String(Math.max(bars.length, 1)));
             chartTitle.textContent = dataset.title || 'Phân tích dữ liệu';
             chartDescription.textContent = dataset.description || '';
