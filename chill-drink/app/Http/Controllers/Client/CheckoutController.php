@@ -98,12 +98,13 @@ class CheckoutController extends Controller
         $request->validate([
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => 'required|string|max:255',
-            'shipping_area_ui' => 'nullable|string|max:255',
+            'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_area_ui'],
+            'shipping_area_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_address_ui'],
             'voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
         ], [
-            'shipping_address_ui.required' => 'Vui lòng nhập địa chỉ nhận hàng.',
+            'shipping_address_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
+            'shipping_area_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',

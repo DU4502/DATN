@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Voucher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -129,14 +130,44 @@ class VoucherController extends Controller
             'value.integer' => 'Giá trị giảm phải là số nguyên.',
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $voucher) {
             if ($request->input('type') === Voucher::TYPE_PERCENT && (int) $request->input('value') > 100) {
                 $validator->errors()->add('value', 'Voucher phần trăm không được lớn hơn 100%.');
             }
 
-            if ($request->filled('starts_at') && $request->filled('expires_at')) {
-                if (strtotime((string) $request->input('expires_at')) <= strtotime((string) $request->input('starts_at'))) {
-                    $validator->errors()->add('expires_at', 'Ngày hết hạn phải sau ngày bắt đầu.');
+            foreach ([
+                'starts_at' => 'Ngày bắt đầu',
+                'expires_at' => 'Ngày hết hạn',
+            ] as $field => $label) {
+                if ($request->filled($field) && $this->dateInputChanged($voucher, $field, (string) $request->input($field))) {
+                    try {
+                        $submittedDate = Carbon::parse((string) $request->input($field))->startOfMinute();
+
+                        if ($submittedDate->lt(now()->startOfMinute())) {
+                            $validator->errors()->add($field, "{$label} không được là thời gian trong quá khứ.");
+                        }
+                    } catch (\Throwable) {
+                        // The base `date` rule handles invalid date formats.
+                    }
+                }
+            }
+
+            $dateWindowChanged = ! $voucher
+                || ($request->filled('starts_at') && $this->dateInputChanged($voucher, 'starts_at', (string) $request->input('starts_at')))
+                || ($request->filled('expires_at') && $this->dateInputChanged($voucher, 'expires_at', (string) $request->input('expires_at')));
+
+            if ($request->filled('expires_at') && $dateWindowChanged) {
+                try {
+                    $startsAt = $request->filled('starts_at')
+                        ? Carbon::parse((string) $request->input('starts_at'))->startOfMinute()
+                        : now()->startOfMinute();
+                    $expiresAt = Carbon::parse((string) $request->input('expires_at'))->startOfMinute();
+
+                    if ($expiresAt->lte($startsAt)) {
+                        $validator->errors()->add('expires_at', 'Ngày hết hạn phải sau ngày bắt đầu.');
+                    }
+                } catch (\Throwable) {
+                    // The base `date` rule handles invalid date formats.
                 }
             }
         });
@@ -161,6 +192,27 @@ class VoucherController extends Controller
             'point_cost' => (int) ($data['point_cost'] ?? 0),
             'is_redeemable' => $request->boolean('is_redeemable'),
         ];
+    }
+
+    private function dateInputChanged(?Voucher $voucher, string $field, string $value): bool
+    {
+        if (! $voucher) {
+            return true;
+        }
+
+        $current = $voucher->{$field};
+
+        if (! $current) {
+            return $value !== '';
+        }
+
+        try {
+            return ! Carbon::parse($value)
+                ->startOfMinute()
+                ->equalTo($current->copy()->startOfMinute());
+        } catch (\Throwable) {
+            return true;
+        }
     }
 
     private function formOptions(?Voucher $voucher = null): array

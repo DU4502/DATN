@@ -113,7 +113,7 @@ class CheckoutVoucherTest extends TestCase
 
         $order = Order::latest()->first();
 
-        $response->assertRedirect(route('home'));
+        $response->assertRedirect(route('profile.orders'));
         $this->assertNotNull($order);
         $this->assertSame($voucher->id, (int) $order->coupon_id);
         $this->assertSame(100000, (int) $order->subtotal);
@@ -171,6 +171,39 @@ class CheckoutVoucherTest extends TestCase
         $this->assertSame($ordersBefore, Order::count());
     }
 
+    public function test_checkout_accepts_area_only_shipping_address(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    "{$product->id}:M:100:100" => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                        'ice_level' => 100,
+                        'sugar_level' => 100,
+                    ],
+                ],
+            ])
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'shipping_address_ui' => '',
+                'shipping_area_ui' => 'Hà Nội',
+                'voucher_code' => '',
+            ]);
+
+        $response->assertRedirect(route('profile.orders'));
+        $this->assertNotNull(Order::latest()->first());
+    }
+
     public function test_checkout_uses_current_database_price_instead_of_session_price(): void
     {
         $user = $this->customer();
@@ -213,7 +246,7 @@ class CheckoutVoucherTest extends TestCase
 
         $order = Order::latest()->first();
 
-        $response->assertRedirect(route('home'));
+        $response->assertRedirect(route('profile.orders'));
         $this->assertNotNull($order);
         $this->assertSame($voucher->id, (int) $order->coupon_id);
         $this->assertSame(100000, (int) $order->subtotal);

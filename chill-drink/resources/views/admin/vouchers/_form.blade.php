@@ -2,6 +2,10 @@
     $isEdit = isset($voucher) && $voucher;
     $startsAt = old('starts_at', optional($voucher?->starts_at)->format('Y-m-d\TH:i'));
     $expiresAt = old('expires_at', optional($voucher?->expires_at)->format('Y-m-d\TH:i'));
+    $minDateTime = now()->format('Y-m-d\TH:i');
+    $startsAtMin = $isEdit && $startsAt && $startsAt < $minDateTime ? $startsAt : $minDateTime;
+    $expiresBaseMin = $isEdit && $expiresAt && $expiresAt < $minDateTime ? $expiresAt : $minDateTime;
+    $expiresAtMin = $startsAt && $startsAt > $expiresBaseMin ? $startsAt : $expiresBaseMin;
 @endphp
 
 @if($errors->any())
@@ -78,13 +82,13 @@
 
     <div class="col-lg-6">
         <label for="starts_at" class="form-label fw-semibold">Ngày bắt đầu</label>
-        <input id="starts_at" type="datetime-local" name="starts_at" value="{{ $startsAt }}" class="admin-input">
+        <input id="starts_at" type="datetime-local" name="starts_at" value="{{ $startsAt }}" min="{{ $startsAtMin }}" class="admin-input" data-voucher-starts-at data-min-now="{{ $expiresBaseMin }}">
         <small class="text-secondary">Nếu bỏ trống, mã có hiệu lực ngay khi tạo.</small>
     </div>
 
     <div class="col-lg-6">
         <label for="expires_at" class="form-label fw-semibold">Ngày hết hạn</label>
-        <input id="expires_at" type="datetime-local" name="expires_at" value="{{ $expiresAt }}" class="admin-input">
+        <input id="expires_at" type="datetime-local" name="expires_at" value="{{ $expiresAt }}" min="{{ $expiresAtMin }}" class="admin-input" data-voucher-expires-at>
     </div>
 
     <div class="col-12">
@@ -116,3 +120,28 @@
     </button>
     <a href="{{ route('admin.vouchers.index') }}" class="btn btn-outline-primary">Hủy</a>
 </div>
+
+<script>
+    (() => {
+        const startsAtInput = document.querySelector('[data-voucher-starts-at]');
+        const expiresAtInput = document.querySelector('[data-voucher-expires-at]');
+
+        if (!startsAtInput || !expiresAtInput) {
+            return;
+        }
+
+        const minNow = startsAtInput.dataset.minNow || startsAtInput.min;
+        const syncExpiresMin = () => {
+            expiresAtInput.min = startsAtInput.value && startsAtInput.value > minNow
+                ? startsAtInput.value
+                : minNow;
+
+            if (expiresAtInput.value && expiresAtInput.value < expiresAtInput.min) {
+                expiresAtInput.value = expiresAtInput.min;
+            }
+        };
+
+        startsAtInput.addEventListener('change', syncExpiresMin);
+        syncExpiresMin();
+    })();
+</script>

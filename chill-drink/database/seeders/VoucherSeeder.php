@@ -67,7 +67,7 @@ class VoucherSeeder extends Seeder
                 ['code' => $voucher['code']],
                 array_merge($voucher, [
                     'status' => true,
-                    'starts_at' => $now->copy()->subDay(),
+                    'starts_at' => $now,
                     'expires_at' => $now->copy()->addMonths(3),
                     'created_at' => $now,
                 ])
