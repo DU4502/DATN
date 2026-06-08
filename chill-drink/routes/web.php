@@ -84,7 +84,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('products', AdminProductController::class)->only(['index']);
 
     // Category Management
-    Route::resource('categories', CategoryController::class)->only(['index']);
+    Route::resource('categories', CategoryController::class)->except(['show']);
 
     // Order Management
     Route::resource('orders', OrderController::class)->only(['index']);
