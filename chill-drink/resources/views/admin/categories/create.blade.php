@@ -18,7 +18,7 @@
         <div class="col-md-8 col-lg-6">
             <div class="card border-0 shadow-sm admin-card">
                 <div class="card-body p-4">
-                    <form action="{{ route('admin.categories.store') }}" method="POST">
+                    <form action="{{ route('admin.categories.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <div class="mb-4">
@@ -34,6 +34,35 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="text-muted d-block mt-1">Slug sẽ được tự động tạo từ tên này.</small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-bold text-dark">Mô tả</label>
+                            <textarea
+                                id="description"
+                                name="description"
+                                rows="3"
+                                class="form-control @error('description') is-invalid @enderror"
+                                placeholder="Mô tả ngắn về nhóm đồ uống này"
+                            >{{ old('description') }}</textarea>
+                            @error('description')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="image" class="form-label fw-bold text-dark">Ảnh danh mục</label>
+                            <input
+                                id="image"
+                                type="file"
+                                name="image"
+                                accept="image/*"
+                                class="form-control @error('image') is-invalid @enderror"
+                            >
+                            @error('image')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted d-block mt-1">Hỗ trợ JPG, PNG, WEBP, GIF. Dung lượng tối đa 2MB.</small>
                         </div>
 
                         <div class="mb-4">
