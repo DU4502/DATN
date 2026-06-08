@@ -261,7 +261,7 @@
             @forelse($categories as $category)
                 <div class="col-md-4 col-lg-3">
                     <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-card">
-                        <img src="{{ $uiCategoryImages[$category->name] ?? $uiDefaultImage }}" alt="{{ $category->name }}" class="category-image">
+                        <img src="{{ $category->image_url ?? ($uiCategoryImages[$category->name] ?? $uiDefaultImage) }}" alt="{{ $category->name }}" class="category-image">
                         <div class="category-overlay">
                             <span class="category-icon"><i class="bi bi-arrow-up-right"></i></span>
                             <div class="category-title">{{ $category->name }}</div>
@@ -442,6 +442,11 @@
 
 <section class="cta-section">
     <div class="container">
+        @php
+            $ctaCategory = $categories->firstWhere('name', 'Trà Sữa') ?? $categories->firstWhere('name', 'Trà sữa');
+            $ctaImage = $ctaCategory?->image_url
+                ?? asset('storage/categories/U2o2CJ5ILRKraiJJ8hXWvt1VA2YZPFmqTvnGLgTJ.png');
+        @endphp
         <div class="cta-card">
             <div class="cta-content">
                 <p class="section-kicker mb-2">Ưu đãi thành viên</p>
@@ -456,7 +461,7 @@
                 </div>
             </div>
             <div class="cta-image">
-                <img src="https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1000&q=85" alt="Summer drinks">
+                <img src="{{ $ctaImage }}" alt="Trà sữa trân châu">
             </div>
         </div>
     </div>
