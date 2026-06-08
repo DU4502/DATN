@@ -697,6 +697,12 @@
         @if(session('error'))
             <div class="alert alert-danger rounded-4 border-0">{{ session('error') }}</div>
         @endif
+        @if($errors->any())
+            <div class="alert alert-danger rounded-4 border-0">
+                <div class="fw-bold mb-1">Vui lòng kiểm tra lại thông tin thanh toán.</div>
+                <div>{{ $errors->first() }}</div>
+            </div>
+        @endif
 
         <form method="POST" action="{{ route('checkout.process') }}">
             @csrf
@@ -745,6 +751,12 @@
                                 </div>
                                 <button type="button" class="btn-address-link" data-open-address-edit>Cập nhật</button>
                             </div>
+
+                            @if($errors->has('shipping_address_ui') || $errors->has('shipping_area_ui'))
+                                <div class="text-danger small mt-3">
+                                    {{ $errors->first('shipping_address_ui') ?: $errors->first('shipping_area_ui') }}
+                                </div>
+                            @endif
 
                             @if(empty($user->phone))
                                 <div class="alert alert-warning border-0 rounded-4 mt-4 mb-0">
