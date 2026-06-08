@@ -11,7 +11,7 @@ class CategoryApiController extends Controller
     public function index(): JsonResponse
     {
         $categories = Category::query()
-            ->select(['id', 'name', 'slug', 'description', 'status'])
+            ->select(['id', 'name', 'slug', 'description', 'image', 'status'])
             ->where('status', true)
             ->orderBy('name')
             ->get()
@@ -20,6 +20,7 @@ class CategoryApiController extends Controller
                 'name' => $category->name,
                 'slug' => $category->slug,
                 'description' => $category->description,
+                'image_url' => $category->image_url,
             ]);
 
         return response()->json([
