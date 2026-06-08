@@ -60,6 +60,63 @@ class VoucherManagementTest extends TestCase
         $response->assertRedirect(route('admin.vouchers.index'));
     }
 
+    public function test_admin_cannot_create_voucher_with_past_start_or_expiry_date(): void
+    {
+        $admin = $this->admin();
+        $now = Carbon::parse('2026-06-08 08:30:00');
+        Carbon::setTestNow($now);
+
+        $this->actingAs($admin)
+            ->from(route('admin.vouchers.create'))
+            ->post(route('admin.vouchers.store'), [
+                'code' => 'PASTDATE',
+                'type' => Voucher::TYPE_FIXED,
+                'value' => 10000,
+                'min_order' => 0,
+                'usage_limit' => 10,
+                'point_cost' => 0,
+                'starts_at' => $now->copy()->subMinute()->format('Y-m-d H:i:s'),
+                'expires_at' => $now->copy()->addDay()->format('Y-m-d H:i:s'),
+                'status' => 1,
+            ])
+            ->assertRedirect(route('admin.vouchers.create'))
+            ->assertSessionHasErrors('starts_at');
+
+        $this->actingAs($admin)
+            ->from(route('admin.vouchers.create'))
+            ->post(route('admin.vouchers.store'), [
+                'code' => 'PASTEND',
+                'type' => Voucher::TYPE_FIXED,
+                'value' => 10000,
+                'min_order' => 0,
+                'usage_limit' => 10,
+                'point_cost' => 0,
+                'starts_at' => '',
+                'expires_at' => $now->copy()->subMinute()->format('Y-m-d H:i:s'),
+                'status' => 1,
+            ])
+            ->assertRedirect(route('admin.vouchers.create'))
+            ->assertSessionHasErrors('expires_at');
+
+        Carbon::setTestNow();
+
+        $this->assertDatabaseMissing('coupons', ['code' => 'PASTDATE']);
+        $this->assertDatabaseMissing('coupons', ['code' => 'PASTEND']);
+    }
+
+    public function test_voucher_form_limits_date_inputs_from_current_time(): void
+    {
+        $admin = $this->admin();
+        Carbon::setTestNow(Carbon::parse('2026-06-08 08:30:00'));
+
+        $response = $this->actingAs($admin)->get(route('admin.vouchers.create'));
+
+        Carbon::setTestNow();
+
+        $response->assertOk();
+        $response->assertSee('min="2026-06-08T08:30"', false);
+    }
+
     public function test_admin_can_update_and_delete_voucher(): void
     {
         $admin = $this->admin();
