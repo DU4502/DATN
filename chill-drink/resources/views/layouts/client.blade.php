@@ -966,98 +966,6 @@
             }
         }
 
-        /* ─── Mini Bar Chart ─── */
-        .mini-chart {
-            position: relative;
-            display: inline-flex;
-            align-items: flex-end;
-            gap: 0.4rem;
-            padding: 0.75rem 1rem 0.6rem;
-            border-radius: var(--radius-lg);
-            border: 1px solid rgba(251, 191, 36, 0.18);
-            background: linear-gradient(180deg, rgba(254, 243, 199, 0.55), rgba(255, 255, 255, 0.9));
-            box-shadow: 0 8px 20px rgba(234, 179, 8, 0.12);
-            min-width: 132px;
-        }
-
-        .mini-chart::before {
-            content: '';
-            position: absolute;
-            inset: 12px;
-            border-radius: inherit;
-            background: radial-gradient(circle at top, rgba(253, 224, 71, 0.35), transparent 70%);
-            opacity: 0.75;
-        }
-
-        .mini-chart-bar {
-            position: relative;
-            width: 12px;
-            border-radius: 999px 999px 4px 4px;
-            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 60%, #d97706 100%);
-            filter: drop-shadow(0 4px 6px rgba(217, 119, 6, 0.15));
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-
-        .mini-chart-bar:nth-child(3n) {
-            background: linear-gradient(180deg, #fde68a 0%, #fbbf24 55%, #f59e0b 100%);
-        }
-
-        .mini-chart:hover .mini-chart-bar {
-            opacity: 0.88;
-        }
-
-        .mini-chart-bar::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 65%);
-            mix-blend-mode: screen;
-        }
-
-        .mini-chart-bar[data-h="xl"] {
-            height: 54px;
-        }
-
-        .mini-chart-bar[data-h="lg"] {
-            height: 48px;
-        }
-
-        .mini-chart-bar[data-h="md"] {
-            height: 38px;
-        }
-
-        .mini-chart-bar[data-h="sm"] {
-            height: 30px;
-        }
-
-        @media (max-width: 767.98px) {
-            .mini-chart {
-                padding: 0.6rem 0.75rem 0.4rem;
-                gap: 0.3rem;
-                min-width: 110px;
-            }
-
-            .mini-chart-bar {
-                width: 10px;
-            }
-
-            .mini-chart-bar[data-h="xl"] {
-                height: 48px;
-            }
-
-            .mini-chart-bar[data-h="lg"] {
-                height: 40px;
-            }
-
-            .mini-chart-bar[data-h="md"] {
-                height: 32px;
-            }
-
-            .mini-chart-bar[data-h="sm"] {
-                height: 24px;
-            }
-        }
     </style>
 </head>
 
@@ -1082,16 +990,6 @@
                         <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
                     </li>
                 </ul>
-
-                <div class="d-none d-lg-flex align-items-end ms-lg-5 me-lg-4" aria-hidden="true">
-                    <div class="mini-chart">
-                        <span class="mini-chart-bar" data-h="sm"></span>
-                        <span class="mini-chart-bar" data-h="md"></span>
-                        <span class="mini-chart-bar" data-h="lg"></span>
-                        <span class="mini-chart-bar" data-h="md"></span>
-                        <span class="mini-chart-bar" data-h="xl"></span>
-                    </div>
-                </div>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
