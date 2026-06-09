@@ -1,75 +1,132 @@
 @extends('layouts.admin')
 
-@section('content')
-<div class="container mt-4">
-    <h1>Sửa danh mục</h1>
-    <hr>
+@section('page-title', 'Sửa danh mục')
+@section('hide-topbar-search', true)
 
-   <form action="{{ route('admin.categories.update', $category->id) }}" method="POST">
+@section('content')
+<section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+    <div>
+        <p class="admin-kicker mb-1">Danh mục</p>
+        <h2 class="h2 fw-bold mb-1">Sửa danh mục</h2>
+        <p class="text-secondary mb-0">Cập nhật tên, mô tả, ảnh và trạng thái hiển thị của danh mục.</p>
+    </div>
+    <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-primary align-self-start align-self-lg-auto">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+</section>
+
+<section class="admin-card p-4">
+    <form action="{{ route('admin.categories.update', $category) }}" method="POST" enctype="multipart/form-data" class="row g-4">
         @csrf
         @method('PUT')
 
-        <div class="mb-3">
-            <label for="name" class="form-label font-weight-bold">Tên danh mục</label>
-            <input type="text"
-                   id="name"
-                   name="name"
-                   class="form-control"
-                   value="{{ old('name', $category->name) }}"
-                   required>
+        <div class="col-lg-8">
+            <div class="d-flex flex-column gap-4">
+                <div>
+                    <label for="name" class="admin-kicker mb-2 d-block">Tên danh mục</label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        class="admin-input @error('name') is-invalid @enderror"
+                        value="{{ old('name', $category->name) }}"
+                        required
+                    >
+                    @error('name')
+                        <div class="text-danger small mt-2">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="slug" class="admin-kicker mb-2 d-block">Slug</label>
+                    <input
+                        type="text"
+                        id="slug"
+                        name="slug"
+                        class="admin-input @error('slug') is-invalid @enderror"
+                        value="{{ old('slug', $category->slug) }}"
+                        required
+                    >
+                    @error('slug')
+                        <div class="text-danger small mt-2">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="description" class="admin-kicker mb-2 d-block">Mô tả</label>
+                    <textarea
+                        id="description"
+                        name="description"
+                        rows="4"
+                        class="admin-input @error('description') is-invalid @enderror"
+                    >{{ old('description', $category->description) }}</textarea>
+                    @error('description')
+                        <div class="text-danger small mt-2">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div>
+                    <label for="status" class="admin-kicker mb-2 d-block">Trạng thái</label>
+                    <select name="status" id="status" class="admin-filter">
+                        <option value="1" @selected((string) old('status', (int) $category->status) === '1')>Hiển thị</option>
+                        <option value="0" @selected((string) old('status', (int) $category->status) === '0')>Ẩn</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label for="slug" class="form-label font-weight-bold">Slug</label>
-            <input type="text"
-                   id="slug"
-                   name="slug"
-                   class="form-control"
-                   value="{{ old('slug', $category->slug) }}"
-                   required>
+        <div class="col-lg-4">
+            <div class="admin-card p-4 h-100">
+                <label for="image" class="admin-kicker mb-3 d-block">Ảnh danh mục</label>
+                <div id="categoryImagePreview" class="admin-form-image-preview mb-3" style="width: 100%; height: 220px;">
+                    @if($category->image)
+                        <img src="{{ asset('storage/' . $category->image) }}" alt="{{ $category->name }}" style="object-fit: cover !important; padding: 0;">
+                    @else
+                        <span class="text-secondary fw-semibold">Chưa có ảnh</span>
+                    @endif
+                </div>
+                <input
+                    type="file"
+                    id="image"
+                    name="image"
+                    accept="image/*"
+                    class="form-control @error('image') is-invalid @enderror"
+                    data-image-input
+                    data-preview-target="#categoryImagePreview"
+                >
+                @error('image')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <small class="text-secondary d-block mt-2">Chọn ảnh mới nếu muốn thay ảnh hiện tại.</small>
+            </div>
         </div>
 
-        <div class="mb-3">
-            <label for="status" class="form-label font-weight-bold">Trạng thái</label>
-            <select name="status" id="status" class="form-select form-control">
-                <option value="1" {{ old('status', $category->status) == 1 ? 'selected' : '' }}>Hiển thị (Ẩn/Hiện)</option>
-                <option value="0" {{ old('status', $category->status) == 0 ? 'selected' : '' }}>Khóa / Ẩn</option>
-            </select>
-        </div>
-
-        <div class="mt-4">
-            <button type="submit" class="btn btn-primary">
-                Cập nhật
-            </button>
-            <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary">
-                Quay lại
-            </button>
+        <div class="col-12">
+            <div class="d-flex flex-wrap justify-content-end gap-2 pt-3 border-top">
+                <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-primary">Hủy</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check2-circle me-1"></i>Cập nhật
+                </button>
+            </div>
         </div>
     </form>
-</div>
+</section>
 
-{{-- Script tự động tạo Slug từ Tên khi chỉnh sửa --}}
 <script>
-    document.getElementById('name').addEventListener('keyup', function() {
-        let title = this.value;
-        let slug = title.toLowerCase();
+    document.getElementById('name')?.addEventListener('input', function () {
+        const slugInput = document.getElementById('slug');
 
-        // Chuyển ký tự tiếng Việt có dấu thành không dấu
-        slug = slug.replace(/á|à|ả|ạ|ã|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, 'a');
-        slug = slug.replace(/é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, 'e');
-        slug = slug.replace(/i|í|ì|ỉ|ĩ|ị/gi, 'i');
-        slug = slug.replace(/ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, 'o');
-        slug = slug.replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, 'u');
-        slug = slug.replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, 'y');
-        slug = slug.replace(/đ/gi, 'd');
+        if (!slugInput) {
+            return;
+        }
 
-        // Xóa ký tự đặc biệt, thay khoảng trắng bằng dấu gạch ngang
-        slug = slug.replace(/\s+/g, '-');
-        slug = slug.replace(/[^a-z0-9\-]/g, '');
-        slug = slug.replace(/\-{2,}/g, '-');
-        slug = slug.trim('-');
-
-        document.getElementById('slug').value = slug;
+        slugInput.value = this.value
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
     });
 </script>
 @endsection
