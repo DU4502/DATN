@@ -42,7 +42,7 @@ class GoogleController extends Controller
             } catch (Throwable $fallbackException) {
                 report($fallbackException);
 
-                return redirect()->route('login')->with('oauth_error', 'Phiên đăng nhập Google bị mất trạng thái. Hãy thử lại bằng đúng domain localhost hoặc đăng nhập lại.');
+                return redirect()->route('login')->with('oauth_error', 'Phiên đăng nhập Google bị mất trạng thái. Hãy thử lại bằng cùng một domain hoặc đăng nhập lại.');
             }
         } catch (Throwable $exception) {
             report($exception);
