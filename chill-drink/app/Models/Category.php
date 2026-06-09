@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\ProductImage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
@@ -15,6 +16,7 @@ class Category extends Model
         'name',
         'slug',
         'description',
+        'image',
         'status',
     ];
 
@@ -38,5 +40,10 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function getImageUrlAttribute(): string
+    {
+        return ProductImage::resolve($this->image, $this->name);
     }
 }
