@@ -30,7 +30,7 @@ class GoogleAuthenticationTest extends TestCase
 
         config()->set('services.google.client_id', 'test-client-id');
         config()->set('services.google.client_secret', 'test-client-secret');
-        config()->set('services.google.redirect', 'http://localhost:8000/auth/google/callback');
+        config()->set('services.google.redirect', 'http://127.0.0.1:8000/auth/google/callback');
         config()->set('services.google.stateless', true);
 
         $response = $this->get(route('auth.google.callback'));
@@ -67,7 +67,7 @@ class GoogleAuthenticationTest extends TestCase
 
         config()->set('services.google.client_id', 'test-client-id');
         config()->set('services.google.client_secret', 'test-client-secret');
-        config()->set('services.google.redirect', 'http://localhost:8000/auth/google/callback');
+        config()->set('services.google.redirect', 'http://127.0.0.1:8000/auth/google/callback');
         config()->set('services.google.stateless', true);
 
         $response = $this->get(route('auth.google.callback'));
