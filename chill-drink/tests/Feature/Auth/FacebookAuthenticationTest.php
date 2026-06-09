@@ -30,7 +30,7 @@ class FacebookAuthenticationTest extends TestCase
 
         config()->set('services.facebook.client_id', 'test-client-id');
         config()->set('services.facebook.client_secret', 'test-client-secret');
-        config()->set('services.facebook.redirect', 'http://localhost:8000/auth/facebook/callback');
+        config()->set('services.facebook.redirect', 'http://127.0.0.1:8000/auth/facebook/callback');
         config()->set('services.facebook.stateless', true);
 
         $response = $this->get(route('auth.facebook.callback'));
@@ -67,7 +67,7 @@ class FacebookAuthenticationTest extends TestCase
 
         config()->set('services.facebook.client_id', 'test-client-id');
         config()->set('services.facebook.client_secret', 'test-client-secret');
-        config()->set('services.facebook.redirect', 'http://localhost:8000/auth/facebook/callback');
+        config()->set('services.facebook.redirect', 'http://127.0.0.1:8000/auth/facebook/callback');
         config()->set('services.facebook.stateless', true);
 
         $response = $this->get(route('auth.facebook.callback'));
