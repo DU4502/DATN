@@ -11,18 +11,18 @@
     }
 
     .breadcrumb-soft {
-        color: var(--drink-muted);
+        color: var(--c-muted, #6b7280);
         font-size: 0.9rem;
         font-weight: 600;
     }
 
     .breadcrumb-soft a {
-        color: var(--drink-muted);
+        color: var(--c-muted, #6b7280);
         text-decoration: none;
     }
 
     .breadcrumb-soft a:hover {
-        color: var(--drink-primary);
+        color: var(--c-primary, #0d9373);
     }
 
     .detail-photo-card {
@@ -56,7 +56,7 @@
         border: 0;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.9);
-        color: var(--drink-primary-dark);
+        color: var(--c-primary-dark, #067a5f);
         box-shadow: 0 12px 28px rgba(7, 52, 58, 0.16);
         transform: translateY(-50%);
         transition: transform 0.18s ease, background 0.18s ease;
@@ -104,7 +104,7 @@
 
     .detail-thumb:hover,
     .detail-thumb.active {
-        border-color: var(--drink-primary);
+        border-color: var(--c-primary, #0d9373);
         transform: translateY(-1px);
     }
 
@@ -120,7 +120,7 @@
         align-items: center;
         border-radius: 999px;
         background: #dff4ef;
-        color: var(--drink-primary-dark);
+        color: var(--c-primary-dark, #067a5f);
         font-size: 0.76rem;
         font-weight: 800;
         letter-spacing: 0.04em;
@@ -138,7 +138,7 @@
     }
 
     .option-label {
-        color: var(--drink-muted);
+        color: var(--c-muted, #6b7280);
         font-size: 0.78rem;
         font-weight: 800;
         letter-spacing: 0.08em;
@@ -146,20 +146,34 @@
     }
 
     .choice-btn {
-        border: 1px solid var(--drink-border);
+        border: 1px solid var(--c-border, #e5e7eb);
         border-radius: 999px;
         background: #ffffff;
-        color: var(--drink-ink);
+        color: var(--c-ink, #111827);
         font-weight: 700;
         padding: 0.52rem 0.95rem;
-        transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+        cursor: pointer;
+        transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, transform 0.18s ease;
     }
 
     .choice-btn:hover,
     .choice-btn.active {
-        border-color: var(--drink-primary);
-        box-shadow: 0 0 0 3px rgba(0, 139, 122, 0.13);
-        color: var(--drink-primary-dark);
+        border-color: var(--c-primary, #0d9373);
+        background: var(--c-primary-light, #e6f7f2);
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.13);
+        color: var(--c-primary-dark, #067a5f);
+    }
+
+    .choice-btn.active {
+        border-width: 2px;
+        background: var(--c-primary, #0d9373);
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(13, 147, 115, 0.22);
+        transform: translateY(-1px);
+    }
+
+    .choice-btn.active small {
+        color: rgba(255, 255, 255, 0.85);
     }
 
     .size-choice {
@@ -169,7 +183,7 @@
 
     .size-choice small {
         display: block;
-        color: var(--drink-muted);
+        color: var(--c-muted, #6b7280);
         font-size: 0.72rem;
         font-weight: 700;
         margin-top: 0.15rem;
@@ -177,14 +191,14 @@
 
     .qty-control {
         min-width: 132px;
-        border: 1px solid var(--drink-border);
+        border: 1px solid var(--c-border, #e5e7eb);
         border-radius: 999px;
         background: #ffffff;
         padding: 0.45rem 0.75rem;
     }
 
     .product-detail-actions {
-        border-top: 1px solid var(--drink-border);
+        border-top: 1px solid var(--c-border, #e5e7eb);
         padding-top: 1.2rem;
     }
 
@@ -206,8 +220,8 @@
         height: 34px;
         border: 0;
         border-radius: 50%;
-        background: var(--drink-primary-soft);
-        color: var(--drink-primary-dark);
+        background: var(--c-primary-light, #e6f7f2);
+        color: var(--c-primary-dark, #067a5f);
         font-weight: 800;
     }
 
@@ -217,7 +231,7 @@
     }
 
     .review-shell {
-        border: 1px solid var(--drink-border);
+        border: 1px solid var(--c-border, #e5e7eb);
         border-radius: 24px;
         background: #ffffff;
         box-shadow: 0 18px 40px rgba(7, 52, 58, 0.06);
@@ -249,7 +263,7 @@
     }
 
     .review-card {
-        border: 1px solid var(--drink-border);
+        border: 1px solid var(--c-border, #e5e7eb);
         border-radius: 18px;
         background: #ffffff;
     }
@@ -262,14 +276,14 @@
         justify-content: center;
         border-radius: 50%;
         background: linear-gradient(135deg, #dff4ef, #8fd8ce);
-        color: var(--drink-primary-dark);
+        color: var(--c-primary-dark, #067a5f);
         font-weight: 800;
     }
 
     .review-form-panel {
         border-radius: 20px;
         background: #fbfffe;
-        border: 1px solid var(--drink-border);
+        border: 1px solid var(--c-border, #e5e7eb);
     }
 
     .review-rating-input {
@@ -450,21 +464,21 @@
                         <div class="mb-4">
                             <label class="option-label d-block mb-3">Mức đường</label>
                             <div class="d-flex flex-wrap gap-2" data-choice-group="sugar">
-                                <button type="button" class="choice-btn">0%</button>
-                                <button type="button" class="choice-btn active">30%</button>
-                                <button type="button" class="choice-btn">50%</button>
-                                <button type="button" class="choice-btn">70%</button>
-                                <button type="button" class="choice-btn">100%</button>
+                                <button type="button" class="choice-btn" data-choice-value="0">0%</button>
+                                <button type="button" class="choice-btn active" data-choice-value="30">30%</button>
+                                <button type="button" class="choice-btn" data-choice-value="50">50%</button>
+                                <button type="button" class="choice-btn" data-choice-value="70">70%</button>
+                                <button type="button" class="choice-btn" data-choice-value="100">100%</button>
                             </div>
                         </div>
 
                         <div class="mb-4">
                             <label class="option-label d-block mb-3">Mức đá</label>
                             <div class="d-flex flex-wrap gap-2" data-choice-group="ice">
-                                <button type="button" class="choice-btn">Không đá</button>
-                                <button type="button" class="choice-btn active">Bình thường</button>
-                                <button type="button" class="choice-btn">Ít đá</button>
-                                <button type="button" class="choice-btn">Nhiều đá</button>
+                                <button type="button" class="choice-btn" data-choice-value="0">Không đá</button>
+                                <button type="button" class="choice-btn active" data-choice-value="100">Bình thường</button>
+                                <button type="button" class="choice-btn" data-choice-value="50">Ít đá</button>
+                                <button type="button" class="choice-btn" data-choice-value="150">Nhiều đá</button>
                             </div>
                         </div>
 
@@ -476,12 +490,14 @@
                             </div>
 
                             @if(($product->stock ?? 1) > 0)
-                            <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
-                                @csrf
-                                <input type="hidden" name="size" value="M" data-size-input>
-                                <input type="hidden" name="quantity" value="1" data-qty-input>
-                                <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
-                            </form>
+                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
+                                    @csrf
+                                    <input type="hidden" name="size" value="M" data-size-input>
+                                    <input type="hidden" name="sugar_level" value="30" data-choice-input="sugar">
+                                    <input type="hidden" name="ice_level" value="100" data-choice-input="ice">
+                                    <input type="hidden" name="quantity" value="1" data-qty-input>
+                                    <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
+                                </form>
                             @else
                             <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
                             @endif
@@ -705,14 +721,20 @@
 </section>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('[data-choice-group]').forEach(function(group) {
-            group.querySelectorAll('.choice-btn').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    group.querySelectorAll('.choice-btn').forEach(function(item) {
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-choice-group]').forEach(function (group) {
+            const input = document.querySelector(`[data-choice-input="${group.dataset.choiceGroup}"]`);
+
+            group.querySelectorAll('.choice-btn').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    group.querySelectorAll('.choice-btn').forEach(function (item) {
                         item.classList.remove('active');
                     });
                     button.classList.add('active');
+
+                    if (input) {
+                        input.value = button.dataset.choiceValue || '';
+                    }
                 });
             });
         });
