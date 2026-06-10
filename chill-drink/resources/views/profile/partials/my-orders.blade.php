@@ -201,6 +201,11 @@ $paymentLabels = $paymentLabels ?? [
             <div class="text-end">
                 <div class="text-secondary small">Tổng thanh toán</div>
                 <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
+                @if($order->payment_method === 'vnpay' && $order->payment_status !== 'paid' && $order->status !== 'cancelled')
+                <a href="{{ route('vnpay.payment', $order) }}" class="btn btn-primary btn-sm mt-2">
+                    Thanh toán VNPay
+                </a>
+                @endif
             </div>
         </div>
     </article>

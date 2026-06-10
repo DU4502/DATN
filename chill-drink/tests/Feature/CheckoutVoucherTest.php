@@ -18,6 +18,80 @@ class CheckoutVoucherTest extends TestCase
 {
     use DatabaseTransactions;
 
+    public function test_checkout_page_only_offers_cod_and_vnpay(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+
+        $this
+            ->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    'cart-1' => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                    ],
+                ],
+            ])
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('Thanh toán khi nhận hàng')
+            ->assertSee('VNPay')
+            ->assertDontSee('Chuyển khoản ngân hàng')
+            ->assertDontSee('Ví Momo');
+    }
+
+    public function test_checkout_rejects_removed_payment_methods(): void
+    {
+        $this
+            ->actingAs($this->customer())
+            ->from(route('checkout.index'))
+            ->post(route('checkout.process'), [
+                'payment_method' => 'momo',
+                'shipping_method_ui' => 'standard',
+                'shipping_address_ui' => '123 Test Street',
+            ])
+            ->assertRedirect(route('checkout.index'))
+            ->assertSessionHasErrors('payment_method');
+    }
+
+    public function test_checkout_redirects_vnpay_order_to_payment_gateway_route(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    'cart-1' => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                    ],
+                ],
+            ])
+            ->post(route('checkout.process'), [
+                'payment_method' => 'vnpay',
+                'shipping_method_ui' => 'standard',
+                'shipping_address_ui' => '123 Test Street',
+                'shipping_area_ui' => 'Test Area',
+            ]);
+
+        $order = Order::latest()->first();
+
+        $this->assertNotNull($order);
+        $this->assertSame('vnpay', $order->payment_method);
+        $response->assertRedirect(route('vnpay.payment', $order));
+    }
+
     public function test_checkout_page_renders_database_vouchers_not_demo_vouchers(): void
     {
         $user = $this->customer();
@@ -113,8 +187,8 @@ class CheckoutVoucherTest extends TestCase
 
         $order = Order::latest()->first();
 
-        $response->assertRedirect(route('profile.orders'));
         $this->assertNotNull($order);
+        $response->assertRedirect(route('checkout.success', $order));
         $this->assertSame($voucher->id, (int) $order->coupon_id);
         $this->assertSame(100000, (int) $order->subtotal);
         $this->assertSame(10000, (int) $order->discount);
@@ -200,8 +274,10 @@ class CheckoutVoucherTest extends TestCase
                 'voucher_code' => '',
             ]);
 
-        $response->assertRedirect(route('profile.orders'));
-        $this->assertNotNull(Order::latest()->first());
+        $order = Order::latest()->first();
+
+        $this->assertNotNull($order);
+        $response->assertRedirect(route('checkout.success', $order));
     }
 
     public function test_checkout_uses_current_database_price_instead_of_session_price(): void
@@ -246,8 +322,8 @@ class CheckoutVoucherTest extends TestCase
 
         $order = Order::latest()->first();
 
-        $response->assertRedirect(route('profile.orders'));
         $this->assertNotNull($order);
+        $response->assertRedirect(route('checkout.success', $order));
         $this->assertSame($voucher->id, (int) $order->coupon_id);
         $this->assertSame(100000, (int) $order->subtotal);
         $this->assertSame(10000, (int) $order->discount);
