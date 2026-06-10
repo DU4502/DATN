@@ -1,18 +1,19 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Client\CartController;
+use App\Http\Controllers\Client\CheckoutController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
-use App\Http\Controllers\Client\CartController;
-use App\Http\Controllers\Client\CheckoutController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ProductController as AdminProductController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\OrderController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\ReviewController;
-use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Client\VnpayController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,10 +36,15 @@ Route::patch('/cart/update/{id}', [CartController::class, 'update'])->name('cart
 Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
 Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
 
+Route::get('/vnpay/ipn', [VnpayController::class, 'ipn'])->name('vnpay.ipn');
+Route::get('/vnpay/return', [VnpayController::class, 'return'])->name('vnpay.return');
+
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
+    Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name('vnpay.payment');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
 });
 
@@ -100,4 +106,4 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'update']);
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
