@@ -25,7 +25,7 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         $cart = session()->get('cart', []);
-        
+
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
         }
@@ -114,7 +114,7 @@ class CheckoutController extends Controller
         $fullCart = session()->get('cart', []);
         $selectedKeys = session()->get('checkout_cart_keys');
         $cart = $this->cartForCheckout($fullCart, $selectedKeys);
-        
+
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
         }
@@ -206,8 +206,14 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            return redirect()->route('profile.orders')->with('success', 'Đặt hàng thành công!');
-            
+            if ($order->payment_method === 'vnpay') {
+                return redirect()
+                    ->route('vnpay.payment', $order)
+                    ->with('success', 'Đơn hàng đã được tạo. Vui lòng thanh toán qua VNPay.');
+            }
+
+            return redirect()->route('checkout.success', $order);
+
         } catch (Throwable $e) {
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
@@ -224,6 +230,20 @@ class CheckoutController extends Controller
 
             return redirect()->back()->withInput()->with('error', $message);
         }
+    }
+
+    public function success(Order $order)
+    {
+        abort_unless((int) $order->user_id === (int) auth()->id(), 403);
+
+        $order->load('orderItems.product');
+
+        return view('client.checkout.success', [
+            'order' => $order,
+            'result' => 'success',
+            'title' => 'Cảm ơn bạn đã đặt hàng',
+            'message' => 'Đơn hàng đã được tiếp nhận và sẽ sớm được chuẩn bị.',
+        ]);
     }
 
     private function resolveVoucher(?string $code, int $subtotal): array
@@ -262,8 +282,8 @@ class CheckoutController extends Controller
         if (! $voucher->meetsMinimumOrder($subtotal)) {
             throw new \RuntimeException(
                 'Mã voucher chỉ áp dụng cho đơn từ '
-                . number_format((int) $voucher->min_order, 0, ',', '.')
-                . 'đ.'
+                .number_format((int) $voucher->min_order, 0, ',', '.')
+                .'đ.'
             );
         }
 
@@ -289,8 +309,8 @@ class CheckoutController extends Controller
         if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost) {
             throw new \RuntimeException(
                 'Bạn chưa đủ '
-                . number_format((int) $voucher->point_cost, 0, ',', '.')
-                . ' điểm để dùng mã voucher này.'
+                .number_format((int) $voucher->point_cost, 0, ',', '.')
+                .' điểm để dùng mã voucher này.'
             );
         }
     }
@@ -365,16 +385,6 @@ class CheckoutController extends Controller
                 'title' => 'Thanh toán khi nhận hàng',
                 'desc' => 'Trả tiền mặt sau khi nhận đồ uống.',
                 'icon' => 'bi-cash-coin',
-            ],
-            'bank_transfer' => [
-                'title' => 'Chuyển khoản ngân hàng',
-                'desc' => 'Nhân viên xác nhận sau khi nhận chuyển khoản.',
-                'icon' => 'bi-bank',
-            ],
-            'momo' => [
-                'title' => 'Ví Momo',
-                'desc' => 'Thanh toán nhanh qua ví điện tử Momo.',
-                'icon' => 'bi-phone',
             ],
             'vnpay' => [
                 'title' => 'VNPay',
