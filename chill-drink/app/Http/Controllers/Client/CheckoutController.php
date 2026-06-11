@@ -144,10 +144,7 @@ class CheckoutController extends Controller
                 $request->shipping_area_ui,
             ])->filter()->implode(', '));
             $shippingNote = sprintf(
-                'Giao hàng: %s, %skm (%s), phí ship %s%s',
-                $shippingQuote['method_label'],
-                rtrim(rtrim(number_format($shippingQuote['distance_km'], 1, '.', ''), '0'), '.'),
-                $shippingQuote['distance_label'],
+                'Giao hàng: phí cố định %s%s',
                 ShippingFee::formatCurrency($shippingQuote['total_fee']),
                 $addressText ? ", địa chỉ: {$addressText}" : ''
             );
@@ -195,7 +192,8 @@ class CheckoutController extends Controller
 
             // Create order items
             foreach ($orderItems as $item) {
-                OrderItem::create($this->orderItemData($order->id, $item));
+                $orderItem = OrderItem::create($this->orderItemData($order->id, $item));
+                $this->recordOrderItemToppings((int) $orderItem->id, $item['toppings'] ?? []);
             }
 
             if ($voucher) {
@@ -437,6 +435,7 @@ class CheckoutController extends Controller
                 'total_price' => $unitPrice * $quantity,
                 'ice_level' => (int) ($item['ice_level'] ?? 100),
                 'sugar_level' => (int) ($item['sugar_level'] ?? 100),
+                'toppings' => $item['toppings'] ?? [],
             ];
         }
 
@@ -481,6 +480,8 @@ class CheckoutController extends Controller
     {
         $productId = $product?->id ?? (int) ($item['product_id'] ?? 0);
         $fallbackPrice = max(0, (int) ($item['price'] ?? $product?->price ?? 0));
+        $toppingTotal = max(0, (int) ($item['topping_total'] ?? collect($item['toppings'] ?? [])->sum('price')));
+        $sizeExtra = max(0, (int) ($item['size_extra'] ?? 0));
 
         if (
             $productId <= 0
@@ -497,7 +498,7 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice);
+                return max(0, (int) $productSizePrice + $toppingTotal);
             }
         }
 
@@ -510,15 +511,48 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice);
+                return max(0, (int) $productSizePrice + $toppingTotal);
             }
         }
 
         if ($product && is_numeric($product->price ?? null)) {
-            return max(0, (int) $product->price);
+            return max(0, (int) $product->price + $sizeExtra + $toppingTotal);
         }
 
         return $fallbackPrice;
+    }
+
+    private function recordOrderItemToppings(int $orderItemId, array $toppings): void
+    {
+        if ($orderItemId <= 0 || empty($toppings) || ! Schema::hasTable('order_item_toppings') || ! Schema::hasTable('toppings')) {
+            return;
+        }
+
+        foreach ($toppings as $topping) {
+            $name = trim((string) ($topping['name'] ?? ''));
+
+            if ($name === '') {
+                continue;
+            }
+
+            $price = max(0, (int) ($topping['price'] ?? 0));
+            $toppingId = DB::table('toppings')->where('name', $name)->value('id');
+
+            if (! $toppingId) {
+                $toppingId = DB::table('toppings')->insertGetId([
+                    'name' => $name,
+                    'price' => $price,
+                    'status' => 1,
+                    'created_at' => now(),
+                ]);
+            }
+
+            DB::table('order_item_toppings')->insert([
+                'order_item_id' => $orderItemId,
+                'topping_id' => (int) $toppingId,
+                'price' => $price,
+            ]);
+        }
     }
 
     private function resolveProductSizeId(int $productId, array $item, int $unitPrice): ?int

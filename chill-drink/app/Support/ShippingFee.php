@@ -86,13 +86,11 @@ class ShippingFee
 
     public static function quoteForAddress(?string $address, ?string $area, string $method = 'standard'): array
     {
-        $estimate = self::estimateDistanceForAddress($address, $area);
-
         return array_merge(
-            self::calculate($estimate['distance_km'], $method),
+            self::calculate(self::DEFAULT_DISTANCE, 'standard'),
             [
-                'estimate_label' => $estimate['label'],
-                'estimate_detail' => $estimate['detail'],
+                'estimate_label' => 'Phí cố định',
+                'estimate_detail' => 'tạm thời chưa tính theo kilomet',
             ]
         );
     }

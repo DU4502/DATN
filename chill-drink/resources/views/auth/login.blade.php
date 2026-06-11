@@ -80,6 +80,9 @@
                             @if(session('status'))
                                 <div class="alert alert-success d-flex align-items-center mb-4"><i class="bi bi-check-circle-fill me-2"></i> {{ session('status') }}</div>
                             @endif
+                            @if(session('error'))
+                                <div class="alert alert-danger d-flex align-items-center mb-4"><i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}</div>
+                            @endif
 
                             @if(session('oauth_error'))
                                 <div class="alert alert-danger d-flex align-items-center mb-4"><i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('oauth_error') }}</div>

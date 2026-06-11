@@ -589,6 +589,16 @@
         padding: 1.4rem 1.8rem;
     }
 
+    .address-modal .modal-footer {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        background: #ffffff;
+    }
+
     .address-modal .modal-body {
         padding: 1.2rem 1.8rem;
     }
@@ -646,6 +656,11 @@
         border-color: var(--drink-primary);
         color: #ffffff;
         min-width: 170px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
     }
 
     .btn-address-primary:hover {
@@ -744,7 +759,7 @@
                         </div>
                     </div>
 
-                    <div class="checkout-panel p-4 p-md-5 mb-4">
+                    <div class="checkout-panel p-4 p-md-5 mb-4 d-none" aria-hidden="true">
                         <div class="d-flex align-items-center gap-3 mb-4">
                             <span class="checkout-step"><i class="bi bi-truck"></i></span>
                             <div>
@@ -891,6 +906,14 @@
                                         <div class="text-secondary small">
                                             {{ $item['size_label'] ?? 'Size M' }} · Số lượng: {{ $item['quantity'] }}
                                         </div>
+                                        @if(!empty($item['toppings']))
+                                            <div class="text-primary small fw-semibold">
+                                                Topping: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}
+                                            </div>
+                                        @endif
+                                        <div class="text-secondary small">
+                                            Đường {{ $item['sugar_level'] ?? 100 }}% · Đá {{ $item['ice_level'] ?? 100 }}%
+                                        </div>
                                     </div>
                                     <strong>{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}đ</strong>
                                 </div>
@@ -908,6 +931,14 @@
                                             <div class="fw-bold">{{ $item['name'] }}</div>
                                             <div class="text-secondary small">
                                                 {{ $item['size_label'] ?? 'Size M' }} · Số lượng: {{ $item['quantity'] }}
+                                            </div>
+                                            @if(!empty($item['toppings']))
+                                                <div class="text-primary small fw-semibold">
+                                                    Topping: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}
+                                                </div>
+                                            @endif
+                                            <div class="text-secondary small">
+                                                Đường {{ $item['sugar_level'] ?? 100 }}% · Đá {{ $item['ice_level'] ?? 100 }}%
                                             </div>
                                         </div>
                                         <strong>{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }}đ</strong>
@@ -936,7 +967,7 @@
                             </div>
                             <div class="d-flex justify-content-between mb-3 small">
                                 <span class="text-secondary">Khoảng cách</span>
-                                <span id="summaryShippingDistance">{{ $shippingQuote['distance_label'] }} · {{ $shippingQuote['method_label'] }}</span>
+                                <span id="summaryShippingDistance">Phí giao hàng cố định</span>
                             </div>
                             <div class="d-flex justify-content-between mb-3">
                                 <span class="text-secondary">Voucher</span>
@@ -1042,7 +1073,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-link text-dark text-decoration-none" data-return-address-list>Trở lại</button>
-                <button type="button" class="btn btn-address-primary" id="saveEditedAddress">Hoàn thành</button>
+                <button type="button" class="btn btn-address-primary" id="saveEditedAddress">Lưu địa chỉ</button>
             </div>
         </div>
     </div>
@@ -1098,7 +1129,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-link text-dark text-decoration-none" data-return-address-list>Trở lại</button>
-                <button type="button" class="btn btn-address-primary" id="saveNewAddress">Hoàn thành</button>
+                <button type="button" class="btn btn-address-primary" id="saveNewAddress">Lưu địa chỉ</button>
             </div>
         </div>
     </div>
@@ -1224,6 +1255,7 @@
         const shippingConfig = {
             subtotal: {{ (int) $total }},
             discount: {{ (int) $discount }},
+            fixedShippingFee: {{ (int) $shippingFee }},
         };
         const shippingTiers = @json($shippingDistanceOptions);
         const shippingRules = @json(\App\Support\ShippingFee::estimationRules());
@@ -1317,23 +1349,23 @@
                 return;
             }
 
-            const estimate = estimateDistanceFromAddress();
-            const tier = tierForDistance(estimate.distance);
-            const distanceFee = Number(tier.base_fee || 0);
-            const methodFee = Number(methodInput.dataset.methodFee || 0);
-            const shippingFee = distanceFee + methodFee;
+            const shippingFee = Number(shippingConfig.fixedShippingFee || 0);
             const grandTotal = shippingConfig.subtotal + shippingFee - Number(shippingConfig.discount || 0);
-            const distanceLabel = tier.label || '';
-            const methodLabel = methodInput.dataset.methodLabel || '';
 
-            shippingDistanceLabel.textContent = distanceLabel;
-            shippingEstimateDetail.textContent = `${estimate.label} · ${estimate.detail}`;
-            shippingInlineFee.textContent = formatVnd(shippingFee);
+            if (shippingDistanceLabel) {
+                shippingDistanceLabel.textContent = 'Cố định';
+            }
+            if (shippingEstimateDetail) {
+                shippingEstimateDetail.textContent = 'Tạm thời chưa tính theo kilomet';
+            }
+            if (shippingInlineFee) {
+                shippingInlineFee.textContent = formatVnd(shippingFee);
+            }
             if (shippingEta) {
                 shippingEta.textContent = methodInput.dataset.methodEta || '';
             }
             summaryShippingFee.textContent = formatVnd(shippingFee);
-            summaryShippingDistance.textContent = `${distanceLabel} · ${methodLabel}`;
+            summaryShippingDistance.textContent = 'Phí giao hàng cố định';
             summaryGrandTotal.textContent = formatVnd(grandTotal);
         }
 
