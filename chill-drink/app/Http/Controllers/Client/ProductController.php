@@ -19,30 +19,86 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::where('status', true)->with('category');
+        $query = Product::query()->with('category');
+        $this->onlyVisibleProducts($query);
+
         $hasSkuColumn = Schema::hasColumn('products', 'sku');
-        $hasCatalogProducts = Product::where('status', true)->exists();
+        $hasDescriptionColumn = Schema::hasColumn('products', 'description');
+        $hasCategorySlugColumn = Schema::hasColumn('categories', 'slug');
+        $hasReviewsTable = Schema::hasTable('reviews');
+        $hasCatalogProducts = tap(Product::query(), fn ($productQuery) => $this->onlyVisibleProducts($productQuery))->exists();
+
+        if ($hasReviewsTable) {
+            $query->withAvg(['reviews' => fn ($reviewQuery) => $reviewQuery->where('status', true)], 'rating')
+                ->withCount(['reviews' => fn ($reviewQuery) => $reviewQuery->where('status', true)]);
+        }
 
         // Filter by category
         if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
+            $categoryValue = trim((string) $request->input('category'));
+            $categoryQuery = Category::query();
+
+            $categoryQuery->where(function ($categoryLookup) use ($categoryValue, $hasCategorySlugColumn) {
+                if (is_numeric($categoryValue)) {
+                    $categoryLookup->where('id', (int) $categoryValue);
+                }
+
+                if ($hasCategorySlugColumn) {
+                    $categoryLookup->orWhere('slug', $categoryValue);
+                }
+
+                $categoryLookup->orWhere('name', $categoryValue);
+            });
+
+            $category = $categoryQuery->first();
+
+            if ($category) {
+                $query->where('category_id', $category->id);
+            } else {
+                $query->whereHas('category', function ($categoryQuery) use ($categoryValue, $hasCategorySlugColumn) {
+                    $categoryQuery->where('name', 'like', '%'.$categoryValue.'%');
+
+                    if ($hasCategorySlugColumn) {
+                        $categoryQuery->orWhere('slug', 'like', '%'.$categoryValue.'%');
+                    }
+                });
+            }
         }
 
-        // Search by name
+        // Search by name, sku, description and category.
         $searchQuery = trim((string) $request->input('search', ''));
         if ($searchQuery !== '') {
-            $query->where(function ($q) use ($searchQuery, $hasSkuColumn) {
-                $q->where('name', 'like', '%' . $searchQuery . '%');
+            $query->where(function ($q) use ($searchQuery, $hasSkuColumn, $hasDescriptionColumn, $hasCategorySlugColumn) {
+                $q->where('name', 'like', '%'.$searchQuery.'%');
 
                 if ($hasSkuColumn) {
                     $q->orWhere('sku', 'like', '%' . $searchQuery . '%');
                 }
+
+                if ($hasDescriptionColumn) {
+                    $q->orWhere('description', 'like', '%'.$searchQuery.'%');
+                }
+
+                $q->orWhereHas('category', function ($categoryQuery) use ($searchQuery, $hasCategorySlugColumn) {
+                    $categoryQuery->where('name', 'like', '%'.$searchQuery.'%');
+
+                    if ($hasCategorySlugColumn) {
+                        $categoryQuery->orWhere('slug', 'like', '%'.$searchQuery.'%');
+                    }
+                });
             });
         }
 
+        match ($request->input('sort')) {
+            'newest' => $query->latest('id'),
+            'price_asc' => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            default => $query->latest('id'),
+        };
+
         $products = $query->paginate(12)->withQueryString();
         $categories = Category::withCount([
-            'products' => fn($query) => $query->where('status', true),
+            'products' => fn ($query) => $this->onlyVisibleProducts($query),
         ])
             ->orderBy('id')
             ->get();
@@ -286,5 +342,25 @@ class ProductController extends Controller
             'average' => 0,
             'counts' => [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0],
         ];
+    }
+
+    private function onlyVisibleProducts($query)
+    {
+        if (! Schema::hasColumn('products', 'status')) {
+            return $query;
+        }
+
+        return $query->where(function ($statusQuery) {
+            $statusQuery
+                ->where('status', true)
+                ->orWhere('status', 1)
+                ->orWhere('status', '1')
+                ->orWhere('status', 'active')
+                ->orWhere('status', 'published')
+                ->orWhere('status', 'visible')
+                ->orWhere('status', 'show')
+                ->orWhere('status', 'Hiển thị')
+                ->orWhere('status', 'hiển thị');
+        });
     }
 }

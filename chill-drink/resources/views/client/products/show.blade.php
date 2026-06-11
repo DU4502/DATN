@@ -6,7 +6,7 @@
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
     .product-detail-wrap {
-        padding-top: 2rem;
+        padding-top: 1.5rem;
         padding-bottom: 4rem;
     }
 
@@ -29,9 +29,9 @@
         position: relative;
         overflow: hidden;
         border: 0;
-        border-radius: 22px;
-        background: #f3efe5;
-        box-shadow: 0 18px 42px rgba(7, 52, 58, 0.08);
+        border-radius: var(--radius-md, 12px);
+        background: var(--c-bg-warm, #f0fdf9);
+        box-shadow: var(--shadow-lg);
         aspect-ratio: 1 / 1;
         height: auto;
         min-height: 0;
@@ -40,8 +40,9 @@
     .detail-photo-card img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
-        padding: 0;
+        object-fit: contain !important;
+        object-position: center;
+        padding: 1rem;
         transition: opacity 0.18s ease;
     }
 
@@ -83,19 +84,19 @@
 
     .detail-thumbs {
         display: flex;
-        gap: 0.75rem;
-        margin-top: 1rem;
+        gap: 0.65rem;
+        margin-top: 0.75rem;
         overflow-x: auto;
         padding-bottom: 0.2rem;
     }
 
     .detail-thumb {
         width: 86px;
-        height: 86px;
-        border: 2px solid transparent;
-        border-radius: 12px;
+        height: 70px;
+        border: 1.5px solid transparent;
+        border-radius: var(--radius-sm, 8px);
         background: #ffffff;
-        padding: 0.35rem;
+        padding: 0.25rem;
         box-shadow: 0 8px 18px rgba(7, 52, 58, 0.08);
         cursor: pointer;
         flex: 0 0 auto;
@@ -111,7 +112,7 @@
     .detail-thumb img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         border-radius: 6px;
     }
 
@@ -128,6 +129,24 @@
         text-transform: uppercase;
     }
 
+    .detail-layout {
+        --bs-gutter-x: 2.25rem;
+    }
+
+    .detail-summary {
+        max-width: 560px;
+    }
+
+    .detail-summary h1 {
+        margin-bottom: 0.35rem !important;
+    }
+
+    .detail-summary .detail-desc {
+        font-size: 0.95rem;
+        line-height: 1.7;
+        margin-bottom: 0;
+    }
+
     .detail-info-card,
     .option-card {
         border: 0;
@@ -137,21 +156,30 @@
         padding: 0 !important;
     }
 
+    .option-card {
+        max-width: 560px;
+    }
+
+    .option-block {
+        margin-bottom: 1.05rem;
+    }
+
     .option-label {
-        color: var(--c-muted, #6b7280);
-        font-size: 0.78rem;
+        color: var(--c-ink, #111827);
+        font-size: 0.82rem;
         font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
+        letter-spacing: 0;
+        text-transform: none;
     }
 
     .choice-btn {
-        border: 1px solid var(--c-border, #e5e7eb);
-        border-radius: 999px;
-        background: #ffffff;
+        min-height: 50px;
+        border: 1.5px solid var(--c-border, #e5e7eb);
+        border-radius: var(--radius-sm, 8px);
+        background: var(--c-surface, #ffffff);
         color: var(--c-ink, #111827);
         font-weight: 700;
-        padding: 0.52rem 0.95rem;
+        padding: 0.55rem 0.9rem;
         cursor: pointer;
         transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, transform 0.18s ease;
     }
@@ -165,19 +193,20 @@
     }
 
     .choice-btn.active {
-        border-width: 2px;
-        background: var(--c-primary, #0d9373);
-        color: #ffffff;
-        box-shadow: 0 8px 18px rgba(13, 147, 115, 0.22);
+        border-width: 1.5px;
+        background: var(--c-primary-light, #e6f7f2);
+        color: var(--c-primary-dark, #067a5f);
+        box-shadow: inset 0 0 0 1px var(--c-primary, #0d9373), 0 8px 18px rgba(13, 147, 115, 0.12);
         transform: translateY(-1px);
     }
 
     .choice-btn.active small {
-        color: rgba(255, 255, 255, 0.85);
+        color: var(--c-primary-dark, #067a5f);
     }
 
     .size-choice {
-        min-width: 76px;
+        min-width: 0;
+        flex: 1 1 0;
         text-align: center;
     }
 
@@ -190,28 +219,47 @@
     }
 
     .qty-control {
-        min-width: 132px;
+        min-width: 142px;
         border: 1px solid var(--c-border, #e5e7eb);
-        border-radius: 999px;
+        border-radius: var(--radius-full, 999px);
         background: #ffffff;
         padding: 0.45rem 0.75rem;
     }
 
+    .detail-action-row {
+        display: grid;
+        grid-template-columns: 142px minmax(0, 1fr);
+        gap: 0.9rem;
+        align-items: stretch;
+    }
+
+    .detail-button-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9rem;
+    }
+
     .product-detail-actions {
-        border-top: 1px solid var(--c-border, #e5e7eb);
-        padding-top: 1.2rem;
+        border-top: 0;
+        padding-top: 0.5rem;
     }
 
     .product-detail-actions .btn-primary {
         min-height: 52px;
     }
 
+    .detail-buy-btn {
+        min-height: 52px;
+        border-radius: var(--radius-full, 999px);
+        font-weight: 800;
+    }
+
     .detail-info-card {
-        max-width: 680px;
+        max-width: 560px;
     }
 
     .product-detail-wrap .display-5 {
-        font-size: clamp(2rem, 4vw, 3.2rem);
+        font-size: clamp(1.55rem, 2.3vw, 2rem);
         line-height: 1.12;
     }
 
@@ -225,9 +273,136 @@
         font-weight: 800;
     }
 
+    .detail-benefits {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        padding-top: 0.9rem;
+    }
+
+    .detail-benefit {
+        text-align: center;
+        color: var(--c-muted, #6b7280);
+        font-size: 0.74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .detail-benefit i {
+        display: block;
+        color: var(--c-primary, #0d9373);
+        font-size: 1.15rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .topping-choice {
+        flex: 1 1 calc(33.333% - 0.5rem);
+        min-width: 150px;
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        text-align: left;
+    }
+
+    .topping-choice::before {
+        content: "";
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        border-radius: 4px;
+        border: 1.5px solid var(--c-subtle, #9ca3af);
+        background: #fff;
+        transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .topping-choice.active::before {
+        border-color: var(--c-primary, #0d9373);
+        background: var(--c-primary, #0d9373);
+        box-shadow: inset 0 0 0 3px #fff;
+    }
+
+    .topping-choice small {
+        display: block;
+        margin-top: 0.1rem;
+        color: var(--c-muted, #6b7280);
+        font-size: 0.72rem;
+    }
+
+    .compact-select {
+        position: relative;
+    }
+
+    .compact-select-toggle {
+        width: 100%;
+        min-height: 50px;
+        border: 1.5px solid var(--c-border, #e5e7eb);
+        border-radius: var(--radius-sm, 8px);
+        padding: 0.65rem 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        color: var(--c-ink, #111827);
+        font-weight: 800;
+        background: var(--c-surface, #fff);
+        cursor: pointer;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .compact-select.open .compact-select-toggle,
+    .compact-select-toggle:focus {
+        border-color: var(--c-primary, #0d9373);
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.13);
+    }
+
+    .compact-select-toggle i {
+        color: var(--c-muted, #6b7280);
+        transition: transform 0.16s ease;
+    }
+
+    .compact-select.open .compact-select-toggle i {
+        transform: rotate(180deg);
+    }
+
+    .compact-select-menu {
+        position: absolute;
+        top: calc(100% + 0.35rem);
+        left: 0;
+        right: 0;
+        z-index: 30;
+        display: none;
+        overflow: hidden;
+        border: 1px solid var(--c-border, #e5e7eb);
+        border-radius: var(--radius-sm, 8px);
+        background: #fff;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .compact-select.open .compact-select-menu {
+        display: block;
+    }
+
+    .compact-select-option {
+        width: 100%;
+        border: 0;
+        background: #fff;
+        color: var(--c-ink, #111827);
+        text-align: left;
+        padding: 0.7rem 0.9rem;
+        font-weight: 700;
+    }
+
+    .compact-select-option:hover,
+    .compact-select-option.active {
+        background: var(--c-primary-light, #e6f7f2);
+        color: var(--c-primary-dark, #067a5f);
+    }
+
     .related-card img {
-        height: 270px;
-        object-fit: cover;
+        height: 230px;
+        object-fit: contain;
+        background: var(--c-bg-warm, #f0fdf9);
+        padding: 0.75rem;
     }
 
     .review-shell {
@@ -323,6 +498,11 @@
         .detail-gallery {
             position: static;
         }
+
+        .detail-summary,
+        .option-card {
+            max-width: none;
+        }
     }
 
     @media (max-width: 575.98px) {
@@ -343,6 +523,16 @@
         .related-card img {
             height: 220px;
         }
+
+        .detail-action-row,
+        .detail-button-row,
+        .detail-benefits {
+            grid-template-columns: 1fr;
+        }
+
+        .qty-control {
+            width: 100%;
+        }
     }
 </style>
 
@@ -356,7 +546,7 @@
             <span class="text-primary">{{ $product->name }}</span>
         </nav>
 
-        <div class="row g-4 g-xl-5 align-items-start">
+        <div class="row g-4 align-items-start detail-layout">
             <div class="col-lg-5">
                 @php
                 $detailCategory = $product->category->name ?? null;
@@ -374,9 +564,48 @@
                 );
                 }
 
-                $detailMainImage = $detailGalleryImages[0]
-                ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
-                $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
+                    $detailMainImage = $detailGalleryImages[0]
+                        ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
+                    $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
+                    $productNameLower = mb_strtolower($product->name ?? '');
+                    $categoryLower = mb_strtolower($detailCategory ?? '');
+                    $detailToppings = match (true) {
+                        str_contains($productNameLower, 'matcha') => [
+                            ['Trân châu đen', 5000],
+                            ['Kem cheese', 7000],
+                            ['Thạch matcha', 6000],
+                        ],
+                        str_contains($categoryLower, 'trà sữa') || str_contains($productNameLower, 'trà sữa') => [
+                            ['Trân châu đen', 5000],
+                            ['Pudding trứng', 7000],
+                            ['Thạch phô mai', 8000],
+                        ],
+                        str_contains($categoryLower, 'cà phê') || str_contains($productNameLower, 'cà phê') => [
+                            ['Kem mặn', 7000],
+                            ['Shot espresso', 10000],
+                            ['Caramel', 6000],
+                        ],
+                        str_contains($categoryLower, 'sinh tố') || str_contains($productNameLower, 'sinh tố') => [
+                            ['Hạt chia', 5000],
+                            ['Sữa chua', 7000],
+                            ['Nha đam', 6000],
+                        ],
+                        str_contains($categoryLower, 'nước ép') || str_contains($productNameLower, 'nước ép') => [
+                            ['Nha đam', 6000],
+                            ['Hạt chia', 5000],
+                            ['Soda', 7000],
+                        ],
+                        str_contains($categoryLower, 'soda') || str_contains($productNameLower, 'soda') => [
+                            ['Thạch trái cây', 6000],
+                            ['Nha đam', 6000],
+                            ['Trân châu trắng', 7000],
+                        ],
+                        default => [
+                            ['Trân châu trắng', 7000],
+                            ['Thạch nha đam', 6000],
+                            ['Kem cheese', 7000],
+                        ],
+                    };
                 @endphp
                 <div class="detail-gallery">
                     <div class="detail-photo-card">
@@ -384,7 +613,6 @@
                             id="detailMainImage"
                             src="{{ $detailMainImage }}"
                             alt="{{ $product->name }}"
-                            style="width:100%;height:100%;object-fit:cover;"
                             data-detail-fallback="{{ $detailFallbackImage }}"
                             onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
                         @if(count($detailGalleryImages) > 1)
@@ -413,7 +641,7 @@
             </div>
 
             <div class="col-lg-7">
-                <div class="d-flex flex-column gap-4">
+                <div class="d-flex flex-column gap-3 detail-summary">
                     <div>
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
                         <h1 class="display-5 fw-bold mb-3">{{ $product->name }}</h1>
@@ -424,18 +652,13 @@
                     </div>
 
                     <div class="detail-info-card p-4">
-                        <p class="text-secondary mb-3">
+                        <p class="text-secondary detail-desc">
                             {{ $product instanceof \App\Models\Product ? $product->display_description : ($product->description ?? \App\Support\ProductCatalog::descriptionFor($product->name ?? '', $product->category->name ?? null)) }}
                         </p>
-                        <div class="d-flex flex-wrap gap-3">
-                            <span class="text-primary fw-semibold">Tươi mát</span>
-                            <span class="text-primary fw-semibold">Dễ uống</span>
-                            <span class="text-primary fw-semibold">Pha trong ngày</span>
-                        </div>
                     </div>
 
                     <div class="option-card p-4">
-                        <div class="mb-4">
+                        <div class="option-block">
                             <label class="option-label d-block mb-3">Size</label>
                             <div class="d-flex flex-wrap gap-2" data-size-group>
                                 <button type="button" class="choice-btn size-choice" data-size-option="S" data-size-extra="0">
@@ -450,39 +673,57 @@
                                     L
                                     <small>+10.000đ</small>
                                 </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="XL" data-size-extra="15000">
-                                    XL
-                                    <small>+15.000đ</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="XXL" data-size-extra="20000">
-                                    XXL
-                                    <small>+20.000đ</small>
-                                </button>
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="option-label d-block mb-3">Mức đường</label>
-                            <div class="d-flex flex-wrap gap-2" data-choice-group="sugar">
-                                <button type="button" class="choice-btn" data-choice-value="0">0%</button>
-                                <button type="button" class="choice-btn active" data-choice-value="30">30%</button>
-                                <button type="button" class="choice-btn" data-choice-value="50">50%</button>
-                                <button type="button" class="choice-btn" data-choice-value="70">70%</button>
-                                <button type="button" class="choice-btn" data-choice-value="100">100%</button>
+                        <div class="row g-3 option-block">
+                            <div class="col-md-6">
+                                <label class="option-label d-block mb-3">Mức đường</label>
+                                <div class="compact-select" data-compact-choice="sugar">
+                                    <button type="button" class="compact-select-toggle">
+                                        <span data-compact-label>100% (Tiêu chuẩn)</span>
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                    <div class="compact-select-menu">
+                                        <button type="button" class="compact-select-option" data-value="0">0%</button>
+                                        <button type="button" class="compact-select-option" data-value="30">30%</button>
+                                        <button type="button" class="compact-select-option" data-value="50">50%</button>
+                                        <button type="button" class="compact-select-option" data-value="70">70%</button>
+                                        <button type="button" class="compact-select-option active" data-value="100">100% (Tiêu chuẩn)</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="option-label d-block mb-3">Mức đá</label>
+                                <div class="compact-select" data-compact-choice="ice">
+                                    <button type="button" class="compact-select-toggle">
+                                        <span data-compact-label>100% (Tiêu chuẩn)</span>
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                    <div class="compact-select-menu">
+                                        <button type="button" class="compact-select-option" data-value="0">Không đá</button>
+                                        <button type="button" class="compact-select-option" data-value="50">Ít đá</button>
+                                        <button type="button" class="compact-select-option active" data-value="100">100% (Tiêu chuẩn)</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="option-label d-block mb-3">Mức đá</label>
-                            <div class="d-flex flex-wrap gap-2" data-choice-group="ice">
-                                <button type="button" class="choice-btn" data-choice-value="0">Không đá</button>
-                                <button type="button" class="choice-btn active" data-choice-value="100">Bình thường</button>
-                                <button type="button" class="choice-btn" data-choice-value="50">Ít đá</button>
-                                <button type="button" class="choice-btn" data-choice-value="150">Nhiều đá</button>
+                        <div class="option-block">
+                            <label class="option-label d-block mb-3">Thêm topping</label>
+                            <div class="d-flex flex-wrap gap-2" data-topping-group>
+                                @foreach($detailToppings as $topping)
+                                    <button type="button" class="choice-btn topping-choice" data-topping-name="{{ $topping[0] }}" data-topping-price="{{ $topping[1] }}">
+                                        <span>
+                                            {{ $topping[0] }}
+                                            <small>+{{ number_format($topping[1], 0, ',', '.') }}đ</small>
+                                        </span>
+                                    </button>
+                                @endforeach
                             </div>
                         </div>
 
-                        <div class="product-detail-actions d-flex flex-column flex-sm-row gap-3">
+                        <div class="product-detail-actions detail-action-row">
                             <div class="qty-control d-flex align-items-center justify-content-between">
                                 <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
                                 <span class="h5 fw-bold mb-0" data-qty-value>1</span>
@@ -490,17 +731,38 @@
                             </div>
 
                             @if(($product->stock ?? 1) > 0)
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST" class="flex-grow-1" data-ajax-cart>
+                                <form action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
                                     @csrf
                                     <input type="hidden" name="size" value="M" data-size-input>
-                                    <input type="hidden" name="sugar_level" value="30" data-choice-input="sugar">
+                                    <input type="hidden" name="sugar_level" value="100" data-choice-input="sugar">
                                     <input type="hidden" name="ice_level" value="100" data-choice-input="ice">
+                                    <input type="hidden" name="toppings" value="" data-topping-input>
                                     <input type="hidden" name="quantity" value="1" data-qty-input>
-                                    <button type="submit" class="btn btn-primary btn-lg w-100">Thêm vào giỏ</button>
+                                    <div class="detail-button-row">
+                                        <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill">
+                                            <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
+                                        </button>
+                                        <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill">Mua ngay</button>
+                                    </div>
                                 </form>
                             @else
                             <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
                             @endif
+                        </div>
+
+                        <div class="detail-benefits">
+                            <div class="detail-benefit">
+                                <i class="bi bi-patch-check"></i>
+                                Tự nhiên 100%
+                            </div>
+                            <div class="detail-benefit">
+                                <i class="bi bi-truck"></i>
+                                Giao nhanh 30'
+                            </div>
+                            <div class="detail-benefit">
+                                <i class="bi bi-shield-check"></i>
+                                Đảm bảo an toàn
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -665,8 +927,8 @@
         <section class="mt-5 pt-4">
             <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
                 <div>
-                    <h2 class="section-title h1 mb-2">Có thể bạn cũng thích</h2>
-                    <p class="text-secondary mb-0">Gợi ý thêm cho một ly đồ uống thật hợp mood.</p>
+                    <h2 class="section-title h2 mb-2">Sản phẩm liên quan</h2>
+                    <p class="text-secondary mb-0">Gợi ý riêng cho gu thưởng thức của bạn.</p>
                 </div>
                 <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Xem tất cả</a>
             </div>
@@ -739,6 +1001,50 @@
             });
         });
 
+        document.querySelectorAll('[data-compact-choice]').forEach(function (select) {
+            const input = document.querySelector(`[data-choice-input="${select.dataset.compactChoice}"]`);
+            const toggle = select.querySelector('.compact-select-toggle');
+            const label = select.querySelector('[data-compact-label]');
+            const options = select.querySelectorAll('.compact-select-option');
+
+            if (!input) {
+                return;
+            }
+
+            const activeOption = select.querySelector('.compact-select-option.active') || options[0];
+            input.value = activeOption?.dataset.value || input.value;
+            if (label && activeOption) {
+                label.textContent = activeOption.textContent.trim();
+            }
+
+            toggle?.addEventListener('click', function () {
+                document.querySelectorAll('.compact-select.open').forEach(function (item) {
+                    if (item !== select) {
+                        item.classList.remove('open');
+                    }
+                });
+                select.classList.toggle('open');
+            });
+
+            options.forEach(function (option) {
+                option.addEventListener('click', function () {
+                    options.forEach((item) => item.classList.remove('active'));
+                    option.classList.add('active');
+                    input.value = option.dataset.value || '';
+                    if (label) {
+                        label.textContent = option.textContent.trim();
+                    }
+                    select.classList.remove('open');
+                });
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('.compact-select')) {
+                document.querySelectorAll('.compact-select.open').forEach((item) => item.classList.remove('open'));
+            }
+        });
+
         const minus = document.querySelector('[data-qty-minus]');
         const plus = document.querySelector('[data-qty-plus]');
         const value = document.querySelector('[data-qty-value]');
@@ -797,6 +1103,29 @@
                     });
                     button.classList.add('active');
                     sizeInput.value = button.dataset.sizeOption || 'M';
+                });
+            });
+        }
+
+        const toppingGroup = document.querySelector('[data-topping-group]');
+        const toppingInput = document.querySelector('[data-topping-input]');
+
+        if (toppingGroup && toppingInput) {
+            const syncToppings = function () {
+                const toppings = Array.from(toppingGroup.querySelectorAll('.topping-choice.active')).map(function (button) {
+                    return {
+                        name: button.dataset.toppingName || '',
+                        price: Number(button.dataset.toppingPrice || 0),
+                    };
+                });
+
+                toppingInput.value = JSON.stringify(toppings);
+            };
+
+            toppingGroup.querySelectorAll('.topping-choice').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    button.classList.toggle('active');
+                    syncToppings();
                 });
             });
         }

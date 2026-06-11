@@ -419,6 +419,13 @@
             flex: 0 0 auto;
         }
 
+        .cart-button i {
+            display: block;
+            flex: 0 0 auto;
+            font-size: 1.05rem;
+            line-height: 1;
+        }
+
         .cart-bump {
             animation: cartBump 0.55s ease;
         }
@@ -1107,10 +1114,7 @@
                     </form>
 
                     <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng" data-cart-button>
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
-                        </svg>
+                        <i class="bi bi-cart-plus" aria-hidden="true"></i>
                         <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {{ session('cart') ? '' : 'd-none' }}">
                             {{ session('cart') ? count(session('cart')) : 0 }}
                         </span>
@@ -1332,6 +1336,10 @@
             const form = event.target;
 
             if (!form.matches('[data-ajax-cart]')) {
+                return;
+            }
+
+            if (event.submitter?.name === 'buy_now') {
                 return;
             }
 

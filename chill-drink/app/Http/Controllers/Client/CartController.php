@@ -14,8 +14,6 @@ class CartController extends Controller
             'S' => ['label' => 'Size S', 'extra' => 0],
             'M' => ['label' => 'Size M', 'extra' => 5000],
             'L' => ['label' => 'Size L', 'extra' => 10000],
-            'XL' => ['label' => 'Size XL', 'extra' => 15000],
-            'XXL' => ['label' => 'Size XXL', 'extra' => 20000],
         ];
     }
 
@@ -109,7 +107,7 @@ class CartController extends Controller
             $cart[$key]['sku'] = $product->sku ?? null;
             $cart[$key]['category'] = $product->category?->name;
             $cart[$key]['base_price'] = (int) $product->price;
-            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0);
+            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0);
         }
 
         return $cart;
@@ -131,7 +129,17 @@ class CartController extends Controller
         $size = $sizes[$sizeCode] ?? $sizes['M'];
         $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
         $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
-        $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel;
+        $toppings = collect(json_decode((string) $request->input('toppings', '[]'), true) ?: [])
+            ->filter(fn ($item) => is_array($item) && ! empty($item['name']))
+            ->map(fn ($item) => [
+                'name' => (string) $item['name'],
+                'price' => max(0, (int) ($item['price'] ?? 0)),
+            ])
+            ->values()
+            ->all();
+        $toppingTotal = collect($toppings)->sum('price');
+        $toppingKey = collect($toppings)->pluck('name')->implode(',');
+        $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel . ':' . md5($toppingKey);
         $basePrice = (int) ($product->price ?? 0);
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
         
@@ -148,12 +156,14 @@ class CartController extends Controller
                 'product_id' => $id,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => $basePrice + $size['extra'],
+                'price' => $basePrice + $size['extra'] + $toppingTotal,
                 'size' => $sizeCode,
                 'size_label' => $size['label'],
                 'size_extra' => $size['extra'],
                 'sugar_level' => $sugarLevel,
                 'ice_level' => $iceLevel,
+                'toppings' => $toppings,
+                'topping_total' => $toppingTotal,
                 'image' => $image,
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
@@ -165,6 +175,10 @@ class CartController extends Controller
 
         if ($request->expectsJson()) {
             return response()->json($this->cartPayload('Đã thêm sản phẩm vào giỏ hàng!'));
+        }
+
+        if ($request->boolean('buy_now')) {
+            return redirect()->route('checkout.index', ['items' => [$cartKey]]);
         }
         
         return redirect()->back();
