@@ -290,6 +290,14 @@
                                                 · +{{ number_format($item['size_extra'], 0, ',', '.') }}đ
                                             @endif
                                         </p>
+                                        @if(!empty($item['toppings']))
+                                            <p class="text-primary small fw-semibold mb-1">
+                                                Topping: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}
+                                            </p>
+                                        @endif
+                                        <p class="text-secondary small mb-1">
+                                            Đường {{ $item['sugar_level'] ?? 100 }}% · Đá {{ $item['ice_level'] ?? 100 }}%
+                                        </p>
                                         <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
                                     </div>
 
