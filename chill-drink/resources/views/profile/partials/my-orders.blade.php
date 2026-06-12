@@ -81,6 +81,78 @@ $paymentLabels = $paymentLabels ?? [
         border-bottom: 0;
     }
 
+    .order-review-collapse {
+        border-top: 1px solid rgba(213, 238, 232, 0.9);
+        background: #fbfffe;
+    }
+
+    .order-review-toggle {
+        appearance: none;
+        -webkit-appearance: none;
+        border: 1px solid var(--drink-primary, var(--c-primary)) !important;
+        background-color: var(--drink-primary, var(--c-primary)) !important;
+        color: #ffffff !important;
+        border-radius: 999px;
+        padding: 0.42rem 0.85rem;
+        font-size: 0.85rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+        box-shadow: 0 10px 18px rgba(0, 107, 95, 0.14);
+    }
+
+    .order-review-toggle .label {
+        color: #ffffff !important;
+    }
+
+    .order-review-toggle:hover {
+        background-color: var(--drink-primary-dark, var(--c-primary-dark)) !important;
+        border-color: var(--drink-primary-dark, var(--c-primary-dark)) !important;
+        transform: translateY(-1px);
+    }
+
+    .order-review-toggle i {
+        transition: transform 0.2s ease;
+    }
+
+    .order-review-toggle[aria-expanded="true"] i {
+        transform: rotate(180deg);
+    }
+
+    .order-review-panel {
+        border-radius: 16px;
+        background: #ffffff;
+        border: 1px solid rgba(213, 238, 232, 0.9);
+    }
+
+    .order-review-stars {
+        display: inline-flex;
+        flex-direction: row-reverse;
+        gap: 0.35rem;
+    }
+
+    .order-review-stars input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .order-review-stars label {
+        cursor: pointer;
+        color: #cbd5e1;
+        font-size: 1.3rem;
+        transition: color 0.16s ease, transform 0.16s ease;
+    }
+
+    .order-review-stars label:hover,
+    .order-review-stars label:hover ~ label,
+    .order-review-stars input:checked ~ label {
+        color: #f59e0b;
+        transform: translateY(-1px);
+    }
+
     .order-item-thumb {
         width: 58px;
         height: 58px;
@@ -146,15 +218,15 @@ $paymentLabels = $paymentLabels ?? [
         @php
         $item = $group->first();
         $product = $item->product;
-        $productReviewUrl = $product ? route('products.show', $product->slug) . '#reviews' : null;
         $totalQuantity = $group->sum('quantity');
         $totalSubtotal = $group->sum(fn($subItem) => $subItem->getSubtotal());
         $hasReviewedForThisItem = $product ? isset($reviewedProducts[$product->id]) : false;
+        $reviewPanelId = $product ? 'order-review-'.$order->id.'-'.$product->id : null;
         @endphp
         <div class="order-item-row">
             <div class="order-item-thumb">
                 @if($product)
-                <a href="{{ $productReviewUrl }}" class="d-block h-100">
+                <a href="{{ route('products.show', $product->slug) }}" class="d-block h-100">
                     <x-product-image
                         :src="$product->image_url"
                         :sku="$product->sku"
@@ -170,7 +242,7 @@ $paymentLabels = $paymentLabels ?? [
             <div class="flex-grow-1">
                 <div class="fw-bold">
                     @if($product)
-                    <a href="{{ $productReviewUrl }}" class="text-decoration-none text-dark">{{ $product->name }}</a>
+                    <a href="{{ route('products.show', $product->slug) }}" class="text-decoration-none text-dark">{{ $product->name }}</a>
                     @else
                     {{ 'Sản phẩm đã xóa' }}
                     @endif
@@ -182,13 +254,70 @@ $paymentLabels = $paymentLabels ?? [
 
                 @if(($statusKey ?? '') === 'completed' && $product)
                 @if(auth()->check() && ! $hasReviewedForThisItem)
-                <a href="{{ $productReviewUrl }}" class="badge bg-primary text-white mt-2 py-2 px-3">Đánh giá</a>
+                <button
+                    type="button"
+                    class="order-review-toggle mt-2"
+                    data-review-toggle
+                    data-review-target="{{ $reviewPanelId }}"
+                    aria-expanded="false"
+                    aria-controls="{{ $reviewPanelId }}"
+                >
+                    <span class="label">Đánh giá</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
                 @else
                 <span class="badge bg-light text-secondary mt-2">Đã đánh giá</span>
                 @endif
                 @endif
             </div>
         </div>
+
+        @if(($statusKey ?? '') === 'completed' && $product && auth()->check() && ! $hasReviewedForThisItem)
+        <div class="order-review-collapse d-none" id="{{ $reviewPanelId }}" data-review-panel>
+            <div class="p-3 p-md-4">
+                <div class="order-review-panel p-3 p-md-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                        <div>
+                            <h3 class="h6 fw-bold mb-1">Viết đánh giá cho {{ $product->name }}</h3>
+                            <p class="text-secondary small mb-0">Mỗi đơn hoàn tất cho phép gửi một đánh giá cho sản phẩm này.</p>
+                        </div>
+                        <span class="badge text-bg-light border">Từ lịch sử đơn hàng</span>
+                    </div>
+
+                    <form method="POST" action="{{ route('products.reviews.store', $product) }}" data-review-form>
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Chấm sao</label>
+                            <div class="order-review-stars">
+                                @for($star = 5; $star >= 1; $star--)
+                                    <input type="radio" name="rating" id="order-review-{{ $order->id }}-{{ $product->id }}-star-{{ $star }}" value="{{ $star }}">
+                                    <label for="order-review-{{ $order->id }}-{{ $product->id }}-star-{{ $star }}">
+                                        <i class="bi bi-star-fill"></i>
+                                    </label>
+                                @endfor
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="order-review-comment-{{ $order->id }}-{{ $product->id }}" class="form-label fw-semibold">Nhận xét</label>
+                            <textarea
+                                id="order-review-comment-{{ $order->id }}-{{ $product->id }}"
+                                name="comment"
+                                rows="3"
+                                class="form-control"
+                                placeholder="Chia sẻ cảm nhận của bạn về hương vị, độ ngọt, và chất lượng..."
+                            ></textarea>
+                        </div>
+
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="text-secondary small">Sau khi gửi, đánh giá sẽ hiển thị trong lịch sử mua hàng và trang sản phẩm.</div>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4">Gửi đánh giá</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        @endif
         @endforeach
 
         <div class="order-card-footer">
@@ -213,3 +342,22 @@ $paymentLabels = $paymentLabels ?? [
     </div>
     @endforelse
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-review-toggle]').forEach(function (button) {
+            const targetId = button.dataset.reviewTarget;
+            const panel = targetId ? document.getElementById(targetId) : null;
+
+            if (!panel) {
+                return;
+            }
+
+            button.addEventListener('click', function () {
+                const isHidden = panel.classList.contains('d-none');
+                panel.classList.toggle('d-none', !isHidden);
+                button.setAttribute('aria-expanded', String(isHidden));
+            });
+        });
+    });
+</script>
