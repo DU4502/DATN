@@ -63,23 +63,36 @@
                     <td>{{ strtoupper(str_replace('_', ' ', $order->payment_method ?? 'cod')) }}</td>
                     <td class="text-end fw-bold text-primary">{{ number_format($order->total_price ?? $order->total ?? 0, 0, ',', '.') }}đ</td>
                     <td class="text-center">
-                        <?php $status = $order->status ?? 'pending'; ?>
-                        <span class="badge
-                                @if($status === 'completed') badge-soft-primary
-                                @elseif($status === 'cancelled') badge-soft-danger
-                                @elseif(in_array($status, ['shipping', 'shipped', 'delivering'], true)) badge-soft-info
-                                @else badge-soft-muted
-                                @endif">
-                            @if($status === 'completed') Hoàn tất
-                            @elseif($status === 'cancelled') Đã hủy
-                            @elseif($status === 'pending') Chờ xử lý
-                            @elseif($status === 'processing') Đang xử lý
-                            @elseif($status === 'preparing') Đang chuẩn bị
-                            @elseif(in_array($status, ['shipping', 'shipped', 'delivering'], true)) Đang giao
-                            @else {{ $status }}
-                            @endif
-                        </span>
+                           <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST">
+                                @csrf
+                                @method('PUT')
+
+                                <select name="status"
+                                        class="form-select form-select-sm"
+                                        onchange="this.form.submit()">
+                                    <option value="pending"
+                                        {{ $order->status == 'pending' ? 'selected' : '' }}>
+                                        Chờ xử lý
+                                    </option>
+
+                                    <option value="processing"
+                                        {{ $order->status == 'processing' ? 'selected' : '' }}>
+                                        Đang xử lý
+                                    </option>
+
+                                    <option value="completed"
+                                        {{ $order->status == 'completed' ? 'selected' : '' }}>
+                                        Hoàn tất
+                                    </option>
+
+                                    <option value="cancelled"
+                                        {{ $order->status == 'cancelled' ? 'selected' : '' }}>
+                                        Đã hủy
+                                    </option>
+                                </select>
+                            </form>
                     </td>
+                    
                 </tr>
                 @empty
                 <tr>
