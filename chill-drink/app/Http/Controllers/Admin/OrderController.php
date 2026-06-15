@@ -98,6 +98,19 @@ class OrderController extends Controller
     {
         //
     }
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,processing,shipping,completed,cancelled',
+        ]);
+
+        $order = Order::findOrFail($id);
+
+        $order->status = $request->status;
+        $order->save();
+
+        return redirect()->back()->with('success', 'Cập nhật trạng thái thành công!');
+    }
 
     /**
      * Show the form for editing the specified resource.
