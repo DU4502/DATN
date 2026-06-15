@@ -287,7 +287,7 @@ $paymentLabels = $paymentLabels ?? [
                     <form method="POST" action="{{ route('products.reviews.store', $product) }}" data-review-form>
                         @csrf
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Chấm sao</label>
+                            <label class="form-label fw-semibold">Đánh giá sao</label>
                             <div class="order-review-stars">
                                 @for($star = 5; $star >= 1; $star--)
                                     <input type="radio" name="rating" id="order-review-{{ $order->id }}-{{ $product->id }}-star-{{ $star }}" value="{{ $star }}">
