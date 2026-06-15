@@ -16,8 +16,15 @@ class Order extends Model
      */
     protected $fillable = [
         'user_id',
+        'coupon_id',
+        'subtotal',
+        'shipping_fee',
+        'discount',
+        'total',
         'total_price',
         'payment_method',
+        'payment_status',
+        'vnpay_transaction_id',
         'status',
         'note',
     ];
@@ -29,6 +36,10 @@ class Order extends Model
      */
     protected $casts = [
         'total_price' => 'decimal:2',
+        'subtotal' => 'integer',
+        'shipping_fee' => 'integer',
+        'discount' => 'integer',
+        'total' => 'integer',
     ];
 
     /**
@@ -37,6 +48,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function voucher()
+    {
+        return $this->belongsTo(Voucher::class, 'coupon_id');
     }
 
     /**
@@ -52,7 +68,7 @@ class Order extends Model
      */
     public function getStatusBadgeColor()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'yellow',
             'processing' => 'blue',
             'shipping' => 'purple',
