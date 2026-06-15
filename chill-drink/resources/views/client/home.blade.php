@@ -529,6 +529,51 @@
 <div class="home-premium-page">
 <x-animated-slider />
 
+<section class="category-section">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-end mb-5">
+            <div>
+                <p class="section-kicker mb-2">Thực đơn</p>
+                <h2 class="section-title h1 mb-0">Hương vị yêu thích</h2>
+            </div>
+            <a href="{{ route('products.index') }}" class="btn btn-outline-primary d-none d-md-inline-flex px-4 rounded-pill">Khám phá tất cả <i class="bi bi-arrow-right ms-2"></i></a>
+        </div>
+
+        <div class="row g-4 category-scroll">
+            @forelse($categories as $category)
+                <div class="col-md-4 col-lg-3">
+                    <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-card">
+                        <img src="{{ $category->image_url ?? ($uiCategoryImages[$category->name] ?? $uiDefaultImage) }}" alt="{{ $category->name }}" class="category-image">
+                        <div class="category-overlay">
+                            <span class="category-icon"><i class="bi bi-arrow-up-right"></i></span>
+                            <div class="category-title">{{ $category->name }}</div>
+                            <span class="text-white opacity-75 small">Xem lựa chọn</span>
+                        </div>
+                    </a>
+                </div>
+            @empty
+                @foreach([
+                    ['Trà Sữa', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=500&q=85', 'bi-cup-hot'],
+                    ['Cà Phê', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=500&q=85', 'bi-cup'],
+                    ['Nước Ép', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=85', 'bi-arrow-up-right'],
+                    ['Sinh Tố', 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=500&q=85', 'bi-snow'],
+                ] as $category)
+                    <div class="col-md-4 col-lg-3">
+                        <a href="{{ route('products.index') }}" class="category-card">
+                            <img src="{{ $category[1] }}" alt="{{ $category[0] }}" class="category-image">
+                            <div class="category-overlay">
+                                <span class="category-icon"><i class="bi {{ $category[2] }}"></i></span>
+                                <div class="category-title">{{ $category[0] }}</div>
+                                <span class="text-white opacity-75 small">Xem lựa chọn</span>
+                            </div>
+                        </a>
+                    </div>
+                @endforeach
+            @endforelse
+        </div>
+    </div>
+</section>
+
 <section id="featured-products" class="featured-section">
     <div class="container">
         <div class="section-heading-row">
@@ -684,6 +729,11 @@
 
 <section class="cta-section">
     <div class="container">
+        @php
+            $ctaCategory = $categories->firstWhere('name', 'Trà Sữa') ?? $categories->firstWhere('name', 'Trà sữa');
+            $ctaImage = $ctaCategory?->image_url
+                ?? asset('storage/categories/U2o2CJ5ILRKraiJJ8hXWvt1VA2YZPFmqTvnGLgTJ.png');
+        @endphp
         <div class="cta-card">
             <div class="cta-content">
                 <h2 class="h3 fw-bold mb-3">Đừng bỏ lỡ bất kỳ tin tức nào</h2>
