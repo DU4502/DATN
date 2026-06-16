@@ -6,7 +6,7 @@
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
     .shop-page {
-        padding-top: 3rem;
+        padding-top: 2rem;
         padding-bottom: 5rem;
     }
 
@@ -19,13 +19,127 @@
         top: 108px;
     }
 
+    .shop-grid-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .shop-sort {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        white-space: nowrap;
+    }
+
+    .shop-sort .form-select {
+        width: auto;
+        min-width: 170px;
+        min-height: 38px;
+        padding-top: 0.4rem;
+        padding-right: 2.4rem;
+        padding-bottom: 0.4rem;
+        font-size: 0.82rem;
+        border-radius: var(--radius-sm);
+        border: 1.5px solid var(--c-border, #e5e7eb);
+        background-color: var(--c-surface, #fff) !important;
+        background-image:
+            linear-gradient(45deg, transparent 50%, var(--c-muted, #6b7280) 50%),
+            linear-gradient(135deg, var(--c-muted, #6b7280) 50%, transparent 50%);
+        background-position:
+            calc(100% - 18px) calc(50% - 2px),
+            calc(100% - 12px) calc(50% - 2px);
+        background-size: 6px 6px, 6px 6px;
+        background-repeat: no-repeat !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+    }
+
+    .shop-sort .form-select:focus {
+        border-color: var(--c-primary, #0d9373);
+        box-shadow: 0 0 0 3px var(--c-primary-glow, rgba(13, 147, 115, 0.15));
+    }
+
+    .sort-dropdown {
+        position: relative;
+        min-width: 190px;
+    }
+
+    .sort-dropdown-toggle {
+        width: 100%;
+        min-height: 42px;
+        border: 1.5px solid var(--c-border, #e5e7eb);
+        border-radius: var(--radius-sm, 8px);
+        padding: 0.55rem 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        background: #fff;
+        color: var(--c-ink, #111827);
+        font-weight: 800;
+        cursor: pointer;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .sort-dropdown.open .sort-dropdown-toggle,
+    .sort-dropdown-toggle:focus {
+        border-color: var(--c-primary, #0d9373);
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.13);
+    }
+
+    .sort-dropdown-toggle i {
+        color: var(--c-muted, #6b7280);
+        transition: transform 0.16s ease;
+    }
+
+    .sort-dropdown.open .sort-dropdown-toggle i {
+        transform: rotate(180deg);
+    }
+
+    .sort-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 0.35rem);
+        left: 0;
+        right: 0;
+        z-index: 50;
+        display: none;
+        overflow: hidden;
+        border: 1px solid var(--c-border, #e5e7eb);
+        border-radius: var(--radius-sm, 8px);
+        background: #fff;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .sort-dropdown.open .sort-dropdown-menu {
+        display: block;
+    }
+
+    .sort-dropdown-option {
+        width: 100%;
+        border: 0;
+        background: #fff;
+        color: var(--c-ink, #111827);
+        text-align: left;
+        padding: 0.72rem 0.9rem;
+        font-weight: 700;
+    }
+
+    .sort-dropdown-option:hover,
+    .sort-dropdown-option.active {
+        background: var(--c-primary-light, #e6f7f2);
+        color: var(--c-primary-dark, #067a5f);
+    }
+
     .filter-panel,
     .promo-panel,
     .shop-product-card {
         border: 1px solid var(--drink-border);
-        border-radius: 24px;
+        border-radius: var(--radius-md);
         background: rgba(255, 255, 255, 0.84);
-        box-shadow: 0 18px 42px rgba(79, 183, 168, 0.10);
+        box-shadow: var(--shadow-sm);
     }
 
     .filter-panel {
@@ -41,43 +155,71 @@
     }
 
     .category-chip {
-        min-height: 46px;
+        min-height: 30px;
         display: flex;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
         width: 100%;
         border: 0;
-        border-radius: 999px;
+        border-radius: var(--radius-sm);
         background: transparent;
         color: var(--drink-muted);
-        font-weight: 800;
-        padding: 0.82rem 1rem;
+        font-size: 0.84rem;
+        font-weight: 700;
+        padding: 0.34rem 0;
         text-align: left;
         text-decoration: none;
         transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     }
 
+    .category-radio {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        border: 1.5px solid var(--c-subtle, #9ca3af);
+        background: #ffffff;
+        transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+
     .category-list {
-        gap: 0.35rem !important;
+        gap: 0.15rem !important;
         margin-top: 0;
     }
 
     .category-chip:hover {
-        background: var(--drink-primary-soft);
+        background: transparent;
         color: var(--drink-primary-dark);
-        box-shadow: 0 12px 24px rgba(0, 107, 95, 0.10);
-        transform: translateX(6px);
+        box-shadow: none;
+        transform: translateX(3px);
     }
 
     .category-chip.active {
-        background: #008b7a !important;
-        color: #ffffff !important;
-        box-shadow: 0 12px 24px rgba(0, 107, 95, 0.16);
+        background: transparent !important;
+        color: var(--drink-primary) !important;
+        box-shadow: none;
     }
 
     .category-chip.active:hover {
-        background: #006b5f !important;
-        color: #ffffff !important;
+        background: transparent !important;
+        color: var(--drink-primary-dark) !important;
+    }
+
+    .category-chip.active .category-radio {
+        border-color: var(--drink-primary, #0d9373);
+        background: var(--drink-primary, #0d9373);
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.16);
+    }
+
+    .category-chip.active .category-radio::after {
+        content: "";
+        display: block;
+        width: 6px;
+        height: 6px;
+        margin: 4.5px auto 0;
+        border-radius: 50%;
+        background: #ffffff;
     }
 
     .range-control {
@@ -122,7 +264,7 @@
     }
 
     .shop-product-card {
-        padding: 1rem;
+        padding: 0.75rem;
         height: 100%;
         display: flex;
         flex-direction: column;
@@ -131,15 +273,15 @@
 
     .shop-product-card:hover {
         border-color: rgba(0, 139, 122, 0.38);
-        transform: translateY(-8px);
-        box-shadow: 0 28px 58px rgba(0, 107, 95, 0.18);
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg), var(--shadow-glow);
     }
 
     .shop-product-image {
         position: relative;
         overflow: hidden;
-        border-radius: 18px;
-        aspect-ratio: 1 / 1;
+        border-radius: var(--radius-sm);
+        aspect-ratio: 4 / 3;
         background: var(--drink-primary-soft);
     }
 
@@ -148,9 +290,11 @@
         width: 100%;
         height: 100%;
         min-height: 100%;
-        object-fit: cover;
+        object-fit: contain !important;
+        object-position: center !important;
+        padding: 0.55rem;
         display: block;
-        background: var(--drink-primary-soft);
+        background: var(--drink-primary-soft) !important;
         transition: transform 0.55s ease, filter 0.35s ease;
     }
 
@@ -161,23 +305,48 @@
 
     .product-tag {
         position: absolute;
-        top: 0.8rem;
-        right: 0.8rem;
-        border-radius: 999px;
+        top: 0.55rem;
+        left: 0.55rem;
+        right: auto;
+        border-radius: var(--radius-sm);
         background: #dff4ef;
         color: var(--drink-primary-dark);
-        font-size: 0.72rem;
+        font-size: 0.65rem;
         font-weight: 800;
-        padding: 0.38rem 0.75rem;
+        padding: 0.22rem 0.5rem;
     }
 
     .shop-product-title {
-        min-height: 3.75rem;
+        min-height: 2.6rem;
         display: -webkit-box;
         overflow: hidden;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 2;
-        line-height: 1.18;
+        line-height: 1.2;
+    }
+
+    .shop-product-meta {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .product-rating-mini {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.18rem;
+        color: #f59e0b;
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1;
+        white-space: nowrap;
+        margin-top: 0.3rem;
+    }
+
+    .product-rating-mini i {
+        font-size: 0.72rem;
     }
 
     .shop-product-sku {
@@ -185,11 +354,11 @@
     }
 
     .shop-product-desc {
-        min-height: 4.75rem;
+        min-height: 2.75rem;
         display: -webkit-box;
         overflow: hidden;
         -webkit-box-orient: vertical;
-        -webkit-line-clamp: 3;
+        -webkit-line-clamp: 2;
     }
 
     .shop-product-actions {
@@ -197,9 +366,9 @@
     }
 
     .add-round {
-        width: 46px;
-        height: 46px;
-        min-width: 46px;
+        width: 56px;
+        height: 56px;
+        min-width: 56px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -217,6 +386,39 @@
         position: relative;
         z-index: 2;
         transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .floating-cart-button {
+        right: 1.5rem !important;
+        bottom: 1.5rem !important;
+        margin: 0 !important;
+    }
+
+    .floating-cart-button svg {
+        width: 23px;
+        height: 23px;
+    }
+
+    .floating-cart-button i {
+        font-size: 1.35rem !important;
+        line-height: 1;
+    }
+
+    .floating-cart-button [data-cart-badge] {
+        min-width: 22px;
+        height: 22px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        top: -2px !important;
+        left: auto !important;
+        right: -3px !important;
+        transform: none !important;
+        border: 2px solid #fff;
+        font-size: 0.75rem;
+        line-height: 1;
+        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.25);
     }
 
     .shop-product-card button.add-round,
@@ -253,28 +455,51 @@
     }
 
     .product-cart-btn {
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
         border: 0;
-        border-radius: 999px;
+        border-radius: 14px;
         padding: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: var(--c-primary-light, var(--drink-primary-soft));
+        background: var(--drink-primary-soft);
         color: var(--c-primary, var(--drink-primary));
-        transition: all 0.2s ease;
+        box-shadow: inset 0 0 0 1px rgba(13, 147, 115, 0.12);
+        transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .shop-product-card:hover .product-cart-btn,
     .product-cart-btn:hover {
         background: var(--c-primary, var(--drink-primary));
         color: #ffffff;
-        transform: scale(1.1);
+        transform: translateY(-1px);
+        box-shadow: 0 10px 20px rgba(13, 147, 115, 0.24);
     }
 
     .product-cart-btn i {
+        font-size: 1rem !important;
         line-height: 1;
+    }
+
+    .product-detail-btn {
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1 1 auto;
+        border-radius: var(--radius-sm);
+        background: var(--c-border-light, #f3f4f6);
+        color: var(--c-ink, #111827);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-decoration: none;
+        transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .product-detail-btn:hover {
+        background: var(--drink-primary-soft);
+        color: var(--drink-primary-dark);
     }
 
     .shop-empty-state {
@@ -294,9 +519,25 @@
         width: 76px;
         height: 76px;
         border-radius: 18px;
-        object-fit: cover;
-        background: var(--drink-primary-soft);
+        object-fit: contain;
+        object-position: center;
+        background: #ffffff;
+        border: 1px solid var(--drink-border);
+        padding: 0.35rem;
         flex: 0 0 auto;
+    }
+
+    .quick-topping-choice {
+        min-width: 150px;
+        border-radius: 14px;
+        text-align: left;
+    }
+
+    .quick-topping-choice small {
+        display: block;
+        margin-top: 0.1rem;
+        font-size: 0.72rem;
+        opacity: 0.82;
     }
 
     .quick-choice {
@@ -352,6 +593,30 @@
         border-color: var(--drink-primary);
     }
 
+    .pagination {
+        justify-content: center;
+        gap: 0.4rem;
+    }
+
+    .pagination .page-link {
+        min-width: 36px;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius-sm) !important;
+        color: var(--drink-primary);
+        border-color: var(--drink-border);
+        font-weight: 800;
+    }
+
+    .pagination .active .page-link,
+    .pagination .page-link:hover {
+        background: var(--drink-primary);
+        border-color: var(--drink-primary);
+        color: #fff;
+    }
+
     @media (max-width: 991.98px) {
         .shop-sidebar {
             position: static;
@@ -369,43 +634,49 @@
             width: auto;
             white-space: nowrap;
             border: 1px solid var(--drink-border);
+            padding: 0.55rem 0.75rem;
+        }
+
+        .category-radio { display: none; }
+
+        .shop-grid-head {
+            align-items: flex-start;
+            flex-direction: column;
         }
     }
 </style>
 
 <section class="shop-page">
     <div class="container">
-        <header class="shop-heading mb-5">
-            <p class="section-kicker mb-2">Cửa hàng</p>
-            <h1 class="section-title display-5 mb-3">Làm mới ngày của bạn</h1>
-            <p class="text-secondary fs-5 mb-0">Khám phá menu đồ uống mát lành, từ trà sữa béo nhẹ, cà phê đậm vị đến nước ép và sinh tố trái cây.</p>
-        </header>
-
-        <div class="row g-4 g-xl-5">
+        <div class="row g-4">
             <aside class="col-lg-3">
                 <div class="shop-sidebar d-flex flex-column gap-4">
                     <div class="filter-panel p-4">
-                        <h2 class="filter-title d-flex align-items-center gap-2 mb-3">
-                            <span>☰</span>
-                            Danh mục
+                        <h2 class="h5 fw-bold mb-4">
+                            Bộ lọc
                         </h2>
 
+                        <h3 class="filter-title mb-3">Danh mục</h3>
                         <div class="category-list d-grid gap-2">
-                            <a href="{{ route('products.index', request()->only('search')) }}" class="category-chip {{ !request('category') ? 'active' : '' }}">Tất cả đồ uống</a>
+                            <a href="{{ route('products.index') }}" class="category-chip {{ !request('category') && empty($searchQuery) ? 'active' : '' }}">
+                                <span>Tất cả</span>
+                                <span class="category-radio" aria-hidden="true"></span>
+                            </a>
                             @forelse($categories as $category)
-                                <a href="{{ route('products.index', array_filter(['category' => $category->id, 'search' => $searchQuery ?? request('search')])) }}" class="category-chip {{ request('category') == $category->id ? 'active' : '' }}">
-                                    {{ $category->name }}
+                                <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-chip {{ request('category') == $category->id ? 'active' : '' }}">
+                                    <span>{{ $category->name }}</span>
+                                    <span class="category-radio" aria-hidden="true"></span>
                                 </a>
                             @empty
-                                <a href="{{ route('products.index') }}" class="category-chip">Trà sữa</a>
-                                <a href="{{ route('products.index') }}" class="category-chip">Cà phê</a>
-                                <a href="{{ route('products.index') }}" class="category-chip">Nước ép</a>
-                                <a href="{{ route('products.index') }}" class="category-chip">Sinh tố</a>
+                                <a href="{{ route('products.index') }}" class="category-chip"><span>Trà sữa</span><span class="category-radio" aria-hidden="true"></span></a>
+                                <a href="{{ route('products.index') }}" class="category-chip"><span>Cà phê</span><span class="category-radio" aria-hidden="true"></span></a>
+                                <a href="{{ route('products.index') }}" class="category-chip"><span>Nước ép</span><span class="category-radio" aria-hidden="true"></span></a>
+                                <a href="{{ route('products.index') }}" class="category-chip"><span>Sinh tố</span><span class="category-radio" aria-hidden="true"></span></a>
                             @endforelse
                         </div>
 
                         <div class="border-top mt-4 pt-4">
-                            <h2 class="filter-title mb-3">Khoảng giá</h2>
+                            <h3 class="filter-title mb-3">Lọc theo giá</h3>
                             <input class="range-control w-100" type="range" min="0" max="100000" value="50000">
                             <div class="d-flex justify-content-between text-secondary small fw-semibold mt-2">
                                 <span>0đ</span>
@@ -413,28 +684,51 @@
                             </div>
                         </div>
 
-                        <div class="border-top mt-4 pt-4">
-                            <h2 class="filter-title mb-3">Sắp xếp</h2>
-                            <select class="form-select">
-                                <option>Phổ biến nhất</option>
-                                <option>Mới nhất</option>
-                                <option>Giá thấp đến cao</option>
-                                <option>Giá cao đến thấp</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="promo-panel">
-                        <img src="https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85" alt="Ưu đãi đồ uống">
-                        <div class="promo-panel-content">
-                            <p class="small fw-bold text-uppercase mb-1">Ưu đãi giới hạn</p>
-                            <h3 class="h4 fw-bold mb-0">Arctic Mint Special</h3>
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-primary w-100 fw-bold">Áp dụng bộ lọc</button>
                         </div>
                     </div>
                 </div>
             </aside>
 
             <div class="col-lg-9">
+                <div class="shop-grid-head">
+                    <h1 class="section-title h2 mb-0">Sản phẩm nổi bật</h1>
+                    <form action="{{ route('products.index') }}" method="GET" class="shop-sort">
+                        @if(request('category'))
+                            <input type="hidden" name="category" value="{{ request('category') }}">
+                        @endif
+                        @if(!empty($searchQuery))
+                            <input type="hidden" name="search" value="{{ $searchQuery }}">
+                        @endif
+                        <label class="small fw-bold text-secondary mb-0">Sắp xếp theo:</label>
+@php
+    $sortOptions = [
+        '' => 'Bán chạy nhất',
+        'newest' => 'Mới nhất',
+        'price_asc' => 'Giá thấp đến cao',
+        'price_desc' => 'Giá cao đến thấp',
+    ];
+    $currentSort = request('sort', '');
+    $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions[''];
+@endphp
+<input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
+<div class="sort-dropdown" data-sort-dropdown>
+    <button type="button" class="sort-dropdown-toggle">
+        <span data-sort-label>{{ $currentSortLabel }}</span>
+        <i class="bi bi-chevron-down"></i>
+    </button>
+    <div class="sort-dropdown-menu">
+        @foreach($sortOptions as $value => $label)
+            <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active d-none' : '' }}" data-sort-value="{{ $value }}">
+                {{ $label }}
+            </button>
+        @endforeach
+    </div>
+</div>
+                    </form>
+                </div>
+
                 @if(!empty($searchQuery))
                     <div class="search-results-banner">
                         Kết quả tìm kiếm cho <strong>"{{ $searchQuery }}"</strong>
@@ -458,18 +752,31 @@
                                     <span class="product-tag">{{ $product->category->name ?? 'Đồ uống' }}</span>
                                 </a>
 
-                                <h2 class="h4 fw-bold mb-1 shop-product-title">
-                                    <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
-                                </h2>
+                                <div class="shop-product-meta mb-1">
+                                    <h2 class="h5 fw-bold mb-0 shop-product-title">
+                                        <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
+                                    </h2>
+                                    @if(($product->reviews_count ?? 0) > 0)
+                                        <span class="product-rating-mini" aria-label="Đánh giá {{ number_format((float) $product->reviews_avg_rating, 1) }} sao">
+                                            <i class="bi bi-star-fill" aria-hidden="true"></i>
+                                            {{ number_format((float) $product->reviews_avg_rating, 1) }}
+                                        </span>
+                                    @else
+                                        <span class="product-rating-mini text-secondary">Chưa có đánh giá</span>
+                                    @endif
+                                </div>
                                 @if(!empty($product->sku))
                                     <p class="text-secondary small font-monospace mb-2 shop-product-sku">{{ $product->sku }}</p>
                                 @else
                                     <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
                                 @endif
-                                <p class="text-secondary mb-4 shop-product-desc">{{ \Illuminate\Support\Str::limit($product->display_description, 90) }}</p>
+                                <p class="text-secondary small mb-3 shop-product-desc">{{ \Illuminate\Support\Str::limit($product->display_description, 70) }}</p>
 
-                                <div class="d-flex justify-content-between align-items-center shop-product-actions">
-                                    <span class="h4 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
+                                <div class="mb-3">
+                                    <span class="h5 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 shop-product-actions">
+                                    <a href="{{ route('products.show', $product->slug) }}" class="product-detail-btn">Chi tiết</a>
                                     @if(($product->stock ?? 1) > 0)
                                         <button
                                             type="button"
@@ -480,8 +787,9 @@
                                             data-name="{{ $product->name }}"
                                             data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
                                             data-image="{{ $product->image_url }}"
+                                            data-category="{{ $product->category?->name }}"
                                         >
-                                            <i class="bi bi-bag-plus fs-5" aria-hidden="true"></i>
+                                            <i class="bi bi-cart-plus" aria-hidden="true"></i>
                                         </button>
                                     @else
                                         <span class="badge text-bg-danger rounded-pill">Hết hàng</span>
@@ -507,11 +815,17 @@
                                                 <span class="product-tag">{{ $item[4] }}</span>
                                             @endif
                                         </a>
-                                        <h2 class="h4 fw-bold mb-2 shop-product-title">{{ $item[0] }}</h2>
+                                        <div class="shop-product-meta mb-2">
+                                            <h2 class="h5 fw-bold mb-0 shop-product-title">{{ $item[0] }}</h2>
+                                            <span class="product-rating-mini text-secondary">Chưa có đánh giá</span>
+                                        </div>
                                         <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
-                                        <p class="text-secondary mb-4 shop-product-desc">{{ $item[1] }}</p>
-                                        <div class="d-flex justify-content-between align-items-center shop-product-actions">
-                                            <span class="h4 fw-bold text-primary mb-0">{{ $item[2] }}</span>
+                                        <p class="text-secondary small mb-3 shop-product-desc">{{ $item[1] }}</p>
+                                        <div class="mb-3">
+                                            <span class="h5 fw-bold text-primary mb-0">{{ $item[2] }}</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 shop-product-actions">
+                                            <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}" class="product-detail-btn">Chi tiết</a>
                                             <button
                                                 type="button"
                                                 class="product-cart-btn"
@@ -522,7 +836,7 @@
                                                 data-price="{{ $item[2] }}"
                                                 data-image="{{ $item[3] }}"
                                             >
-                                                <i class="bi bi-bag-plus fs-5" aria-hidden="true"></i>
+                                                <i class="bi bi-cart-plus" aria-hidden="true"></i>
                                             </button>
                                         </div>
                                     </article>
@@ -536,7 +850,7 @@
                                     </span>
                                     <h2 class="h4 fw-bold mb-2">Chưa có sản phẩm trong mục này</h2>
                                     <p class="text-secondary mb-4">Bạn chọn danh mục khác hoặc quay lại tất cả đồ uống nhé.</p>
-                                    <a href="{{ route('products.index', request()->only('search')) }}" class="btn btn-primary rounded-pill px-4">Xem tất cả</a>
+                                    <a href="{{ route('products.index') }}" class="btn btn-primary rounded-pill px-4">Xem tất cả</a>
                                 </div>
                             </div>
                         @endif
@@ -561,6 +875,7 @@
                 <input type="hidden" name="size" value="M" data-quick-size-input>
                 <input type="hidden" name="sugar_level" value="50" data-quick-sugar-input>
                 <input type="hidden" name="ice_level" value="100" data-quick-ice-input>
+                <input type="hidden" name="toppings" value="[]" data-quick-toppings-input>
                 <input type="hidden" name="quantity" value="1">
 
                 <div class="modal-header border-0 pb-0">
@@ -583,8 +898,6 @@
                             <button type="button" class="quick-choice" data-value="S">S</button>
                             <button type="button" class="quick-choice active" data-value="M">M</button>
                             <button type="button" class="quick-choice" data-value="L">L</button>
-                            <button type="button" class="quick-choice" data-value="XL">XL</button>
-                            <button type="button" class="quick-choice" data-value="XXL">XXL</button>
                         </div>
                     </div>
 
@@ -599,13 +912,18 @@
                         </div>
                     </div>
 
-                    <div>
+                    <div class="mb-3">
                         <div class="fw-bold mb-2">Mức đá</div>
                         <div class="d-flex flex-wrap gap-2" data-quick-group="ice">
                             <button type="button" class="quick-choice" data-value="0">Không đá</button>
                             <button type="button" class="quick-choice" data-value="50">Ít đá</button>
                             <button type="button" class="quick-choice active" data-value="100">Bình thường</button>
                         </div>
+                    </div>
+
+                    <div>
+                        <div class="fw-bold mb-2">Topping</div>
+                        <div class="d-flex flex-wrap gap-2" data-quick-topping-group></div>
                     </div>
                 </div>
 
@@ -619,11 +937,8 @@
     </div>
 </div>
 
-<a href="{{ route('cart.index') }}" class="position-fixed bottom-0 end-0 m-4 add-round shadow-lg" style="z-index: 30;" aria-label="Giỏ hàng" data-cart-button>
-    <svg width="21" height="21" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.75 8.25h10.5l-.75 10.5a2.25 2.25 0 0 1-2.25 2.1h-6.5a2.25 2.25 0 0 1-2.25-2.1L4.75 8.25Z" />
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.75 8.25a3.25 3.25 0 0 1 6.5 0" />
-    </svg>
+<a href="{{ route('cart.index') }}" class="position-fixed bottom-0 end-0 m-4 add-round floating-cart-button shadow-lg" style="z-index: 30;" aria-label="Giỏ hàng" data-cart-button>
+    <i class="bi bi-cart-plus" aria-hidden="true"></i>
     <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {{ session('cart') ? '' : 'd-none' }}">
         {{ session('cart') ? count(session('cart')) : 0 }}
     </span>
@@ -631,6 +946,44 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-sort-dropdown]').forEach((dropdown) => {
+            const form = dropdown.closest('form');
+            const input = form?.querySelector('[data-sort-input]');
+            const label = dropdown.querySelector('[data-sort-label]');
+            const toggle = dropdown.querySelector('.sort-dropdown-toggle');
+            const options = dropdown.querySelectorAll('.sort-dropdown-option');
+
+            toggle?.addEventListener('click', () => {
+                document.querySelectorAll('.sort-dropdown.open').forEach((item) => {
+                    if (item !== dropdown) {
+                        item.classList.remove('open');
+                    }
+                });
+                dropdown.classList.toggle('open');
+            });
+
+            options.forEach((option) => {
+                option.addEventListener('click', () => {
+                    options.forEach((item) => item.classList.remove('active', 'd-none'));
+                    option.classList.add('active', 'd-none');
+                    if (input) {
+                        input.value = option.dataset.sortValue || '';
+                    }
+                    if (label) {
+                        label.textContent = option.textContent.trim();
+                    }
+                    dropdown.classList.remove('open');
+                    form?.submit();
+                });
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('[data-sort-dropdown]')) {
+                document.querySelectorAll('.sort-dropdown.open').forEach((item) => item.classList.remove('open'));
+            }
+        });
+
         const modalElement = document.getElementById('quickAddModal');
         const form = document.getElementById('quickAddForm');
 
@@ -646,12 +999,78 @@
             size: modalElement.querySelector('[data-quick-size-input]'),
             sugar: modalElement.querySelector('[data-quick-sugar-input]'),
             ice: modalElement.querySelector('[data-quick-ice-input]'),
+            toppings: modalElement.querySelector('[data-quick-toppings-input]'),
+            toppingGroup: modalElement.querySelector('[data-quick-topping-group]'),
         };
 
         function setGroupValue(group, value) {
             modalElement.querySelectorAll(`[data-quick-group="${group}"] .quick-choice`).forEach((button) => {
                 button.classList.toggle('active', button.dataset.value === value);
             });
+        }
+
+        function normalizeText(value) {
+            return String(value || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd');
+        }
+
+        function toppingOptionsFor(name, category) {
+            const text = normalizeText(`${name} ${category}`);
+
+            if (text.includes('matcha')) {
+                return [['Trân châu đen', 5000], ['Kem cheese', 7000], ['Thạch matcha', 6000]];
+            }
+
+            if (text.includes('tra sua')) {
+                return [['Trân châu đen', 5000], ['Pudding trứng', 7000], ['Thạch phô mai', 8000]];
+            }
+
+            if (text.includes('ca phe')) {
+                return [['Kem mặn', 7000], ['Shot espresso', 10000], ['Caramel', 6000]];
+            }
+
+            if (text.includes('sinh to')) {
+                return [['Hạt chia', 5000], ['Sữa chua', 7000], ['Nha đam', 6000]];
+            }
+
+            if (text.includes('nuoc ep')) {
+                return [['Nha đam', 6000], ['Hạt chia', 5000], ['Soda', 7000]];
+            }
+
+            if (text.includes('soda')) {
+                return [['Thạch trái cây', 6000], ['Nha đam', 6000], ['Trân châu trắng', 7000]];
+            }
+
+            return [['Trân châu trắng', 7000], ['Thạch nha đam', 6000], ['Kem cheese', 7000]];
+        }
+
+        function syncQuickToppings() {
+            const toppings = Array.from(fields.toppingGroup?.querySelectorAll('.quick-topping-choice.active') || []).map((button) => ({
+                name: button.dataset.toppingName || '',
+                price: Number(button.dataset.toppingPrice || 0),
+            }));
+
+            if (fields.toppings) {
+                fields.toppings.value = JSON.stringify(toppings);
+            }
+        }
+
+        function renderQuickToppings(name, category) {
+            if (!fields.toppingGroup) {
+                return;
+            }
+
+            fields.toppingGroup.innerHTML = toppingOptionsFor(name, category).map(([toppingName, price]) => `
+                <button type="button" class="quick-choice quick-topping-choice" data-topping-name="${toppingName}" data-topping-price="${price}">
+                    ${toppingName}
+                    <small>+${Number(price).toLocaleString('vi-VN')}đ</small>
+                </button>
+            `).join('');
+
+            syncQuickToppings();
         }
 
         document.querySelectorAll('[data-quick-add]').forEach((button) => {
@@ -664,9 +1083,11 @@
                 fields.size.value = 'M';
                 fields.sugar.value = '50';
                 fields.ice.value = '100';
+                fields.toppings.value = '[]';
                 setGroupValue('size', 'M');
                 setGroupValue('sugar', '50');
                 setGroupValue('ice', '100');
+                renderQuickToppings(button.dataset.name || '', button.dataset.category || '');
                 modal.show();
             });
         });
@@ -695,6 +1116,18 @@
                 }
             });
         });
+
+        fields.toppingGroup?.addEventListener('click', (event) => {
+            const button = event.target.closest('.quick-topping-choice');
+
+            if (!button) {
+                return;
+            }
+
+            button.classList.toggle('active');
+            syncQuickToppings();
+        });
     });
 </script>
 @endsection
+

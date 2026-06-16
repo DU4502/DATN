@@ -5,6 +5,115 @@
 @section('content')
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
+    .home-premium-page {
+        background: var(--c-bg);
+        color: var(--c-ink);
+        overflow: hidden;
+    }
+
+    .home-premium-page .section-title,
+    .home-premium-page h1,
+    .home-premium-page h2,
+    .home-premium-page h3 {
+        color: var(--c-ink);
+    }
+
+    .home-premium-page .section-kicker {
+        color: var(--c-primary);
+    }
+
+    .home-premium-page .text-secondary,
+    .home-premium-page .text-muted {
+        color: var(--c-muted) !important;
+    }
+
+    .premium-hero {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        padding: 5rem 0;
+        overflow: hidden;
+        background: var(--c-bg-warm);
+    }
+
+    .premium-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(90deg, rgba(249, 250, 251, 0.96) 0%, rgba(249, 250, 251, 0.78) 42%, rgba(249, 250, 251, 0.22) 100%),
+            linear-gradient(180deg, rgba(249, 250, 251, 0) 0%, var(--c-bg) 100%);
+        z-index: 1;
+    }
+
+    .premium-hero img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        opacity: 0.9;
+    }
+
+    .premium-hero-content {
+        position: relative;
+        z-index: 2;
+        max-width: 620px;
+    }
+
+    .premium-pill {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(13, 147, 115, 0.35);
+        color: var(--c-primary);
+        background: rgba(13, 147, 115, 0.10);
+        border-radius: var(--radius-full);
+        padding: 0.35rem 0.85rem;
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+    }
+
+    .premium-hero-title {
+        font-size: clamp(2.4rem, 5.2vw, 4.8rem);
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: -0.04em !important;
+        margin: 1rem 0;
+    }
+
+    .premium-hero-title span {
+        color: var(--c-primary);
+    }
+
+    .premium-hero-copy {
+        max-width: 520px;
+        color: var(--c-ink-secondary);
+        font-size: 1rem;
+    }
+
+    .premium-slide-dots {
+        position: absolute;
+        right: max(1.5rem, calc((100vw - 1140px) / 2));
+        bottom: 3rem;
+        z-index: 2;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .premium-slide-dots span {
+        width: 28px;
+        height: 3px;
+        border-radius: var(--radius-full);
+        background: rgba(17, 24, 39, 0.18);
+    }
+
+    .premium-slide-dots span:first-child {
+        width: 46px;
+        background: var(--c-primary);
+    }
+
     /* ─── Shared ─── */
     .glass-card {
         background: rgba(255, 255, 255, 0.7);
@@ -96,7 +205,7 @@
 
     /* ─── Featured Products ─── */
     .featured-section {
-        padding: 5rem 0;
+        padding: 4.5rem 0;
         background: #fff;
     }
 
@@ -105,13 +214,16 @@
         overflow: hidden;
         border: 1px solid var(--c-border);
         background: var(--c-surface);
-        transition: all 0.3s ease;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.35s ease,
+                    box-shadow 0.35s ease;
     }
 
     .product-card:hover {
         transform: translateY(-6px);
         border-color: var(--c-primary);
-        box-shadow: var(--shadow-xl);
+        box-shadow: var(--shadow-xl), 0 18px 46px rgba(13, 147, 115, 0.13);
     }
 
     .product-img-wrap {
@@ -123,7 +235,7 @@
 
     .product-img-wrap img {
         width: 100%; height: 100%; object-fit: cover;
-        transition: transform 0.5s ease;
+        transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .product-card:hover .product-img-wrap img {
@@ -133,11 +245,13 @@
     .product-badge {
         position: absolute;
         top: 1rem; left: 1rem;
-        background: var(--c-surface);
-        color: var(--c-primary);
-        padding: 0.35rem 0.8rem;
+        background: var(--c-primary);
+        color: #fff;
+        padding: 0.35rem 0.75rem;
         border-radius: var(--radius-full);
-        font-weight: 700; font-size: 0.75rem;
+        font-weight: 800; font-size: 0.7rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
         box-shadow: var(--shadow-sm);
         z-index: 2;
     }
@@ -150,6 +264,10 @@
 
     .product-card .card-body { padding: 1.5rem; }
 
+    .product-card h3 a {
+        color: var(--c-ink) !important;
+    }
+
     .product-cart-btn {
         width: 44px; height: 44px;
         border-radius: var(--radius-full);
@@ -161,6 +279,129 @@
     .product-card:hover .product-cart-btn, .product-cart-btn:hover {
         background: var(--c-primary); color: #fff;
         transform: scale(1.1);
+    }
+
+    .section-heading-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1.5rem;
+        margin-bottom: 1.6rem;
+    }
+
+    .section-heading-row .section-copy {
+        max-width: 560px;
+    }
+
+    .premium-underline {
+        display: block;
+        width: 66px;
+        height: 3px;
+        margin-top: 0.55rem;
+        border-radius: var(--radius-full);
+        background: var(--c-primary);
+    }
+
+    .product-add-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.48rem 0.75rem;
+        border: 1.5px solid var(--c-primary);
+        border-radius: var(--radius-sm);
+        color: var(--c-primary);
+        font-size: 0.78rem;
+        font-weight: 800;
+        text-decoration: none;
+        transition: all 0.25s ease;
+    }
+
+    .product-card:hover .product-add-label,
+    .product-add-label:hover {
+        background: var(--c-primary);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .promo-section {
+        padding: 3rem 0 4.5rem;
+        background: var(--c-bg);
+    }
+
+    .promo-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+        gap: 1.5rem;
+        min-height: 360px;
+    }
+
+    .promo-main,
+    .promo-side {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-2xl);
+        border: 1px solid rgba(13, 147, 115, 0.14);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .promo-main img {
+        width: 100%;
+        height: 100%;
+        min-height: 360px;
+        object-fit: cover;
+        transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .promo-main:hover img {
+        transform: scale(1.05);
+    }
+
+    .promo-main-content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 3rem;
+        background: linear-gradient(90deg, rgba(17, 24, 39, 0.82), rgba(17, 24, 39, 0.2), rgba(17, 24, 39, 0.02));
+        color: #fff;
+    }
+
+    .promo-main-content p,
+    .promo-main-content h3 {
+        color: #fff;
+    }
+
+    .promo-side {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 2rem;
+        background:
+            radial-gradient(circle at top right, rgba(13, 147, 115, 0.18), transparent 36%),
+            var(--c-surface);
+    }
+
+    .promo-icon {
+        width: 72px;
+        height: 72px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+        border-radius: var(--radius-xl);
+        background: var(--c-primary-light);
+        color: var(--c-primary);
+        font-size: 2rem;
+    }
+
+    .promo-action {
+        width: fit-content;
+        align-self: flex-start;
     }
 
     /* ─── Feature Band ─── */
@@ -216,88 +457,86 @@
     }
 
     /* ─── CTA Section ─── */
-    .cta-section { padding: 5rem 0; background: var(--c-bg); }
-
-    .cta-card {
-        background: var(--c-surface);
-        border-radius: 32px;
-        overflow: hidden;
-        border: 1px solid var(--c-border);
-        box-shadow: var(--shadow-xl);
-        display: flex; flex-wrap: wrap;
+    .cta-section {
+        padding: 4rem 0;
+        background: #fff;
     }
 
-    .cta-content { padding: 4rem; flex: 1; min-width: 300px; display: flex; flex-direction: column; justify-content: center;}
-    .cta-image { flex: 1; min-width: 300px; background: var(--c-primary-light); position: relative; }
-    
-    .cta-image img {
-        position: absolute; width: 100%; height: 100%; object-fit: cover;
+    .cta-card {
+        background: transparent;
+        border-radius: 0;
+        overflow: hidden;
+        border: 0;
+        box-shadow: none;
+        display: block;
+        text-align: center;
+        max-width: 720px;
+        margin: 0 auto;
+    }
+
+    .cta-content {
+        padding: 0;
+        display: block;
+    }
+
+    .newsletter-form {
+        display: flex;
+        align-items: stretch;
+        gap: 0.75rem;
+        max-width: 520px;
+        margin: 1.5rem auto 0;
+    }
+
+    .newsletter-form .form-control {
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 44px;
+        background: var(--c-surface);
+        border-color: var(--c-border);
+        border-radius: var(--radius-md);
+        color: var(--c-ink);
+    }
+
+    .newsletter-form .form-control::placeholder {
+        color: var(--c-subtle);
+    }
+
+    .newsletter-form .btn {
+        flex: 0 0 auto;
+        min-width: 112px;
+        min-height: 44px;
+        border-radius: var(--radius-md);
+        padding-inline: 1.35rem !important;
+        white-space: nowrap;
     }
 
     @media (max-width: 767.98px) {
+        .section-heading-row { display: block; margin-bottom: 2rem; }
         .category-scroll {
             display: flex; flex-wrap: nowrap; overflow-x: auto;
             gap: 1rem; padding-bottom: 1rem; scroll-snap-type: x mandatory;
         }
         .category-scroll > div { flex: 0 0 calc(70% - 1rem); scroll-snap-align: center; }
+        .promo-grid { grid-template-columns: 1fr; min-height: 0; }
+        .promo-main img { min-height: 360px; }
+        .promo-main-content { padding: 2rem; }
         .cta-content { padding: 2rem; }
-        .cta-image { min-height: 250px; }
+        .newsletter-form { flex-direction: column; }
+        .newsletter-form .btn { width: 100%; }
     }
 </style>
 
+<div class="home-premium-page">
 <x-animated-slider />
-
-<section class="category-section">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-end mb-5">
-            <div>
-                <p class="section-kicker mb-2">Thực đơn</p>
-                <h2 class="section-title h1 mb-0">Hương vị yêu thích</h2>
-            </div>
-            <a href="{{ route('products.index') }}" class="btn btn-outline-primary d-none d-md-inline-flex px-4 rounded-pill">Khám phá tất cả <i class="bi bi-arrow-right ms-2"></i></a>
-        </div>
-
-        <div class="row g-4 category-scroll">
-            @forelse($categories as $category)
-                <div class="col-md-4 col-lg-3">
-                    <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-card">
-                        <img src="{{ $category->image_url ?? ($uiCategoryImages[$category->name] ?? $uiDefaultImage) }}" alt="{{ $category->name }}" class="category-image">
-                        <div class="category-overlay">
-                            <span class="category-icon"><i class="bi bi-arrow-up-right"></i></span>
-                            <div class="category-title">{{ $category->name }}</div>
-                            <span class="text-white opacity-75 small">Xem lựa chọn</span>
-                        </div>
-                    </a>
-                </div>
-            @empty
-                @foreach([
-                    ['Trà Sữa', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=500&q=85', 'bi-cup-hot'],
-                    ['Cà Phê', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=500&q=85', 'bi-cup'],
-                    ['Nước Ép', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=85', 'bi-arrow-up-right'],
-                    ['Sinh Tố', 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=500&q=85', 'bi-snow'],
-                ] as $category)
-                    <div class="col-md-4 col-lg-3">
-                        <a href="{{ route('products.index') }}" class="category-card">
-                            <img src="{{ $category[1] }}" alt="{{ $category[0] }}" class="category-image">
-                            <div class="category-overlay">
-                                <span class="category-icon"><i class="bi {{ $category[2] }}"></i></span>
-                                <div class="category-title">{{ $category[0] }}</div>
-                                <span class="text-white opacity-75 small">Xem lựa chọn</span>
-                            </div>
-                        </a>
-                    </div>
-                @endforeach
-            @endforelse
-        </div>
-    </div>
-</section>
 
 <section id="featured-products" class="featured-section">
     <div class="container">
-        <div class="text-center mb-5 max-w-2xl mx-auto" style="max-width: 600px; margin: 0 auto;">
-            <p class="section-kicker mb-2">Bán chạy nhất</p>
-            <h2 class="section-title h1 mb-3">Gợi ý hôm nay</h2>
-            <p class="text-secondary text-lg mb-0">Những món uống được yêu thích nhất tại Chill Drink, mang đến sự tươi mới cho ngày của bạn.</p>
+        <div class="section-heading-row">
+            <div class="section-copy">
+                <h2 class="section-title h3 mb-0">Sản phẩm nổi bật</h2>
+                <span class="premium-underline"></span>
+            </div>
+            <a class="fw-bold text-decoration-none" href="{{ route('products.index') }}" style="font-size: 0.8rem;">Xem tất cả <i class="bi bi-box-arrow-up-right ms-1"></i></a>
         </div>
 
         <div class="row g-4 g-lg-5">
@@ -315,11 +554,12 @@
                         ->whereIn('sku', $homeFeaturedSkus)
                         ->get()
                         ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
+                        ->take(4)
                         ->values()
                     : (clone $homeProductQuery)
                         ->where('status', true)
                         ->latest()
-                        ->limit(8)
+                        ->limit(4)
                         ->get();
             @endphp
             @forelse($homeFeaturedProducts as $product)
@@ -361,12 +601,13 @@
                             @else
                                 <div class="mb-3"></div>
                             @endif
-                            <div class="mt-auto d-flex align-items-center justify-content-between">
+                            <div class="mt-auto">
                                 <strong class="text-primary h5 mb-0">{{ number_format($product->price, 0, ',', '.') }}đ</strong>
-                                <a href="{{ route('products.show', $product->slug) }}" class="product-cart-btn" aria-label="Xem chi tiết {{ $product->name }}">
-                                    <i class="bi bi-bag-plus fs-5"></i>
-                                </a>
                             </div>
+                            <a href="{{ route('products.show', $product->slug) }}" class="product-add-label">
+                                <i class="bi bi-cart-plus"></i>
+                                Thêm vào giỏ
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -393,12 +634,13 @@
                                 <h3 class="h5 fw-bold mb-3">
                                     <a href="{{ route('products.show', $item[4]) }}" class="text-dark text-decoration-none">{{ $item[0] }}</a>
                                 </h3>
-                                <div class="mt-auto d-flex align-items-center justify-content-between">
+                                <div class="mt-auto">
                                     <strong class="text-primary h5 mb-0">{{ $item[1] }}</strong>
-                                    <a href="{{ route('products.show', $item[4]) }}" class="product-cart-btn" aria-label="Xem chi tiết {{ $item[0] }}">
-                                        <i class="bi bi-bag-plus fs-5"></i>
-                                    </a>
                                 </div>
+                                <a href="{{ route('products.show', $item[4]) }}" class="product-add-label">
+                                    <i class="bi bi-cart-plus"></i>
+                                    Thêm vào giỏ
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -406,35 +648,35 @@
             @endforelse
         </div>
         
-        <div class="text-center mt-5 pt-3">
-            <a href="{{ route('products.index') }}" class="btn btn-outline-primary px-5 py-2 rounded-pill fw-bold">Xem toàn bộ menu</a>
-        </div>
     </div>
 </section>
 
-<section class="feature-band">
-    <div class="container position-relative z-1">
-        <div class="row g-4 g-lg-5">
-            <div class="col-md-4">
-                <div class="feature-item h-100">
-                    <div class="feature-icon-lg"><i class="bi bi-rocket-takeoff"></i></div>
-                    <h3 class="h4 fw-bold text-white mb-3">Giao Hàng Siêu Tốc</h3>
-                    <p class="text-white-50 mb-0">Cam kết giao hàng trong 30 phút. Đồ uống luôn tươi mát và chuẩn vị khi tới tay bạn.</p>
+<section class="promo-section">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="section-title h3 mb-0">Ưu đãi hấp dẫn</h2>
+        </div>
+
+        <div class="promo-grid">
+            <div class="promo-main">
+                <img src="{{ asset('images/chill-drink-promo.png') }}" alt="Chill Drink - đồ uống tươi mát">
+                <div class="promo-main-content">
+                    <p class="section-kicker text-white mb-2">Giao hàng siêu tốc</p>
+                    <h3 class="display-6 fw-bold mb-3">Đồ uống tươi mát<br>tới tay trong 30 phút</h3>
+                    <p class="mb-4" style="max-width: 460px;">Đơn hàng được chuẩn bị nhanh, giữ đúng hương vị và giao tiện lợi đến địa chỉ của bạn.</p>
+                    <a href="{{ route('products.index') }}" class="btn btn-light fw-bold rounded-pill px-4">Đặt hàng ngay</a>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="feature-item h-100">
-                    <div class="feature-icon-lg"><i class="bi bi-cup-hot"></i></div>
-                    <h3 class="h4 fw-bold text-white mb-3">Nguyên Liệu Tươi Sạch</h3>
-                    <p class="text-white-50 mb-0">Sử dụng trái cây tươi mỗi ngày và trà/cà phê chọn lọc kỹ càng, đảm bảo an toàn.</p>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="feature-item h-100">
-                    <div class="feature-icon-lg"><i class="bi bi-shield-check"></i></div>
-                    <h3 class="h4 fw-bold text-white mb-3">Thanh Toán An Toàn</h3>
-                    <p class="text-white-50 mb-0">Hỗ trợ đa dạng phương thức thanh toán, tiện lợi và bảo mật tuyệt đối thông tin.</p>
-                </div>
+
+            <div class="promo-side">
+                <div class="promo-icon"><i class="bi bi-ticket-perforated"></i></div>
+                <h3 class="h4 fw-bold mb-3">Thành viên Chill</h3>
+                <p class="text-secondary mb-4">Tích điểm nhận quà và nhận voucher riêng cho khách hàng thân thiết.</p>
+                @guest
+                    <a href="{{ route('register') }}" class="fw-bold text-decoration-none promo-action">Đăng ký ngay <i class="bi bi-chevron-right ms-1"></i></a>
+                @else
+                    <a href="{{ route('products.index') }}" class="fw-bold text-decoration-none promo-action">Đặt hàng ngay <i class="bi bi-chevron-right ms-1"></i></a>
+                @endguest
             </div>
         </div>
     </div>
@@ -442,28 +684,17 @@
 
 <section class="cta-section">
     <div class="container">
-        @php
-            $ctaCategory = $categories->firstWhere('name', 'Trà Sữa') ?? $categories->firstWhere('name', 'Trà sữa');
-            $ctaImage = $ctaCategory?->image_url
-                ?? asset('storage/categories/U2o2CJ5ILRKraiJJ8hXWvt1VA2YZPFmqTvnGLgTJ.png');
-        @endphp
         <div class="cta-card">
             <div class="cta-content">
-                <p class="section-kicker mb-2">Ưu đãi thành viên</p>
-                <h2 class="display-6 fw-bold mb-3">Tham gia cộng đồng <br>Chill Drink</h2>
-                <p class="text-secondary mb-4 fs-5">Đăng ký thành viên ngay hôm nay để nhận voucher giảm 20% cho đơn hàng đầu tiên và tích điểm đổi quà.</p>
-                <div class="d-flex flex-wrap gap-3">
-                    @guest
-                        <a href="{{ route('register') }}" class="btn btn-primary btn-lg rounded-pill px-4">Đăng ký ngay</a>
-                    @else
-                        <a href="{{ route('products.index') }}" class="btn btn-primary btn-lg rounded-pill px-4">Đặt hàng ngay</a>
-                    @endguest
-                </div>
-            </div>
-            <div class="cta-image">
-                <img src="{{ $ctaImage }}" alt="Trà sữa trân châu">
+                <h2 class="h3 fw-bold mb-3">Đừng bỏ lỡ bất kỳ tin tức nào</h2>
+                <p class="text-secondary mb-0">Đăng ký nhận tin để thành người đầu tiên biết về các sản phẩm mới và chương trình khuyến mãi độc quyền từ Chill Drink.</p>
+                <form action="{{ route('products.index') }}" method="GET" class="newsletter-form">
+                    <input class="form-control" type="email" name="email" placeholder="Địa chỉ email của bạn" aria-label="Địa chỉ email">
+                    <button class="btn btn-primary px-4" type="submit">Đăng ký</button>
+                </form>
             </div>
         </div>
     </div>
 </section>
+</div>
 @endsection
