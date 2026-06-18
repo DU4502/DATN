@@ -12,6 +12,7 @@
 </script>
 <style>
     .cart-page {
+        --cart-sticky-offset: 116px;
         background: linear-gradient(180deg, #effcf9 0%, #f7fffd 48%, #ffffff 100%);
         padding: 3rem 0 4.5rem;
     }
@@ -94,6 +95,12 @@
         background: transparent;
     }
 
+    .cart-summary-sticky {
+        position: sticky;
+        top: var(--cart-sticky-offset);
+        z-index: 1;
+    }
+
     .cart-item-card {
         border: 0;
         border-radius: 0;
@@ -154,39 +161,6 @@
         color: #d94b4b;
     }
 
-    .promo-control {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 0.5rem;
-        border: 1px solid rgba(0, 139, 122, 0.16);
-        border-radius: 18px;
-        background: #f7fffd;
-        padding: 0.45rem;
-    }
-
-    .promo-control input {
-        border: 0;
-        background: transparent;
-        height: 44px;
-        padding: 0 0.9rem;
-        min-width: 0;
-        font-weight: 600;
-    }
-
-    .promo-control input:focus {
-        box-shadow: none;
-    }
-
-    .promo-control .btn {
-        min-width: 92px;
-        min-height: 44px;
-        border-radius: 14px !important;
-        padding-inline: 1rem !important;
-        box-shadow: none;
-        white-space: nowrap;
-    }
-
     .payment-mark {
         width: 24px;
         height: 24px;
@@ -212,6 +186,14 @@
     }
 
     @media (max-width: 767.98px) {
+        .cart-page {
+            padding-top: 2rem;
+        }
+
+        .cart-summary-sticky {
+            position: static;
+        }
+
         .cart-items-card {
             border-radius: 22px;
             max-height: 58vh;
@@ -339,7 +321,7 @@
                 </div>
 
                 <div class="col-lg-4">
-                    <div class="cart-summary-card p-4 p-md-5 sticky-top" style="top: 96px;">
+                    <div class="cart-summary-card cart-summary-sticky p-4 p-md-5">
                         <h2 class="h4 fw-bold mb-4">Tóm tắt đơn</h2>
 
                         <div class="d-flex justify-content-between mb-3">
@@ -362,11 +344,6 @@
                         <div class="d-flex justify-content-between align-items-center h4 fw-bold mb-4">
                             <span>Tạm tính</span>
                             <span class="text-primary" data-selected-grand-total>{{ number_format($total + $tax, 0, ',', '.') }}đ</span>
-                        </div>
-
-                        <div class="promo-control mb-4">
-                            <input type="text" class="form-control" placeholder="Mã voucher">
-                            <button type="button" class="btn btn-primary">Áp dụng</button>
                         </div>
 
                         @auth

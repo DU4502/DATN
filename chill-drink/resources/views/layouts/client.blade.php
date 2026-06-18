@@ -1215,6 +1215,7 @@
         @yield('content')
     </main>
 
+    @unless(request()->routeIs('login', 'register', 'password.*', 'verification.*'))
     <footer class="site-footer mt-5">
         <div class="container py-5">
             <div class="row g-4 g-lg-5">
@@ -1267,6 +1268,7 @@
             </div>
         </div>
     </footer>
+    @endunless
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
