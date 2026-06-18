@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,8 +10,12 @@ return new class extends Migration
      */
     public function up()
     {
+        if (Schema::hasColumn('products', 'price')) {
+            return;
+        }
+
         Schema::table('products', function ($table) {
-            $table->decimal('price', 10, 2)->after('slug');
+            $table->decimal('price', 10, 2)->default(0)->after('slug');
         });
     }
 
@@ -21,8 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            //
-        });
+        // The price column already exists in deployed schemas, so rollback must not drop it.
     }
 };
