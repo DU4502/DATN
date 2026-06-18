@@ -97,6 +97,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Order Management
     Route::resource('orders', OrderController::class)->only(['index']);
+    Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
+        ->name('orders.updateStatus');
 
     // Review Management
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
