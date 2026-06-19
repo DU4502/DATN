@@ -14,6 +14,93 @@ class ProductManagementTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_can_search_products_by_name_sku_and_category(): void
+    {
+        $admin = $this->admin();
+        [$teaCategory, $coffeeCategory] = $this->productCategories();
+
+        Product::create([
+            'category_id' => $teaCategory->id,
+            'name' => 'Trà sữa tìm kiếm',
+            'slug' => 'tra-sua-tim-kiem',
+            'sku' => 'TS-SEARCH-001',
+            'price' => 45000,
+            'stock' => 12,
+            'status' => true,
+        ]);
+        Product::create([
+            'category_id' => $coffeeCategory->id,
+            'name' => 'Cà phê không khớp',
+            'slug' => 'ca-phe-khong-khop',
+            'sku' => 'CF-OTHER-001',
+            'price' => 32000,
+            'stock' => 8,
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index', ['q' => 'TS-SEARCH']))
+            ->assertOk()
+            ->assertSee('Trà sữa tìm kiếm')
+            ->assertDontSee('Cà phê không khớp')
+            ->assertSee('value="TS-SEARCH"', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index', ['q' => 'Cà Phê']))
+            ->assertOk()
+            ->assertSee('Cà phê không khớp')
+            ->assertDontSee('Trà sữa tìm kiếm');
+    }
+
+    public function test_admin_can_filter_products_by_category_status_and_stock(): void
+    {
+        $admin = $this->admin();
+        [$teaCategory, $coffeeCategory] = $this->productCategories();
+
+        Product::create([
+            'category_id' => $teaCategory->id,
+            'name' => 'Trà đang bán sắp hết',
+            'slug' => 'tra-dang-ban-sap-het',
+            'price' => 45000,
+            'stock' => 3,
+            'status' => true,
+        ]);
+        Product::create([
+            'category_id' => $teaCategory->id,
+            'name' => 'Trà đã ẩn',
+            'slug' => 'tra-da-an',
+            'price' => 42000,
+            'stock' => 20,
+            'status' => false,
+        ]);
+        Product::create([
+            'category_id' => $coffeeCategory->id,
+            'name' => 'Cà phê hết hàng',
+            'slug' => 'ca-phe-het-hang',
+            'price' => 32000,
+            'stock' => 0,
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index', [
+                'category' => $teaCategory->id,
+                'status' => 'active',
+                'stock' => 'low',
+            ]))
+            ->assertOk()
+            ->assertSee('Trà đang bán sắp hết')
+            ->assertDontSee('Trà đã ẩn')
+            ->assertDontSee('Cà phê hết hàng')
+            ->assertSee('selected', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index', ['stock' => 'out']))
+            ->assertOk()
+            ->assertSee('Cà phê hết hàng')
+            ->assertDontSee('Trà đang bán sắp hết');
+    }
+
     public function test_admin_can_create_product(): void
     {
         $admin = $this->admin();
@@ -242,6 +329,22 @@ class ProductManagementTest extends TestCase
             'role_id' => 2,
             'is_active' => 1,
         ]);
+    }
+
+    private function productCategories(): array
+    {
+        $teaCategory = Category::create([
+            'name' => 'Trà Sữa',
+            'slug' => 'tra-sua',
+            'status' => true,
+        ]);
+        $coffeeCategory = Category::create([
+            'name' => 'Cà Phê',
+            'slug' => 'ca-phe',
+            'status' => true,
+        ]);
+
+        return [$teaCategory, $coffeeCategory];
     }
 
     private function imageUpload(string $name): UploadedFile
