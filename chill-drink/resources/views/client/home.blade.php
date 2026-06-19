@@ -1186,6 +1186,21 @@
                                     :category="$product->category?->name"
                                 />
                             </a>
+                            <div class="product-image-cart-form">
+                                <button
+                                    type="button"
+                                    class="product-cart-btn"
+                                    aria-label="Chọn size và topping cho {{ $product->name }}"
+                                    data-quick-add
+                                    data-action="{{ route('cart.add', $product->id) }}"
+                                    data-name="{{ $product->name }}"
+                                    data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
+                                    data-image="{{ $product->image_url }}"
+                                    data-category="{{ $product->category?->name }}"
+                                >
+                                    <i class="bi bi-cart-plus" aria-hidden="true"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="home-product__body">
                             <div class="home-product__rating">
@@ -1228,6 +1243,21 @@
                                 <a href="{{ route('products.show', $item[4]) }}">
                                     <img src="{{ $item[2] }}" alt="{{ $item[0] }}" loading="lazy">
                                 </a>
+                                <div class="product-image-cart-form">
+                                    <button
+                                        type="button"
+                                        class="product-cart-btn"
+                                        aria-label="Chọn size và topping cho {{ $item[0] }}"
+                                        data-quick-add
+                                        data-action="{{ route('cart.add', 'demo-' . $item[4]) }}"
+                                        data-name="{{ $item[0] }}"
+                                        data-price="{{ $item[1] }}"
+                                        data-image="{{ $item[2] }}"
+                                        data-category="{{ $item[3] }}"
+                                    >
+                                        <i class="bi bi-cart-plus" aria-hidden="true"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="home-product__body">
                                 <div class="home-product__rating">

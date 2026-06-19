@@ -24,6 +24,7 @@ class Order extends Model
         'total_price',
         'payment_method',
         'payment_status',
+        'vnpay_transaction_id',
         'status',
         'note',
     ];
@@ -67,7 +68,7 @@ class Order extends Model
      */
     public function getStatusBadgeColor()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'yellow',
             'processing' => 'blue',
             'shipping' => 'purple',

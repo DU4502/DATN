@@ -25,7 +25,7 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         $cart = session()->get('cart', []);
-        
+
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
         }
@@ -98,12 +98,13 @@ class CheckoutController extends Controller
         $request->validate([
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => 'required|string|max:255',
-            'shipping_area_ui' => 'nullable|string|max:255',
+            'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_area_ui'],
+            'shipping_area_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_address_ui'],
             'voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
         ], [
-            'shipping_address_ui.required' => 'Vui lòng nhập địa chỉ nhận hàng.',
+            'shipping_address_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
+            'shipping_area_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
@@ -113,7 +114,7 @@ class CheckoutController extends Controller
         $fullCart = session()->get('cart', []);
         $selectedKeys = session()->get('checkout_cart_keys');
         $cart = $this->cartForCheckout($fullCart, $selectedKeys);
-        
+
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
         }
@@ -143,10 +144,7 @@ class CheckoutController extends Controller
                 $request->shipping_area_ui,
             ])->filter()->implode(', '));
             $shippingNote = sprintf(
-                'Giao hàng: %s, %skm (%s), phí ship %s%s',
-                $shippingQuote['method_label'],
-                rtrim(rtrim(number_format($shippingQuote['distance_km'], 1, '.', ''), '0'), '.'),
-                $shippingQuote['distance_label'],
+                'Giao hàng: phí cố định %s%s',
                 ShippingFee::formatCurrency($shippingQuote['total_fee']),
                 $addressText ? ", địa chỉ: {$addressText}" : ''
             );
@@ -194,7 +192,8 @@ class CheckoutController extends Controller
 
             // Create order items
             foreach ($orderItems as $item) {
-                OrderItem::create($this->orderItemData($order->id, $item));
+                $orderItem = OrderItem::create($this->orderItemData($order->id, $item));
+                $this->recordOrderItemToppings((int) $orderItem->id, $item['toppings'] ?? []);
             }
 
             if ($voucher) {
@@ -205,8 +204,14 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            return redirect()->route('profile.orders')->with('success', 'Đặt hàng thành công!');
-            
+            if ($order->payment_method === 'vnpay') {
+                return redirect()
+                    ->route('vnpay.payment', $order)
+                    ->with('success', 'Đơn hàng đã được tạo. Vui lòng thanh toán qua VNPay.');
+            }
+
+            return redirect()->route('checkout.success', $order);
+
         } catch (Throwable $e) {
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
@@ -223,6 +228,20 @@ class CheckoutController extends Controller
 
             return redirect()->back()->withInput()->with('error', $message);
         }
+    }
+
+    public function success(Order $order)
+    {
+        abort_unless((int) $order->user_id === (int) auth()->id(), 403);
+
+        $order->load('orderItems.product');
+
+        return view('client.checkout.success', [
+            'order' => $order,
+            'result' => 'success',
+            'title' => 'Cảm ơn bạn đã đặt hàng',
+            'message' => 'Đơn hàng đã được tiếp nhận và sẽ sớm được chuẩn bị.',
+        ]);
     }
 
     private function resolveVoucher(?string $code, int $subtotal): array
@@ -261,8 +280,8 @@ class CheckoutController extends Controller
         if (! $voucher->meetsMinimumOrder($subtotal)) {
             throw new \RuntimeException(
                 'Mã voucher chỉ áp dụng cho đơn từ '
-                . number_format((int) $voucher->min_order, 0, ',', '.')
-                . 'đ.'
+                .number_format((int) $voucher->min_order, 0, ',', '.')
+                .'đ.'
             );
         }
 
@@ -288,8 +307,8 @@ class CheckoutController extends Controller
         if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost) {
             throw new \RuntimeException(
                 'Bạn chưa đủ '
-                . number_format((int) $voucher->point_cost, 0, ',', '.')
-                . ' điểm để dùng mã voucher này.'
+                .number_format((int) $voucher->point_cost, 0, ',', '.')
+                .' điểm để dùng mã voucher này.'
             );
         }
     }
@@ -365,16 +384,6 @@ class CheckoutController extends Controller
                 'desc' => 'Trả tiền mặt sau khi nhận đồ uống.',
                 'icon' => 'bi-cash-coin',
             ],
-            'bank_transfer' => [
-                'title' => 'Chuyển khoản ngân hàng',
-                'desc' => 'Nhân viên xác nhận sau khi nhận chuyển khoản.',
-                'icon' => 'bi-bank',
-            ],
-            'momo' => [
-                'title' => 'Ví Momo',
-                'desc' => 'Thanh toán nhanh qua ví điện tử Momo.',
-                'icon' => 'bi-phone',
-            ],
             'vnpay' => [
                 'title' => 'VNPay',
                 'desc' => 'Hỗ trợ thẻ ATM, QR và ngân hàng nội địa.',
@@ -426,6 +435,7 @@ class CheckoutController extends Controller
                 'total_price' => $unitPrice * $quantity,
                 'ice_level' => (int) ($item['ice_level'] ?? 100),
                 'sugar_level' => (int) ($item['sugar_level'] ?? 100),
+                'toppings' => $item['toppings'] ?? [],
             ];
         }
 
@@ -470,6 +480,8 @@ class CheckoutController extends Controller
     {
         $productId = $product?->id ?? (int) ($item['product_id'] ?? 0);
         $fallbackPrice = max(0, (int) ($item['price'] ?? $product?->price ?? 0));
+        $toppingTotal = max(0, (int) ($item['topping_total'] ?? collect($item['toppings'] ?? [])->sum('price')));
+        $sizeExtra = max(0, (int) ($item['size_extra'] ?? 0));
 
         if (
             $productId <= 0
@@ -486,7 +498,7 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice);
+                return max(0, (int) $productSizePrice + $toppingTotal);
             }
         }
 
@@ -499,15 +511,48 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice);
+                return max(0, (int) $productSizePrice + $toppingTotal);
             }
         }
 
         if ($product && is_numeric($product->price ?? null)) {
-            return max(0, (int) $product->price);
+            return max(0, (int) $product->price + $sizeExtra + $toppingTotal);
         }
 
         return $fallbackPrice;
+    }
+
+    private function recordOrderItemToppings(int $orderItemId, array $toppings): void
+    {
+        if ($orderItemId <= 0 || empty($toppings) || ! Schema::hasTable('order_item_toppings') || ! Schema::hasTable('toppings')) {
+            return;
+        }
+
+        foreach ($toppings as $topping) {
+            $name = trim((string) ($topping['name'] ?? ''));
+
+            if ($name === '') {
+                continue;
+            }
+
+            $price = max(0, (int) ($topping['price'] ?? 0));
+            $toppingId = DB::table('toppings')->where('name', $name)->value('id');
+
+            if (! $toppingId) {
+                $toppingId = DB::table('toppings')->insertGetId([
+                    'name' => $name,
+                    'price' => $price,
+                    'status' => 1,
+                    'created_at' => now(),
+                ]);
+            }
+
+            DB::table('order_item_toppings')->insert([
+                'order_item_id' => $orderItemId,
+                'topping_id' => (int) $toppingId,
+                'price' => $price,
+            ]);
+        }
     }
 
     private function resolveProductSizeId(int $productId, array $item, int $unitPrice): ?int
