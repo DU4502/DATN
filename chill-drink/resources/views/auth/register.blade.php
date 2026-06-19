@@ -52,6 +52,13 @@
     }
     .btn-auth-submit:hover { transform: translateY(-3px); box-shadow: 0 12px 20px rgba(13,147,115,0.4); color: #fff; }
 
+    .social-btn {
+        height: 48px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.95rem;
+        background: var(--c-bg); border: 1.5px solid var(--c-border); color: var(--c-ink-secondary);
+        display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.2s;
+    }
+    .social-btn:hover { background: var(--c-surface); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+
     .auth-section-title {
         color: var(--c-primary); font-size: 0.8125rem; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;
@@ -73,6 +80,19 @@
                                 <div class="auth-logo"><img src="{{ asset('images/logo.png') }}" alt="Chill Drink"></div>
                                 <h1 class="h3 fw-bold mb-2">Tạo tài khoản mới</h1>
                                 <p class="text-secondary">Điền thông tin để bắt đầu đặt đồ uống siêu tốc</p>
+                            </div>
+
+                            @if(session('oauth_error'))
+                                <div class="alert alert-danger d-flex align-items-center mb-4"><i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('oauth_error') }}</div>
+                            @endif
+
+                            <div class="d-grid gap-3 mb-4">
+                                <a href="{{ route('auth.google.redirect') }}" class="btn social-btn">
+                                    <i class="bi bi-google text-danger fs-5"></i> Tiếp tục với Google
+                                </a>
+                                <a href="{{ route('auth.facebook.redirect') }}" class="btn social-btn">
+                                    <i class="bi bi-facebook text-primary fs-5"></i> Tiếp tục với Facebook
+                                </a>
                             </div>
 
                             <form method="POST" action="{{ route('register') }}">

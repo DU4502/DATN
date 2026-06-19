@@ -404,19 +404,31 @@ class DashboardController extends Controller
             $start = $now->copy()->startOfDay();
             for ($i = 0; $i < 12; $i++) {
                 $slotStart = $start->copy()->addHours($i * 2);
+                if ($slotStart->greaterThan($now)) {
+                    break;
+                }
                 $slotEnd = $slotStart->copy()->addHours(2)->subSecond();
+                if ($slotEnd->greaterThan($now)) {
+                    $slotEnd = $now->copy();
+                }
                 $slots[] = ['label' => $slotStart->format('H:i'), 'from' => $slotStart, 'to' => $slotEnd];
             }
         } elseif ($period === 'week') {
             $start = $now->copy()->startOfWeek(Carbon::MONDAY);
             for ($i = 0; $i < 7; $i++) {
                 $slotStart = $start->copy()->addDays($i)->startOfDay();
+                if ($slotStart->greaterThan($now)) {
+                    break;
+                }
                 $slotEnd = $slotStart->copy()->endOfDay();
+                if ($slotEnd->greaterThan($now)) {
+                    $slotEnd = $now->copy();
+                }
                 $slots[] = ['label' => 'T' . ($i + 2), 'from' => $slotStart, 'to' => $slotEnd];
             }
         } elseif ($period === 'month') {
             $cursor = $now->copy()->startOfMonth();
-            $monthEnd = $now->copy()->endOfMonth();
+            $monthEnd = $now->copy();
 
             while ($cursor->lessThanOrEqualTo($monthEnd)) {
                 $slotStart = $cursor->copy()->startOfDay();
@@ -432,7 +444,13 @@ class DashboardController extends Controller
         } else {
             for ($m = 1; $m <= 12; $m++) {
                 $slotStart = $now->copy()->startOfYear()->month($m)->startOfMonth();
+                if ($slotStart->greaterThan($now)) {
+                    break;
+                }
                 $slotEnd = $slotStart->copy()->endOfMonth();
+                if ($slotEnd->greaterThan($now)) {
+                    $slotEnd = $now->copy();
+                }
 
                 $slots[] = ['label' => 'T' . $m, 'from' => $slotStart, 'to' => $slotEnd];
             }
