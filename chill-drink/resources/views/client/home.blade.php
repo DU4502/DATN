@@ -77,6 +77,240 @@
         line-height: 1.4;
     }
 
+    /* ─── Discover Section ─── */
+    .home-discover {
+        padding: clamp(2.5rem, 6vw, 4.25rem) 0 0;
+        background: linear-gradient(180deg, rgba(247, 250, 252, 0.9) 0%, var(--c-bg) 100%);
+    }
+
+    .home-discover__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .home-discover__top .section-title {
+        margin-bottom: 0.35rem;
+    }
+
+    .home-discover__types {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .home-discover__type {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.4rem 1rem;
+        min-height: 170px;
+        text-align: center;
+        border-radius: var(--home-radius);
+        border: 1px solid var(--c-border);
+        background: var(--c-surface);
+        color: var(--c-ink);
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .home-discover__type:hover {
+        transform: translateY(-4px);
+        border-color: rgba(13, 147, 115, 0.3);
+        box-shadow: var(--home-shadow-hover);
+    }
+
+    .home-discover__type-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        margin-bottom: 1rem;
+        border-radius: 18px;
+        background: rgba(13, 147, 115, 0.12);
+        color: var(--c-primary);
+        font-size: 1.5rem;
+    }
+
+    .home-discover__type-title {
+        margin: 0;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .home-discover__products {
+        margin-top: 2.5rem;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1.25rem;
+    }
+
+    .home-discover-card {
+        display: flex;
+        flex-direction: column;
+        border-radius: var(--home-radius);
+        overflow: hidden;
+        border: 1px solid var(--c-border);
+        background: var(--c-surface);
+        box-shadow: var(--home-shadow);
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .home-discover-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(13, 147, 115, 0.3);
+        box-shadow: var(--home-shadow-hover);
+    }
+
+    .home-discover-card__media {
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+        background: var(--c-bg-warm);
+    }
+
+    .home-discover-card__media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
+
+    .home-discover-card:hover .home-discover-card__media img {
+        transform: scale(1.05);
+    }
+
+    .home-discover-card__body {
+        padding: 1.2rem 1.25rem 1.25rem;
+    }
+
+    .home-discover-card__tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.85rem;
+        margin-bottom: 0.85rem;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--c-primary);
+        background: rgba(13, 147, 115, 0.08);
+    }
+
+    .home-discover-card__title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0 0 0.75rem;
+        line-height: 1.35;
+    }
+
+    .home-discover-card__meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .home-discover-card__price {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--c-primary);
+    }
+
+    .home-discover-card__button {
+        color: var(--c-primary);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .home-discover__banner-grid {
+        display: grid;
+        grid-template-columns: 1.75fr 1fr;
+        gap: 1rem;
+        margin-top: 1.75rem;
+    }
+
+    .home-discover__banner {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 220px;
+        padding: 2rem;
+        border-radius: var(--home-radius);
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .home-discover__banner--promo {
+        background: linear-gradient(135deg, #22b573 0%, #2dd78e 100%);
+    }
+
+    .home-discover__banner--wellness {
+        background: linear-gradient(135deg, #ff9444 0%, #ff6b00 100%);
+    }
+
+    .home-discover__banner-title {
+        margin: 0 0 0.75rem;
+        font-size: clamp(1.6rem, 2.8vw, 2.4rem);
+        line-height: 1.05;
+        font-weight: 800;
+    }
+
+    .home-discover__banner-text {
+        margin: 0 0 1.25rem;
+        max-width: 18rem;
+        line-height: 1.6;
+    }
+
+    .home-discover__banner-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 1.5rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        transition: background 0.25s ease, transform 0.25s ease;
+    }
+
+    .home-discover__banner-button:hover {
+        background: rgba(255, 255, 255, 0.28);
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 1199.98px) {
+        .home-discover__banner-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 991.98px) {
+        .home-discover__types,
+        .home-discover__products,
+        .home-discover__banner-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .home-discover__top {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .home-discover { padding-top: 2rem; }
+        .home-discover__banner { min-height: 180px; }
+    }
+
     /* ─── Section Header ─── */
     .home-section-head {
         display: flex;
@@ -782,6 +1016,79 @@
     </div>
 
     {{-- Categories --}}
+    <section class="home-discover">
+        <div class="container">
+            <div class="home-discover__top">
+                <div>
+                    <p class="section-kicker mb-2">Khám Phá Hương Vị</p>
+                    <h2 class="section-title h1 mb-0">Đồ uống theo sở thích của bạn</h2>
+                    <p class="home-section-head__desc">Trải nghiệm các loại đồ uống tươi mát, từ nước ép trái cây đến cà phê chuẩn vị.</p>
+                </div>
+                <a href="{{ route('products.index') }}" class="home-link-arrow d-none d-md-inline-flex">
+                    Xem toàn bộ menu <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            @php
+                $homeDiscoverCategories = [
+                    ['title' => 'Juices', 'category_name' => 'Nước Ép', 'icon' => 'bi-droplet', 'description' => 'Trái cây tươi, thanh ngọt, giàu vitamin.'],
+                    ['title' => 'Smoothies', 'category_name' => 'Sinh Tố', 'icon' => 'bi-cup-straw', 'description' => 'Mịn màng, lạ miệng, bổ dưỡng mỗi ngày.'],
+                    ['title' => 'Teas', 'category_name' => 'Trà Trái Cây', 'icon' => 'bi-cup-hot', 'description' => 'Hương trà thanh nhẹ, thư thái cho mọi khoảnh khắc.'],
+                    ['title' => 'Coffee', 'category_name' => 'Cà Phê', 'icon' => 'bi-cup-fill', 'description' => 'Đậm đà, sảng khoái, đánh thức mọi cảm xúc.'],
+                ];
+            @endphp
+
+            <div class="home-discover__types">
+                @foreach($homeDiscoverCategories as $item)
+                    @php
+                        $discoverCategory = $categories->firstWhere('name', $item['category_name']);
+                    @endphp
+                    <a href="{{ route('products.index', array_filter(['category' => optional($discoverCategory)->id])) }}" class="home-discover__type">
+                        <span class="home-discover__type-icon"><i class="bi {{ $item['icon'] }}"></i></span>
+                        <h3 class="home-discover__type-title">{{ $item['title'] }}</h3>
+                        <p>{{ $item['description'] }}</p>
+                    </a>
+                @endforeach
+            </div>
+
+            <div class="home-discover__products">
+                @foreach([
+                    ['Cam Vắt Nguyên Chất', '45.000đ', 'https://images.unsplash.com/photo-1510832842230-f5bfe497d03b?auto=format&fit=crop&w=700&q=85', 'juices', 'cam-vat-nguyen-chat'],
+                    ['Green Detox Smoothie', '65.000đ', 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=700&q=85', 'smoothies', 'green-detox-smoothie'],
+                    ['Trà Đào Cam Sả', '50.000đ', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=700&q=85', 'teas', 'tra-dao-cam-sa'],
+                    ['Cold Brew Trái Cây', '55.000đ', 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=700&q=85', 'coffee', 'cold-brew-trai-cay'],
+                ] as $item)
+                    <a href="{{ route('products.show', $item[4]) }}" class="home-discover-card">
+                        <div class="home-discover-card__media">
+                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" loading="lazy">
+                        </div>
+                        <div class="home-discover-card__body">
+                            <span class="home-discover-card__tag">{{ ucfirst($item[3]) }}</span>
+                            <h3 class="home-discover-card__title">{{ $item[0] }}</h3>
+                            <div class="home-discover-card__meta">
+                                <span class="home-discover-card__price">{{ $item[1] }}</span>
+                                <span class="home-discover-card__button">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+
+            <div class="home-discover__banner-grid">
+                <div class="home-discover__banner home-discover__banner--promo">
+                    <h3 class="home-discover__banner-title">Ưu đãi mùa hè</h3>
+                    <p class="home-discover__banner-text">Giảm 20% cho đơn hàng đầu tiên của bạn. Thưởng thức ngay hương vị mát lạnh với giá ưu đãi.</p>
+                    <a href="{{ route('products.index') }}" class="home-discover__banner-button">Nhận mã khuyến mãi</a>
+                </div>
+                <div class="home-discover__banner home-discover__banner--wellness">
+                    <h3 class="home-discover__banner-title">Thanh Lọc Cơ Thể</h3>
+                    <p class="home-discover__banner-text">Các thức uống detox tự nhiên, giải nhiệt và bù nước nhanh chóng cho ngày năng động.</p>
+                    <a href="{{ route('products.index') }}" class="home-discover__banner-button">Xem thực đơn detox</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section class="home-categories">
         <div class="container">
             <div class="home-section-head">
