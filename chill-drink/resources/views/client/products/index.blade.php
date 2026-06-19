@@ -14,6 +14,185 @@
         max-width: 720px;
     }
 
+    .shop-main-top {
+        display: grid;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .shop-hero {
+        display: grid;
+        grid-template-columns: 1.35fr 1fr;
+        gap: 1.75rem;
+        overflow: hidden;
+        border-radius: 32px;
+        padding: 2rem;
+        background: linear-gradient(135deg, #0e5e48 0%, #1f9577 100%);
+        color: #ffffff;
+        min-height: 320px;
+    }
+
+    .shop-hero__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .shop-hero__title {
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.03;
+        font-weight: 800;
+        margin: 1rem 0 0.75rem;
+    }
+
+    .shop-hero__text {
+        max-width: 40rem;
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 1.75rem;
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .shop-hero__button {
+        min-width: 170px;
+        padding: 0.95rem 1.75rem;
+        border-radius: 999px;
+        font-weight: 700;
+    }
+
+    .shop-hero__visual {
+        display: grid;
+        align-items: center;
+        justify-items: center;
+    }
+
+    .shop-hero__visual img {
+        width: 100%;
+        max-width: 420px;
+        border-radius: 28px;
+        object-fit: cover;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+    }
+
+    .shop-vouchers {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .shop-vouchers__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .shop-vouchers__header h3 {
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .shop-vouchers__header a {
+        color: var(--c-primary);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .voucher-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .voucher-card {
+        background: #ffffff;
+        border: 1px solid rgba(15, 78, 62, 0.08);
+        border-radius: 24px;
+        padding: 1.15rem 1.2rem;
+        box-shadow: 0 18px 40px rgba(15, 78, 62, 0.05);
+        min-height: 170px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .voucher-card__top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.9rem;
+        min-height: 36px;
+    }
+
+    .voucher-card__code {
+        font-size: 1rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .voucher-card__tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(255, 137, 73, 0.16);
+        color: #ff6d2d;
+        font-size: 0.68rem;
+        font-weight: 800;
+        cursor: pointer;
+        border: 1px solid rgba(255, 137, 73, 0.25);
+        transition: background 0.2s ease, transform 0.2s ease;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .voucher-card__tag:hover {
+        background: rgba(255, 137, 73, 0.24);
+        transform: translateY(-1px);
+    }
+
+    .voucher-card__info {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--c-muted);
+        line-height: 1.6;
+    }
+
+    .voucher-card {
+        background: #ffffff;
+        border: 1px solid rgba(15, 78, 62, 0.08);
+        border-radius: 24px;
+        padding: 1.15rem 1.2rem;
+        box-shadow: 0 18px 40px rgba(15, 78, 62, 0.05);
+        min-height: 170px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .voucher-card__info {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--c-muted);
+        line-height: 1.6;
+    }
+
     .shop-sidebar {
         position: sticky;
         top: 108px;
@@ -334,9 +513,34 @@
         border-color: var(--drink-primary);
     }
 
-    @media (max-width: 991.98px) {
+    @media (max-width: 1199.98px) {
+        .shop-hero {
+            grid-template-columns: 1fr;
+            min-height: auto;
+        }
+
+        .shop-hero__visual img {
+            max-width: 100%;
+        }
+
+        .voucher-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 767.98px) {
         .shop-sidebar {
             position: static;
+        }
+
+        .shop-main-top,
+        .shop-hero,
+        .shop-vouchers {
+            grid-template-columns: 1fr;
+        }
+
+        .voucher-grid {
+            grid-template-columns: 1fr;
         }
 
         .category-list {
@@ -366,6 +570,9 @@
         <div class="row g-4 g-xl-5">
             <aside class="col-lg-3">
                 <div class="shop-sidebar d-flex flex-column gap-4">
+                    <div class="d-grid mb-3">
+                        <a href="{{ route('products.index') }}" class="btn btn-warning btn-lg rounded-pill text-white">Sản phẩm mới</a>
+                    </div>
                     <div class="filter-panel p-4">
                         <h2 class="filter-title d-flex align-items-center gap-2 mb-3">
                             <span>☰</span>
@@ -406,17 +613,69 @@
                         </div>
                     </div>
 
-                    <div class="promo-panel">
-                        <img src="https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85" alt="Ưu đãi đồ uống">
+                    <div class="promo-panel text-white">
+                        <img src="https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=700&q=85" alt="Thành viên Highlands">
                         <div class="promo-panel-content">
-                            <p class="small fw-bold text-uppercase mb-1">Ưu đãi giới hạn</p>
-                            <h3 class="h4 fw-bold mb-0">Arctic Mint Special</h3>
+                            <p class="small fw-bold text-uppercase mb-1">Thành viên Highlands</p>
+                            <h3 class="h4 fw-bold mb-3">Tích điểm đổi quà, nhận ưu đãi độc quyền hàng tuần.</h3>
+                            <a href="{{ route('register') }}" class="btn btn-warning rounded-pill px-4 fw-bold">Đăng ký ngay</a>
                         </div>
                     </div>
                 </div>
             </aside>
 
             <div class="col-lg-9">
+                <div class="shop-main-top">
+                    <div class="shop-hero">
+                        <div>
+                            <span class="shop-hero__badge">Món mới nhất</span>
+                            <h2 class="shop-hero__title">Matcha Dừa Mây</h2>
+                            <p class="shop-hero__text">Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.</p>
+                            <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
+                        </div>
+                        <div class="shop-hero__visual">
+                            <img src="https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=900&q=85" alt="Matcha Dừa Mây" loading="lazy">
+                        </div>
+                    </div>
+
+                    <div class="shop-vouchers">
+                        <div class="shop-vouchers__header">
+                            <h3>Mã Giảm Giá Phổ Biến</h3>
+                            <a href="{{ route('products.index') }}">Xem tất cả</a>
+                        </div>
+                        <div class="voucher-grid">
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <div class="voucher-card__code">TANGNANG20</div>
+                                    <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG20">SAO CHÉP</button>
+                                </div>
+                                <p class="voucher-card__info">Giảm 20k đơn 100k</p>
+                            </div>
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <div class="voucher-card__code">TANGNANG15</div>
+                                    <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG15">SAO CHÉP</button>
+                                </div>
+                                <p class="voucher-card__info">Giảm 15% tổng bill</p>
+                            </div>
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <div class="voucher-card__code">CHOCHILL</div>
+                                    <button type="button" class="voucher-card__tag" data-copy-code="CHOCHILL">SAO CHÉP</button>
+                                </div>
+                                <p class="voucher-card__info">Freeship đơn từ 50k</p>
+                            </div>
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <div class="voucher-card__code">SUMMER24</div>
+                                    <button type="button" class="voucher-card__tag" data-copy-code="SUMMER24">SAO CHÉP</button>
+                                </div>
+                                <p class="voucher-card__info">Giảm 10k mọi đơn</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 @if(!empty($searchQuery))
                     <div class="search-results-banner">
                         Kết quả tìm kiếm cho <strong>"{{ $searchQuery }}"</strong>
@@ -674,6 +933,23 @@
 
                 if (group.dataset.quickGroup === 'ice') {
                     fields.ice.value = button.dataset.value;
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-copy-code]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const code = button.dataset.copyCode;
+                try {
+                    await navigator.clipboard.writeText(code);
+                    button.textContent = 'ĐÃ SAO CHÉP';
+                    button.setAttribute('disabled', 'true');
+                    setTimeout(() => {
+                        button.textContent = 'SAO CHÉP';
+                        button.removeAttribute('disabled');
+                    }, 1500);
+                } catch (err) {
+                    console.error(err);
                 }
             });
         });
