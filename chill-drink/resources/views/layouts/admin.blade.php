@@ -268,6 +268,43 @@
             border-bottom: 1px solid var(--a-border);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
+            overflow: visible;
+        }
+
+        .admin-filter-panel {
+            position: relative;
+            z-index: 36;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-filter-panel.d-none {
+            display: none !important;
+        }
+
+        .admin-category-scroller {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.25rem;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar-thumb {
+            background: var(--a-border);
+            border-radius: var(--radius-full);
+        }
+
+        .admin-category-scroller .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
 
         /* ─── Metrics ─── */
@@ -657,10 +694,21 @@
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
-                    <div class="admin-search">
-                        <span class="admin-search-icon"><i class="bi bi-search"></i></span>
-                        <input type="search" placeholder="@yield('search-placeholder', 'Tìm kiếm...')">
-                    </div>
+                    @unless(View::hasSection('hide-topbar-search'))
+                        <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search" role="search">
+                            @foreach(request()->except(['q', 'page']) as $key => $value)
+                                @if(is_array($value))
+                                    @foreach($value as $item)
+                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                @endif
+                            @endforeach
+                            <span class="admin-search-icon"><i class="bi bi-search"></i></span>
+                            <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
+                        </form>
+                    @endunless
                 </div>
                 <div class="admin-topbar-actions">
                     <span class="text-secondary fw-medium d-none d-lg-inline" style="font-size: 0.8125rem;">{{ Auth::user()->name }}</span>
@@ -739,6 +787,17 @@
                 });
             });
         });
+
+        const filterToggle = document.querySelector('[data-admin-filter-toggle]');
+        const filterPanel = document.querySelector('[data-admin-filter-panel]');
+
+        if (filterToggle && filterPanel) {
+            filterToggle.addEventListener('click', () => {
+                const isHidden = filterPanel.classList.contains('d-none');
+                filterPanel.classList.toggle('d-none', !isHidden ? true : false);
+                filterToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        }
     </script>
 </body>
 </html>
