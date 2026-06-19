@@ -1092,18 +1092,6 @@
                     </li>
                 </ul>
 
-                {{-- COMMENTED OUT - Mini chart decoration (not used) - Có thể xóa sau
-                <div class="d-none d-lg-flex align-items-end ms-lg-5 me-lg-4" aria-hidden="true">
-                    <div class="mini-chart">
-                        <span class="mini-chart-bar" data-h="sm"></span>
-                        <span class="mini-chart-bar" data-h="md"></span>
-                        <span class="mini-chart-bar" data-h="lg"></span>
-                        <span class="mini-chart-bar" data-h="md"></span>
-                        <span class="mini-chart-bar" data-h="xl"></span>
-                    </div>
-                </div>
-                --}}
-
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
                         <div class="position-relative flex-grow-1">
