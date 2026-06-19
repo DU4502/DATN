@@ -1,10 +1,11 @@
 @extends('layouts.admin')
 
 @section('page-title', 'Danh mục')
-@section('search-placeholder', 'Tìm danh mục đồ uống...')
+{{-- @section('search-placeholder', 'Tìm danh mục đồ uống...') --}}
 
 @section('content')
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
+
 <section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
     <div>
         <h2 class="h2 fw-bold mb-1">Danh mục đồ uống</h2>
@@ -13,6 +14,37 @@
     <a href="{{ route('admin.categories.create') }}" class="btn btn-primary align-self-start align-self-lg-auto">
         <i class="bi bi-plus-circle me-1"></i>Thêm danh mục
     </a>
+</section>
+
+
+{{-- Thanh tìm kiếm --}}
+<section class="admin-card mb-4">
+    <div class="card-body">
+        <form id="searchForm" action="{{ route('admin.categories.index') }}" method="GET">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+
+                <input
+                    type="text"
+                    id="searchInput"
+                    name="keyword"
+                    class="form-control border-start-0"
+                    placeholder="Tìm theo tên danh mục..."
+                    value="{{ request('keyword') }}"
+                    autocomplete="off"
+                >
+
+                @if(request('keyword'))
+                    <a href="{{ route('admin.categories.index') }}"
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                @endif
+            </div>
+        </form>
+    </div>
 </section>
 
 <section class="row g-4 mb-4">
@@ -28,6 +60,7 @@
             </div>
         </div>
     </div>
+
     <div class="col-md-4">
         <div class="admin-card admin-metric">
             <div class="d-flex justify-content-between align-items-start">
@@ -40,6 +73,7 @@
             </div>
         </div>
     </div>
+
     <div class="col-md-4">
         <div class="admin-card admin-metric">
             <div class="d-flex justify-content-between align-items-start">
@@ -77,7 +111,9 @@
                         </td>
                         <td>
                             <div class="d-flex align-items-center gap-3">
-                                <span class="admin-icon-dot" style="width: 42px; height: 42px;"><i class="bi bi-grid"></i></span>
+                                <span class="admin-icon-dot" style="width: 42px; height: 42px;">
+                                    <i class="bi bi-grid"></i>
+                                </span>
                                 <span>
                                     <span class="fw-bold d-block">{{ $category->name }}</span>
                                     <small class="text-secondary">{{ $category->slug }}</small>
@@ -85,22 +121,35 @@
                             </div>
                         </td>
                         <td class="text-secondary">{{ $category->description ?? 'Chưa có mô tả' }}</td>
-                        <td class="text-center"><span class="badge badge-soft-primary">{{ $category->products_count }}</span></td>
+                        <td class="text-center">
+                            <span class="badge badge-soft-primary">{{ $category->products_count }}</span>
+                        </td>
                         <td class="text-center">
                             <span class="badge {{ $category->status ? 'badge-soft-primary' : 'badge-soft-muted' }}">
                                 {{ $category->status ? 'Hiển thị' : 'Chưa bật' }}
                             </span>
                         </td>
-                        <td class="text-secondary">{{ optional($category->created_at)->format('d/m/Y') }}</td>
+                        <td class="text-secondary">
+                            {{ optional($category->created_at)->format('d/m/Y') }}
+                        </td>
                         <td class="text-end text-nowrap">
-                            <a href="{{ route('admin.categories.edit', $category) }}" class="admin-action text-decoration-none" title="Sửa danh mục">
+                            <a href="{{ route('admin.categories.edit', $category) }}"
+                               class="admin-action text-decoration-none"
+                               title="Sửa danh mục">
                                 <i class="bi bi-pencil"></i>
                             </a>
+
                             @if((int) $category->products_count === 0)
-                                <form action="{{ route('admin.categories.destroy', $category) }}" method="POST" class="d-inline" onsubmit="return confirm('Xóa danh mục này?');">
+                                <form action="{{ route('admin.categories.destroy', $category) }}"
+                                      method="POST"
+                                      class="d-inline"
+                                      onsubmit="return confirm('Xóa danh mục này?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="admin-action" title="Xóa danh mục" style="color: var(--a-danger);">
+                                    <button type="submit"
+                                            class="admin-action"
+                                            title="Xóa danh mục"
+                                            style="color: var(--a-danger);">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
@@ -118,9 +167,31 @@
             </tbody>
         </table>
     </div>
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
-        <p class="text-secondary mb-0">Đang hiển thị {{ $categories->count() }} danh mục</p>
-        {{ $categories->links('pagination::bootstrap-5') }}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top"
+         style="background: var(--admin-soft-2);">
+        <p class="text-secondary mb-0">
+            Đang hiển thị {{ $categories->count() }} danh mục
+        </p>
+
+        {{ $categories->appends(request()->query())->links('pagination::bootstrap-5') }}
     </div>
 </section>
 @endsection
+
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let timeout = null;
+
+    document.getElementById('searchInput').addEventListener('keyup', function () {
+        clearTimeout(timeout);
+
+        timeout = setTimeout(() => {
+            document.getElementById('searchForm').submit();
+        }, 100); 
+    });
+});
+</script>
+@endpush

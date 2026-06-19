@@ -98,18 +98,20 @@ class OrderController extends Controller
     {
         //
     }
-    public function updateStatus(Request $request, $id)
+ public function updateStatus(Request $request, $id)
     {
-        $request->validate([
-            'status' => 'required|in:pending,processing,shipping,completed,cancelled',
-        ]);
-
         $order = Order::findOrFail($id);
 
-        $order->status = $request->status;
-        $order->save();
+        // Không cho sửa nếu đã hoàn tất hoặc đã hủy
+        if (in_array($order->status, ['completed', 'cancelled'])) {
+            return back()->with('error', 'Đơn hàng này không thể thay đổi trạng thái.');
+        }
 
-        return redirect()->back()->with('success', 'Cập nhật trạng thái thành công!');
+        $order->update([
+            'status' => $request->status
+        ]);
+
+        return back()->with('success', 'Cập nhật trạng thái thành công.');
     }
 
     /**

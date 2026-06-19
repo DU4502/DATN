@@ -13,13 +13,22 @@ class CategoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Lấy danh sách kèm số lượng sản phẩm, phân trang 12 mục
-        $categories = Category::withCount('products')->latest()->paginate(12);
+        $query = Category::withCount('products');
+
+        // Tìm kiếm theo tên danh mục
+        if ($request->filled('keyword')) {
+            $query->where('name', 'like', '%' . $request->keyword . '%');
+        }
+
+        $categories = $query->latest()->paginate(12);
 
         return view('admin.categories.index', compact('categories'));
     }
+
+        
+    
 
     /**
      * Show the form for creating a new resource.
