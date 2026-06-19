@@ -64,35 +64,34 @@
                     <td class="text-end fw-bold text-primary">{{ number_format($order->total_price ?? $order->total ?? 0, 0, ',', '.') }}đ</td>
                     <td class="text-center">
                            <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST">
-                                @csrf
-                                @method('PUT')
+                                    @csrf
+                                    @method('PUT')
 
-                                <select name="status"
+                                    <select
+                                        name="status"
                                         class="form-select form-select-sm"
-                                        onchange="this.form.submit()">
-                                    <option value="pending"
-                                        {{ $order->status == 'pending' ? 'selected' : '' }}>
-                                        Chờ xử lý
-                                    </option>
+                                        onchange="this.form.submit()"
+                                        {{ in_array($order->status, ['completed', 'cancelled']) ? 'disabled' : '' }}
+                                    >
+                                        <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }}>
+                                            Chờ xử lý
+                                        </option>
 
-                                    <option value="processing"
-                                        {{ $order->status == 'processing' ? 'selected' : '' }}>
-                                        Đang xử lý
-                                    </option>
+                                        <option value="processing" {{ $order->status == 'processing' ? 'selected' : '' }}>
+                                            Đang xử lý
+                                        </option>
 
-                                    <option value="completed"
-                                        {{ $order->status == 'completed' ? 'selected' : '' }}>
-                                        Hoàn tất
-                                    </option>
+                                        <option value="completed" {{ $order->status == 'completed' ? 'selected' : '' }}>
+                                            Hoàn tất
+                                        </option>
 
-                                    <option value="cancelled"
-                                        {{ $order->status == 'cancelled' ? 'selected' : '' }}>
-                                        Đã hủy
-                                    </option>
-                                </select>
-                            </form>
-                    </td>
-                    
+                                        <option value="cancelled" {{ $order->status == 'cancelled' ? 'selected' : '' }}>
+                                            Đã hủy
+                                        </option>
+                                    </select>
+</form>
+                        </td>
+                                            
                 </tr>
                 @empty
                 <tr>

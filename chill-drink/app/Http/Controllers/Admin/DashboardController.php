@@ -54,6 +54,8 @@ class DashboardController extends Controller
             'topProducts',
             'recentOrders'
         ));
+
+        
     }
 
     /**
