@@ -4,6 +4,16 @@
 
 @section('content')
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
+@php
+    $currentSort = request('sort', 'popular');
+    $sortOptions = [
+        'popular' => 'Phổ biến nhất',
+        'newest' => 'Mới nhất',
+        'price_asc' => 'Giá thấp đến cao',
+        'price_desc' => 'Giá cao đến thấp',
+    ];
+    $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
+@endphp
 <style>
     .shop-page {
         padding-top: 2rem;
@@ -72,14 +82,16 @@
         display: grid;
         align-items: center;
         justify-items: center;
+        min-height: 260px;
     }
 
     .shop-hero__visual img {
-        width: 100%;
-        max-width: 420px;
-        border-radius: 28px;
-        object-fit: cover;
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+        width: min(100%, 300px);
+        max-height: 270px;
+        border-radius: 22px;
+        object-fit: contain;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.14);
     }
 
     .shop-vouchers {
@@ -107,42 +119,82 @@
 
     .voucher-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1rem;
         align-items: stretch;
     }
 
     .voucher-card {
-        background: #ffffff;
-        border: 1px solid rgba(15, 78, 62, 0.08);
-        border-radius: 24px;
-        padding: 1.15rem 1.2rem;
-        box-shadow: 0 18px 40px rgba(15, 78, 62, 0.05);
-        min-height: 170px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+        position: relative;
+        background: linear-gradient(90deg, #2fb9a0 0 156px, #ffffff 156px 100%);
+        border: 1px solid rgba(47, 185, 160, 0.24);
+        border-radius: 18px;
+        padding: 1.05rem 1.05rem 1.05rem 1rem;
+        box-shadow: 0 18px 40px rgba(15, 78, 62, 0.08);
+        min-height: 132px;
+        display: grid;
+        grid-template-columns: 156px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "left code action"
+            "left info action";
+        column-gap: 1.45rem;
+        row-gap: 0.35rem;
+        align-items: center;
         overflow: hidden;
     }
 
-    .voucher-card__top {
-        display: flex;
+    .voucher-card::before,
+    .voucher-card::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #f6faf9;
+        border: 1px solid rgba(15, 78, 62, 0.08);
+        transform: translateY(-50%);
+    }
+
+    .voucher-card::before {
+        left: -9px;
+    }
+
+    .voucher-card::after {
+        right: -9px;
+    }
+
+    .voucher-card__visual {
+        grid-area: left;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: inline-flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
-        margin-bottom: 0.9rem;
-        min-height: 36px;
+        justify-content: center;
+        justify-self: center;
+        align-self: start;
+        margin-top: 0.2rem;
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        font-size: 1.25rem;
+    }
+
+    .voucher-card__top {
+        display: contents;
     }
 
     .voucher-card__code {
-        font-size: 1rem;
+        grid-area: code;
+        align-self: end;
+        font-size: 1.04rem;
         font-weight: 800;
-        letter-spacing: 0.02em;
-        flex: 1 1 auto;
+        letter-spacing: 0.01em;
         min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        line-height: 1.25;
     }
 
     .voucher-card__tag {
@@ -159,7 +211,9 @@
         border: 1px solid rgba(255, 137, 73, 0.25);
         transition: background 0.2s ease, transform 0.2s ease;
         white-space: nowrap;
-        flex-shrink: 0;
+        grid-area: action;
+        align-self: start;
+        margin-top: 0.05rem;
     }
 
     .voucher-card__tag:hover {
@@ -168,29 +222,44 @@
     }
 
     .voucher-card__info {
+        grid-area: info;
+        align-self: start;
         margin: 0;
-        font-size: 0.95rem;
+        font-size: 0.88rem;
         color: var(--c-muted);
-        line-height: 1.6;
+        line-height: 1.45;
+        min-width: 0;
     }
 
-    .voucher-card {
-        background: #ffffff;
-        border: 1px solid rgba(15, 78, 62, 0.08);
-        border-radius: 24px;
-        padding: 1.15rem 1.2rem;
-        box-shadow: 0 18px 40px rgba(15, 78, 62, 0.05);
-        min-height: 170px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+    .voucher-card__label {
+        grid-area: left;
+        align-self: end;
+        justify-self: center;
+        width: 112px;
+        color: #ffffff;
+        font-size: 0.86rem;
+        font-weight: 900;
+        line-height: 1.15;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.15rem;
     }
 
-    .voucher-card__info {
-        margin: 0;
-        font-size: 0.95rem;
-        color: var(--c-muted);
-        line-height: 1.6;
+    .voucher-card__highlight {
+        display: inline-flex;
+        width: fit-content;
+        max-width: 100%;
+        margin-top: 0.55rem;
+        padding: 0.28rem 0.55rem;
+        border: 1px solid rgba(13, 147, 115, 0.28);
+        border-radius: 6px;
+        color: var(--drink-primary-dark);
+        background: rgba(13, 147, 115, 0.06);
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1.25;
     }
 
     .shop-sidebar {
@@ -204,6 +273,7 @@
         justify-content: space-between;
         gap: 1rem;
         margin-bottom: 1.25rem;
+        flex-wrap: wrap;
     }
 
     .shop-sort {
@@ -243,15 +313,26 @@
 
     .sort-dropdown {
         position: relative;
-        min-width: 190px;
+        min-width: 220px;
+        z-index: 20;
+    }
+
+    .sort-dropdown.open,
+    .sort-dropdown:focus-within {
+        z-index: 120;
+    }
+
+    .sort-dropdown--full {
+        width: 100%;
+        min-width: 0;
     }
 
     .sort-dropdown-toggle {
         width: 100%;
-        min-height: 42px;
+        min-height: 46px;
         border: 1.5px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-sm, 8px);
-        padding: 0.55rem 0.8rem;
+        padding: 0.62rem 0.85rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -260,11 +341,19 @@
         color: var(--c-ink, #111827);
         font-weight: 800;
         cursor: pointer;
-        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+    }
+
+    .sort-dropdown-toggle span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .sort-dropdown.open .sort-dropdown-toggle,
+    .sort-dropdown:focus-within .sort-dropdown-toggle,
     .sort-dropdown-toggle:focus {
+        background: var(--c-primary-light, #e6f7f2);
         border-color: var(--c-primary, #0d9373);
         box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.13);
     }
@@ -274,7 +363,8 @@
         transition: transform 0.16s ease;
     }
 
-    .sort-dropdown.open .sort-dropdown-toggle i {
+    .sort-dropdown.open .sort-dropdown-toggle i,
+    .sort-dropdown:focus-within .sort-dropdown-toggle i {
         transform: rotate(180deg);
     }
 
@@ -283,33 +373,42 @@
         top: calc(100% + 0.35rem);
         left: 0;
         right: 0;
-        z-index: 50;
+        z-index: 80;
         display: none;
         overflow: hidden;
         border: 1px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-sm, 8px);
         background: #fff;
         box-shadow: var(--shadow-lg);
+        padding: 0.3rem;
     }
 
-    .sort-dropdown.open .sort-dropdown-menu {
+    .sort-dropdown.open .sort-dropdown-menu,
+    .sort-dropdown:focus-within .sort-dropdown-menu {
         display: block;
     }
 
     .sort-dropdown-option {
+        display: block !important;
         width: 100%;
         border: 0;
-        background: #fff;
+        border-radius: 7px;
+        background: transparent;
         color: var(--c-ink, #111827);
         text-align: left;
-        padding: 0.72rem 0.9rem;
-        font-weight: 700;
+        padding: 0.75rem 0.85rem;
+        font-weight: 800;
+        transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
     }
 
     .sort-dropdown-option:hover,
     .sort-dropdown-option.active {
         background: var(--c-primary-light, #e6f7f2);
         color: var(--c-primary-dark, #067a5f);
+    }
+
+    .sort-dropdown-option:hover {
+        transform: translateX(2px);
     }
 
     .filter-panel,
@@ -322,7 +421,7 @@
     }
 
     .filter-panel {
-        overflow: hidden;
+        overflow: visible;
     }
 
     .filter-title {
@@ -409,7 +508,6 @@
         position: relative;
         min-height: 250px;
         overflow: hidden;
-        color: #ffffff;
     }
 
     .promo-panel img {
@@ -422,24 +520,7 @@
     }
 
     .promo-panel:hover img {
-        transform: scale(1.08);
-    }
-
-    .promo-panel::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(180deg, transparent 15%, rgba(0, 82, 70, 0.84));
-    }
-
-    .promo-panel-content {
-        position: relative;
-        z-index: 1;
-        min-height: 250px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        padding: 1.5rem;
+        transform: scale(1.03);
     }
 
     .shop-product-card {
@@ -448,6 +529,12 @@
         display: flex;
         flex-direction: column;
         transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+    }
+
+    .shop-product-price {
+        display: flex;
+        justify-content: center;
+        text-align: center;
     }
 
     .shop-product-card:hover {
@@ -779,7 +866,8 @@
         }
 
         .shop-hero__visual img {
-            max-width: 100%;
+            width: min(100%, 280px);
+            max-height: 250px;
         }
 
         .voucher-grid {
@@ -800,6 +888,26 @@
 
         .voucher-grid {
             grid-template-columns: 1fr;
+        }
+
+        .voucher-card {
+            min-height: 108px;
+            background: linear-gradient(90deg, #2fb9a0 0 128px, #ffffff 128px 100%);
+            grid-template-columns: 128px minmax(0, 1fr);
+            grid-template-areas:
+                "left code"
+                "left info"
+                "left action";
+            column-gap: 1rem;
+        }
+
+        .voucher-card__tag {
+            justify-self: start;
+            margin-top: 0.25rem;
+        }
+
+        .voucher-card__label {
+            width: 90px;
         }
 
         .category-list {
@@ -869,22 +977,36 @@
 
                         <div class="border-top mt-4 pt-4">
                             <h2 class="filter-title mb-3">Sắp xếp</h2>
-                            <select class="form-select">
-                                <option>Phổ biến nhất</option>
-                                <option>Mới nhất</option>
-                                <option>Giá thấp đến cao</option>
-                                <option>Giá cao đến thấp</option>
-                            </select>
+                            <form method="GET" action="{{ route('products.index') }}">
+                                @foreach(request()->except(['sort', 'page']) as $key => $value)
+                                    @if(is_array($value))
+                                        @foreach($value as $nestedValue)
+                                            <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
+                                        @endforeach
+                                    @else
+                                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                    @endif
+                                @endforeach
+                                <input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
+                                <div class="sort-dropdown sort-dropdown--full" data-sort-dropdown>
+                                    <button type="button" class="sort-dropdown-toggle" aria-expanded="false">
+                                        <span data-sort-label>{{ $currentSortLabel }}</span>
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                    <div class="sort-dropdown-menu">
+                                        @foreach($sortOptions as $value => $label)
+                                            <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active' : '' }}" data-sort-value="{{ $value }}">
+                                                {{ $label }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     </div>
 
-                    <div class="promo-panel text-white">
-                        <img src="https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=700&q=85" alt="Thành viên Highlands">
-                        <div class="promo-panel-content">
-                            <p class="small fw-bold text-uppercase mb-1">Thành viên Highlands</p>
-                            <h3 class="h4 fw-bold mb-3">Tích điểm đổi quà, nhận ưu đãi độc quyền hàng tuần.</h3>
-                            <a href="{{ route('register') }}" class="btn btn-warning rounded-pill px-4 fw-bold">Đăng ký ngay</a>
-                        </div>
+                    <div class="promo-panel">
+                        <img src="{{ asset('images/chill-drink-promo.png') }}" alt="Thành viên Chill Drink">
                     </div>
                 </div>
             </aside>
@@ -899,7 +1021,7 @@
                             <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
                         </div>
                         <div class="shop-hero__visual">
-                            <img src="https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=900&q=85" alt="Matcha Dừa Mây" loading="lazy">
+                            <img src="{{ asset('images/matcha.png') }}" alt="Matcha Dừa Mây" loading="lazy">
                         </div>
                     </div>
 
@@ -911,34 +1033,75 @@
                         <div class="voucher-grid">
                             <div class="voucher-card">
                                 <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
+                                    <span class="voucher-card__label">TANGNANG20</span>
                                     <div class="voucher-card__code">TANGNANG20</div>
                                     <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG20">SAO CHÉP</button>
                                 </div>
-                                <p class="voucher-card__info">Giảm 20k đơn 100k</p>
+                                <p class="voucher-card__info">Giảm 20k đơn 100k <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
                             </div>
                             <div class="voucher-card">
                                 <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
+                                    <span class="voucher-card__label">TANGNANG15</span>
                                     <div class="voucher-card__code">TANGNANG15</div>
                                     <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG15">SAO CHÉP</button>
                                 </div>
-                                <p class="voucher-card__info">Giảm 15% tổng bill</p>
+                                <p class="voucher-card__info">Giảm 15% tổng bill <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
                             </div>
                             <div class="voucher-card">
                                 <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
+                                    <span class="voucher-card__label">CHOCHILL</span>
                                     <div class="voucher-card__code">CHOCHILL</div>
                                     <button type="button" class="voucher-card__tag" data-copy-code="CHOCHILL">SAO CHÉP</button>
                                 </div>
-                                <p class="voucher-card__info">Freeship đơn từ 50k</p>
+                                <p class="voucher-card__info">Freeship đơn từ 50k <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
                             </div>
                             <div class="voucher-card">
                                 <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
+                                    <span class="voucher-card__label">SUMMER24</span>
                                     <div class="voucher-card__code">SUMMER24</div>
                                     <button type="button" class="voucher-card__tag" data-copy-code="SUMMER24">SAO CHÉP</button>
                                 </div>
-                                <p class="voucher-card__info">Giảm 10k mọi đơn</p>
+                                <p class="voucher-card__info">Giảm 10k mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="shop-grid-head">
+                    <div>
+                        <h2 class="h4 fw-bold mb-1">Danh sách đồ uống</h2>
+                        <p class="text-secondary mb-0">{{ $products->total() }} sản phẩm phù hợp</p>
+                    </div>
+                    <form method="GET" action="{{ route('products.index') }}" class="shop-sort">
+                        @foreach(request()->except(['sort', 'page']) as $key => $value)
+                            @if(is_array($value))
+                                @foreach($value as $nestedValue)
+                                    <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
+                                @endforeach
+                            @else
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+                        <input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
+                        <span class="text-secondary fw-semibold small">Sắp xếp</span>
+                        <div class="sort-dropdown" data-sort-dropdown>
+                            <button type="button" class="sort-dropdown-toggle" aria-expanded="false">
+                                <span data-sort-label>{{ $currentSortLabel }}</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                            <div class="sort-dropdown-menu">
+                                @foreach($sortOptions as $value => $label)
+                                    <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active' : '' }}" data-sort-value="{{ $value }}">
+                                        {{ $label }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </form>
                 </div>
 
                 @if(!empty($searchQuery))
@@ -984,7 +1147,7 @@
                                 @endif
                                 <p class="text-secondary small mb-3 shop-product-desc">{{ \Illuminate\Support\Str::limit($product->display_description, 70) }}</p>
 
-                                <div class="mb-3">
+                                <div class="shop-product-price mb-3">
                                     <span class="h5 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 shop-product-actions">
@@ -1033,7 +1196,7 @@
                                         </div>
                                         <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
                                         <p class="text-secondary small mb-3 shop-product-desc">{{ $item[1] }}</p>
-                                        <div class="mb-3">
+                                        <div class="shop-product-price mb-3">
                                             <span class="h5 fw-bold text-primary mb-0">{{ $item[2] }}</span>
                                         </div>
                                         <div class="d-flex align-items-center gap-2 shop-product-actions">
@@ -1165,19 +1328,25 @@
             const toggle = dropdown.querySelector('.sort-dropdown-toggle');
             const options = dropdown.querySelectorAll('.sort-dropdown-option');
 
-            toggle?.addEventListener('click', () => {
+            options.forEach((item) => item.classList.remove('d-none'));
+
+            toggle?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                options.forEach((item) => item.classList.remove('d-none'));
                 document.querySelectorAll('.sort-dropdown.open').forEach((item) => {
                     if (item !== dropdown) {
                         item.classList.remove('open');
+                        item.querySelector('.sort-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
                     }
                 });
                 dropdown.classList.toggle('open');
+                toggle.setAttribute('aria-expanded', dropdown.classList.contains('open') ? 'true' : 'false');
             });
 
             options.forEach((option) => {
                 option.addEventListener('click', () => {
-                    options.forEach((item) => item.classList.remove('active', 'd-none'));
-                    option.classList.add('active', 'd-none');
+                    options.forEach((item) => item.classList.remove('active'));
+                    option.classList.add('active');
                     if (input) {
                         input.value = option.dataset.sortValue || '';
                     }
@@ -1185,6 +1354,7 @@
                         label.textContent = option.textContent.trim();
                     }
                     dropdown.classList.remove('open');
+                    toggle?.setAttribute('aria-expanded', 'false');
                     form?.submit();
                 });
             });
@@ -1192,7 +1362,10 @@
 
         document.addEventListener('click', (event) => {
             if (!event.target.closest('[data-sort-dropdown]')) {
-                document.querySelectorAll('.sort-dropdown.open').forEach((item) => item.classList.remove('open'));
+                document.querySelectorAll('.sort-dropdown.open').forEach((item) => {
+                    item.classList.remove('open');
+                    item.querySelector('.sort-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
+                });
             }
         });
 
@@ -1348,4 +1521,3 @@
     });
 </script>
 @endsection
-

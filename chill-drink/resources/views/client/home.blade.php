@@ -79,8 +79,9 @@
 
     /* ─── Discover Section ─── */
     .home-discover {
-        padding: clamp(2.5rem, 6vw, 4.25rem) 0 0;
-        background: linear-gradient(180deg, rgba(247, 250, 252, 0.9) 0%, var(--c-bg) 100%);
+        padding: clamp(2.75rem, 6vw, 4.75rem) 0 0;
+        background:
+            linear-gradient(180deg, rgba(247, 250, 252, 0.96) 0%, var(--c-bg) 100%);
     }
 
     .home-discover__top {
@@ -88,7 +89,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 1.25rem;
-        margin-bottom: 2rem;
+        margin-bottom: 1.65rem;
     }
 
     .home-discover__top .section-title {
@@ -98,66 +99,93 @@
     .home-discover__types {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1rem;
+        gap: 0.9rem;
     }
 
     .home-discover__type {
+        position: relative;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
-        padding: 1.4rem 1rem;
-        min-height: 170px;
-        text-align: center;
-        border-radius: var(--home-radius);
-        border: 1px solid var(--c-border);
-        background: var(--c-surface);
+        padding: 1.1rem 1.15rem 1.15rem;
+        min-height: 138px;
+        text-align: left;
+        border-radius: 18px;
+        border: 1px solid rgba(13, 147, 115, 0.13);
+        background: linear-gradient(180deg, #ffffff 0%, #f8fffd 100%);
         color: var(--c-ink);
         text-decoration: none;
-        box-shadow: var(--shadow-sm);
-        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        box-shadow: 0 12px 30px rgba(15, 78, 62, 0.06);
+        overflow: hidden;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+    }
+
+    .home-discover__type::after {
+        content: "\F138";
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+        font-family: "bootstrap-icons";
+        color: rgba(13, 147, 115, 0.35);
+        font-size: 1rem;
+        transition: transform 0.25s ease, color 0.25s ease;
     }
 
     .home-discover__type:hover {
         transform: translateY(-4px);
-        border-color: rgba(13, 147, 115, 0.3);
+        border-color: rgba(13, 147, 115, 0.34);
+        background: #ffffff;
         box-shadow: var(--home-shadow-hover);
+    }
+
+    .home-discover__type:hover::after {
+        color: var(--c-primary);
+        transform: translateX(3px);
     }
 
     .home-discover__type-icon {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 56px;
-        height: 56px;
-        margin-bottom: 1rem;
-        border-radius: 18px;
+        width: 46px;
+        height: 46px;
+        margin-bottom: 0.85rem;
+        border-radius: 14px;
         background: rgba(13, 147, 115, 0.12);
         color: var(--c-primary);
-        font-size: 1.5rem;
+        font-size: 1.25rem;
     }
 
     .home-discover__type-title {
-        margin: 0;
-        font-weight: 700;
+        margin: 0 0 0.25rem;
+        font-size: 1.05rem;
+        font-weight: 800;
         letter-spacing: -0.02em;
     }
 
+    .home-discover__type p {
+        margin: 0;
+        color: var(--c-muted);
+        font-size: 0.86rem;
+        line-height: 1.5;
+    }
+
     .home-discover__products {
-        margin-top: 2.5rem;
+        margin-top: 1.2rem;
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 1.25rem;
+        gap: 1rem;
     }
 
     .home-discover-card {
         display: flex;
         flex-direction: column;
-        border-radius: var(--home-radius);
+        border-radius: 18px;
         overflow: hidden;
-        border: 1px solid var(--c-border);
+        border: 1px solid rgba(13, 147, 115, 0.13);
         background: var(--c-surface);
-        box-shadow: var(--home-shadow);
+        box-shadow: 0 14px 34px rgba(15, 78, 62, 0.07);
         transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
         text-decoration: none;
         color: inherit;
@@ -171,15 +199,16 @@
 
     .home-discover-card__media {
         position: relative;
-        aspect-ratio: 1;
+        aspect-ratio: 4 / 3;
         overflow: hidden;
-        background: var(--c-bg-warm);
+        background: linear-gradient(145deg, #effbf7, #ffffff);
     }
 
     .home-discover-card__media img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+        padding: 0.35rem;
         transition: transform 0.6s ease;
     }
 
@@ -188,26 +217,33 @@
     }
 
     .home-discover-card__body {
-        padding: 1.2rem 1.25rem 1.25rem;
+        display: grid;
+        gap: 0.65rem;
+        padding: 0.95rem 1rem 1rem;
     }
 
     .home-discover-card__tag {
+        position: absolute;
+        left: 0.8rem;
+        top: 0.8rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.35rem 0.85rem;
-        margin-bottom: 0.85rem;
+        width: fit-content;
+        padding: 0.28rem 0.7rem;
+        margin-bottom: 0;
         border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 700;
+        font-size: 0.68rem;
+        font-weight: 800;
         color: var(--c-primary);
-        background: rgba(13, 147, 115, 0.08);
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 8px 20px rgba(15, 78, 62, 0.08);
     }
 
     .home-discover-card__title {
         font-size: 1rem;
-        font-weight: 700;
-        margin: 0 0 0.75rem;
+        font-weight: 800;
+        margin: 0;
         line-height: 1.35;
     }
 
@@ -227,7 +263,14 @@
     .home-discover-card__button {
         color: var(--c-primary);
         text-decoration: none;
-        font-weight: 600;
+        font-size: 0.82rem;
+        font-weight: 800;
+        white-space: nowrap;
+        transition: transform 0.25s ease;
+    }
+
+    .home-discover-card:hover .home-discover-card__button {
+        transform: translateX(3px);
     }
 
     .home-discover__banner-grid {
@@ -493,6 +536,55 @@
         transform: scale(1.05);
     }
 
+    .home-product .product-image-cart-form {
+        position: absolute;
+        inset: 0;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(7, 58, 53, 0.12);
+        transition: opacity 0.22s ease;
+    }
+
+    .home-product__img:hover .product-image-cart-form,
+    .home-product__img:focus-within .product-image-cart-form {
+        opacity: 1;
+    }
+
+    .home-product .product-cart-btn {
+        width: 54px;
+        height: 54px;
+        border: 0;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--c-primary);
+        color: #ffffff;
+        box-shadow: 0 18px 36px rgba(13, 147, 115, 0.28);
+        pointer-events: auto;
+        transform: translateY(8px) scale(0.94);
+        transition: transform 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .home-product .product-cart-btn i {
+        font-size: 1.25rem;
+        line-height: 1;
+    }
+
+    .home-product__img:hover .product-cart-btn,
+    .home-product__img:focus-within .product-cart-btn {
+        transform: translateY(0) scale(1);
+    }
+
+    .home-product .product-cart-btn:hover {
+        background: var(--c-primary-dark);
+        box-shadow: 0 20px 40px rgba(13, 147, 115, 0.34);
+    }
+
     .home-product__tag {
         position: absolute;
         top: 0.875rem;
@@ -557,10 +649,11 @@
     .home-product__footer {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
         margin-top: auto;
         padding-top: 0.75rem;
         border-top: 1px solid var(--c-border-light);
+        text-align: center;
     }
 
     .home-product__price {
@@ -568,27 +661,6 @@
         font-weight: 800;
         color: var(--c-primary);
         letter-spacing: -0.02em;
-    }
-
-    .home-product__btn {
-        width: 42px;
-        height: 42px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        background: var(--c-primary-light);
-        color: var(--c-primary);
-        text-decoration: none;
-        border: 0;
-        transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-    }
-
-    .home-product:hover .home-product__btn,
-    .home-product__btn:hover {
-        background: var(--c-primary);
-        color: #fff;
-        transform: scale(1.08);
     }
 
     .home-featured__cta {
@@ -1053,17 +1125,17 @@
 
             <div class="home-discover__products">
                 @foreach([
-                    ['Cam Vắt Nguyên Chất', '45.000đ', 'https://images.unsplash.com/photo-1510832842230-f5bfe497d03b?auto=format&fit=crop&w=700&q=85', 'juices', 'cam-vat-nguyen-chat'],
-                    ['Green Detox Smoothie', '65.000đ', 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=700&q=85', 'smoothies', 'green-detox-smoothie'],
-                    ['Trà Đào Cam Sả', '50.000đ', 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=700&q=85', 'teas', 'tra-dao-cam-sa'],
-                    ['Cold Brew Trái Cây', '55.000đ', 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=700&q=85', 'coffee', 'cold-brew-trai-cay'],
+                    ['Cam Vắt Nguyên Chất', '45.000đ', asset('images/products/nuoc-ep-cam.png'), 'juices', 'cam-vat-nguyen-chat'],
+                    ['Green Detox Smoothie', '65.000đ', asset('images/products/sinh-to-bo.png'), 'smoothies', 'green-detox-smoothie'],
+                    ['Trà Đào Cam Sả', '50.000đ', asset('images/products/tra-dao-cam-sa.png'), 'teas', 'tra-dao-cam-sa'],
+                    ['Cold Brew Trái Cây', '55.000đ', asset('images/products/ca-phe-u-lanh.png'), 'coffee', 'cold-brew-trai-cay'],
                 ] as $item)
                     <a href="{{ route('products.show', $item[4]) }}" class="home-discover-card">
                         <div class="home-discover-card__media">
                             <img src="{{ $item[2] }}" alt="{{ $item[0] }}" loading="lazy">
+                            <span class="home-discover-card__tag">{{ ucfirst($item[3]) }}</span>
                         </div>
                         <div class="home-discover-card__body">
-                            <span class="home-discover-card__tag">{{ ucfirst($item[3]) }}</span>
                             <h3 class="home-discover-card__title">{{ $item[0] }}</h3>
                             <div class="home-discover-card__meta">
                                 <span class="home-discover-card__price">{{ $item[1] }}</span>
@@ -1115,10 +1187,10 @@
                     </a>
                 @empty
                     @foreach([
-                        ['Trà Sữa', 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=500&q=85'],
-                        ['Cà Phê', 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=500&q=85'],
-                        ['Nước Ép', 'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=85'],
-                        ['Sinh Tố', 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=500&q=85'],
+                        ['Trà Sữa', asset('images/products/tra-sua-tran-chau-duong-den.webp')],
+                        ['Cà Phê', asset('images/products/ca-phe-sua-da.png')],
+                        ['Nước Ép', asset('images/products/nuoc-ep-cam.png')],
+                        ['Sinh Tố', asset('images/products/sinh-to-xoai.png')],
                     ] as $category)
                         <a href="{{ route('products.index') }}" class="home-cat-card">
                             <div class="home-cat-card__media">
@@ -1224,18 +1296,15 @@
                             @endif
                             <div class="home-product__footer">
                                 <span class="home-product__price">{{ number_format($product->price, 0, ',', '.') }}đ</span>
-                                <a href="{{ route('products.show', $product->slug) }}" class="home-product__btn" aria-label="Xem chi tiết {{ $product->name }}">
-                                    <i class="bi bi-bag-plus fs-5"></i>
-                                </a>
                             </div>
                         </div>
                     </article>
                 @empty
                     @foreach([
-                        ['Matcha Latte', '45.000đ', 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=85', 'Trà', 'matcha-latte-da'],
-                        ['Trà Dâu Dứa', '38.000đ', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=85', 'Trái cây', 'tropical-frost'],
-                        ['Bạc Xỉu Đá', '29.000đ', 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=700&q=85', 'Cà phê', 'ca-phe-sua-da'],
-                        ['Nước Chanh Bạc Hà', '35.000đ', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=85', 'Giải khát', 'citrus-sunset'],
+                        ['Matcha Latte', '45.000đ', asset('images/matcha.png'), 'Trà', 'matcha-latte-da'],
+                        ['Trà Dâu Dứa', '38.000đ', asset('images/products/tra-dau.jpg'), 'Trái cây', 'tropical-frost'],
+                        ['Bạc Xỉu Đá', '29.000đ', asset('images/products/bac-xiu-da.jpg'), 'Cà phê', 'ca-phe-sua-da'],
+                        ['Nước Chanh Bạc Hà', '35.000đ', asset('images/products/soda-chanh-day.jpg'), 'Giải khát', 'citrus-sunset'],
                     ] as $item)
                         <article class="home-product">
                             <div class="home-product__img">
@@ -1270,9 +1339,6 @@
                                 <p class="home-product__sku">&nbsp;</p>
                                 <div class="home-product__footer">
                                     <span class="home-product__price">{{ $item[1] }}</span>
-                                    <a href="{{ route('products.show', $item[4]) }}" class="home-product__btn" aria-label="Xem chi tiết {{ $item[0] }}">
-                                        <i class="bi bi-bag-plus fs-5"></i>
-                                    </a>
                                 </div>
                             </div>
                         </article>
@@ -1293,7 +1359,7 @@
         <div class="container">
             <div class="home-story__grid">
                 <div class="home-story__visual">
-                    <img src="https://images.unsplash.com/photo-1546171753-97d0dcb6ef2e?auto=format&fit=crop&w=900&q=85" alt="Chill Drink - đồ uống tươi mát" loading="lazy">
+                    <img src="{{ asset('images/chill-drink-promo.png') }}" alt="Chill Drink - đồ uống tươi mát" loading="lazy">
                     <div class="home-story__visual-badge">
                         <strong>5+ năm</strong>
                         <span>Phục vụ hơn 50.000 khách hàng</span>
@@ -1440,7 +1506,7 @@
                     @endguest
                 </div>
                 <div class="home-cta__visual">
-                    <img src="https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1000&q=85" alt="Đồ uống mùa hè" loading="lazy">
+                    <img src="{{ asset('images/products/soda-blue-curacao.png') }}" alt="Đồ uống mùa hè" loading="lazy">
                 </div>
             </div>
         </div>

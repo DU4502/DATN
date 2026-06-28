@@ -78,6 +78,9 @@ Route::middleware('auth')->group(function () {
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
 
+    // Super Admin interface preview (frontend only)
+    Route::view('/super-admin', 'admin.super-admin')->name('super-admin');
+
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
