@@ -25,6 +25,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'area',
+        'branch_id',
         'reset_token',
         'reset_expire',
         'avatar',
@@ -104,13 +105,12 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return (int) ($this->role_id ?? 1) === 2;
+        return in_array((int) ($this->role_id ?? 1), [2, 3], true);
     }
 
     public function isSuperAdmin(): bool
     {
-        return $this->isAdmin()
-            && strcasecmp((string) $this->email, self::SUPER_ADMIN_EMAIL) === 0;
+        return (int) ($this->role_id ?? 1) === 3;
     }
 
     public function isCustomer(): bool
@@ -125,7 +125,12 @@ class User extends Authenticatable
 
     public function scopeAdmins($query)
     {
-        return $query->where('role_id', 2);
+        return $query->whereIn('role_id', [2, 3]);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**

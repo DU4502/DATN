@@ -64,6 +64,10 @@ class GoogleController extends Controller
         request()->session()->regenerate();
         request()->session()->forget('url.intended');
 
+        if ($user->isSuperAdmin()) {
+            return redirect()->route('admin.super-admin');
+        }
+
         if ($user->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }

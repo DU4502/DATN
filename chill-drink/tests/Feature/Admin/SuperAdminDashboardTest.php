@@ -15,12 +15,12 @@ class SuperAdminDashboardTest extends TestCase
     {
         $superAdmin = User::factory()->create([
             'email' => User::SUPER_ADMIN_EMAIL,
-            'role_id' => 2,
+            'role_id' => 3,
         ]);
         User::factory()->create([
             'name' => 'Admin Can Tim',
             'email' => 'search-admin@chilldrink.com',
-            'role_id' => 2,
+            'role_id' => 3,
         ]);
         User::factory()->create(['role_id' => 1]);
 

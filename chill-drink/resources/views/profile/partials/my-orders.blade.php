@@ -1,12 +1,6 @@
 @php
 $profileOrders = $profileOrders ?? collect();
-$orderStatusLabels = $orderStatusLabels ?? [
-'pending' => ['label' => 'Chờ xử lý', 'class' => 'order-status-pending'],
-'processing' => ['label' => 'Đang xử lý', 'class' => 'order-status-processing'],
-'shipping' => ['label' => 'Đang giao', 'class' => 'order-status-shipping'],
-'completed' => ['label' => 'Hoàn tất', 'class' => 'order-status-completed'],
-'cancelled' => ['label' => 'Đã hủy', 'class' => 'order-status-cancelled'],
-];
+$orderStatusLabels = $orderStatusLabels ?? \App\Support\OrderStatus::userBadgeStyles();
 $paymentLabels = $paymentLabels ?? [
 'cod' => 'Tiền mặt (COD)',
 'bank_transfer' => 'Chuyển khoản',
@@ -47,6 +41,21 @@ $paymentLabels = $paymentLabels ?? [
     .order-status-pending {
         background: #fff6db;
         color: #9a6b00;
+    }
+
+    .order-status-in-progress {
+        background: #e8f4ff;
+        color: #1d5f9c;
+    }
+
+    .order-status-shipper-accepted {
+        background: #f1e9ff;
+        color: #5b3f9e;
+    }
+
+    .order-status-arrived {
+        background: #fff4e8;
+        color: #9a5b00;
     }
 
     .order-status-processing {
@@ -198,13 +207,13 @@ $paymentLabels = $paymentLabels ?? [
     @forelse($profileOrders as $order)
     <?php $statusKey = $order->status_display_key ?? $order->status; ?>
     <?php $status = $orderStatusLabels[$statusKey] ?? ['label' => $order->status, 'class' => 'order-status-pending']; ?>
-    <article class="order-card mb-4">
+    <article class="order-card mb-4" id="order-{{ $order->id }}" data-order-id="{{ $order->id }}">
         <div class="order-card-header">
             <div>
                 <div class="fw-bold text-primary">#{{ str_pad((string) $order->id, 5, '0', STR_PAD_LEFT) }}</div>
                 <div class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</div>
             </div>
-            <span class="order-status-badge {{ $status['class'] }}">{{ $status['label'] }}</span>
+            <span class="order-status-badge {{ $status['class'] }}" data-order-status-badge data-status="{{ $statusKey }}">{{ $status['label'] }}</span>
         </div>
 
         @php
@@ -330,10 +339,34 @@ $paymentLabels = $paymentLabels ?? [
             <div class="text-end">
                 <div class="text-secondary small">Tổng thanh toán</div>
                 <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
-                @if($order->payment_method === 'vnpay' && $order->payment_status !== 'paid' && $order->status !== 'cancelled')
-                <a href="{{ route('vnpay.payment', $order) }}" class="btn btn-primary btn-sm mt-2">
-                    Thanh toán VNPay
-                </a>
+                
+                @if($order->payment_method === 'vnpay' && in_array($order->payment_status, ['pending', 'failed']) && $order->status !== 'cancelled')
+                    <div class="mt-2">
+                        @if($order->payment_status === 'failed')
+                            <div class="badge bg-danger-subtle text-danger mb-2">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Thanh toán thất bại
+                            </div>
+                        @else
+                            <div class="badge bg-warning-subtle text-warning mb-2">
+                                <i class="bi bi-clock-history me-1"></i>
+                                Chưa thanh toán
+                            </div>
+                        @endif
+                        <div>
+                            <a href="{{ route('vnpay.payment', $order) }}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-credit-card me-1"></i>
+                                {{ $order->payment_status === 'failed' ? 'Thanh toán lại' : 'Thanh toán ngay' }}
+                            </a>
+                        </div>
+                    </div>
+                @endif
+                
+                @if($order->payment_method === 'vnpay' && $order->payment_status === 'paid')
+                    <div class="badge bg-success-subtle text-success mt-2">
+                        <i class="bi bi-check-circle-fill me-1"></i>
+                        Đã thanh toán
+                    </div>
                 @endif
             </div>
         </div>
@@ -349,7 +382,30 @@ $paymentLabels = $paymentLabels ?? [
 </div>
 
 <script>
+    function highlightOrderCard(orderCard) {
+        if (!orderCard) {
+            return;
+        }
+
+        orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        orderCard.style.boxShadow = '0 0 0 2px rgba(13, 147, 115, 0.25)';
+
+        window.setTimeout(() => {
+            orderCard.style.boxShadow = '';
+        }, 2500);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+        const params = new URLSearchParams(window.location.search);
+        const orderId = params.get('order');
+
+        if (orderId) {
+            highlightOrderCard(
+                document.getElementById(`order-${orderId}`)
+                    || document.querySelector(`[data-order-id="${orderId}"]`)
+            );
+        }
+
         document.querySelectorAll('[data-review-toggle]').forEach(function (button) {
             const targetId = button.dataset.reviewTarget;
             const panel = targetId ? document.getElementById(targetId) : null;
@@ -364,5 +420,27 @@ $paymentLabels = $paymentLabels ?? [
                 button.setAttribute('aria-expanded', String(isHidden));
             });
         });
+    });
+
+    const statusClassMap = @json(collect(\App\Support\OrderStatus::userBadgeStyles())->mapWithKeys(fn ($item, $key) => [$key => $item['class']]));
+
+    document.addEventListener('order:status-updated', function (event) {
+        const payload = event.detail || {};
+        const orderCard = document.querySelector(`[data-order-id="${payload.order_id}"]`);
+
+        if (!orderCard || !payload.status) {
+            return;
+        }
+
+        const badge = orderCard.querySelector('[data-order-status-badge]');
+
+        if (!badge) {
+            return;
+        }
+
+        badge.dataset.status = payload.status;
+        badge.textContent = payload.status_label || payload.status;
+        badge.className = `order-status-badge ${statusClassMap[payload.status] || 'order-status-pending'}`;
+        highlightOrderCard(orderCard);
     });
 </script>

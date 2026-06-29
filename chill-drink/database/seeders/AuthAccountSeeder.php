@@ -29,7 +29,7 @@ class AuthAccountSeeder extends Seeder
                 'name' => 'Super Admin',
                 'email' => User::SUPER_ADMIN_EMAIL,
                 'password' => 'SuperAdmin@2026',
-                'role_id' => 2,
+                'role_id' => 3,
                 'phone' => '0900000003',
             ],
         ];

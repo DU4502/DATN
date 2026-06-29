@@ -47,7 +47,7 @@ class AuthenticationTest extends TestCase
     {
         $superAdmin = User::factory()->create([
             'email' => User::SUPER_ADMIN_EMAIL,
-            'role_id' => 2,
+            'role_id' => 3,
         ]);
 
         $response = $this->post('/login', [

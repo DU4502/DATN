@@ -9,6 +9,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('roles')) {
+            DB::table('roles')->updateOrInsert(
+                ['id' => 3],
+                ['name' => 'super_admin', 'description' => 'Quản trị toàn hệ thống'],
+            );
+        }
+
         Schema::table('users', function (Blueprint $table) {
             if (! Schema::hasColumn('users', 'last_login_at')) {
                 $table->timestamp('last_login_at')->nullable()->after('is_active');

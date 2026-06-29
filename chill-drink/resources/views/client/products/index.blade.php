@@ -968,11 +968,40 @@
 
                         <div class="border-top mt-4 pt-4">
                             <h3 class="filter-title mb-3">Lọc theo giá</h3>
-                            <input class="range-control w-100" type="range" min="0" max="100000" value="50000">
-                            <div class="d-flex justify-content-between text-secondary small fw-semibold mt-2">
-                                <span>0đ</span>
-                                <span>100.000đ</span>
-                            </div>
+                            <form action="{{ route('products.index') }}" method="GET" id="priceFilterForm">
+                                @if(request('category'))
+                                    <input type="hidden" name="category" value="{{ request('category') }}">
+                                @endif
+                                @if(!empty($searchQuery))
+                                    <input type="hidden" name="search" value="{{ $searchQuery }}">
+                                @endif
+                                @if(request('sort'))
+                                    <input type="hidden" name="sort" value="{{ request('sort') }}">
+                                @endif
+                                
+                                <input type="hidden" name="min_price" id="minPriceInput" value="{{ request('min_price', 0) }}">
+                                <input type="hidden" name="max_price" id="maxPriceInput" value="{{ request('max_price', 100000) }}">
+                                
+                                <input 
+                                    class="range-control w-100" 
+                                    type="range" 
+                                    min="0" 
+                                    max="100000" 
+                                    step="5000"
+                                    value="{{ request('max_price', 100000) }}"
+                                    id="priceRange"
+                                >
+                                <div class="d-flex justify-content-between text-secondary small fw-semibold mt-2">
+                                    <span id="minPriceLabel">{{ number_format(request('min_price', 0), 0, ',', '.') }}đ</span>
+                                    <span id="maxPriceLabel">{{ number_format(request('max_price', 100000), 0, ',', '.') }}đ</span>
+                                </div>
+                                
+                                @if(request('min_price') || request('max_price'))
+                                    <div class="mt-3">
+                                        <a href="{{ route('products.index', request()->except(['min_price', 'max_price'])) }}" class="btn btn-outline-secondary w-100 fw-bold btn-sm">Xóa lọc giá</a>
+                                    </div>
+                                @endif
+                            </form>
                         </div>
 
                         <div class="border-top mt-4 pt-4">
@@ -1518,6 +1547,32 @@
                 }
             });
         });
+
+        // Price range slider functionality with auto-submit
+        const priceRange = document.getElementById('priceRange');
+        const minPriceInput = document.getElementById('minPriceInput');
+        const maxPriceInput = document.getElementById('maxPriceInput');
+        const minPriceLabel = document.getElementById('minPriceLabel');
+        const maxPriceLabel = document.getElementById('maxPriceLabel');
+        const priceFilterForm = document.getElementById('priceFilterForm');
+
+        if (priceRange && minPriceInput && maxPriceInput && minPriceLabel && maxPriceLabel && priceFilterForm) {
+            let debounceTimer;
+            
+            priceRange.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                maxPriceInput.value = value;
+                maxPriceLabel.textContent = value.toLocaleString('vi-VN') + 'đ';
+                
+                // Clear previous timer
+                clearTimeout(debounceTimer);
+                
+                // Auto-submit after 500ms of inactivity
+                debounceTimer = setTimeout(() => {
+                    priceFilterForm.submit();
+                }, 500);
+            });
+        }
     });
 </script>
 @endsection

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Support\RealtimeOrderNotifier;
+
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -203,6 +205,12 @@ class CheckoutController extends Controller
             $this->removeCheckedOutItems($fullCart, $selectedKeys);
 
             DB::commit();
+
+            RealtimeOrderNotifier::orderStatusUpdated($order);
+
+            if ($order->payment_method !== 'vnpay') {
+                RealtimeOrderNotifier::orderCreated($order);
+            }
 
             if ($order->payment_method === 'vnpay') {
                 return redirect()

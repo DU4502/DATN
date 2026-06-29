@@ -15,6 +15,7 @@ use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
 use App\Http\Controllers\Client\VnpayController;
 use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,6 +41,8 @@ Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear
 Route::get('/vnpay/ipn', [VnpayController::class, 'ipn'])->name('vnpay.ipn');
 Route::get('/vnpay/return', [VnpayController::class, 'return'])->name('vnpay.return');
 
+Broadcast::routes(['middleware' => ['web', 'auth']]);
+
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
@@ -57,6 +60,10 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
+        if (auth()->user()->isSuperAdmin()) {
+            return redirect()->route('admin.super-admin');
+        }
+
         if (auth()->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }
@@ -66,6 +73,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
+    Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -77,7 +85,7 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------https://antigravity.google/support
 */
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'super-admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->group(function () {
     Route::get('/super-admin', [SuperAdminController::class, 'index'])->name('super-admin');
     Route::post('/super-admin/admins', [SuperAdminController::class, 'storeAdmin'])->name('super-admin.admins.store');
 });
@@ -96,12 +104,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Product Management
     Route::resource('products', AdminProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
 
-    Route::resource('products', AdminProductController::class)->only(['index']);
-
     // Category Management
     Route::resource('categories', CategoryController::class)->except(['show']);
 
     // Order Management
+    Route::get('orders/recent', [OrderController::class, 'recent'])->name('orders.recent');
     Route::resource('orders', OrderController::class)->only(['index']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
