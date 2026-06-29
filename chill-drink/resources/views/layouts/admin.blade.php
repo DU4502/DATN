@@ -268,6 +268,43 @@
             border-bottom: 1px solid var(--a-border);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
+            overflow: visible;
+        }
+
+        .admin-filter-panel {
+            position: relative;
+            z-index: 36;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-filter-panel.d-none {
+            display: none !important;
+        }
+
+        .admin-category-scroller {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.25rem;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar-thumb {
+            background: var(--a-border);
+            border-radius: var(--radius-full);
+        }
+
+        .admin-category-scroller .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
 
         /* ─── Metrics ─── */
@@ -633,6 +670,7 @@
             </a>
 
             <nav class="nav flex-column">
+                <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock"></i> Super Admin</a>
                 <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-grid-1x2"></i> Tổng quát</a>
                 <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
                 <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
@@ -657,10 +695,24 @@
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
-                    <div class="admin-search">
-                        <span class="admin-search-icon"><i class="bi bi-search"></i></span>
-                        <input type="search" placeholder="@yield('search-placeholder', 'Tìm kiếm...')">
-                    </div>
+<<<<<<< HEAD
+=======
+                    @unless(View::hasSection('hide-topbar-search'))
+                        <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search" role="search">
+                            @foreach(request()->except(['q', 'page']) as $key => $value)
+                                @if(is_array($value))
+                                    @foreach($value as $item)
+                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                @endif
+                            @endforeach
+                            <span class="admin-search-icon"><i class="bi bi-search"></i></span>
+                            <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
+                        </form>
+                    @endunless
+>>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
                 </div>
                 <div class="admin-topbar-actions">
                     <span class="text-secondary fw-medium d-none d-lg-inline" style="font-size: 0.8125rem;">{{ Auth::user()->name }}</span>
@@ -694,6 +746,41 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        window.showRealtimeToast = function (message, type = 'info') {
+            const containerId = 'realtimeToastContainer';
+            let container = document.getElementById(containerId);
+
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.cssText = 'position:fixed;top:80px;right:20px;z-index:10001;width:360px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+
+            const alert = document.createElement('div');
+            const alertType = type === 'success' ? 'success' : (type === 'warning' ? 'warning' : 'primary');
+            alert.className = `alert alert-${alertType} shadow-sm mb-0`;
+            alert.style.borderRadius = '12px';
+            alert.innerHTML = `
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-bell-fill mt-1"></i>
+                    <div class="flex-grow-1">${message}</div>
+                    <button type="button" class="btn-close" aria-label="Đóng"></button>
+                </div>
+            `;
+
+            alert.querySelector('.btn-close')?.addEventListener('click', () => alert.remove());
+            container.appendChild(alert);
+
+            window.setTimeout(() => {
+                alert.style.transition = 'opacity .3s ease';
+                alert.style.opacity = '0';
+                window.setTimeout(() => alert.remove(), 300);
+            }, 6000);
+        };
+    </script>
+    @include('partials.realtime')
     <script>
         document.querySelectorAll('[data-image-input]').forEach((input) => {
             input.addEventListener('change', () => {
@@ -739,6 +826,17 @@
                 });
             });
         });
+
+        const filterToggle = document.querySelector('[data-admin-filter-toggle]');
+        const filterPanel = document.querySelector('[data-admin-filter-panel]');
+
+        if (filterToggle && filterPanel) {
+            filterToggle.addEventListener('click', () => {
+                const isHidden = filterPanel.classList.contains('d-none');
+                filterPanel.classList.toggle('d-none', !isHidden ? true : false);
+                filterToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        }
     </script>
 </body>
 </html>

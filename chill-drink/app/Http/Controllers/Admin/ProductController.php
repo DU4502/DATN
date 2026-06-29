@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -15,11 +15,110 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with('category')->latest()->paginate(12);
+<<<<<<< HEAD
+        $search = trim((string) $request->query('search', ''));
+        $categoryId = $request->query('category');
+        
+        // Get all categories for filter buttons
+        $categories = Category::orderBy('name')->get();
+        
+        // Query with search and category filter
+        $products = Product::with('category')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('description', 'like', '%' . $search . '%');
+                    
+                    // Search by SKU if exists
+                    if (Schema::hasColumn('products', 'sku')) {
+                        $subQuery->orWhere('sku', 'like', '%' . $search . '%');
+                    }
+                    
+                    // Search by slug if exists
+                    if (Schema::hasColumn('products', 'slug')) {
+                        $subQuery->orWhere('slug', 'like', '%' . $search . '%');
+                    }
+                });
+            })
+            ->when($categoryId, function ($query) use ($categoryId) {
+                $query->where('category_id', $categoryId);
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
-        return view('admin.products.index', compact('products'));
+        return view('admin.products.index', compact('products', 'categories'));
+=======
+        $filters = [
+            'q' => trim((string) $request->query('q', '')),
+            'category' => trim((string) $request->query('category', '')),
+            'status' => trim((string) $request->query('status', '')),
+            'stock' => trim((string) $request->query('stock', '')),
+            'sort' => trim((string) $request->query('sort', 'latest')),
+        ];
+
+        $categories = Category::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+        $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
+
+        $productsQuery = Product::query()
+            ->with('category')
+            ->when($filters['q'] !== '', function ($query) use ($filters) {
+                $keyword = $filters['q'];
+
+                $query->where(function ($builder) use ($keyword) {
+                    $builder
+                        ->where('name', 'like', '%'.$keyword.'%')
+                        ->orWhere('slug', 'like', '%'.$keyword.'%')
+                        ->orWhere('description', 'like', '%'.$keyword.'%')
+                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
+                            $categoryQuery->where('name', 'like', '%'.$keyword.'%');
+                        });
+
+                    if (Schema::hasColumn('products', 'sku')) {
+                        $builder->orWhere('sku', 'like', '%'.$keyword.'%');
+                    }
+                });
+            })
+            ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
+                $query->where('category_id', (int) $filters['category']);
+            })
+            ->when($filters['status'] === 'active', fn ($query) => $query->where('status', true))
+            ->when($filters['status'] === 'hidden', fn ($query) => $query->where('status', false))
+            ->when($filters['stock'] === 'low', fn ($query) => $query->where('stock', '>', 0)->where('stock', '<=', 5))
+            ->when($filters['stock'] === 'out', fn ($query) => $query->where('stock', '<=', 0));
+
+        match ($filters['sort']) {
+            'name' => $productsQuery->orderBy('name'),
+            'price_asc' => $productsQuery->orderBy('price'),
+            'price_desc' => $productsQuery->orderByDesc('price'),
+            'stock_asc' => $productsQuery->orderBy('stock'),
+            default => $productsQuery->latest(),
+        };
+
+        $products = $productsQuery->paginate(12)->withQueryString();
+        $totalProducts = Product::count();
+        $lowStockProducts = Product::where('stock', '>', 0)->where('stock', '<=', 5)->count();
+        $activeFiltersCount = collect($filters)
+            ->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
+            ->count();
+        $quickCategories = $categories
+            ->filter(fn ($category) => in_array($category->name, ['Trà Sữa', 'Cà Phê', 'Nước Ép'], true))
+            ->values();
+
+        return view('admin.products.index', compact(
+            'products',
+            'categories',
+            'quickCategories',
+            'filters',
+            'totalProducts',
+            'lowStockProducts',
+            'activeFiltersCount'
+        ));
+>>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
     }
 
     /**
@@ -227,7 +326,10 @@ class ProductController extends Controller
     {
         $page = (int) ($request->input('return_page') ?: $request->query('page'));
 
-        return $page > 1 ? ['page' => $page] : [];
+        return array_filter(array_merge(
+            request()->only(['q', 'category', 'status', 'stock', 'sort']),
+            $page > 1 ? ['page' => $page] : []
+        ), fn ($value) => $value !== null && $value !== '');
     }
 
     private function findProduct(string $id): Product
