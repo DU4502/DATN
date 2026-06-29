@@ -10,6 +10,8 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    public const SUPER_ADMIN_EMAIL = 'superadmin@chilldrink.com';
+
     /**
      * Các trường được phép fill (Đã đồng bộ với database trong ảnh)
      */
@@ -27,6 +29,8 @@ class User extends Authenticatable
         'reset_expire',
         'avatar',
         'is_active',
+        'last_login_at',
+        'last_login_ip',
     ];
 
     protected $hidden = [
@@ -42,6 +46,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'reset_expire' => 'datetime',
             'is_active' => 'boolean', // Tự động cast về true/false
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -100,6 +105,12 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return (int) ($this->role_id ?? 1) === 2;
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->isAdmin()
+            && strcasecmp((string) $this->email, self::SUPER_ADMIN_EMAIL) === 0;
     }
 
     public function isCustomer(): bool
