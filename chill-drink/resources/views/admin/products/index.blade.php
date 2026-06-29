@@ -18,6 +18,16 @@
     $returnParams = request()->only(['q', 'category', 'status', 'stock', 'sort', 'page']);
 @endphp
 
+@php
+    $filterParams = collect($filters ?? [])->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))->all();
+    $currentCategory = (string) ($filters['category'] ?? '');
+    $currentStatus = (string) ($filters['status'] ?? '');
+    $currentStock = (string) ($filters['stock'] ?? '');
+    $currentSort = (string) ($filters['sort'] ?? 'latest');
+    $hasAdvancedFilters = $currentStatus !== '' || $currentStock !== '' || $currentSort !== 'latest';
+    $returnParams = request()->only(['q', 'category', 'status', 'stock', 'sort', 'page']);
+@endphp
+
 <section class="admin-sticky-tools d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
 <<<<<<< HEAD
     <div class="d-flex flex-wrap gap-2">
@@ -63,7 +73,9 @@
         <p class="admin-kicker mb-1">Tình trạng kho</p>
         <div class="d-flex align-items-center gap-3">
             <div><span class="admin-value text-primary">{{ $totalProducts }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
+            <div><span class="admin-value text-primary">{{ $totalProducts }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
             <div style="width:1px;height:38px;background:var(--admin-border);"></div>
+            <div><span class="admin-value" style="color:var(--admin-danger);">{{ $lowStockProducts }}</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
             <div><span class="admin-value" style="color:var(--admin-danger);">{{ $lowStockProducts }}</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
         </div>
     </div>
@@ -187,6 +199,9 @@
                             <a href="{{ route('admin.products.show', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
                             <a href="{{ route('admin.products.edit', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
                             <form action="{{ route('admin.products.destroy', array_merge(['product' => $product->id], $returnParams)) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
+                            <a href="{{ route('admin.products.show', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
+                            <a href="{{ route('admin.products.edit', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
+                            <form action="{{ route('admin.products.destroy', array_merge(['product' => $product->id], $returnParams)) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
                                 @csrf
                                 @method('DELETE')
                                 <button class="admin-action" title="Xóa" style="color:var(--admin-danger);"><i class="bi bi-trash3"></i></button>
@@ -198,6 +213,8 @@
                         <td colspan="6" class="text-center text-secondary py-5">
                             <div class="fw-bold text-dark mb-1">{{ empty($filterParams) ? 'Chưa có sản phẩm' : 'Không tìm thấy sản phẩm phù hợp' }}</div>
                             <div>{{ empty($filterParams) ? 'Danh sách sản phẩm sẽ hiển thị tại đây khi có dữ liệu.' : 'Thử đổi từ khóa hoặc xóa bớt bộ lọc đang áp dụng.' }}</div>
+                            <div class="fw-bold text-dark mb-1">{{ empty($filterParams) ? 'Chưa có sản phẩm' : 'Không tìm thấy sản phẩm phù hợp' }}</div>
+                            <div>{{ empty($filterParams) ? 'Danh sách sản phẩm sẽ hiển thị tại đây khi có dữ liệu.' : 'Thử đổi từ khóa hoặc xóa bớt bộ lọc đang áp dụng.' }}</div>
                         </td>
                     </tr>
                 @endforelse
@@ -205,6 +222,7 @@
         </table>
     </div>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
+        <p class="text-secondary mb-0">Đang hiển thị {{ $products->count() }} / {{ $products->total() }} sản phẩm</p>
         <p class="text-secondary mb-0">Đang hiển thị {{ $products->count() }} / {{ $products->total() }} sản phẩm</p>
         {{ $products->links('pagination::bootstrap-5') }}
     </div>

@@ -305,6 +305,43 @@
         .admin-category-scroller .btn {
             flex: 0 0 auto;
             white-space: nowrap;
+            overflow: visible;
+        }
+
+        .admin-filter-panel {
+            position: relative;
+            z-index: 36;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-filter-panel.d-none {
+            display: none !important;
+        }
+
+        .admin-category-scroller {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.25rem;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar-thumb {
+            background: var(--a-border);
+            border-radius: var(--radius-full);
+        }
+
+        .admin-category-scroller .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
 
         /* ─── Metrics ─── */
@@ -671,6 +708,7 @@
 
             <nav class="nav flex-column">
                 <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock"></i> Super Admin</a>
+                <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock"></i> Super Admin</a>
                 <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-grid-1x2"></i> Tổng quát</a>
                 <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
                 <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
@@ -826,6 +864,17 @@
                 });
             });
         });
+
+        const filterToggle = document.querySelector('[data-admin-filter-toggle]');
+        const filterPanel = document.querySelector('[data-admin-filter-panel]');
+
+        if (filterToggle && filterPanel) {
+            filterToggle.addEventListener('click', () => {
+                const isHidden = filterPanel.classList.contains('d-none');
+                filterPanel.classList.toggle('d-none', !isHidden ? true : false);
+                filterToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        }
 
         const filterToggle = document.querySelector('[data-admin-filter-toggle]');
         const filterPanel = document.querySelector('[data-admin-filter-panel]');

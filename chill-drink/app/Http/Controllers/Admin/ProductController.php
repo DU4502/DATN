@@ -17,40 +17,6 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-<<<<<<< HEAD
-        $search = trim((string) $request->query('search', ''));
-        $categoryId = $request->query('category');
-        
-        // Get all categories for filter buttons
-        $categories = Category::orderBy('name')->get();
-        
-        // Query with search and category filter
-        $products = Product::with('category')
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($subQuery) use ($search) {
-                    $subQuery->where('name', 'like', '%' . $search . '%')
-                        ->orWhere('description', 'like', '%' . $search . '%');
-                    
-                    // Search by SKU if exists
-                    if (Schema::hasColumn('products', 'sku')) {
-                        $subQuery->orWhere('sku', 'like', '%' . $search . '%');
-                    }
-                    
-                    // Search by slug if exists
-                    if (Schema::hasColumn('products', 'slug')) {
-                        $subQuery->orWhere('slug', 'like', '%' . $search . '%');
-                    }
-                });
-            })
-            ->when($categoryId, function ($query) use ($categoryId) {
-                $query->where('category_id', $categoryId);
-            })
-            ->latest()
-            ->paginate(12)
-            ->withQueryString();
-
-        return view('admin.products.index', compact('products', 'categories'));
-=======
         $filters = [
             'q' => trim((string) $request->query('q', '')),
             'category' => trim((string) $request->query('category', '')),
@@ -118,7 +84,6 @@ class ProductController extends Controller
             'lowStockProducts',
             'activeFiltersCount'
         ));
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
     }
 
     /**
