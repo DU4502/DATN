@@ -30,6 +30,10 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
         $request->session()->forget('url.intended');
 
+        if ($request->user()->isSuperAdmin()) {
+            return redirect()->route('admin.super-admin');
+        }
+
         // Kiểm tra quyền dựa trên hàm isAdmin() trong Model User
         if ($request->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');

@@ -59,6 +59,10 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
+        if (auth()->user()->isSuperAdmin()) {
+            return redirect()->route('admin.super-admin');
+        }
+
         if (auth()->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }
@@ -83,7 +87,9 @@ Route::middleware('auth')->group(function () {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
 
     // Super Admin interface preview (frontend only)
-    Route::view('/super-admin', 'admin.super-admin')->name('super-admin');
+    Route::view('/super-admin', 'admin.super-admin')
+        ->middleware('superadmin')
+        ->name('super-admin');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -96,8 +102,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Product Management
     Route::resource('products', AdminProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
-
-    Route::resource('products', AdminProductController::class)->only(['index']);
 
     // Category Management
     Route::resource('categories', CategoryController::class)->except(['show']);

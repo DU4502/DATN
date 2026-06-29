@@ -17,6 +17,7 @@ class Order extends Model
      */
     protected $fillable = [
         'user_id',
+        'branch_id',
         'coupon_id',
         'subtotal',
         'shipping_fee',
@@ -49,6 +50,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function voucher()
