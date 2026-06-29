@@ -515,10 +515,17 @@ $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
                 @forelse($recentOrders as $order)
                 @php
                 $statusClass = 'pending';
-                $statusText = 'Đang xử lý';
-                if(isset($order->status)) {
-                if($order->status === 'completed') { $statusClass = 'completed'; $statusText = 'Hoàn tất'; }
-                if($order->status === 'cancelled') { $statusClass = 'cancelled'; $statusText = 'Đã hủy'; }
+                $statusText = \App\Support\OrderStatus::label((string) ($order->status ?? 'pending'));
+                if (isset($order->status)) {
+                    $normalizedStatus = \App\Support\OrderStatus::normalize((string) $order->status);
+                    $statusClass = match ($normalizedStatus) {
+                        \App\Support\OrderStatus::COMPLETED => 'completed',
+                        \App\Support\OrderStatus::CANCELLED => 'cancelled',
+                        \App\Support\OrderStatus::IN_PROGRESS => 'processing',
+                        \App\Support\OrderStatus::SHIPPER_ACCEPTED => 'shipping',
+                        \App\Support\OrderStatus::ARRIVED => 'arrived',
+                        default => 'pending',
+                    };
                 }
                 @endphp
                 <tr>

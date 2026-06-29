@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\OrderStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,6 +17,7 @@ class Order extends Model
      */
     protected $fillable = [
         'user_id',
+        'branch_id',
         'coupon_id',
         'subtotal',
         'shipping_fee',
@@ -50,6 +52,11 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
     public function voucher()
     {
         return $this->belongsTo(Voucher::class, 'coupon_id');
@@ -68,12 +75,13 @@ class Order extends Model
      */
     public function getStatusBadgeColor()
     {
-        return match ($this->status) {
-            'pending' => 'yellow',
-            'processing' => 'blue',
-            'shipping' => 'purple',
-            'completed' => 'green',
-            'cancelled' => 'red',
+        return match (OrderStatus::normalize((string) $this->status)) {
+            OrderStatus::PENDING => 'yellow',
+            OrderStatus::IN_PROGRESS => 'blue',
+            OrderStatus::SHIPPER_ACCEPTED => 'purple',
+            OrderStatus::ARRIVED => 'indigo',
+            OrderStatus::COMPLETED => 'green',
+            OrderStatus::CANCELLED => 'red',
             default => 'gray',
         };
     }

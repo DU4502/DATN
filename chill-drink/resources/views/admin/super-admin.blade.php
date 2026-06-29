@@ -48,7 +48,7 @@
 
     .sa-alert { margin: 0; border-radius: 7px; font-size: 0.74rem; }
 
-    .sa-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+    .sa-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; }
     .sa-stat { min-height: 104px; padding: 0.9rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff; }
     .sa-stat-top { justify-content: space-between; gap: 0.5rem; }
     .sa-stat-icon { width: 34px; height: 34px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); }
@@ -183,6 +183,8 @@
         @foreach([
             ['bi-people', $totalUserCount, 'Tổng tài khoản', 'Toàn hệ thống'],
             ['bi-person-badge', $adminCount, 'Tổng Admin', 'Quyền quản trị'],
+            ['bi-person-check', $activeAdminCount, 'Admin hoạt động', 'Đang được phép'],
+            ['bi-shop', $branchCount, 'Tổng chi nhánh', 'Trong hệ thống'],
             ['bi-bag-check', $orderStats['today_count'], 'Đơn hàng hôm nay', 'Trong ngày'],
             ['bi-cash-stack', number_format($orderStats['today_revenue'], 0, ',', '.').'đ', 'Doanh thu hôm nay', 'Đã thanh toán'],
             ['bi-calendar3', number_format($orderStats['month_revenue'], 0, ',', '.').'đ', 'Doanh thu tháng', 'Tháng hiện tại'],

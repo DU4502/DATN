@@ -305,6 +305,43 @@
         .admin-category-scroller .btn {
             flex: 0 0 auto;
             white-space: nowrap;
+            overflow: visible;
+        }
+
+        .admin-filter-panel {
+            position: relative;
+            z-index: 36;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-filter-panel.d-none {
+            display: none !important;
+        }
+
+        .admin-category-scroller {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.25rem;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar-thumb {
+            background: var(--a-border);
+            border-radius: var(--radius-full);
+        }
+
+        .admin-category-scroller .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
 
         /* ─── Metrics ─── */
@@ -742,6 +779,41 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        window.showRealtimeToast = function (message, type = 'info') {
+            const containerId = 'realtimeToastContainer';
+            let container = document.getElementById(containerId);
+
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.cssText = 'position:fixed;top:80px;right:20px;z-index:10001;width:360px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+
+            const alert = document.createElement('div');
+            const alertType = type === 'success' ? 'success' : (type === 'warning' ? 'warning' : 'primary');
+            alert.className = `alert alert-${alertType} shadow-sm mb-0`;
+            alert.style.borderRadius = '12px';
+            alert.innerHTML = `
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-bell-fill mt-1"></i>
+                    <div class="flex-grow-1">${message}</div>
+                    <button type="button" class="btn-close" aria-label="Đóng"></button>
+                </div>
+            `;
+
+            alert.querySelector('.btn-close')?.addEventListener('click', () => alert.remove());
+            container.appendChild(alert);
+
+            window.setTimeout(() => {
+                alert.style.transition = 'opacity .3s ease';
+                alert.style.opacity = '0';
+                window.setTimeout(() => alert.remove(), 300);
+            }, 6000);
+        };
+    </script>
+    @include('partials.realtime')
     <script>
         document.querySelectorAll('[data-image-input]').forEach((input) => {
             input.addEventListener('change', () => {

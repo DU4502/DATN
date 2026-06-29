@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\SystemLog;
@@ -42,9 +43,9 @@ class SuperAdminController extends Controller
         }
 
         if ($role === 'super') {
-            $adminQuery->where('email', User::SUPER_ADMIN_EMAIL);
+            $adminQuery->where('role_id', 3);
         } elseif ($role === 'admin') {
-            $adminQuery->where('email', '!=', User::SUPER_ADMIN_EMAIL);
+            $adminQuery->where('role_id', 2);
         }
 
         if ($created === 'today') {
@@ -73,6 +74,7 @@ class SuperAdminController extends Controller
             'customerCount' => User::customers()->count(),
             'productCount' => Schema::hasTable('products') ? Product::count() : 0,
             'categoryCount' => Schema::hasTable('categories') ? Category::count() : 0,
+            'branchCount' => Schema::hasTable('branches') ? Branch::count() : 0,
             'roleCount' => Schema::hasTable('roles') ? DB::table('roles')->count() : 0,
             'orderStats' => $orderStats,
             'revenueChart' => $this->revenueChart(),
