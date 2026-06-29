@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Client\CartController;
@@ -76,10 +77,12 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------https://antigravity.google/support
 */
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'super-admin'])->group(function () {
+    Route::get('/super-admin', [SuperAdminController::class, 'index'])->name('super-admin');
+    Route::post('/super-admin/admins', [SuperAdminController::class, 'storeAdmin'])->name('super-admin.admins.store');
+});
 
-    // Super Admin interface preview (frontend only)
-    Route::view('/super-admin', 'admin.super-admin')->name('super-admin');
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

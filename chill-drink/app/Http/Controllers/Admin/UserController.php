@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\SystemLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -92,6 +93,14 @@ class UserController extends Controller
 
         $user->update(['role_id' => $roleId]);
 
+        SystemLog::record(
+            Auth::user(),
+            "Đã cập nhật vai trò của {$user->email}",
+            'admin',
+            'success',
+            ['target_user_id' => $user->id, 'role_id' => $roleId],
+        );
+
         return redirect()
             ->route('admin.users.index')
             ->with('success', 'Đã cập nhật vai trò người dùng.');
@@ -110,6 +119,14 @@ class UserController extends Controller
         }
 
         $user->forceFill(['is_active' => $newStatus])->save();
+
+        SystemLog::record(
+            Auth::user(),
+            ($newStatus ? 'Đã mở khóa ' : 'Đã khóa ').$user->email,
+            'security',
+            'success',
+            ['target_user_id' => $user->id],
+        );
 
         return back()->with(
             'success',
