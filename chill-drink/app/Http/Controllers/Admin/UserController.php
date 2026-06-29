@@ -15,6 +15,7 @@ class UserController extends Controller
 {
     private const ROLE_CUSTOMER = 1;
     private const ROLE_ADMIN = 2;
+    private const ROLE_SUPER_ADMIN = 3;
 
     public function index(Request $request): View
     {
@@ -47,7 +48,7 @@ class UserController extends Controller
         $stats = [
             'total' => User::count(),
             'customers' => User::where('role_id', self::ROLE_CUSTOMER)->count(),
-            'admins' => User::where('role_id', self::ROLE_ADMIN)->count(),
+            'admins' => User::admins()->count(),
             'active' => User::where('is_active', true)->count(),
             'locked' => User::where('is_active', false)->count(),
         ];
@@ -132,6 +133,7 @@ class UserController extends Controller
         return [
             self::ROLE_CUSTOMER => 'Người dùng',
             self::ROLE_ADMIN => 'Quản trị viên',
+            self::ROLE_SUPER_ADMIN => 'Super Admin',
         ];
     }
 
@@ -141,11 +143,11 @@ class UserController extends Controller
             return false;
         }
 
-        if ($newRoleId === self::ROLE_ADMIN && $newActiveStatus) {
+        if (in_array($newRoleId, [self::ROLE_ADMIN, self::ROLE_SUPER_ADMIN], true) && $newActiveStatus) {
             return false;
         }
 
-        return User::where('role_id', self::ROLE_ADMIN)
+        return User::admins()
             ->where('is_active', true)
             ->whereKeyNot($user->id)
             ->doesntExist();

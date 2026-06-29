@@ -1,11 +1,8 @@
 @extends('layouts.admin')
 
 @section('page-title', 'Sản phẩm')
-<<<<<<< HEAD
-=======
 @section('search-placeholder', 'Tìm đồ uống, mã sản phẩm...')
 @section('topbar-search-action', route('admin.products.index'))
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
 
 @section('content')
 @php
@@ -18,28 +15,7 @@
     $returnParams = request()->only(['q', 'category', 'status', 'stock', 'sort', 'page']);
 @endphp
 
-@php
-    $filterParams = collect($filters ?? [])->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))->all();
-    $currentCategory = (string) ($filters['category'] ?? '');
-    $currentStatus = (string) ($filters['status'] ?? '');
-    $currentStock = (string) ($filters['stock'] ?? '');
-    $currentSort = (string) ($filters['sort'] ?? 'latest');
-    $hasAdvancedFilters = $currentStatus !== '' || $currentStock !== '' || $currentSort !== 'latest';
-    $returnParams = request()->only(['q', 'category', 'status', 'stock', 'sort', 'page']);
-@endphp
-
 <section class="admin-sticky-tools d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
-<<<<<<< HEAD
-    <div class="d-flex flex-wrap gap-2">
-        <a href="{{ route('admin.products.index') }}" class="btn {{ !request('category') ? 'btn-primary' : 'btn-outline-primary' }}">Tất cả sản phẩm</a>
-        @foreach($categories as $category)
-            <a href="{{ route('admin.products.index', ['category' => $category->id]) }}" 
-               class="btn {{ request('category') == $category->id ? 'btn-primary' : 'btn-outline-primary' }}">
-                {{ $category->name }}
-            </a>
-        @endforeach
-        <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
-=======
     <div class="d-flex flex-column gap-2 flex-grow-1">
         <div class="d-flex flex-wrap gap-2 align-items-center">
             <a href="{{ route('admin.products.index') }}" class="btn {{ empty($filterParams) ? 'btn-primary' : 'btn-outline-primary' }}">Tất cả sản phẩm</a>
@@ -67,41 +43,17 @@
                 </a>
             @endforeach
         </div>
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
     </div>
     <div class="text-lg-end">
         <p class="admin-kicker mb-1">Tình trạng kho</p>
         <div class="d-flex align-items-center gap-3">
             <div><span class="admin-value text-primary">{{ $totalProducts }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
-            <div><span class="admin-value text-primary">{{ $totalProducts }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
             <div style="width:1px;height:38px;background:var(--admin-border);"></div>
-            <div><span class="admin-value" style="color:var(--admin-danger);">{{ $lowStockProducts }}</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
             <div><span class="admin-value" style="color:var(--admin-danger);">{{ $lowStockProducts }}</span><small class="d-block text-secondary fw-bold">Sắp hết</small></div>
         </div>
     </div>
 </section>
 
-<<<<<<< HEAD
-<!-- Search Form -->
-<form method="GET" action="{{ route('admin.products.index') }}" class="mb-4">
-    <div class="row g-3 align-items-end">
-        <div class="col-md-8">
-            <label class="admin-kicker mb-2 d-block">Tìm kiếm sản phẩm</label>
-            <input class="admin-input" type="text" name="search" value="{{ request('search') }}" placeholder="Tìm theo tên sản phẩm, mã SKU...">
-        </div>
-        <div class="col-md-4 d-flex gap-2">
-            <button class="btn btn-primary flex-grow-1" type="submit">
-                <i class="bi bi-search me-1"></i>Tìm kiếm
-            </button>
-            @if(request('search'))
-                <a href="{{ route('admin.products.index') }}" class="btn btn-outline-primary">
-                    <i class="bi bi-x-circle"></i>
-                </a>
-            @endif
-        </div>
-    </div>
-</form>
-=======
 <section class="admin-filter-panel {{ $hasAdvancedFilters ? '' : 'd-none' }}" id="productFilterPanel" data-admin-filter-panel>
     <form method="GET" action="{{ route('admin.products.index') }}" class="admin-card p-4 mb-4">
         <input type="hidden" name="q" value="{{ $filters['q'] ?? '' }}">
@@ -148,7 +100,6 @@
         </div>
     </form>
 </section>
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
 
 <section class="admin-card">
     <div class="table-responsive">
@@ -199,9 +150,6 @@
                             <a href="{{ route('admin.products.show', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
                             <a href="{{ route('admin.products.edit', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
                             <form action="{{ route('admin.products.destroy', array_merge(['product' => $product->id], $returnParams)) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
-                            <a href="{{ route('admin.products.show', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Xem"><i class="bi bi-eye"></i></a>
-                            <a href="{{ route('admin.products.edit', array_merge(['product' => $product->id], $returnParams)) }}" class="admin-action text-decoration-none" title="Sửa"><i class="bi bi-pencil"></i></a>
-                            <form action="{{ route('admin.products.destroy', array_merge(['product' => $product->id], $returnParams)) }}" method="POST" class="d-inline" onsubmit="return confirm('Bạn chắc chắn muốn xóa sản phẩm này?');">
                                 @csrf
                                 @method('DELETE')
                                 <button class="admin-action" title="Xóa" style="color:var(--admin-danger);"><i class="bi bi-trash3"></i></button>
@@ -213,8 +161,6 @@
                         <td colspan="6" class="text-center text-secondary py-5">
                             <div class="fw-bold text-dark mb-1">{{ empty($filterParams) ? 'Chưa có sản phẩm' : 'Không tìm thấy sản phẩm phù hợp' }}</div>
                             <div>{{ empty($filterParams) ? 'Danh sách sản phẩm sẽ hiển thị tại đây khi có dữ liệu.' : 'Thử đổi từ khóa hoặc xóa bớt bộ lọc đang áp dụng.' }}</div>
-                            <div class="fw-bold text-dark mb-1">{{ empty($filterParams) ? 'Chưa có sản phẩm' : 'Không tìm thấy sản phẩm phù hợp' }}</div>
-                            <div>{{ empty($filterParams) ? 'Danh sách sản phẩm sẽ hiển thị tại đây khi có dữ liệu.' : 'Thử đổi từ khóa hoặc xóa bớt bộ lọc đang áp dụng.' }}</div>
                         </td>
                     </tr>
                 @endforelse
@@ -222,7 +168,6 @@
         </table>
     </div>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
-        <p class="text-secondary mb-0">Đang hiển thị {{ $products->count() }} / {{ $products->total() }} sản phẩm</p>
         <p class="text-secondary mb-0">Đang hiển thị {{ $products->count() }} / {{ $products->total() }} sản phẩm</p>
         {{ $products->links('pagination::bootstrap-5') }}
     </div>

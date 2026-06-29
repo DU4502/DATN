@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
     {
         // Ensure roles exist before creating users
         $this->call(RoleSeeder::class);
+        $this->call(BranchSeeder::class);
 
         // Keep the default admin account usable after reseeding.
         $adminData = [
@@ -44,6 +45,17 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['email' => 'admin@chilldrink.com'],
             $adminData
+        );
+
+        User::updateOrCreate(
+            ['email' => 'superadmin@chilldrink.com'],
+            [
+                'name' => 'Super Admin',
+                'password' => Hash::make('12345678'),
+                'role_id' => 3,
+                'phone' => '0123456788',
+                'is_active' => 1,
+            ]
         );
 
         $this->call(VoucherSeeder::class);
