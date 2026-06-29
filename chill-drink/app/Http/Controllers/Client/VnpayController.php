@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Support\RealtimeOrderNotifier;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
@@ -17,24 +18,29 @@ class VnpayController extends Controller
         abort_unless((int) $order->user_id === (int) auth()->id(), 403);
 
         if ($order->payment_method !== 'vnpay') {
-            return redirect()->route('profile.orders')
+            return redirect()->route('orders.index')
                 ->with('error', 'Đơn hàng này không sử dụng phương thức thanh toán VNPay.');
         }
 
         if ($order->payment_status === 'paid') {
-            return redirect()->route('profile.orders')
+            return redirect()->route('orders.index')
                 ->with('success', 'Đơn hàng này đã được thanh toán.');
         }
 
+        // Reset payment status to pending when retry
+        if ($order->payment_status === 'failed') {
+            $order->update(['payment_status' => 'pending']);
+        }
+
         if (! $this->isConfigured()) {
-            return redirect()->route('profile.orders')
+            return redirect()->route('orders.index')
                 ->with('error', 'VNPay chưa được cấu hình đầy đủ. Vui lòng thử lại sau.');
         }
 
         $total = (int) $order->total;
 
         if ($total <= 0) {
-            return redirect()->route('profile.orders')
+            return redirect()->route('orders.index')
                 ->with('error', 'Số tiền thanh toán không hợp lệ.');
         }
 
@@ -115,9 +121,12 @@ class VnpayController extends Controller
         if ($this->isSuccessful($request)) {
             $order->update([
                 'payment_status' => 'paid',
-                'status' => 'processing',
+                'status' => 'in_progress',
                 'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
             ]);
+
+            RealtimeOrderNotifier::orderStatusUpdated($order);
+            RealtimeOrderNotifier::orderCreated($order);
 
             return $this->resultView(
                 $order->fresh(),
@@ -167,9 +176,12 @@ class VnpayController extends Controller
             if ($this->isSuccessful($request)) {
                 $order->update([
                     'payment_status' => 'paid',
-                    'status' => 'processing',
+                    'status' => 'in_progress',
                     'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
                 ]);
+
+                RealtimeOrderNotifier::orderStatusUpdated($order);
+                RealtimeOrderNotifier::orderCreated($order);
             } else {
                 $order->update(['payment_status' => 'failed']);
             }
