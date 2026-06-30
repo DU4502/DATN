@@ -476,7 +476,7 @@
             </nav>
 
             <div class="root-sidebar-footer">
-                <a href="{{ route('admin.dashboard') }}" class="root-nav-link"><i class="bi bi-arrow-left-square"></i> Về Admin thường</a>
+                <a href="{{ route('home') }}" class="root-nav-link"><i class="bi bi-house-door"></i> Về trang chủ</a>
             </div>
         </aside>
 
@@ -526,7 +526,6 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end root-dropdown">
                             <a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Thông tin cá nhân</a>
-                            <a class="dropdown-item" href="{{ route('profile.edit') }}#security"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a>
                             <div class="dropdown-divider"></div>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
