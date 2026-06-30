@@ -4,12 +4,26 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class AuthAccountSeeder extends Seeder
 {
     public function run(): void
     {
+        if (Schema::hasTable('roles')) {
+            $roles = [
+                ['id' => 1, 'name' => 'user', 'description' => 'Người dùng'],
+                ['id' => 2, 'name' => 'admin', 'description' => 'Quản trị viên'],
+                ['id' => 3, 'name' => 'super_admin', 'description' => 'Quản trị toàn hệ thống'],
+            ];
+
+            foreach ($roles as $role) {
+                DB::table('roles')->updateOrInsert(['id' => $role['id']], $role);
+            }
+        }
+
         $accounts = [
             [
                 'name' => 'Khách hàng Chill Drink',

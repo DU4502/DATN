@@ -13,9 +13,9 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -57,8 +57,13 @@ class SuperAdminController extends Controller
         }
 
         $adminUsers = $adminQuery
-            ->orderByDesc('is_active')
-            ->orderByDesc('last_login_at')
+            ->orderByDesc('is_active');
+        
+        if (Schema::hasColumn('users', 'last_login_at')) {
+            $adminUsers = $adminUsers->orderByDesc('last_login_at');
+        }
+        
+        $adminUsers = $adminUsers
             ->orderBy('name')
             ->paginate(8)
             ->withQueryString();
