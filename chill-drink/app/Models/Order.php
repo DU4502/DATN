@@ -17,6 +17,11 @@ class Order extends Model
      */
     protected $fillable = [
         'user_id',
+        'guest_name',
+        'guest_phone',
+        'guest_email',
+        'guest_token',
+        'delivery_type',
         'branch_id',
         'coupon_id',
         'subtotal',
@@ -84,5 +89,42 @@ class Order extends Model
             OrderStatus::CANCELLED => 'red',
             default => 'gray',
         };
+    }
+
+    public function isGuest(): bool
+    {
+        return blank($this->user_id);
+    }
+
+    public function customerName(): string
+    {
+        if ($this->isGuest()) {
+            return (string) ($this->guest_name ?? '');
+        }
+
+        return (string) ($this->user?->name ?? '');
+    }
+
+    public function customerEmail(): ?string
+    {
+        if ($this->isGuest()) {
+            return $this->guest_email;
+        }
+
+        return $this->user?->email;
+    }
+
+    public function customerPhone(): ?string
+    {
+        if ($this->isGuest()) {
+            return $this->guest_phone;
+        }
+
+        return $this->user?->phone;
+    }
+
+    public function pointsEarnable(): int
+    {
+        return max(0, (int) floor(((int) $this->total) / 1000));
     }
 }

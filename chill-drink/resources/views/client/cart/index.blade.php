@@ -354,9 +354,12 @@
                                 Vui lòng chọn ít nhất một sản phẩm để thanh toán.
                             </p>
                         @else
-                            <a href="{{ route('login') }}" class="btn btn-primary btn-lg w-100 rounded-pill">
-                                Đăng nhập để thanh toán
-                            </a>
+                            <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}" data-guest-checkout-url="{{ route('checkout.guest.index') }}">
+                                Thanh toán ngay <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                            <p class="small text-danger text-center mt-3 mb-0 d-none" data-cart-selection-warning>
+                                Vui lòng chọn ít nhất một sản phẩm để thanh toán.
+                            </p>
                         @endauth
 
                         <div class="d-flex justify-content-center gap-3 mt-4">
@@ -403,6 +406,46 @@
         @endif
     </div>
 </section>
+
+<div class="modal fade" id="cartCheckoutGateModal" tabindex="-1" aria-labelledby="cartCheckoutGateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 24px;">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <p class="section-kicker mb-1">Thanh toán</p>
+                    <h5 class="modal-title fw-bold" id="cartCheckoutGateModalLabel">Bạn có <span data-gate-selected-count>0</span> món · <span data-gate-selected-total>0đ</span></h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="p-4 rounded-4 mb-3" style="background: #f0faf7; border: 1px solid #cceee4;">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="checkout-step"><i class="bi bi-stars"></i></span>
+                        <strong>Đăng nhập để tích điểm & dùng voucher</strong>
+                    </div>
+                    <ul class="small text-secondary mb-4 ps-3">
+                        <li>Tích điểm mỗi đơn (1.000đ = 1 điểm)</li>
+                        <li>Voucher giảm giá theo hạng thành viên</li>
+                        <li>Theo dõi đơn nhanh hơn</li>
+                    </ul>
+                    <a href="{{ route('login') }}" class="btn btn-outline-primary w-100 rounded-pill py-2">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập / Đăng ký
+                    </a>
+                </div>
+
+                <div class="text-center text-secondary small my-3">hoặc</div>
+
+                <button type="button" class="btn btn-primary w-100 rounded-pill py-3" data-guest-checkout-confirm>
+                    <i class="bi bi-lightning-charge me-2"></i>Mua hàng nhanh — không cần tài khoản
+                </button>
+                <p class="small text-secondary text-center mt-2 mb-0">Chỉ cần SĐT & email để nhận hóa đơn</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-link text-secondary w-100" data-bs-dismiss="modal">Quay lại giỏ hàng</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -486,8 +529,43 @@
                 return;
             }
 
+            const guestCheckoutUrl = checkoutButton.dataset.guestCheckoutUrl;
+
+            if (guestCheckoutUrl) {
+                document.querySelectorAll('[data-gate-selected-count]').forEach((element) => {
+                    element.textContent = checkedItems.length;
+                });
+                document.querySelectorAll('[data-gate-selected-total]').forEach((element) => {
+                    const totalText = document.querySelector('[data-selected-grand-total]')?.textContent || '0đ';
+                    element.textContent = totalText;
+                });
+
+                const gateModal = document.getElementById('cartCheckoutGateModal');
+                if (gateModal) {
+                    new bootstrap.Modal(gateModal).show();
+                }
+
+                return;
+            }
+
             const url = new URL(checkoutButton.dataset.checkoutUrl, window.location.origin);
             checkedItems.forEach((input) => {
+                url.searchParams.append('items[]', input.value);
+            });
+
+            window.location.href = url.toString();
+        });
+
+        document.querySelector('[data-guest-checkout-confirm]')?.addEventListener('click', function () {
+            const checkoutBtn = document.querySelector('[data-cart-checkout-button]');
+            const guestUrl = checkoutBtn?.dataset.guestCheckoutUrl;
+
+            if (!guestUrl) {
+                return;
+            }
+
+            const url = new URL(guestUrl, window.location.origin);
+            selectedItems().forEach((input) => {
                 url.searchParams.append('items[]', input.value);
             });
 

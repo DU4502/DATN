@@ -52,10 +52,14 @@
                     <td class="text-secondary">{{ optional($order->created_at)->format('d/m/Y H:i') }}</td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="admin-avatar" style="width:34px;height:34px;font-size:.8rem;">{{ mb_substr($order->user->name ?? 'K', 0, 1) }}</span>
+                            <span class="admin-avatar" style="width:34px;height:34px;font-size:.8rem;">{{ mb_substr($order->customerName() ?: 'K', 0, 1) }}</span>
                             <span>
-                                <span class="fw-bold d-block">{{ $order->user->name ?? 'Khách hàng' }}</span>
-                                <small class="text-secondary">{{ $order->user->email ?? '' }}</small>
+                                <span class="fw-bold d-block">{{ $order->customerName() ?: 'Khách hàng' }}</span>
+                                @if($order->isGuest())
+                                    <span class="small text-secondary">{{ $order->guest_phone }} · {{ $order->guest_email }}</span>
+                                @else
+                                    <small class="text-secondary">{{ $order->user->email ?? '' }}</small>
+                                @endif
                             </span>
                         </div>
                     </td>

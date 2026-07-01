@@ -8,6 +8,8 @@ use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
 use App\Http\Controllers\Client\HomeController;
@@ -41,14 +43,30 @@ Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear
 Route::get('/vnpay/ipn', [VnpayController::class, 'ipn'])->name('vnpay.ipn');
 Route::get('/vnpay/return', [VnpayController::class, 'return'])->name('vnpay.return');
 
+// Guest checkout (no authentication required)
+Route::prefix('checkout/guest')->name('checkout.guest.')->group(function () {
+    Route::get('/', [GuestCheckoutController::class, 'index'])->name('index');
+    Route::post('/info', [GuestCheckoutController::class, 'storeInfo'])->name('info.store');
+    Route::get('/payment', [GuestCheckoutController::class, 'payment'])->name('payment');
+    Route::post('/process', [GuestCheckoutController::class, 'process'])->name('process');
+    Route::get('/track/{order}', [GuestCheckoutController::class, 'track'])
+        ->middleware('signed')
+        ->name('track');
+});
+
+Route::post('/register/guest-convert', [GuestConvertController::class, 'store'])
+    ->middleware('guest')
+    ->name('register.guest-convert');
+
+Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name('vnpay.payment');
+
 Broadcast::routes(['middleware' => ['web', 'auth']]);
 
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-    Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
-    Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name('vnpay.payment');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
 });
 
