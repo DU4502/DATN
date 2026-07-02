@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
-use App\Mail\GuestOrderConfirmationMail;
+use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Support\GuestOrderAccess;
@@ -221,15 +221,18 @@ class GuestCheckoutController extends CheckoutController
             $guestToken = Str::random(48);
 
             $orderData = [
-                'user_id' => null,
-                'guest_name' => $guestInfo['guest_name'],
-                'guest_phone' => $guestInfo['guest_phone'],
-                'guest_email' => strtolower($guestInfo['guest_email']),
-                'guest_token' => $guestToken,
+                'user_id'       => null,
+                'guest_name'    => $guestInfo['guest_name'],
+                'guest_phone'   => $guestInfo['guest_phone'],
+                'guest_email'   => strtolower($guestInfo['guest_email']),
+                'guest_token'   => $guestToken,
                 'delivery_type' => $deliveryType,
-                'branch_id' => $deliveryType === 'pickup' ? ($guestInfo['branch_id'] ?? null) : null,
+                'branch_id'     => $deliveryType === 'pickup' ? ($guestInfo['branch_id'] ?? null) : null,
                 'payment_method' => $request->payment_method,
-                'status' => 'pending',
+                // Đơn hàng ẩn với admin cho đến khi guest xác nhận email
+                'status'                         => 'awaiting_email_confirmation',
+                'confirmation_token'             => Str::random(48),
+                'confirmation_token_expires_at'  => now()->addMinutes(15),
                 'note' => $note,
             ];
 
@@ -272,13 +275,11 @@ class GuestCheckoutController extends CheckoutController
             GuestOrderAccess::remember($order);
             GuestOrderAccess::storeConvertPayload($order);
 
-            $this->sendConfirmationEmail($order);
+            // Gửi email yêu cầu xác nhận đơn hàng (thay vì email thông báo)
+            $this->sendEmailConfirmationRequest($order);
 
-            RealtimeOrderNotifier::orderStatusUpdated($order);
-
-            if ($order->payment_method !== 'vnpay') {
-                RealtimeOrderNotifier::orderCreated($order);
-            }
+            // Chưa notify admin — đơn chỉ được chuyển lên admin sau khi guest xác nhận email
+            // RealtimeOrderNotifier chỉ chạy sau khi confirmEmail()
 
             if ($order->payment_method === 'vnpay') {
                 return redirect()
@@ -286,7 +287,7 @@ class GuestCheckoutController extends CheckoutController
                     ->with('success', 'Đơn hàng đã được tạo. Vui lòng thanh toán qua VNPay.');
             }
 
-            return redirect()->route('checkout.success', $order);
+            return redirect()->route('checkout.guest.pending-confirmation', $order);
 
         } catch (Throwable $e) {
             if (DB::transactionLevel() > 0) {
@@ -336,6 +337,131 @@ class GuestCheckoutController extends CheckoutController
         ]);
     }
 
+    /**
+     * Hiển thị trang thông báo cho khách biết cần vào email để xác nhận đơn.
+     */
+    public function pendingConfirmation(Order $order)
+    {
+        abort_unless(GuestOrderAccess::canView($order), 403);
+
+        // Nếu đã xác nhận rồi thì chuyển thẳng về success
+        if (! $order->isAwaitingEmailConfirmation()) {
+            return redirect()->route('checkout.success', $order);
+        }
+
+        return view('client.checkout.guest.pending-confirmation', compact('order'));
+    }
+
+    /**
+     * Xử lý khi khách click link xác nhận trong email.
+     */
+    public function confirmEmail(Request $request, Order $order)
+    {
+        $token = (string) $request->query('token', '');
+
+        // Đã xác nhận trước đó
+        if (! $order->isAwaitingEmailConfirmation()) {
+            return view('client.checkout.guest.confirm-email-result', [
+                'status'  => 'already_confirmed',
+                'order'   => $order,
+                'message' => 'Đơn hàng này đã được xác nhận trước đó.',
+            ]);
+        }
+
+        // Token không hợp lệ hoặc hết hạn
+        if (! $order->isConfirmationTokenValid($token)) {
+            $expired = $order->confirmation_token_expires_at?->isPast();
+
+            return view('client.checkout.guest.confirm-email-result', [
+                'status'  => $expired ? 'expired' : 'invalid',
+                'order'   => $order,
+                'message' => $expired
+                    ? 'Link xác nhận đã hết hạn (15 phút). Đơn hàng đã bị huỷ tự động.'
+                    : 'Token xác nhận không hợp lệ hoặc đã được sử dụng.',
+            ]);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $order->update([
+                'status'                         => 'pending',
+                'confirmation_token'             => null,   // Dùng một lần, xoá sau khi dùng
+                'confirmation_token_expires_at'  => null,
+            ]);
+
+            DB::commit();
+        } catch (Throwable $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            Log::error('Guest email confirmation failed.', [
+                'order_id' => $order->id,
+                'message'  => $e->getMessage(),
+            ]);
+
+            return view('client.checkout.guest.confirm-email-result', [
+                'status'  => 'error',
+                'order'   => $order,
+                'message' => 'Có lỗi xảy ra khi xác nhận. Vui lòng thử lại hoặc liên hệ hỗ trợ.',
+            ]);
+        }
+
+        // Sau khi xác nhận thành công: notify admin & realtime
+        try {
+            RealtimeOrderNotifier::orderStatusUpdated($order);
+            RealtimeOrderNotifier::orderCreated($order);
+        } catch (Throwable $e) {
+            Log::warning('Realtime notify after email confirm failed.', ['order_id' => $order->id]);
+        }
+
+        GuestOrderAccess::remember($order);
+
+        return view('client.checkout.guest.confirm-email-result', [
+            'status'  => 'success',
+            'order'   => $order,
+            'message' => 'Đơn hàng đã được xác nhận thành công! Chúng tôi sẽ bắt đầu chuẩn bị ngay.',
+        ]);
+    }
+
+    /**
+     * Gửi email yêu cầu xác nhận đơn hàng guest.
+     * Gửi synchronous — không dùng queue để tránh phụ thuộc queue worker.
+     */
+    private function sendEmailConfirmationRequest(Order $order): void
+    {
+        if (blank($order->guest_email)) {
+            Log::warning('Guest order email skipped: no email address.', ['order_id' => $order->id]);
+            return;
+        }
+
+        try {
+            Mail::to($order->guest_email)
+                ->send(new GuestOrderEmailConfirmationMail($order));
+
+            Log::info('Guest order confirmation email sent.', [
+                'order_id' => $order->id,
+                'to'       => $order->guest_email,
+                'mailer'   => config('mail.default'),
+                'host'     => config('mail.mailers.smtp.host'),
+            ]);
+
+        } catch (Throwable $e) {
+            // Log đầy đủ để dễ debug: class lỗi + message + mailer config
+            Log::error('Guest order confirmation email FAILED.', [
+                'order_id'     => $order->id,
+                'to'           => $order->guest_email,
+                'mailer'       => config('mail.default'),
+                'smtp_host'    => config('mail.mailers.smtp.host'),
+                'smtp_port'    => config('mail.mailers.smtp.port'),
+                'smtp_user'    => config('mail.mailers.smtp.username'),
+                'error_class'  => get_class($e),
+                'message'      => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function sendConfirmationEmail(Order $order): void
     {
         if (blank($order->guest_email)) {
@@ -343,11 +469,11 @@ class GuestCheckoutController extends CheckoutController
         }
 
         try {
-            Mail::to($order->guest_email)->send(new GuestOrderConfirmationMail($order));
+            Mail::to($order->guest_email)->send(new \App\Mail\GuestOrderConfirmationMail($order));
         } catch (Throwable $e) {
             Log::warning('Guest order confirmation email failed.', [
                 'order_id' => $order->id,
-                'message' => $e->getMessage(),
+                'message'  => $e->getMessage(),
             ]);
         }
     }

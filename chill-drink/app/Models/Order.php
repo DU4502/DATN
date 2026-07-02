@@ -21,6 +21,8 @@ class Order extends Model
         'guest_phone',
         'guest_email',
         'guest_token',
+        'confirmation_token',
+        'confirmation_token_expires_at',
         'delivery_type',
         'branch_id',
         'coupon_id',
@@ -42,11 +44,12 @@ class Order extends Model
      * @var array
      */
     protected $casts = [
-        'total_price' => 'decimal:2',
-        'subtotal' => 'integer',
-        'shipping_fee' => 'integer',
-        'discount' => 'integer',
-        'total' => 'integer',
+        'total_price'                    => 'decimal:2',
+        'subtotal'                       => 'integer',
+        'shipping_fee'                   => 'integer',
+        'discount'                       => 'integer',
+        'total'                          => 'integer',
+        'confirmation_token_expires_at'  => 'datetime',
     ];
 
     /**
@@ -94,6 +97,34 @@ class Order extends Model
     public function isGuest(): bool
     {
         return blank($this->user_id);
+    }
+
+    /**
+     * Kiểm tra đơn hàng đang chờ xác nhận email.
+     */
+    public function isAwaitingEmailConfirmation(): bool
+    {
+        return $this->status === 'awaiting_email_confirmation';
+    }
+
+    /**
+     * Kiểm tra token xác nhận email có hợp lệ không.
+     */
+    public function isConfirmationTokenValid(string $token): bool
+    {
+        if (blank($this->confirmation_token)) {
+            return false;
+        }
+
+        if (! hash_equals($this->confirmation_token, $token)) {
+            return false;
+        }
+
+        if ($this->confirmation_token_expires_at === null) {
+            return false;
+        }
+
+        return $this->confirmation_token_expires_at->isFuture();
     }
 
     public function customerName(): string

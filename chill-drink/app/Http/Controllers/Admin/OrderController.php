@@ -28,6 +28,8 @@ class OrderController extends Controller
 
         $orders = Order::query()
             ->with(['user', 'orderItems'])
+            // Admin không thấy đơn hàng guest chưa xác nhận email
+            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword = $filters['q'];
                 
@@ -81,6 +83,7 @@ class OrderController extends Controller
 
         $orders = Order::query()
             ->with('user')
+            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId))
             ->orderByDesc('id')
             ->limit(20)

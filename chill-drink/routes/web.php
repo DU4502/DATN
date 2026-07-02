@@ -49,6 +49,8 @@ Route::prefix('checkout/guest')->name('checkout.guest.')->group(function () {
     Route::post('/info', [GuestCheckoutController::class, 'storeInfo'])->name('info.store');
     Route::get('/payment', [GuestCheckoutController::class, 'payment'])->name('payment');
     Route::post('/process', [GuestCheckoutController::class, 'process'])->name('process');
+    Route::get('/pending-confirmation/{order}', [GuestCheckoutController::class, 'pendingConfirmation'])->name('pending-confirmation');
+    Route::get('/confirm-email/{order}', [GuestCheckoutController::class, 'confirmEmail'])->name('confirm-email');
     Route::get('/track/{order}', [GuestCheckoutController::class, 'track'])
         ->middleware('signed')
         ->name('track');
