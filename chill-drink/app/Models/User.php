@@ -134,6 +134,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the user's received vouchers.
+     */
+    public function vouchers()
+    {
+        return $this->hasMany(UserVoucher::class);
+    }
+
+    /**
      * The current database does not include Laravel's remember_token column.
      */
     public function getRememberToken()

@@ -80,7 +80,6 @@ class GuestCheckoutController extends CheckoutController
             'guest_email' => ['required', 'string', 'email', 'max:255'],
             'delivery_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:delivery_type,delivery'],
-            'shipping_area_ui' => ['nullable', 'string', 'max:255', 'required_if:delivery_type,delivery'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id', 'required_if:delivery_type,pickup'],
             'note' => ['nullable', 'string', 'max:500'],
         ], [
@@ -90,7 +89,6 @@ class GuestCheckoutController extends CheckoutController
             'guest_email.required' => 'Vui lòng nhập email.',
             'guest_email.email' => 'Email không đúng định dạng.',
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
-            'shipping_area_ui.required_if' => 'Vui lòng chọn khu vực giao hàng.',
             'branch_id.required_if' => 'Vui lòng chọn chi nhánh lấy hàng.',
         ]);
 
