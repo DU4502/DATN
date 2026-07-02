@@ -815,12 +815,6 @@
                                 type="hidden"
                                 value="{{ old('shipping_address_ui', $primaryAddress) }}"
                             >
-                            <input
-                                id="shipping_area_ui"
-                                name="shipping_area_ui"
-                                type="hidden"
-                                value="{{ old('shipping_area_ui', $primaryArea) }}"
-                            >
 
                             <div class="selected-address-row">
                                 <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
@@ -838,9 +832,9 @@
                                 <button type="button" class="btn-address-link" data-open-address-edit>Cập nhật</button>
                             </div>
 
-                            @if($errors->has('shipping_address_ui') || $errors->has('shipping_area_ui'))
+                            @if($errors->has('shipping_address_ui'))
                                 <div class="text-danger small mt-3">
-                                    {{ $errors->first('shipping_address_ui') ?: $errors->first('shipping_area_ui') }}
+                                    {{ $errors->first('shipping_address_ui') }}
                                 </div>
                             @endif
 
@@ -1244,6 +1238,14 @@
                     <label for="voucherCodeInput" class="fw-semibold text-secondary flex-shrink-0">Mã Voucher</label>
                     <input id="voucherCodeInput" type="text" class="form-control" placeholder="Mã Chill Drink Voucher" value="{{ $selectedVoucherCode }}">
                     <button type="button" class="btn voucher-apply-btn" id="voucherManualApply">Áp dụng</button>
+                </div>
+
+                <!-- Received Vouchers Section -->
+                <div class="mb-3" id="receivedVouchersSection" style="display: none;">
+                    <div class="voucher-group-title">Voucher đã nhận</div>
+                    <div class="text-secondary small mb-2">Những voucher bạn đã nhận và có thể sử dụng</div>
+                    <div class="vstack gap-3" id="receivedVouchersList"></div>
+                    <hr class="my-3">
                 </div>
 
                 @php
@@ -1812,6 +1814,74 @@
                 timeout: 10000,
                 maximumAge: 0,
             });
+        }
+
+        // Load received vouchers
+        async function loadReceivedVouchers() {
+            try {
+                const guestIdentifier = sessionStorage.getItem('guest_identifier');
+                const response = await fetch('/api/vouchers/received', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        ...(guestIdentifier && { 'X-Guest-Identifier': guestIdentifier }),
+                    },
+                });
+
+                const data = await response.json();
+                const receivedVouchersSection = document.getElementById('receivedVouchersSection');
+                const receivedVouchersList = document.getElementById('receivedVouchersList');
+
+                if (data.vouchers && data.vouchers.length > 0) {
+                    receivedVouchersSection.style.display = 'block';
+                    receivedVouchersList.innerHTML = '';
+
+                    data.vouchers.forEach(voucher => {
+                        const voucherHtml = `
+                            <div class="voucher-ticket" data-voucher-card data-voucher-code="${escapeHtml(voucher.code)}" data-voucher-label="${escapeHtml(voucher.description ? `${voucher.code} - ${voucher.description}` : voucher.code)}" data-voucher-discount="0">
+                                <div class="voucher-ticket-brand">
+                                    <span class="brand-circle"><i class="bi bi-gift"></i></span>
+                                    <strong>${escapeHtml(voucher.code)}</strong>
+                                </div>
+                                <div class="voucher-ticket-body">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <span class="voucher-kind">Đã nhận</span>
+                                        <span class="fw-semibold text-secondary">${escapeHtml(voucher.value)}</span>
+                                    </div>
+                                    <div class="text-secondary small">
+                                        ${escapeHtml(voucher.description || 'Voucher')}
+                                    </div>
+                                    <span class="voucher-only mt-2 mb-2">
+                                        Bạn đã nhận voucher này
+                                    </span>
+                                </div>
+                                <button type="button" class="voucher-radio" aria-label="Chọn voucher ${escapeHtml(voucher.code)}"></button>
+                            </div>
+                        `;
+                        receivedVouchersList.innerHTML += voucherHtml;
+                    });
+
+                    // Re-attach voucher click handlers
+                    document.querySelectorAll('[data-voucher-card]').forEach((card) => {
+                        card.addEventListener('click', function (event) {
+                            if (event.target.closest('.voucher-radio')) {
+                                setVoucherActive(this);
+                            }
+                        });
+                    });
+                } else {
+                    receivedVouchersSection.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading received vouchers:', error);
+            }
+        }
+
+        // Load received vouchers when modal is shown
+        const voucherModalElement = document.getElementById('voucherModal');
+        if (voucherModalElement) {
+            voucherModalElement.addEventListener('show.bs.modal', loadReceivedVouchers);
         }
 
         renderAddressList();

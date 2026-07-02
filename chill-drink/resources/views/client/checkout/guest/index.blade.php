@@ -112,16 +112,7 @@
                                 <input type="text" id="shipping_address_ui" name="shipping_address_ui" class="form-control guest-input @error('shipping_address_ui') is-invalid @enderror" value="{{ old('shipping_address_ui', $guestInfo['shipping_address_ui'] ?? '') }}">
                                 @error('shipping_address_ui')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                            <div class="mb-4">
-                                <label for="shipping_area_ui" class="form-label fw-semibold">Khu vực *</label>
-                                <select id="shipping_area_ui" name="shipping_area_ui" class="form-select guest-input @error('shipping_area_ui') is-invalid @enderror">
-                                    <option value="">Chọn khu vực</option>
-                                    @foreach($shippingDistanceOptions as $option)
-                                        <option value="{{ $option['label'] }}" @selected(old('shipping_area_ui', $guestInfo['shipping_area_ui'] ?? '') === $option['label'])>{{ $option['label'] }} — {{ $option['description'] }}</option>
-                                    @endforeach
-                                </select>
-                                @error('shipping_area_ui')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
+
                         </div>
 
                         <div class="pickup-fields {{ $deliveryType === 'delivery' ? 'is-hidden' : '' }}" data-pickup-fields>

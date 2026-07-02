@@ -182,7 +182,8 @@ class CartController extends Controller
         }
 
         if ($request->boolean('buy_now')) {
-            return redirect()->route('checkout.index', ['items' => [$cartKey]]);
+            $route = auth()->check() ? 'checkout.index' : 'checkout.guest.index';
+            return redirect()->route($route, ['items' => [$cartKey]]);
         }
         
         return redirect()->back();

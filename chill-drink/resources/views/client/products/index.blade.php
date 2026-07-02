@@ -1065,7 +1065,7 @@
                                     <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
                                     <span class="voucher-card__label">TANGNANG20</span>
                                     <div class="voucher-card__code">TANGNANG20</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG20">SAO CHÉP</button>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="TANGNANG20">NHẬN</button>
                                 </div>
                                 <p class="voucher-card__info">Giảm 20k đơn 100k <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
                             </div>
@@ -1074,7 +1074,7 @@
                                     <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
                                     <span class="voucher-card__label">TANGNANG15</span>
                                     <div class="voucher-card__code">TANGNANG15</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG15">SAO CHÉP</button>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="TANGNANG15">NHẬN</button>
                                 </div>
                                 <p class="voucher-card__info">Giảm 15% tổng bill <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
                             </div>
@@ -1083,7 +1083,7 @@
                                     <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
                                     <span class="voucher-card__label">CHOCHILL</span>
                                     <div class="voucher-card__code">CHOCHILL</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="CHOCHILL">SAO CHÉP</button>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="CHOCHILL">NHẬN</button>
                                 </div>
                                 <p class="voucher-card__info">Freeship đơn từ 50k <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
                             </div>
@@ -1092,7 +1092,7 @@
                                     <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
                                     <span class="voucher-card__label">SUMMER24</span>
                                     <div class="voucher-card__code">SUMMER24</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="SUMMER24">SAO CHÉP</button>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="SUMMER24">NHẬN</button>
                                 </div>
                                 <p class="voucher-card__info">Giảm 10k mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
                             </div>
@@ -1531,22 +1531,73 @@
             });
         });
 
-        document.querySelectorAll('[data-copy-code]').forEach((button) => {
+        document.querySelectorAll('[data-receive-code]').forEach((button) => {
             button.addEventListener('click', async () => {
-                const code = button.dataset.copyCode;
+                const code = button.dataset.receiveCode;
+                const guestIdentifier = sessionStorage.getItem('guest_identifier') || null;
+
                 try {
-                    await navigator.clipboard.writeText(code);
-                    button.textContent = 'ĐÃ SAO CHÉP';
+                    const response = await fetch('/api/vouchers/receive', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({
+                            voucher_code: code,
+                            guest_identifier: guestIdentifier,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        // Show error message
+                        alert(data.message || 'Lỗi khi nhận voucher');
+                        return;
+                    }
+
+                    // Save guest identifier if not already saved
+                    if (!guestIdentifier) {
+                        sessionStorage.setItem('guest_identifier', sessionStorage.getItem('guest_identifier') || Date.now().toString());
+                    }
+
+                    // Show success message
+                    button.textContent = 'ĐÃ NHẬN';
                     button.setAttribute('disabled', 'true');
+                    
+                    // Show toast notification
+                    showToast(`Nhận voucher thành công: ${data.voucher.code}`, 'success');
+
                     setTimeout(() => {
-                        button.textContent = 'SAO CHÉP';
+                        button.textContent = 'NHẬN';
                         button.removeAttribute('disabled');
-                    }, 1500);
+                    }, 2000);
                 } catch (err) {
                     console.error(err);
+                    alert('Lỗi khi nhận voucher. Vui lòng thử lại.');
                 }
             });
         });
+
+        // Toast notification helper
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 9999;
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
 
         // Price range slider functionality with auto-submit
         const priceRange = document.getElementById('priceRange');
