@@ -17,7 +17,6 @@ class DatabaseSeeder extends Seeder
     {
         // Ensure roles exist before creating users
         $this->call(RoleSeeder::class);
-        $this->call(BranchSeeder::class);
         $this->call(AuthAccountSeeder::class);
 
         $this->call(VoucherSeeder::class);
