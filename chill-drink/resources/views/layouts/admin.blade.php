@@ -112,7 +112,7 @@
         }
 
         .admin-logo-mark {
-            width: 38px; height: 38px;
+            width: 48px; height: 48px;
             border-radius: var(--radius-md);
             background: var(--a-surface);
             border: 1.5px solid var(--a-border);
@@ -121,7 +121,7 @@
         }
 
         .admin-logo-title {
-            margin: 0; font-size: 1.0625rem;
+            margin: 0; font-size: 1.15rem;
             font-weight: 800; line-height: 1.1;
             color: var(--a-ink);
         }
@@ -258,6 +258,92 @@
             overflow: visible;
         }
 
+        .admin-sticky-tools {
+            position: sticky;
+            top: 61px;
+            z-index: 35;
+            margin: -28px -28px 1.5rem;
+            padding: 18px 28px;
+            background: rgba(248, 250, 251, 0.94);
+            border-bottom: 1px solid var(--a-border);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            overflow: visible;
+        }
+
+        .admin-filter-panel {
+            position: relative;
+            z-index: 36;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-filter-panel.d-none {
+            display: none !important;
+        }
+
+        .admin-category-scroller {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.25rem;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar-thumb {
+            background: var(--a-border);
+            border-radius: var(--radius-full);
+        }
+
+        .admin-category-scroller .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            overflow: visible;
+        }
+
+        .admin-filter-panel {
+            position: relative;
+            z-index: 36;
+            margin-bottom: 1.5rem;
+        }
+
+        .admin-filter-panel.d-none {
+            display: none !important;
+        }
+
+        .admin-category-scroller {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.25rem;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .admin-category-scroller::-webkit-scrollbar-thumb {
+            background: var(--a-border);
+            border-radius: var(--radius-full);
+        }
+
+        .admin-category-scroller .btn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
         /* ─── Metrics ─── */
         .admin-metric {
             padding: 20px; min-height: 140px;
@@ -316,6 +402,48 @@
         .admin-table tbody tr { transition: background-color 0.15s ease; }
         .admin-table tbody tr:hover { background: var(--a-bg-subtle); }
 
+        .pagination {
+            align-items: center;
+            gap: 0.3rem;
+            margin-bottom: 0;
+        }
+
+        .pagination .page-link {
+            min-width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-full) !important;
+            border: 1.5px solid var(--a-border);
+            color: var(--a-primary);
+            font-weight: 700;
+            line-height: 1;
+            box-shadow: none;
+        }
+
+        .pagination .page-link svg {
+            width: 1rem !important;
+            height: 1rem !important;
+            max-width: 1rem !important;
+            max-height: 1rem !important;
+            display: block;
+            flex: 0 0 auto;
+        }
+
+        .pagination .page-item.active .page-link,
+        .pagination .page-link:hover {
+            color: #ffffff;
+            background: var(--a-primary);
+            border-color: var(--a-primary);
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: var(--a-subtle);
+            background: var(--a-bg-subtle);
+            border-color: var(--a-border-light);
+        }
+
         /* ─── Thumbnails ─── */
         .admin-thumb {
             width: 48px; height: 48px;
@@ -345,6 +473,23 @@
             width: 100%; height: 100%;
             object-fit: contain !important; object-position: center;
             padding: 0.2rem; background: #fff; box-sizing: border-box;
+        }
+
+        .admin-gallery-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .admin-gallery-preview img {
+            width: 72px;
+            height: 72px;
+            border: 1px solid var(--a-border);
+            border-radius: var(--radius-sm);
+            object-fit: contain;
+            object-position: center;
+            padding: 0.18rem;
+            background: #fff;
         }
 
         .admin-review-thumb {
@@ -506,6 +651,10 @@
             color: #991B1B; background: #FEE2E2;
         }
 
+        .badge-soft-info {
+            color: #1D4ED8; background: #DBEAFE;
+        }
+
         .text-primary { color: var(--a-primary) !important; }
 
         /* ─── Responsive ─── */
@@ -523,6 +672,13 @@
             .admin-sidebar .nav-link { white-space: nowrap; }
             .admin-topbar {
                 flex-direction: column; align-items: stretch;
+            }
+            .admin-sticky-tools {
+                position: sticky;
+                top: 0;
+                margin: -20px -20px 1.25rem;
+                padding: 14px 20px;
+                z-index: 35;
             }
             .admin-search { width: 100%; }
             .admin-page { padding: 20px; }
@@ -543,7 +699,7 @@
     <div class="admin-shell">
         <aside class="admin-sidebar">
             <a href="{{ route('admin.dashboard') }}" class="admin-logo">
-                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 3px;">
+                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 2px;">
                 <span>
                     <span class="admin-logo-title d-block">Chill Drink</span>
                     <span class="admin-logo-subtitle">Quản trị hệ thống</span>
@@ -575,10 +731,21 @@
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
-                    <div class="admin-search">
-                        <span class="admin-search-icon"><i class="bi bi-search"></i></span>
-                        <input type="search" placeholder="@yield('search-placeholder', 'Tìm kiếm...')">
-                    </div>
+                    @unless(View::hasSection('hide-topbar-search'))
+                        <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search" role="search">
+                            @foreach(request()->except(['q', 'page']) as $key => $value)
+                                @if(is_array($value))
+                                    @foreach($value as $item)
+                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                @endif
+                            @endforeach
+                            <span class="admin-search-icon"><i class="bi bi-search"></i></span>
+                            <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
+                        </form>
+                    @endunless
                 </div>
                 <div class="admin-topbar-actions">
                     <span class="text-secondary fw-medium d-none d-lg-inline" style="font-size: 0.8125rem;">{{ Auth::user()->name }}</span>
@@ -613,6 +780,41 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        window.showRealtimeToast = function (message, type = 'info') {
+            const containerId = 'realtimeToastContainer';
+            let container = document.getElementById(containerId);
+
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.cssText = 'position:fixed;top:80px;right:20px;z-index:10001;width:360px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+
+            const alert = document.createElement('div');
+            const alertType = type === 'success' ? 'success' : (type === 'warning' ? 'warning' : 'primary');
+            alert.className = `alert alert-${alertType} shadow-sm mb-0`;
+            alert.style.borderRadius = '12px';
+            alert.innerHTML = `
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-bell-fill mt-1"></i>
+                    <div class="flex-grow-1">${message}</div>
+                    <button type="button" class="btn-close" aria-label="Đóng"></button>
+                </div>
+            `;
+
+            alert.querySelector('.btn-close')?.addEventListener('click', () => alert.remove());
+            container.appendChild(alert);
+
+            window.setTimeout(() => {
+                alert.style.transition = 'opacity .3s ease';
+                alert.style.opacity = '0';
+                window.setTimeout(() => alert.remove(), 300);
+            }, 6000);
+        };
+    </script>
+    @include('partials.realtime')
+    <script>
         document.querySelectorAll('[data-image-input]').forEach((input) => {
             input.addEventListener('change', () => {
                 const target = document.querySelector(input.dataset.previewTarget);
@@ -629,6 +831,45 @@
                 reader.readAsDataURL(file);
             });
         });
+
+        document.querySelectorAll('[data-gallery-input]').forEach((input) => {
+            input.addEventListener('change', () => {
+                const target = document.querySelector(input.dataset.previewTarget);
+                const files = Array.from(input.files || []).slice(0, 6);
+
+                if (!target) {
+                    return;
+                }
+
+                target.innerHTML = '';
+
+                files.forEach((file) => {
+                    if (!file.type.startsWith('image/')) {
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        img.alt = 'Xem trước ảnh con';
+                        target.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+        });
+
+        const filterToggle = document.querySelector('[data-admin-filter-toggle]');
+        const filterPanel = document.querySelector('[data-admin-filter-panel]');
+
+        if (filterToggle && filterPanel) {
+            filterToggle.addEventListener('click', () => {
+                const isHidden = filterPanel.classList.contains('d-none');
+                filterPanel.classList.toggle('d-none', !isHidden ? true : false);
+                filterToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        }
     </script>
 </body>
 </html>

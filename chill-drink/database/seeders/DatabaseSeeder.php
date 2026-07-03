@@ -2,11 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -18,19 +16,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Ensure roles exist before creating users
-        $this->call(\Database\Seeders\RoleSeeder::class);
+        $this->call(RoleSeeder::class);
+        $this->call(BranchSeeder::class);
+        $this->call(AuthAccountSeeder::class);
 
-        // Create Admin User without changing an existing account/password.
-        // Only include columns that exist in the current database schema.
-        User::firstOrCreate(
-            ['email' => 'admin@chilldrink.com'],
-            [
-                'name' => 'Admin',
-                'password' => Hash::make('password'),
-                'role_id' => 2,
-                'phone' => '0123456789',
-            ]
-        );
+        $this->call(VoucherSeeder::class);
 
         // Create Categories
         $categories = [
@@ -40,6 +30,8 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Nước Ép', 'description' => 'Nước ép trái cây tự nhiên'],
             ['name' => 'Trà Trái Cây', 'description' => 'Trà trái cây mát lạnh'],
             ['name' => 'Soda', 'description' => 'Soda các loại'],
+            ['name' => 'Đá Xay', 'description' => 'Đồ uống đá xay mát lạnh, vị ngọt cân bằng'],
+            ['name' => 'Matcha', 'description' => 'Matcha thơm vị trà xanh, béo nhẹ và thanh mát'],
         ];
 
         foreach ($categories as $category) {

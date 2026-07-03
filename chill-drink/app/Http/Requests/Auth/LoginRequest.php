@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use App\Models\User;
+use App\Models\SystemLog;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -97,20 +98,44 @@ class LoginRequest extends FormRequest
         if (! $user || ! $passwordIsValid) {
             RateLimiter::hit($this->throttleKey());
 
+            SystemLog::record(
+                null,
+                'Đăng nhập thất bại',
+                'auth',
+                'failed',
+                [],
+                $this->string('email')->toString(),
+            );
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
 
         if (Schema::hasColumn('users', 'is_active') && ! (bool) $user->is_active) {
+            SystemLog::record($user, 'Tài khoản bị khóa cố gắng đăng nhập', 'auth', 'failed');
+
             throw ValidationException::withMessages([
-                'email' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.',
+                'email' => 'Tài khoản của bạn đã bị khóa.',
             ]);
         }
 
         $remember = $this->boolean('remember') && Schema::hasColumn('users', 'remember_token');
 
         Auth::login($user, $remember);
+
+        $loginData = [];
+        if (Schema::hasColumn('users', 'last_login_at')) {
+            $loginData['last_login_at'] = now();
+        }
+        if (Schema::hasColumn('users', 'last_login_ip')) {
+            $loginData['last_login_ip'] = $this->ip();
+        }
+        if ($loginData !== []) {
+            $user->forceFill($loginData)->save();
+        }
+
+        SystemLog::record($user, 'Đăng nhập hệ thống', 'auth');
 
         RateLimiter::clear($this->throttleKey());
     }

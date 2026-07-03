@@ -8,9 +8,6 @@ use Illuminate\Support\Facades\Schema;
 
 class RoleSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         if (! Schema::hasTable('roles')) {
@@ -19,9 +16,9 @@ class RoleSeeder extends Seeder
         }
 
         $roles = [
-            ['id' => 1, 'name' => 'user',  'description' => 'Khách hàng'],
-            ['id' => 2, 'name' => 'admin', 'description' => 'Quản trị'],
-            ['id' => 3, 'name' => 'staff', 'description' => 'Nhân viên'],
+            ['id' => 1, 'name' => 'user', 'description' => 'Người dùng'],
+            ['id' => 2, 'name' => 'admin', 'description' => 'Quản trị viên'],
+            ['id' => 3, 'name' => 'super_admin', 'description' => 'Quản trị toàn hệ thống'],
         ];
 
         foreach ($roles as $role) {

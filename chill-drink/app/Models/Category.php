@@ -2,19 +2,21 @@
 
 namespace App\Models;
 
+use App\Support\ProductImage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class Category extends Model
 {
     use HasFactory;
 
-    public $timestamps = false;
-
     protected $fillable = [
         'name',
         'slug',
+        'description',
+        'image',
         'status',
     ];
 
@@ -29,7 +31,7 @@ class Category extends Model
         parent::boot();
 
         static::saving(function ($category) {
-            if (empty($category->slug) || $category->isDirty('name')) {
+            if (Schema::hasColumn('categories', 'slug') && (empty($category->slug) || $category->isDirty('name'))) {
                 $category->slug = Str::slug($category->name);
             }
         });
@@ -38,5 +40,10 @@ class Category extends Model
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function getImageUrlAttribute(): string
+    {
+        return ProductImage::resolve($this->image, $this->name);
     }
 }

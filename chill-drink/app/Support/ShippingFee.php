@@ -87,7 +87,7 @@ class ShippingFee
     public static function quoteForAddress(?string $address, ?string $area, string $method = 'standard'): array
     {
         $estimate = self::estimateDistanceForAddress($address, $area);
-
+        
         return array_merge(
             self::calculate($estimate['distance_km'], $method),
             [

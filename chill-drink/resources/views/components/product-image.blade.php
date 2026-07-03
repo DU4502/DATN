@@ -29,7 +29,17 @@
             return $value;
         }
 
-        return asset('storage/'.ltrim($value, '/'));
+        $path = ltrim($value, '/');
+
+        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+            return asset('storage/'.$path);
+        }
+
+        if (is_file(public_path($path))) {
+            return asset($path);
+        }
+
+        return null;
     };
     $imageUrl = $normalizeImage($src) ?: $resolveImage($sku, $category, $name ?: $alt, (int) $width);
 

@@ -17,7 +17,7 @@ return new class extends Migration {
             $table->integer('shipping_fee')->default(0);
             $table->integer('discount')->default(0);
             $table->integer('total');
-            $table->enum('payment_method', ['cod', 'vnpay', 'momo', 'card', 'wallet'])->default('cod');
+            $table->enum('payment_method', ['cod', 'bank_transfer', 'vnpay', 'momo', 'card', 'wallet'])->default('cod');
             $table->enum('status', ['pending', 'processing', 'preparing', 'shipped', 'delivering', 'completed', 'cancelled'])->default('pending')->index();
             $table->enum('payment_status', ['pending', 'paid', 'failed'])->default('pending');
             $table->string('vnpay_transaction_id', 50)->nullable();
