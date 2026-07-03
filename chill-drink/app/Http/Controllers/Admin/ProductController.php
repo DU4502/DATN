@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -15,11 +15,75 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::with('category')->latest()->paginate(12);
+        $filters = [
+            'q' => trim((string) $request->query('q', '')),
+            'category' => trim((string) $request->query('category', '')),
+            'status' => trim((string) $request->query('status', '')),
+            'stock' => trim((string) $request->query('stock', '')),
+            'sort' => trim((string) $request->query('sort', 'latest')),
+        ];
 
-        return view('admin.products.index', compact('products'));
+        $categories = Category::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+        $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
+
+        $productsQuery = Product::query()
+            ->with('category')
+            ->when($filters['q'] !== '', function ($query) use ($filters) {
+                $keyword = $filters['q'];
+
+                $query->where(function ($builder) use ($keyword) {
+                    $builder
+                        ->where('name', 'like', '%'.$keyword.'%')
+                        ->orWhere('slug', 'like', '%'.$keyword.'%')
+                        ->orWhere('description', 'like', '%'.$keyword.'%')
+                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
+                            $categoryQuery->where('name', 'like', '%'.$keyword.'%');
+                        });
+
+                    if (Schema::hasColumn('products', 'sku')) {
+                        $builder->orWhere('sku', 'like', '%'.$keyword.'%');
+                    }
+                });
+            })
+            ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
+                $query->where('category_id', (int) $filters['category']);
+            })
+            ->when($filters['status'] === 'active', fn ($query) => $query->where('status', true))
+            ->when($filters['status'] === 'hidden', fn ($query) => $query->where('status', false))
+            ->when($filters['stock'] === 'low', fn ($query) => $query->where('stock', '>', 0)->where('stock', '<=', 5))
+            ->when($filters['stock'] === 'out', fn ($query) => $query->where('stock', '<=', 0));
+
+        match ($filters['sort']) {
+            'name' => $productsQuery->orderBy('name'),
+            'price_asc' => $productsQuery->orderBy('price'),
+            'price_desc' => $productsQuery->orderByDesc('price'),
+            'stock_asc' => $productsQuery->orderBy('stock'),
+            default => $productsQuery->latest(),
+        };
+
+        $products = $productsQuery->paginate(12)->withQueryString();
+        $totalProducts = Product::count();
+        $lowStockProducts = Product::where('stock', '>', 0)->where('stock', '<=', 5)->count();
+        $activeFiltersCount = collect($filters)
+            ->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
+            ->count();
+        $quickCategories = $categories
+            ->filter(fn ($category) => in_array($category->name, ['Trà Sữa', 'Cà Phê', 'Nước Ép'], true))
+            ->values();
+
+        return view('admin.products.index', compact(
+            'products',
+            'categories',
+            'quickCategories',
+            'filters',
+            'totalProducts',
+            'lowStockProducts',
+            'activeFiltersCount'
+        ));
     }
 
     /**
@@ -71,9 +135,11 @@ class ProductController extends Controller
             }
         }
 
-        Product::create($data);
+        $product = Product::create($data);
 
-        return redirect()->route('admin.products.index')->with('success', 'Thêm sản phẩm thành công!');
+        return redirect()
+            ->route('admin.products.show', $product->id)
+            ->with('success', 'Thêm sản phẩm thành công!');
     }
 
     /**
@@ -83,7 +149,9 @@ class ProductController extends Controller
     {
         $product = Product::with('category')
             ->withCount('orderItems')
-            ->findOrFail($id);
+            ->whereKey($id)
+            ->orWhere('slug', $id)
+            ->firstOrFail();
 
         if (Schema::hasTable('reviews')) {
             $product->loadCount('reviews');
@@ -99,7 +167,7 @@ class ProductController extends Controller
      */
     public function edit(string $id)
     {
-        $product = Product::findOrFail($id);
+        $product = $this->findProduct($id);
         $categories = Category::orderBy('name')->get();
 
         return view('admin.products.edit', compact('product', 'categories'));
@@ -110,7 +178,7 @@ class ProductController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $product = Product::findOrFail($id);
+        $product = $this->findProduct($id);
 
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
@@ -167,7 +235,9 @@ class ProductController extends Controller
 
         $product->update($data);
 
-        return redirect()->route('admin.products.index')->with('success', 'Cập nhật sản phẩm thành công!');
+        return redirect()
+            ->route('admin.products.show', $product->id)
+            ->with('success', 'Cập nhật sản phẩm thành công!');
     }
 
     /**
@@ -175,7 +245,7 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        $product = Product::findOrFail($id);
+        $product = $this->findProduct($id);
 
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
@@ -189,7 +259,9 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('success', 'Xóa sản phẩm thành công!');
+        return redirect()
+            ->route('admin.products.index', $this->returnPageParameters(request()))
+            ->with('success', 'Xóa sản phẩm thành công!');
     }
 
     private function storeGalleryImages(Request $request): array
@@ -213,5 +285,23 @@ class ProductController extends Controller
         return is_array($galleryImages)
             ? array_values(array_filter($galleryImages))
             : [];
+    }
+
+    private function returnPageParameters(Request $request): array
+    {
+        $page = (int) ($request->input('return_page') ?: $request->query('page'));
+
+        return array_filter(array_merge(
+            request()->only(['q', 'category', 'status', 'stock', 'sort']),
+            $page > 1 ? ['page' => $page] : []
+        ), fn ($value) => $value !== null && $value !== '');
+    }
+
+    private function findProduct(string $id): Product
+    {
+        return Product::query()
+            ->whereKey($id)
+            ->orWhere('slug', $id)
+            ->firstOrFail();
     }
 }

@@ -8,22 +8,25 @@
         min-height: calc(100vh - 80px);
         display: flex;
         align-items: center;
-        background: url('https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=2000&q=80') center/cover no-repeat;
+        background:
+            linear-gradient(90deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.34) 46%, rgba(255, 255, 255, 0.08) 100%),
+            url('https://png.pngtree.com/background/20250106/original/pngtree-bubble-tea-cup-with-splashing-milk-summer-drinks-background-picture-image_15464755.jpg') center/cover no-repeat;
         position: relative;
     }
     .auth-page::before {
         content: ''; position: absolute; inset: 0;
-        background: linear-gradient(135deg, rgba(13, 147, 115, 0.85) 0%, rgba(6, 122, 95, 0.95) 100%);
+        background: linear-gradient(135deg, rgba(0, 139, 122, 0.10) 0%, rgba(255, 246, 225, 0.22) 100%);
     }
     
     .auth-container { position: relative; z-index: 1; padding: 4rem 0; width: 100%; }
 
     .auth-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.72);
         border-radius: var(--radius-2xl);
-        box-shadow: 0 24px 48px rgba(0,0,0,0.2);
+        box-shadow: 0 24px 58px rgba(12, 54, 47, 0.22);
         overflow: hidden;
     }
 
@@ -49,6 +52,13 @@
     }
     .btn-auth-submit:hover { transform: translateY(-3px); box-shadow: 0 12px 20px rgba(13,147,115,0.4); color: #fff; }
 
+    .social-btn {
+        height: 48px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.95rem;
+        background: var(--c-bg); border: 1.5px solid var(--c-border); color: var(--c-ink-secondary);
+        display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.2s;
+    }
+    .social-btn:hover { background: var(--c-surface); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+
     .auth-section-title {
         color: var(--c-primary); font-size: 0.8125rem; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;
@@ -70,6 +80,19 @@
                                 <div class="auth-logo"><img src="{{ asset('images/logo.png') }}" alt="Chill Drink"></div>
                                 <h1 class="h3 fw-bold mb-2">Tạo tài khoản mới</h1>
                                 <p class="text-secondary">Điền thông tin để bắt đầu đặt đồ uống siêu tốc</p>
+                            </div>
+
+                            @if(session('oauth_error'))
+                                <div class="alert alert-danger d-flex align-items-center mb-4"><i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('oauth_error') }}</div>
+                            @endif
+
+                            <div class="d-grid gap-3 mb-4">
+                                <a href="{{ route('auth.google.redirect') }}" class="btn social-btn">
+                                    <i class="bi bi-google text-danger fs-5"></i> Tiếp tục với Google
+                                </a>
+                                <a href="{{ route('auth.facebook.redirect') }}" class="btn social-btn">
+                                    <i class="bi bi-facebook text-primary fs-5"></i> Tiếp tục với Facebook
+                                </a>
                             </div>
 
                             <form method="POST" action="{{ route('register') }}">
