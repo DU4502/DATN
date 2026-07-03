@@ -199,7 +199,7 @@
 
     .home-discover-card__media {
         position: relative;
-        aspect-ratio: 4 / 3;
+        aspect-ratio: 1 / 1;
         overflow: hidden;
         background: linear-gradient(145deg, #effbf7, #ffffff);
     }
@@ -527,7 +527,9 @@
     .home-product__img .product-image {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
+        object-position: center;
+        padding: 0.75rem;
         transition: transform 0.5s ease;
     }
 
@@ -1103,10 +1105,10 @@
 
             @php
                 $homeDiscoverCategories = [
-                    ['title' => 'Juices', 'category_name' => 'Nước Ép', 'icon' => 'bi-droplet', 'description' => 'Trái cây tươi, thanh ngọt, giàu vitamin.'],
-                    ['title' => 'Smoothies', 'category_name' => 'Sinh Tố', 'icon' => 'bi-cup-straw', 'description' => 'Mịn màng, lạ miệng, bổ dưỡng mỗi ngày.'],
-                    ['title' => 'Teas', 'category_name' => 'Trà Trái Cây', 'icon' => 'bi-cup-hot', 'description' => 'Hương trà thanh nhẹ, thư thái cho mọi khoảnh khắc.'],
-                    ['title' => 'Coffee', 'category_name' => 'Cà Phê', 'icon' => 'bi-cup-fill', 'description' => 'Đậm đà, sảng khoái, đánh thức mọi cảm xúc.'],
+                    ['title' => 'Nước Ép', 'category_name' => 'Nước Ép', 'icon' => 'bi-droplet', 'description' => 'Trái cây tươi, thanh ngọt, giàu vitamin.'],
+                    ['title' => 'Sinh Tố', 'category_name' => 'Sinh Tố', 'icon' => 'bi-cup-straw', 'description' => 'Mịn màng, lạ miệng, bổ dưỡng mỗi ngày.'],
+                    ['title' => 'Trà Trái Cây', 'category_name' => 'Trà Trái Cây', 'icon' => 'bi-cup-hot', 'description' => 'Hương trà thanh nhẹ, thư thái cho mọi khoảnh khắc.'],
+                    ['title' => 'Cà Phê', 'category_name' => 'Cà Phê', 'icon' => 'bi-cup-fill', 'description' => 'Đậm đà, sảng khoái, đánh thức mọi cảm xúc.'],
                 ];
             @endphp
 
@@ -1124,21 +1126,16 @@
             </div>
 
             <div class="home-discover__products">
-                @foreach([
-                    ['Cam Vắt Nguyên Chất', '45.000đ', asset('images/products/nuoc-ep-cam.png'), 'juices', 'cam-vat-nguyen-chat'],
-                    ['Green Detox Smoothie', '65.000đ', asset('images/products/sinh-to-bo.png'), 'smoothies', 'green-detox-smoothie'],
-                    ['Trà Đào Cam Sả', '50.000đ', asset('images/products/tra-dao-cam-sa.png'), 'teas', 'tra-dao-cam-sa'],
-                    ['Cold Brew Trái Cây', '55.000đ', asset('images/products/ca-phe-u-lanh.png'), 'coffee', 'cold-brew-trai-cay'],
-                ] as $item)
-                    <a href="{{ route('products.show', $item[4]) }}" class="home-discover-card">
+                @foreach($discoverProducts as $product)
+                    <a href="{{ route('products.show', $product->slug) }}" class="home-discover-card">
                         <div class="home-discover-card__media">
-                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" loading="lazy">
-                            <span class="home-discover-card__tag">{{ ucfirst($item[3]) }}</span>
+                            <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
+                            <span class="home-discover-card__tag">{{ $product->category?->name ?? 'Đồ uống' }}</span>
                         </div>
                         <div class="home-discover-card__body">
-                            <h3 class="home-discover-card__title">{{ $item[0] }}</h3>
+                            <h3 class="home-discover-card__title">{{ $product->name }}</h3>
                             <div class="home-discover-card__meta">
-                                <span class="home-discover-card__price">{{ $item[1] }}</span>
+                                <span class="home-discover-card__price">{{ number_format((float) $product->price, 0, ',', '.') }}đ</span>
                                 <span class="home-discover-card__button">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
                             </div>
                         </div>

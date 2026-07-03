@@ -7,6 +7,7 @@ use App\Support\RealtimeOrderNotifier;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -62,6 +63,7 @@ class CheckoutController extends Controller
         $shippingDistanceOptions = ShippingFee::distanceOptions();
         $shippingMethods = ShippingFee::methods();
         $paymentOptions = $this->paymentOptions();
+        $locationReadyBranchCount = Branch::query()->availableForLocation()->count();
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $now = now();
@@ -91,6 +93,7 @@ class CheckoutController extends Controller
             'shippingMethods',
             'paymentOptions',
             'availableVouchers',
+            'locationReadyBranchCount',
             'loyaltyContext',
             'subtotal'
         ));
@@ -106,6 +109,11 @@ class CheckoutController extends Controller
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
             'shipping_address_ui' => ['required', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'branch_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
             'voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
         ], [
@@ -114,6 +122,7 @@ class CheckoutController extends Controller
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
+            'branch_id.exists' => 'Chi nhánh đã chọn không còn hoạt động. Vui lòng tìm lại chi nhánh gần nhất.',
         ]);
 
         $fullCart = session()->get('cart', []);
@@ -164,6 +173,10 @@ class CheckoutController extends Controller
                 'status' => 'pending',
                 'note' => $note,
             ];
+
+            if (Schema::hasColumn('orders', 'branch_id') && $request->filled('branch_id')) {
+                $orderData['branch_id'] = (int) $request->input('branch_id');
+            }
 
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
