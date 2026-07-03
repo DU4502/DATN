@@ -13,12 +13,16 @@ return new class extends Migration
     {
         Schema::create('user_vouchers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-            $table->foreignId('voucher_id')->constrained('coupons')->onDelete('cascade');
+            $table->integer('user_id')->nullable();
+            $table->integer('voucher_id');
             $table->string('guest_identifier')->nullable();
             $table->timestamp('received_at')->useCurrent();
             $table->timestamp('used_at')->nullable();
             $table->timestamps();
+            
+            // Cài đặt khóa ngoại thủ công để khớp kiểu INT
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('voucher_id')->references('id')->on('coupons')->onDelete('cascade');
             
             // Add unique constraint for user + voucher
             $table->unique(['user_id', 'voucher_id']);
