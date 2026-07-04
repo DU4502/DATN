@@ -20,7 +20,7 @@ class SuperAdminDashboardTest extends TestCase
         User::factory()->create([
             'name' => 'Admin Can Tim',
             'email' => 'search-admin@chilldrink.com',
-            'role_id' => 3,
+            'role_id' => 2,
         ]);
         User::factory()->create(['role_id' => 1]);
 
@@ -36,7 +36,7 @@ class SuperAdminDashboardTest extends TestCase
     {
         $superAdmin = User::factory()->create([
             'email' => User::SUPER_ADMIN_EMAIL,
-            'role_id' => 2,
+            'role_id' => 3,
         ]);
 
         $response = $this->actingAs($superAdmin)->post('/admin/super-admin/admins', [
