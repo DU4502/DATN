@@ -240,6 +240,29 @@
         flex: 0 0 auto;
     }
 
+    .branch-suggestion-panel {
+        border-color: rgba(0, 139, 122, 0.2);
+        background: linear-gradient(135deg, #f2fffb, #ffffff);
+    }
+
+    .branch-suggestion-result {
+        border: 1px solid var(--drink-border);
+        border-radius: 16px;
+        background: #ffffff;
+    }
+
+    .branch-distance-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.65rem;
+        border-radius: 999px;
+        background: var(--drink-soft);
+        color: var(--drink-primary-dark);
+        font-size: 0.78rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
     .voucher-box {
         border: 1px dashed rgba(0, 139, 122, 0.34);
         border-radius: 20px;
@@ -815,6 +838,13 @@
                                 type="hidden"
                                 value="{{ old('shipping_address_ui', $primaryAddress) }}"
                             >
+                            <input
+                                id="shipping_area_ui"
+                                name="shipping_area_ui"
+                                type="hidden"
+                                value="{{ old('shipping_area_ui', $primaryArea) }}"
+                            >
+                            <input id="selectedBranchId" name="branch_id" type="hidden" value="{{ old('branch_id') }}">
 
                             <div class="selected-address-row">
                                 <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
@@ -844,6 +874,36 @@
                                 </div>
                             @endif
                         </div>
+                    </div>
+
+                    <div class="checkout-panel branch-suggestion-panel p-4 mb-4">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="checkout-step"><i class="bi bi-shop"></i></span>
+                                <div>
+                                    <h2 class="h5 fw-bold mb-1">Chi nhánh phục vụ gần bạn</h2>
+                                    <p class="text-secondary small mb-0" id="nearestBranchStatus">
+                                        @if(($locationReadyBranchCount ?? 0) > 0)
+                                            Bấm tìm chi nhánh để hệ thống tính theo vị trí hiện tại của bạn.
+                                        @else
+                                            Chưa có chi nhánh thực tế nào được cấu hình tọa độ.
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary rounded-pill px-4"
+                                id="findNearestBranch"
+                                @disabled(($locationReadyBranchCount ?? 0) === 0)
+                            >
+                                <i class="bi bi-crosshair me-2"></i>Tìm chi nhánh gần nhất
+                            </button>
+                        </div>
+                        <div class="branch-suggestion-result p-3 mt-3 d-none" id="nearestBranchResult" aria-live="polite"></div>
+                        @error('branch_id')
+                            <div class="text-danger small mt-2">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="checkout-panel p-4 p-md-5 mb-4 d-none" aria-hidden="true">
@@ -1379,6 +1439,11 @@
         const selectedAddressText = document.getElementById('selectedAddressText');
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
+        const selectedBranchId = document.getElementById('selectedBranchId');
+        const findNearestBranchButton = document.getElementById('findNearestBranch');
+        const nearestBranchStatus = document.getElementById('nearestBranchStatus');
+        const nearestBranchResult = document.getElementById('nearestBranchResult');
+        const nearestBranchEndpoint = @json(route('api.branches.nearest'));
 
         const addressListModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressListModal'));
         const addressEditModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressEditModal'));
@@ -1507,6 +1572,67 @@
 
         function getAddressById(id) {
             return addressBook.find((item) => item.id === id) || addressBook[0];
+        }
+
+        function renderNearestBranch(branch) {
+            selectedBranchId.value = branch.id;
+            nearestBranchResult.classList.remove('d-none');
+            nearestBranchResult.innerHTML = `
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                    <div>
+                        <div class="fw-bold mb-1"><i class="bi bi-shop me-2 text-primary"></i>${escapeHtml(branch.name)}</div>
+                        <div class="text-secondary small">${escapeHtml(branch.address || 'Chưa cập nhật địa chỉ')}</div>
+                        ${branch.phone ? `<div class="text-secondary small mt-1"><i class="bi bi-telephone me-1"></i>${escapeHtml(branch.phone)}</div>` : ''}
+                    </div>
+                    <span class="branch-distance-badge"><i class="bi bi-geo-alt me-1"></i>${Number(branch.distance_km).toFixed(2)} km</span>
+                </div>
+            `;
+            nearestBranchStatus.textContent = 'Đã chọn chi nhánh gần nhất để tiếp nhận đơn hàng.';
+        }
+
+        function findNearestBranch() {
+            if (!navigator.geolocation) {
+                nearestBranchStatus.textContent = 'Trình duyệt của bạn không hỗ trợ định vị.';
+                return;
+            }
+
+            findNearestBranchButton.disabled = true;
+            nearestBranchStatus.textContent = 'Đang xin quyền vị trí để tìm chi nhánh gần nhất...';
+
+            navigator.geolocation.getCurrentPosition(async function (position) {
+                const params = new URLSearchParams({
+                    latitude: position.coords.latitude.toFixed(7),
+                    longitude: position.coords.longitude.toFixed(7),
+                    limit: '1',
+                });
+
+                try {
+                    const response = await fetch(`${nearestBranchEndpoint}?${params.toString()}`, {
+                        headers: { 'Accept': 'application/json' },
+                    });
+                    const payload = await response.json();
+                    const branch = payload.data?.[0];
+
+                    if (!response.ok || !branch) {
+                        throw new Error(payload.message || 'Không tìm thấy chi nhánh phù hợp.');
+                    }
+
+                    renderNearestBranch(branch);
+                } catch (error) {
+                    selectedBranchId.value = '';
+                    nearestBranchResult.classList.add('d-none');
+                    nearestBranchStatus.textContent = error.message || 'Không thể tìm chi nhánh lúc này.';
+                } finally {
+                    findNearestBranchButton.disabled = false;
+                }
+            }, function () {
+                nearestBranchStatus.textContent = 'Bạn chưa cấp quyền vị trí hoặc trình duyệt không lấy được vị trí.';
+                findNearestBranchButton.disabled = false;
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000,
+            });
         }
 
         function applyAddress(address) {
@@ -1747,6 +1873,8 @@
         document.querySelectorAll('input[name="shipping_method_ui"]').forEach((input) => {
             input.addEventListener('change', updateShippingSummary);
         });
+
+        findNearestBranchButton?.addEventListener('click', findNearestBranch);
 
         document.querySelector('[data-toggle-checkout-items]')?.addEventListener('click', function () {
             const extraItems = document.querySelectorAll('[data-checkout-extra-item]');
