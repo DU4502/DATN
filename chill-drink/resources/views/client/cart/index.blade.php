@@ -12,6 +12,7 @@
 </script>
 <style>
     .cart-page {
+        --cart-sticky-offset: 116px;
         background: linear-gradient(180deg, #effcf9 0%, #f7fffd 48%, #ffffff 100%);
         padding: 3rem 0 4.5rem;
     }
@@ -94,6 +95,12 @@
         background: transparent;
     }
 
+    .cart-summary-sticky {
+        position: sticky;
+        top: var(--cart-sticky-offset);
+        z-index: 1;
+    }
+
     .cart-item-card {
         border: 0;
         border-radius: 0;
@@ -154,39 +161,6 @@
         color: #d94b4b;
     }
 
-    .promo-control {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 0.5rem;
-        border: 1px solid rgba(0, 139, 122, 0.16);
-        border-radius: 18px;
-        background: #f7fffd;
-        padding: 0.45rem;
-    }
-
-    .promo-control input {
-        border: 0;
-        background: transparent;
-        height: 44px;
-        padding: 0 0.9rem;
-        min-width: 0;
-        font-weight: 600;
-    }
-
-    .promo-control input:focus {
-        box-shadow: none;
-    }
-
-    .promo-control .btn {
-        min-width: 92px;
-        min-height: 44px;
-        border-radius: 14px !important;
-        padding-inline: 1rem !important;
-        box-shadow: none;
-        white-space: nowrap;
-    }
-
     .payment-mark {
         width: 24px;
         height: 24px;
@@ -212,6 +186,14 @@
     }
 
     @media (max-width: 767.98px) {
+        .cart-page {
+            padding-top: 2rem;
+        }
+
+        .cart-summary-sticky {
+            position: static;
+        }
+
         .cart-items-card {
             border-radius: 22px;
             max-height: 58vh;
@@ -290,6 +272,14 @@
                                                 · +{{ number_format($item['size_extra'], 0, ',', '.') }}đ
                                             @endif
                                         </p>
+                                        @if(!empty($item['toppings']))
+                                            <p class="text-primary small fw-semibold mb-1">
+                                                Topping: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}
+                                            </p>
+                                        @endif
+                                        <p class="text-secondary small mb-1">
+                                            Đường {{ $item['sugar_level'] ?? 100 }}% · Đá {{ $item['ice_level'] ?? 100 }}%
+                                        </p>
                                         <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
                                     </div>
 
@@ -331,7 +321,7 @@
                 </div>
 
                 <div class="col-lg-4">
-                    <div class="cart-summary-card p-4 p-md-5 sticky-top" style="top: 96px;">
+                    <div class="cart-summary-card cart-summary-sticky p-4 p-md-5">
                         <h2 class="h4 fw-bold mb-4">Tóm tắt đơn</h2>
 
                         <div class="d-flex justify-content-between mb-3">
@@ -356,11 +346,6 @@
                             <span class="text-primary" data-selected-grand-total>{{ number_format($total + $tax, 0, ',', '.') }}đ</span>
                         </div>
 
-                        <div class="promo-control mb-4">
-                            <input type="text" class="form-control" placeholder="Mã voucher">
-                            <button type="button" class="btn btn-primary">Áp dụng</button>
-                        </div>
-
                         @auth
                             <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}">
                                 Thanh toán ngay <i class="bi bi-arrow-right ms-2"></i>
@@ -369,9 +354,12 @@
                                 Vui lòng chọn ít nhất một sản phẩm để thanh toán.
                             </p>
                         @else
-                            <a href="{{ route('login') }}" class="btn btn-primary btn-lg w-100 rounded-pill">
-                                Đăng nhập để thanh toán
-                            </a>
+                            <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}" data-guest-checkout-url="{{ route('checkout.guest.index') }}">
+                                Thanh toán ngay <i class="bi bi-arrow-right ms-2"></i>
+                            </button>
+                            <p class="small text-danger text-center mt-3 mb-0 d-none" data-cart-selection-warning>
+                                Vui lòng chọn ít nhất một sản phẩm để thanh toán.
+                            </p>
                         @endauth
 
                         <div class="d-flex justify-content-center gap-3 mt-4">
@@ -418,6 +406,46 @@
         @endif
     </div>
 </section>
+
+<div class="modal fade" id="cartCheckoutGateModal" tabindex="-1" aria-labelledby="cartCheckoutGateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 24px;">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <p class="section-kicker mb-1">Thanh toán</p>
+                    <h5 class="modal-title fw-bold" id="cartCheckoutGateModalLabel">Bạn có <span data-gate-selected-count>0</span> món · <span data-gate-selected-total>0đ</span></h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="p-4 rounded-4 mb-3" style="background: #f0faf7; border: 1px solid #cceee4;">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="checkout-step"><i class="bi bi-stars"></i></span>
+                        <strong>Đăng nhập để tích điểm & dùng voucher</strong>
+                    </div>
+                    <ul class="small text-secondary mb-4 ps-3">
+                        <li>Tích điểm mỗi đơn (1.000đ = 1 điểm)</li>
+                        <li>Voucher giảm giá theo hạng thành viên</li>
+                        <li>Theo dõi đơn nhanh hơn</li>
+                    </ul>
+                    <a href="{{ route('login') }}" class="btn btn-outline-primary w-100 rounded-pill py-2">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập / Đăng ký
+                    </a>
+                </div>
+
+                <div class="text-center text-secondary small my-3">hoặc</div>
+
+                <button type="button" class="btn btn-primary w-100 rounded-pill py-3" data-guest-checkout-confirm>
+                    <i class="bi bi-lightning-charge me-2"></i>Mua hàng nhanh — không cần tài khoản
+                </button>
+                <p class="small text-secondary text-center mt-2 mb-0">Chỉ cần SĐT & email để nhận hóa đơn</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-link text-secondary w-100" data-bs-dismiss="modal">Quay lại giỏ hàng</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -501,8 +529,43 @@
                 return;
             }
 
+            const guestCheckoutUrl = checkoutButton.dataset.guestCheckoutUrl;
+
+            if (guestCheckoutUrl) {
+                document.querySelectorAll('[data-gate-selected-count]').forEach((element) => {
+                    element.textContent = checkedItems.length;
+                });
+                document.querySelectorAll('[data-gate-selected-total]').forEach((element) => {
+                    const totalText = document.querySelector('[data-selected-grand-total]')?.textContent || '0đ';
+                    element.textContent = totalText;
+                });
+
+                const gateModal = document.getElementById('cartCheckoutGateModal');
+                if (gateModal) {
+                    new bootstrap.Modal(gateModal).show();
+                }
+
+                return;
+            }
+
             const url = new URL(checkoutButton.dataset.checkoutUrl, window.location.origin);
             checkedItems.forEach((input) => {
+                url.searchParams.append('items[]', input.value);
+            });
+
+            window.location.href = url.toString();
+        });
+
+        document.querySelector('[data-guest-checkout-confirm]')?.addEventListener('click', function () {
+            const checkoutBtn = document.querySelector('[data-cart-checkout-button]');
+            const guestUrl = checkoutBtn?.dataset.guestCheckoutUrl;
+
+            if (!guestUrl) {
+                return;
+            }
+
+            const url = new URL(guestUrl, window.location.origin);
+            selectedItems().forEach((input) => {
                 url.searchParams.append('items[]', input.value);
             });
 

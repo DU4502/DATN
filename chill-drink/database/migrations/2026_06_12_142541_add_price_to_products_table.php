@@ -9,10 +9,14 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
-        Schema::table('products', function ($table) {
-            $table->decimal('price', 10, 2)->after('slug');
+        if (Schema::hasColumn('products', 'price')) {
+            return;
+        }
+
+        Schema::table('products', function (Blueprint $table) {
+            $table->decimal('price', 10, 2)->default(0)->after('slug');
         });
     }
 
@@ -21,8 +25,12 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasColumn('products', 'price')) {
+            return;
+        }
+
         Schema::table('products', function (Blueprint $table) {
-            //
+            $table->dropColumn('price');
         });
     }
 };
