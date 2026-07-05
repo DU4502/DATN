@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class CartController extends Controller
 {
@@ -14,8 +17,6 @@ class CartController extends Controller
             'S' => ['label' => 'Size S', 'extra' => 0],
             'M' => ['label' => 'Size M', 'extra' => 5000],
             'L' => ['label' => 'Size L', 'extra' => 10000],
-            'XL' => ['label' => 'Size XL', 'extra' => 15000],
-            'XXL' => ['label' => 'Size XXL', 'extra' => 20000],
         ];
     }
 
@@ -109,7 +110,7 @@ class CartController extends Controller
             $cart[$key]['sku'] = $product->sku ?? null;
             $cart[$key]['category'] = $product->category?->name;
             $cart[$key]['base_price'] = (int) $product->price;
-            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0);
+            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0);
         }
 
         return $cart;
@@ -122,7 +123,7 @@ class CartController extends Controller
     {
         $demoProducts = $this->demoProducts();
         $product = isset($demoProducts[$id])
-            ? (object) $demoProducts[$id]
+            ? $this->resolveOrCreatePayableProduct($demoProducts[$id], $id)
             : Product::findOrFail($id);
         
         $cart = session()->get('cart', []);
@@ -131,8 +132,19 @@ class CartController extends Controller
         $size = $sizes[$sizeCode] ?? $sizes['M'];
         $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
         $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
-        $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel;
+        $toppings = collect(json_decode((string) $request->input('toppings', '[]'), true) ?: [])
+            ->filter(fn ($item) => is_array($item) && ! empty($item['name']))
+            ->map(fn ($item) => [
+                'name' => (string) $item['name'],
+                'price' => max(0, (int) ($item['price'] ?? 0)),
+            ])
+            ->values()
+            ->all();
+        $toppingTotal = collect($toppings)->sum('price');
+        $toppingKey = collect($toppings)->pluck('name')->implode(',');
+        $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel . ':' . md5($toppingKey);
         $basePrice = (int) ($product->price ?? 0);
+        $productId = $product instanceof Product ? (int) $product->id : $id;
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
         
         // If the same product and size already exist, increase quantity.
@@ -145,15 +157,17 @@ class CartController extends Controller
                 : ($product->image ?? \App\Support\ProductImage::forCategory(null, crc32((string) $id)));
 
             $cart[$cartKey] = [
-                'product_id' => $id,
+                'product_id' => $productId,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => $basePrice + $size['extra'],
+                'price' => $basePrice + $size['extra'] + $toppingTotal,
                 'size' => $sizeCode,
                 'size_label' => $size['label'],
                 'size_extra' => $size['extra'],
                 'sugar_level' => $sugarLevel,
                 'ice_level' => $iceLevel,
+                'toppings' => $toppings,
+                'topping_total' => $toppingTotal,
                 'image' => $image,
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
@@ -166,8 +180,57 @@ class CartController extends Controller
         if ($request->expectsJson()) {
             return response()->json($this->cartPayload('Đã thêm sản phẩm vào giỏ hàng!'));
         }
+
+        if ($request->boolean('buy_now')) {
+            $route = auth()->check() ? 'checkout.index' : 'checkout.guest.index';
+            return redirect()->route($route, ['items' => [$cartKey]]);
+        }
         
         return redirect()->back();
+    }
+
+    private function resolveOrCreatePayableProduct(array $demoProduct, string $demoId): Product
+    {
+        $name = trim((string) ($demoProduct['name'] ?? ''));
+        $slug = Str::slug($name !== '' ? $name : $demoId);
+        $price = max(0, (int) ($demoProduct['price'] ?? 0));
+
+        $product = Product::query()
+            ->where(function ($query) use ($name, $slug) {
+                $query->where('name', $name);
+
+                if ($slug !== '') {
+                    $query->orWhere('slug', $slug);
+                }
+            })
+            ->first();
+
+        if ($product) {
+            return $product;
+        }
+
+        $categoryName = trim((string) ($demoProduct['category'] ?? ''));
+        $category = null;
+
+        if (Schema::hasTable('categories') && $categoryName !== '') {
+            $category = Category::query()->firstOrCreate(
+                ['name' => $categoryName],
+                ['slug' => Str::slug($categoryName), 'status' => true]
+            );
+        }
+
+        return Product::create([
+            'category_id' => $category?->id,
+            'name' => $name !== '' ? $name : 'Sản phẩm demo',
+            'slug' => $slug,
+            'price' => $price,
+            'stock' => 100,
+            'status' => true,
+            'description' => trim((string) ($demoProduct['description'] ?? '')) !== ''
+                ? $demoProduct['description']
+                : 'Sản phẩm được tạo tự động để hỗ trợ thanh toán.',
+            'image' => $demoProduct['image'] ?? null,
+        ]);
     }
 
     /**

@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Support\GuestOrderAccess;
+use App\Support\RealtimeOrderNotifier;
+
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -14,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -25,6 +31,7 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         $cart = session()->get('cart', []);
+        $cart = $this->normalizeCartForCheckout($cart);
 
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
@@ -56,6 +63,7 @@ class CheckoutController extends Controller
         $shippingDistanceOptions = ShippingFee::distanceOptions();
         $shippingMethods = ShippingFee::methods();
         $paymentOptions = $this->paymentOptions();
+        $locationReadyBranchCount = Branch::query()->availableForLocation()->count();
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $now = now();
@@ -85,6 +93,7 @@ class CheckoutController extends Controller
             'shippingMethods',
             'paymentOptions',
             'availableVouchers',
+            'locationReadyBranchCount',
             'loyaltyContext',
             'subtotal'
         ));
@@ -98,22 +107,27 @@ class CheckoutController extends Controller
         $request->validate([
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_area_ui'],
-            'shipping_area_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_address_ui'],
+            'shipping_address_ui' => ['required', 'string', 'max:255'],
+            'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'branch_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
             'voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
         ], [
-            'shipping_address_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
-            'shipping_area_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
+            'shipping_address_ui.required' => 'Vui lòng nhập địa chỉ nhận hàng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
+            'branch_id.exists' => 'Chi nhánh đã chọn không còn hoạt động. Vui lòng tìm lại chi nhánh gần nhất.',
         ]);
 
         $fullCart = session()->get('cart', []);
         $selectedKeys = session()->get('checkout_cart_keys');
-        $cart = $this->cartForCheckout($fullCart, $selectedKeys);
+        $cart = $this->normalizeCartForCheckout($this->cartForCheckout($fullCart, $selectedKeys));
 
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
@@ -144,10 +158,7 @@ class CheckoutController extends Controller
                 $request->shipping_area_ui,
             ])->filter()->implode(', '));
             $shippingNote = sprintf(
-                'Giao hàng: %s, %skm (%s), phí ship %s%s',
-                $shippingQuote['method_label'],
-                rtrim(rtrim(number_format($shippingQuote['distance_km'], 1, '.', ''), '0'), '.'),
-                $shippingQuote['distance_label'],
+                'Giao hàng: phí cố định %s%s',
                 ShippingFee::formatCurrency($shippingQuote['total_fee']),
                 $addressText ? ", địa chỉ: {$addressText}" : ''
             );
@@ -162,6 +173,10 @@ class CheckoutController extends Controller
                 'status' => 'pending',
                 'note' => $note,
             ];
+
+            if (Schema::hasColumn('orders', 'branch_id') && $request->filled('branch_id')) {
+                $orderData['branch_id'] = (int) $request->input('branch_id');
+            }
 
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
@@ -195,7 +210,8 @@ class CheckoutController extends Controller
 
             // Create order items
             foreach ($orderItems as $item) {
-                OrderItem::create($this->orderItemData($order->id, $item));
+                $orderItem = OrderItem::create($this->orderItemData($order->id, $item));
+                $this->recordOrderItemToppings((int) $orderItem->id, $item['toppings'] ?? []);
             }
 
             if ($voucher) {
@@ -205,6 +221,12 @@ class CheckoutController extends Controller
             $this->removeCheckedOutItems($fullCart, $selectedKeys);
 
             DB::commit();
+
+            RealtimeOrderNotifier::orderStatusUpdated($order);
+
+            if ($order->payment_method !== 'vnpay') {
+                RealtimeOrderNotifier::orderCreated($order);
+            }
 
             if ($order->payment_method === 'vnpay') {
                 return redirect()
@@ -234,19 +256,28 @@ class CheckoutController extends Controller
 
     public function success(Order $order)
     {
-        abort_unless((int) $order->user_id === (int) auth()->id(), 403);
+        abort_unless(GuestOrderAccess::canView($order), 403);
 
-        $order->load('orderItems.product');
+        $order->load('orderItems.product', 'branch');
 
-        return view('client.checkout.success', [
+        $payload = [
             'order' => $order,
             'result' => 'success',
             'title' => 'Cảm ơn bạn đã đặt hàng',
             'message' => 'Đơn hàng đã được tiếp nhận và sẽ sớm được chuẩn bị.',
-        ]);
+        ];
+
+        if ($order->isGuest()) {
+            GuestOrderAccess::remember($order);
+            GuestOrderAccess::storeConvertPayload($order);
+            $payload['title'] = 'Cảm ơn bạn! Đơn hàng đã được tiếp nhận';
+            $payload['guestConvert'] = session('guest_convert');
+        }
+
+        return view('client.checkout.success', $payload);
     }
 
-    private function resolveVoucher(?string $code, int $subtotal): array
+    protected function resolveVoucher(?string $code, int $subtotal): array
     {
         $code = strtoupper(trim((string) $code));
 
@@ -298,7 +329,7 @@ class CheckoutController extends Controller
         return [$voucher, $discount];
     }
 
-    private function assertVoucherRankAndPoints(Voucher $voucher): void
+    protected function assertVoucherRankAndPoints(Voucher $voucher): void
     {
         $context = $this->loyaltyContext();
 
@@ -315,7 +346,7 @@ class CheckoutController extends Controller
         }
     }
 
-    private function userCanUseVoucher(Voucher $voucher, array $context): bool
+    protected function userCanUseVoucher(Voucher $voucher, array $context): bool
     {
         if ($voucher->required_rank && ! $this->rankAllows($context['rank'], $voucher->required_rank)) {
             return false;
@@ -324,7 +355,7 @@ class CheckoutController extends Controller
         return ! ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost);
     }
 
-    private function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
+    protected function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
     {
         $voucher->increment('used_count');
 
@@ -346,7 +377,7 @@ class CheckoutController extends Controller
         }
     }
 
-    private function loyaltyContext(bool $lock = true): array
+    protected function loyaltyContext(bool $lock = true): array
     {
         if (! Schema::hasTable('loyalty_points')) {
             return ['rank' => 'bronze', 'points' => 0];
@@ -366,7 +397,7 @@ class CheckoutController extends Controller
         ];
     }
 
-    private function rankAllows(?string $userRank, string $requiredRank): bool
+    protected function rankAllows(?string $userRank, string $requiredRank): bool
     {
         $rankOrder = [
             'bronze' => 1,
@@ -378,7 +409,7 @@ class CheckoutController extends Controller
         return ($rankOrder[$userRank ?: 'bronze'] ?? 1) >= ($rankOrder[$requiredRank] ?? 1);
     }
 
-    private function paymentOptions(): array
+    protected function paymentOptions(): array
     {
         return [
             'cod' => [
@@ -394,7 +425,87 @@ class CheckoutController extends Controller
         ];
     }
 
-    private function prepareOrderItems(array $cart): array
+    protected function normalizeCartForCheckout(array $cart): array
+    {
+        foreach ($cart as $cartKey => $item) {
+            $productId = $item['product_id'] ?? $cartKey;
+
+            if (is_numeric($productId)) {
+                $product = Product::query()->find((int) $productId);
+
+                if ($product) {
+                    $cart[$cartKey]['product_id'] = (int) $product->id;
+                    $cart[$cartKey]['name'] = $product->name;
+                    $cart[$cartKey]['sku'] = $product->sku ?? null;
+                    $cart[$cartKey]['category'] = $product->category?->name;
+                    $cart[$cartKey]['base_price'] = (int) ($product->price ?? 0);
+                    $cart[$cartKey]['price'] = max(0, (int) ($product->price ?? 0) + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0));
+
+                    continue;
+                }
+            }
+
+            $resolvedProduct = $this->resolveOrCreatePayableProduct($item, (string) $cartKey);
+
+            if ($resolvedProduct) {
+                $cart[$cartKey]['product_id'] = (int) $resolvedProduct->id;
+                $cart[$cartKey]['name'] = $resolvedProduct->name;
+                $cart[$cartKey]['sku'] = $resolvedProduct->sku ?? null;
+                $cart[$cartKey]['category'] = $resolvedProduct->category?->name;
+                $cart[$cartKey]['base_price'] = (int) ($resolvedProduct->price ?? 0);
+                $cart[$cartKey]['price'] = max(0, (int) ($resolvedProduct->price ?? 0) + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0));
+            }
+        }
+
+        return $cart;
+    }
+
+    protected function resolveOrCreatePayableProduct(array $item, string $cartKey): ?Product
+    {
+        $name = trim((string) ($item['name'] ?? ''));
+        $fallbackName = $name !== '' ? $name : 'Sản phẩm '.Str::upper(Str::substr($cartKey, 0, 6));
+        $candidateSlug = trim((string) ($item['slug'] ?? ''));
+        $productId = $item['product_id'] ?? null;
+        $fallbackSlug = $candidateSlug !== '' ? $candidateSlug : Str::slug($fallbackName);
+
+        $product = Product::query()
+            ->when($name !== '', fn ($query) => $query->where(function ($subQuery) use ($name, $fallbackSlug) {
+                $subQuery->where('name', $name)
+                    ->orWhere('slug', $fallbackSlug);
+            }))
+            ->when($name === '', fn ($query) => $query->where('slug', $fallbackSlug))
+            ->first();
+
+        if ($product) {
+            return $product;
+        }
+
+        $categoryName = trim((string) ($item['category'] ?? ''));
+        $category = null;
+
+        if ($categoryName !== '') {
+            $category = Category::query()->firstOrCreate(
+                ['name' => $categoryName],
+                ['slug' => Str::slug($categoryName), 'status' => true]
+            );
+        }
+
+        $price = max(0, (int) ($item['price'] ?? $item['base_price'] ?? 0));
+
+        return Product::create([
+            'category_id' => $category?->id,
+            'name' => $fallbackName,
+            'slug' => $fallbackSlug,
+            'price' => $price,
+            'stock' => 100,
+            'status' => true,
+            'description' => trim((string) ($item['description'] ?? '')) !== ''
+                ? $item['description']
+                : 'Sản phẩm được tạo tự động để hỗ trợ thanh toán.',
+        ]);
+    }
+
+    protected function prepareOrderItems(array $cart): array
     {
         $items = [];
 
@@ -437,6 +548,7 @@ class CheckoutController extends Controller
                 'total_price' => $unitPrice * $quantity,
                 'ice_level' => (int) ($item['ice_level'] ?? 100),
                 'sugar_level' => (int) ($item['sugar_level'] ?? 100),
+                'toppings' => $item['toppings'] ?? [],
             ];
         }
 
@@ -447,7 +559,7 @@ class CheckoutController extends Controller
         return $items;
     }
 
-    private function hydrateCheckoutCart(array $cart): array
+    protected function hydrateCheckoutCart(array $cart): array
     {
         foreach ($cart as $cartKey => $item) {
             $productId = $item['product_id'] ?? $cartKey;
@@ -470,17 +582,19 @@ class CheckoutController extends Controller
         return $cart;
     }
 
-    private function cartSubtotal(array $cart): int
+    protected function cartSubtotal(array $cart): int
     {
         return (int) collect($cart)->sum(
             fn (array $item) => max(0, (int) ($item['price'] ?? 0)) * max(1, (int) ($item['quantity'] ?? 1))
         );
     }
 
-    private function currentUnitPriceForCheckoutItem(array $item, ?Product $product = null): int
+    protected function currentUnitPriceForCheckoutItem(array $item, ?Product $product = null): int
     {
         $productId = $product?->id ?? (int) ($item['product_id'] ?? 0);
         $fallbackPrice = max(0, (int) ($item['price'] ?? $product?->price ?? 0));
+        $toppingTotal = max(0, (int) ($item['topping_total'] ?? collect($item['toppings'] ?? [])->sum('price')));
+        $sizeExtra = max(0, (int) ($item['size_extra'] ?? 0));
 
         if (
             $productId <= 0
@@ -497,7 +611,7 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice);
+                return max(0, (int) $productSizePrice + $toppingTotal);
             }
         }
 
@@ -510,18 +624,51 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice);
+                return max(0, (int) $productSizePrice + $toppingTotal);
             }
         }
 
         if ($product && is_numeric($product->price ?? null)) {
-            return max(0, (int) $product->price);
+            return max(0, (int) $product->price + $sizeExtra + $toppingTotal);
         }
 
         return $fallbackPrice;
     }
 
-    private function resolveProductSizeId(int $productId, array $item, int $unitPrice): ?int
+    protected function recordOrderItemToppings(int $orderItemId, array $toppings): void
+    {
+        if ($orderItemId <= 0 || empty($toppings) || ! Schema::hasTable('order_item_toppings') || ! Schema::hasTable('toppings')) {
+            return;
+        }
+
+        foreach ($toppings as $topping) {
+            $name = trim((string) ($topping['name'] ?? ''));
+
+            if ($name === '') {
+                continue;
+            }
+
+            $price = max(0, (int) ($topping['price'] ?? 0));
+            $toppingId = DB::table('toppings')->where('name', $name)->value('id');
+
+            if (! $toppingId) {
+                $toppingId = DB::table('toppings')->insertGetId([
+                    'name' => $name,
+                    'price' => $price,
+                    'status' => 1,
+                    'created_at' => now(),
+                ]);
+            }
+
+            DB::table('order_item_toppings')->insert([
+                'order_item_id' => $orderItemId,
+                'topping_id' => (int) $toppingId,
+                'price' => $price,
+            ]);
+        }
+    }
+
+    protected function resolveProductSizeId(int $productId, array $item, int $unitPrice): ?int
     {
         if (! Schema::hasColumn('order_items', 'product_size_id')) {
             return null;
@@ -575,7 +722,7 @@ class CheckoutController extends Controller
         )->id;
     }
 
-    private function orderItemData(int $orderId, array $item): array
+    protected function orderItemData(int $orderId, array $item): array
     {
         $data = [
             'order_id' => $orderId,
@@ -596,7 +743,7 @@ class CheckoutController extends Controller
         return $data;
     }
 
-    private function removeCheckedOutItems(array $fullCart, mixed $selectedKeys): void
+    protected function removeCheckedOutItems(array $fullCart, mixed $selectedKeys): void
     {
         if (is_array($selectedKeys) && count($selectedKeys) > 0) {
             foreach ($selectedKeys as $cartKey) {
@@ -617,7 +764,7 @@ class CheckoutController extends Controller
         session()->forget(['cart', 'checkout_cart_keys']);
     }
 
-    private function selectedCartKeys(mixed $keys, array $cart): array
+    protected function selectedCartKeys(mixed $keys, array $cart): array
     {
         $keys = is_array($keys) ? $keys : [$keys];
 
@@ -627,7 +774,7 @@ class CheckoutController extends Controller
         ));
     }
 
-    private function cartForCheckout(array $cart, mixed $selectedKeys): array
+    protected function cartForCheckout(array $cart, mixed $selectedKeys): array
     {
         if (! is_array($selectedKeys) || empty($selectedKeys)) {
             return $cart;
@@ -636,7 +783,7 @@ class CheckoutController extends Controller
         return array_intersect_key($cart, array_flip($this->selectedCartKeys($selectedKeys, $cart)));
     }
 
-    private function invalidCheckoutCartKeys(array $cart): array
+    protected function invalidCheckoutCartKeys(array $cart): array
     {
         $invalidKeys = [];
 
