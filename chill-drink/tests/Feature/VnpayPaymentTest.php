@@ -77,7 +77,7 @@ class VnpayPaymentTest extends TestCase
 
         $order->refresh();
         $this->assertSame('paid', $order->payment_status);
-        $this->assertSame('processing', $order->status);
+        $this->assertSame('in_progress', $order->status);
         $this->assertSame('14933727', $order->vnpay_transaction_id);
     }
 
@@ -125,7 +125,7 @@ class VnpayPaymentTest extends TestCase
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
             'payment_status' => 'paid',
-            'status' => 'processing',
+            'status' => 'in_progress',
             'vnpay_transaction_id' => '14933728',
         ]);
     }
