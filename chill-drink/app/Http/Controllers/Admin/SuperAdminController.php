@@ -29,6 +29,9 @@ class SuperAdminController extends Controller
         $status = (string) $request->query('status', 'all');
         $role = (string) $request->query('role', 'all');
         $created = (string) $request->query('created', 'all');
+        $rankingPeriod = in_array($request->query('ranking_period'), ['all', 'week', 'month', 'year'], true)
+            ? $request->query('ranking_period')
+            : 'all';
 
         if ($search !== '') {
             $adminQuery->where(function ($query) use ($search) {
@@ -104,7 +107,8 @@ class SuperAdminController extends Controller
             'branchInsightStats' => $this->branchInsightStats(),
             'branchRevenueChart' => $this->branchRevenueChart(),
             'branchOrderChart' => $this->branchOrderChart(),
-            'branchRankingStats' => $this->branchRankingStats(),
+            'branchRankingStats' => $this->branchRankingStats($rankingPeriod),
+            'rankingPeriod' => $rankingPeriod,
         ]);
     }
 
@@ -409,34 +413,47 @@ class SuperAdminController extends Controller
         ];
     }
 
-    private function branchRankingStats(): Collection
+    private function branchRankingStats(string $rankingPeriod = 'all'): Collection
     {
         if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
             return collect();
         }
 
         $branches = Branch::with('users')->get();
+        [$from, $to] = $this->rankingPeriodRange($rankingPeriod);
 
-        $totalNetworkRevenue = DB::table('orders')
+        $totalNetworkRevenueQuery = DB::table('orders')
             ->whereNotNull('branch_id')
             ->where(function ($q) {
                 $q->where('payment_status', 'paid')->orWhere('status', 'completed');
-            })
-            ->sum('total');
+            });
 
-        $stats = $branches->map(function ($branch) use ($totalNetworkRevenue) {
+        if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
+            $totalNetworkRevenueQuery->whereBetween('created_at', [$from, $to]);
+        }
+
+        $totalNetworkRevenue = $totalNetworkRevenueQuery->sum('total');
+
+        $stats = $branches->map(function ($branch) use ($totalNetworkRevenue, $from, $to) {
             $allOrders = Order::where('branch_id', $branch->id);
             $paidOrders = Order::where('branch_id', $branch->id)
                 ->where(function ($q) {
                     $q->where('payment_status', 'paid')->orWhere('status', 'completed');
                 });
 
+            if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
+                $allOrders->whereBetween('created_at', [$from, $to]);
+                $paidOrders->whereBetween('created_at', [$from, $to]);
+            }
+
             $totalOrders = $allOrders->count();
             $completedOrders = Order::where('branch_id', $branch->id)
                 ->where('status', 'completed')
+                ->when($from && $to && Schema::hasColumn('orders', 'created_at'), fn ($query) => $query->whereBetween('created_at', [$from, $to]))
                 ->count();
             $cancelledOrders = Order::where('branch_id', $branch->id)
                 ->where('status', 'cancelled')
+                ->when($from && $to && Schema::hasColumn('orders', 'created_at'), fn ($query) => $query->whereBetween('created_at', [$from, $to]))
                 ->count();
             $revenue = $paidOrders->sum('total');
             $averageOrderValue = $totalOrders > 0 ? (int) ($revenue / $totalOrders) : 0;
@@ -468,6 +485,18 @@ class SuperAdminController extends Controller
         })->sortByDesc('revenue')->values();
 
         return $stats;
+    }
+
+    private function rankingPeriodRange(string $rankingPeriod): array
+    {
+        $now = Carbon::now();
+
+        return match ($rankingPeriod) {
+            'week' => [$now->copy()->startOfWeek(Carbon::MONDAY), $now->copy()->endOfWeek(Carbon::SUNDAY)],
+            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            'year' => [$now->copy()->startOfYear(), $now->copy()->endOfYear()],
+            default => [null, null],
+        };
     }
 
     private function securityStats(): array

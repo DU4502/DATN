@@ -81,43 +81,45 @@ class CheckoutController extends Controller
         $userLatitude = $user->latitude;
         $userLongitude = $user->longitude;
         
-        // Sort branches by distance if user has coordinates
-        $sortedBranches = $branches;
-        if ($userLatitude && $userLongitude) {
-            $sortedBranches = $branches->map(function($branch) use ($userLatitude, $userLongitude) {
-                $distance = null;
-                if ($branch->latitude && $branch->longitude) {
-                    // Calculate distance using Haversine formula
-                    $lat1 = deg2rad($userLatitude);
-                    $lon1 = deg2rad($userLongitude);
-                    $lat2 = deg2rad($branch->latitude);
-                    $lon2 = deg2rad($branch->longitude);
-                    
-                    $dlat = $lat2 - $lat1;
-                    $dlon = $lon2 - $lon1;
-                    
-                    $a = sin($dlat/2) * sin($dlat/2) + cos($lat1) * cos($lat2) * sin($dlon/2) * sin($dlon/2);
-                    $c = 2 * asin(sqrt($a));
-                    $radius = 6371; // Earth radius in kilometers
-                    $distance = $c * $radius;
-                }
-                
-                return [
-                    'branch' => $branch,
-                    'distance' => $distance,
-                    'hasCoordinates' => !empty($branch->latitude) && !empty($branch->longitude)
-                ];
-            })->sort(function($a, $b) {
-                // Sort by: has coordinates, then distance, then name
-                if ($a['hasCoordinates'] && !$b['hasCoordinates']) return -1;
-                if (!$a['hasCoordinates'] && $b['hasCoordinates']) return 1;
-                if ($a['distance'] === null && $b['distance'] === null) return 0;
-                if ($a['distance'] === null) return 1;
-                if ($b['distance'] === null) return -1;
-                return $a['distance'] <=> $b['distance'];
-            })->pluck('branch');
+        if ($userLatitude !== null && $userLongitude !== null) {
+            $branches = $branches
+                ->map(function (Branch $branch) use ($userLatitude, $userLongitude) {
+                    $hasCoordinates = $branch->latitude !== null && $branch->longitude !== null;
+
+                    return [
+                        'branch' => $branch,
+                        'distance' => $hasCoordinates
+                            ? $branch->distanceTo((float) $userLatitude, (float) $userLongitude)
+                            : null,
+                        'hasCoordinates' => $hasCoordinates,
+                    ];
+                })
+                ->sort(function (array $a, array $b) {
+                    if ($a['hasCoordinates'] && ! $b['hasCoordinates']) {
+                        return -1;
+                    }
+
+                    if (! $a['hasCoordinates'] && $b['hasCoordinates']) {
+                        return 1;
+                    }
+
+                    if ($a['distance'] === null && $b['distance'] === null) {
+                        return strcmp($a['branch']->name, $b['branch']->name);
+                    }
+
+                    if ($a['distance'] === null) {
+                        return 1;
+                    }
+
+                    if ($b['distance'] === null) {
+                        return -1;
+                    }
+
+                    return $a['distance'] <=> $b['distance'];
+                })
+                ->pluck('branch')
+                ->values();
         }
-        $branches = $sortedBranches;
 
         // Prepare branch data as JSON for location-based sorting in frontend
         $branchesJson = $branches->map(function ($b) {

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CategoryApiController;
+use App\Http\Controllers\Api\NearestBranchController;
 use App\Http\Controllers\Api\ProductApiController;
 use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Route;
@@ -8,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/categories', [CategoryApiController::class, 'index'])->name('api.categories.index');
 Route::get('/products', [ProductApiController::class, 'index'])->name('api.products.index');
 Route::get('/products/{product:slug}', [ProductApiController::class, 'show'])->name('api.products.show');
+Route::get('/branches/nearest', [NearestBranchController::class, 'nearest'])->name('api.branches.nearest');
+Route::get('/branches', [NearestBranchController::class, 'list'])->name('api.branches.list');
 
 // Voucher routes
 Route::post('/vouchers/receive', [VoucherController::class, 'receive'])->name('api.vouchers.receive');

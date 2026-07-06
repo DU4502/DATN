@@ -349,6 +349,31 @@
         font-weight: 800;
     }
 
+    .voucher-modal .voucher-footer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .voucher-modal .voucher-footer-actions .btn {
+        min-width: 0;
+    }
+
+    .voucher-modal .voucher-clear-btn {
+        min-width: 0;
+        color: #ef4444;
+        border-color: rgba(239, 68, 68, 0.2);
+        background: #fff5f5;
+    }
+
+    .voucher-modal .voucher-clear-btn:hover {
+        color: #dc2626;
+        border-color: rgba(220, 38, 38, 0.32);
+        background: #fff1f2;
+    }
+
     .voucher-search-box {
         background: #ffffff;
         padding: 1rem;
@@ -1493,12 +1518,14 @@
             </div>
             <div class="modal-footer border-top">
                 <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Trở lại</button>
-                <button type="button" class="btn btn-outline-danger px-4" id="clearVoucherSelection">
-                    <i class="bi bi-x-circle me-2"></i>Bỏ chọn tất cả
-                </button>
-                <button type="button" class="btn btn-primary px-4" id="confirmVoucher">
-                    <i class="bi bi-check2 me-2"></i>Áp dụng voucher
-                </button>
+                <div class="voucher-footer-actions">
+                    <button type="button" class="btn btn-outline-danger px-4 voucher-clear-btn" id="clearVoucherSelection">
+                        <i class="bi bi-x-circle me-2"></i>Bỏ chọn tất cả
+                    </button>
+                    <button type="button" class="btn btn-primary px-4" id="confirmVoucher">
+                        <i class="bi bi-check2 me-2"></i>Áp dụng voucher
+                    </button>
+                </div>
             </div>
         </div>
     </div>

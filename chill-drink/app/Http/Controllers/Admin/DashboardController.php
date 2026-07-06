@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
+    private bool $dashboardUseBranchScope = false;
+
+    private ?int $dashboardBranchId = null;
+
     /**
      * Display admin dashboard
      */
@@ -21,7 +26,10 @@ class DashboardController extends Controller
         $selectedPeriod = in_array($request->query('period'), ['today', 'week', 'month', 'year'], true)
             ? $request->query('period')
             : 'week';
+
+        $this->resolveDashboardScope($request);
         $data = $this->gatherDashboardData($selectedPeriod);
+        $dashboardBranch = $this->dashboardBranch();
 
         extract($data);
         $comparisonLabel = $this->comparisonLabel($selectedPeriod);
@@ -42,7 +50,8 @@ class DashboardController extends Controller
             'chartBars',
             'chartDatasets',
             'topProducts',
-            'recentOrders'
+            'recentOrders',
+            'dashboardBranch'
         ));
     }
 
@@ -55,6 +64,7 @@ class DashboardController extends Controller
             ? $request->query('period')
             : 'week';
 
+        $this->resolveDashboardScope($request);
         $data = $this->gatherDashboardData($selectedPeriod);
 
         // Convert Eloquent collections/models to arrays for JSON
@@ -146,15 +156,51 @@ class DashboardController extends Controller
      */
     private function applyBranchScope($query)
     {
-        $user = auth()->user();
-        
-        // Super Admin (role_id = 3) can see all data
-        if ($user->isSuperAdmin()) {
+        if (! $this->dashboardUseBranchScope) {
             return $query;
         }
-        
-        // Regular Admin (role_id = 2) can only see their branch's data
-        return $query->where('branch_id', $user->branch_id);
+
+        return $query->where('branch_id', $this->dashboardBranchId);
+    }
+
+    private function resolveDashboardScope(Request $request): void
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            $this->dashboardUseBranchScope = false;
+            $this->dashboardBranchId = null;
+
+            return;
+        }
+
+        if ($user->isSuperAdmin()) {
+            $branchId = $request->query('branch_id');
+
+            if (is_numeric($branchId) && Branch::query()->whereKey((int) $branchId)->exists()) {
+                $this->dashboardUseBranchScope = true;
+                $this->dashboardBranchId = (int) $branchId;
+
+                return;
+            }
+
+            $this->dashboardUseBranchScope = false;
+            $this->dashboardBranchId = null;
+
+            return;
+        }
+
+        $this->dashboardUseBranchScope = true;
+        $this->dashboardBranchId = $user->branch_id ? (int) $user->branch_id : null;
+    }
+
+    private function dashboardBranch(): ?Branch
+    {
+        if (! $this->dashboardUseBranchScope || ! $this->dashboardBranchId) {
+            return null;
+        }
+
+        return Branch::query()->find($this->dashboardBranchId);
     }
 
     private function orderAmountColumn(): ?string
@@ -566,9 +612,8 @@ class DashboardController extends Controller
         }
 
         // Apply branch scope to orders
-        $user = auth()->user();
-        if ($orderJoinAvailable && !$user->isSuperAdmin()) {
-            $salesQuery->where('orders.branch_id', $user->branch_id);
+        if ($orderJoinAvailable && $this->dashboardUseBranchScope) {
+            $salesQuery->where('orders.branch_id', $this->dashboardBranchId);
         }
 
         if ($orderJoinAvailable && Schema::hasColumn('orders', 'status')) {

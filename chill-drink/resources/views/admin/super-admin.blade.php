@@ -243,10 +243,25 @@
     </section>
 
     <!-- Branch Ranking Table -->
-    <section class="sa-panel" id="branch-ranking" style="margin-top: 1.5rem;">
-        <div class="sa-panel-header">
-            <div><h2 class="sa-panel-title">Danh sách quản lý chi nhánh</h2><p class="sa-panel-note">So sánh hiệu suất từng chi nhánh theo đơn hàng, doanh thu và nhân sự</p></div>
-            <a href="{{ route('admin.branches.index') }}" class="sa-btn sa-btn-primary"><i class="bi bi-shop"></i> Mở trang chi nhánh</a>
+    @php
+        $rankingQueryBase = request()->except('ranking_period');
+        $rankingPeriod = $rankingPeriod ?? 'all';
+    @endphp
+    <section class="sa-panel" id="branch-ranking" data-branch-ranking-region style="margin-top: 1.5rem;">
+        <div class="sa-panel-header" style="gap: 0.8rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <div>
+                <h2 class="sa-panel-title">Quản Lý chi nhánh - bảng xếp hạng</h2>
+                <p class="sa-panel-note">So sánh hiệu suất từng chi nhánh theo đơn hàng, doanh thu và nhân sự</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; justify-content:flex-end; margin-left:auto;">
+                <div style="display:flex; flex-wrap:wrap; gap:0.25rem; padding:0.2rem; border:1px solid var(--sa-border); border-radius:999px; background:#fff;">
+                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'all'])) }}#branch-ranking" data-ranking-period="all" class="sa-btn {{ $rankingPeriod === 'all' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'all' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tất cả</a>
+                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'week'])) }}#branch-ranking" data-ranking-period="week" class="sa-btn {{ $rankingPeriod === 'week' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'week' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tuần</a>
+                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'month'])) }}#branch-ranking" data-ranking-period="month" class="sa-btn {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
+                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'year'])) }}#branch-ranking" data-ranking-period="year" class="sa-btn {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
+                </div>
+                <a href="{{ route('admin.branches.index') }}" class="sa-btn sa-btn-primary" style="min-height:32px; padding:0.28rem 0.7rem; border-radius:999px; white-space:nowrap; font-size:0.75rem;"><i class="bi bi-shop"></i> Mở trang chi nhánh</a>
+            </div>
         </div>
 
         @if($branchRankingStats->count() > 0)
@@ -473,7 +488,13 @@
                             <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}">{{ $adminUser->is_active ? 'Active' : 'Locked' }}</span></td>
                             <td>
                                 <div class="sa-actions">
-                                    <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                                    @if($adminUser->isSuperAdmin())
+                                        <a class="sa-action-btn" href="{{ route('admin.super-admin', ['q' => $adminUser->email]) }}" title="Xem trang quản trị"><i class="bi bi-eye"></i></a>
+                                    @elseif($adminUser->branch_id)
+                                        <a class="sa-action-btn" href="{{ route('admin.dashboard', ['branch_id' => $adminUser->branch_id]) }}" title="Xem dashboard chi nhánh"><i class="bi bi-eye"></i></a>
+                                    @else
+                                        <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                                    @endif
                                     <button class="sa-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#adminActionsModal{{ $adminUser->id }}" title="Thao tác"><i class="bi bi-gear"></i></button>
                                 </div>
                             </td>
@@ -1113,6 +1134,37 @@ async function loadAdminsRegion(url) {
     window.history.replaceState({}, '', targetUrl.toString());
 }
 
+async function loadBranchRankingRegion(url) {
+    const targetUrl = new URL(url, window.location.origin);
+    targetUrl.hash = 'branch-ranking';
+
+    const response = await fetch(targetUrl.toString(), {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/html',
+        },
+    });
+
+    if (!response.ok) {
+        window.location.href = targetUrl.toString();
+        return;
+    }
+
+    const html = await response.text();
+    const parser = new DOMParser();
+    const nextDoc = parser.parseFromString(html, 'text/html');
+    const nextRegion = nextDoc.querySelector('[data-branch-ranking-region]');
+    const currentRegion = document.querySelector('[data-branch-ranking-region]');
+
+    if (!nextRegion || !currentRegion) {
+        window.location.href = targetUrl.toString();
+        return;
+    }
+
+    currentRegion.replaceWith(nextRegion);
+    window.history.replaceState({}, '', targetUrl.toString());
+}
+
 // Initialize first tab as active on modal open
 document.addEventListener('show.bs.modal', function(e) {
     if (e.target && e.target.id.startsWith('adminActionsModal')) {
@@ -1146,6 +1198,13 @@ document.addEventListener('submit', function(e) {
 });
 
 document.addEventListener('click', function(e) {
+    const rankingLink = e.target.closest('[data-ranking-period]');
+    if (rankingLink) {
+        e.preventDefault();
+        loadBranchRankingRegion(rankingLink.getAttribute('href'));
+        return;
+    }
+
     const resetLink = e.target.closest('[data-admins-reset]');
     if (resetLink) {
         e.preventDefault();
