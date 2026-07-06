@@ -2,7 +2,13 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Models\Address;
+use App\Support\GuestOrderAccess;
+use App\Support\RealtimeOrderNotifier;
+
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -10,10 +16,12 @@ use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
 use App\Support\ShippingFee;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -25,6 +33,7 @@ class CheckoutController extends Controller
     public function index(Request $request)
     {
         $cart = session()->get('cart', []);
+        $cart = $this->normalizeCartForCheckout($cart);
 
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
@@ -58,6 +67,68 @@ class CheckoutController extends Controller
         $paymentOptions = $this->paymentOptions();
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
+        $branches = Branch::where('status', true)
+            ->whereHas('users', function ($query) {
+                $query->where('role_id', 2);
+            })
+            ->orderBy('name')
+            ->get();
+        
+        $user = auth()->user();
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user);
+        
+        // Get user coordinates for distance calculation
+        $userLatitude = $user->latitude;
+        $userLongitude = $user->longitude;
+        
+        // Sort branches by distance if user has coordinates
+        $sortedBranches = $branches;
+        if ($userLatitude && $userLongitude) {
+            $sortedBranches = $branches->map(function($branch) use ($userLatitude, $userLongitude) {
+                $distance = null;
+                if ($branch->latitude && $branch->longitude) {
+                    // Calculate distance using Haversine formula
+                    $lat1 = deg2rad($userLatitude);
+                    $lon1 = deg2rad($userLongitude);
+                    $lat2 = deg2rad($branch->latitude);
+                    $lon2 = deg2rad($branch->longitude);
+                    
+                    $dlat = $lat2 - $lat1;
+                    $dlon = $lon2 - $lon1;
+                    
+                    $a = sin($dlat/2) * sin($dlat/2) + cos($lat1) * cos($lat2) * sin($dlon/2) * sin($dlon/2);
+                    $c = 2 * asin(sqrt($a));
+                    $radius = 6371; // Earth radius in kilometers
+                    $distance = $c * $radius;
+                }
+                
+                return [
+                    'branch' => $branch,
+                    'distance' => $distance,
+                    'hasCoordinates' => !empty($branch->latitude) && !empty($branch->longitude)
+                ];
+            })->sort(function($a, $b) {
+                // Sort by: has coordinates, then distance, then name
+                if ($a['hasCoordinates'] && !$b['hasCoordinates']) return -1;
+                if (!$a['hasCoordinates'] && $b['hasCoordinates']) return 1;
+                if ($a['distance'] === null && $b['distance'] === null) return 0;
+                if ($a['distance'] === null) return 1;
+                if ($b['distance'] === null) return -1;
+                return $a['distance'] <=> $b['distance'];
+            })->pluck('branch');
+        }
+        $branches = $sortedBranches;
+
+        // Prepare branch data as JSON for location-based sorting in frontend
+        $branchesJson = $branches->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'name' => $b->name,
+                'address' => $b->address,
+                'latitude' => $b->latitude,
+                'longitude' => $b->longitude,
+            ];
+        })->values();
         $now = now();
         $availableVouchers = Voucher::query()
             ->where('status', true)
@@ -86,7 +157,13 @@ class CheckoutController extends Controller
             'paymentOptions',
             'availableVouchers',
             'loyaltyContext',
-            'subtotal'
+            'subtotal',
+            'addressBook',
+            'selectedAddressId',
+            'branches',
+            'branchesJson',
+            'userLatitude',
+            'userLongitude'
         ));
     }
 
@@ -98,22 +175,27 @@ class CheckoutController extends Controller
         $request->validate([
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_area_ui'],
-            'shipping_area_ui' => ['nullable', 'string', 'max:255', 'required_without:shipping_address_ui'],
+            'shipping_address_ui' => ['required_if:delivery_type,delivery', 'nullable', 'string', 'max:255'],
+            'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'delivery_type' => ['required', Rule::in(['delivery', 'pickup'])],
+            'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
         ], [
-            'shipping_address_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
-            'shipping_area_ui.required_without' => 'Vui lòng chọn hoặc nhập địa chỉ nhận hàng.',
+            'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ nhận hàng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
+            'delivery_type.required' => 'Vui lòng chọn phương thức nhận hàng.',
+            'delivery_type.in' => 'Phương thức nhận hàng không hợp lệ.',
+            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
         ]);
 
         $fullCart = session()->get('cart', []);
         $selectedKeys = session()->get('checkout_cart_keys');
-        $cart = $this->cartForCheckout($fullCart, $selectedKeys);
+        $cart = $this->normalizeCartForCheckout($this->cartForCheckout($fullCart, $selectedKeys));
 
         if (empty($cart)) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
@@ -131,21 +213,32 @@ class CheckoutController extends Controller
 
             $orderItems = $this->prepareOrderItems($cart);
             $subtotal = collect($orderItems)->sum('total_price');
+            $deliveryType = $request->input('delivery_type', 'delivery');
 
-            $shippingQuote = ShippingFee::quoteForAddress(
-                $request->shipping_address_ui,
-                $request->shipping_area_ui,
-                $request->shipping_method_ui
-            );
+            // Handle shipping fee based on delivery type
+            if ($deliveryType === 'pickup') {
+                $shippingFee = 0;
+            } else {
+                $shippingQuote = ShippingFee::quoteForAddress(
+                    $request->shipping_address_ui,
+                    $request->shipping_area_ui,
+                    $request->shipping_method_ui
+                );
+                $shippingFee = $shippingQuote['total_fee'];
+            }
+
+            // Branch_id is always required and comes from user selection
+            $branchId = $request->input('branch_id');
+
             [$voucher, $discount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal);
-            $grandTotal = max(0, $subtotal + $shippingQuote['total_fee'] - $discount);
+            $grandTotal = max(0, $subtotal + $shippingFee - $discount);
             $addressText = trim(collect([
                 $request->shipping_address_ui,
                 $request->shipping_area_ui,
             ])->filter()->implode(', '));
             $shippingNote = sprintf(
                 'Giao hàng: phí cố định %s%s',
-                ShippingFee::formatCurrency($shippingQuote['total_fee']),
+                ShippingFee::formatCurrency($shippingFee),
                 $addressText ? ", địa chỉ: {$addressText}" : ''
             );
             $note = trim((string) $request->note);
@@ -156,6 +249,8 @@ class CheckoutController extends Controller
             $orderData = [
                 'user_id' => auth()->id(),
                 'payment_method' => $request->payment_method,
+                'delivery_type' => $deliveryType,
+                'branch_id' => $branchId,
                 'status' => 'pending',
                 'note' => $note,
             ];
@@ -169,7 +264,7 @@ class CheckoutController extends Controller
             }
 
             if (Schema::hasColumn('orders', 'shipping_fee')) {
-                $orderData['shipping_fee'] = $shippingQuote['total_fee'];
+                $orderData['shipping_fee'] = $shippingFee;
             }
 
             if (Schema::hasColumn('orders', 'discount')) {
@@ -204,6 +299,12 @@ class CheckoutController extends Controller
 
             DB::commit();
 
+            RealtimeOrderNotifier::orderStatusUpdated($order);
+
+            if ($order->payment_method !== 'vnpay') {
+                RealtimeOrderNotifier::orderCreated($order);
+            }
+
             if ($order->payment_method === 'vnpay') {
                 return redirect()
                     ->route('vnpay.payment', $order)
@@ -232,19 +333,222 @@ class CheckoutController extends Controller
 
     public function success(Order $order)
     {
-        abort_unless((int) $order->user_id === (int) auth()->id(), 403);
+        abort_unless(GuestOrderAccess::canView($order), 403);
 
-        $order->load('orderItems.product');
+        $order->load('orderItems.product', 'branch');
 
-        return view('client.checkout.success', [
+        $payload = [
             'order' => $order,
             'result' => 'success',
             'title' => 'Cảm ơn bạn đã đặt hàng',
             'message' => 'Đơn hàng đã được tiếp nhận và sẽ sớm được chuẩn bị.',
+        ];
+
+        if ($order->isGuest()) {
+            GuestOrderAccess::remember($order);
+            GuestOrderAccess::storeConvertPayload($order);
+            $payload['title'] = 'Cảm ơn bạn! Đơn hàng đã được tiếp nhận';
+            $payload['guestConvert'] = session('guest_convert');
+        }
+
+        return view('client.checkout.success', $payload);
+    }
+
+    protected function checkoutAddressBook($user): array
+    {
+        $savedAddresses = Schema::hasTable('addresses')
+            ? $user->addresses()->orderByDesc('is_default')->orderBy('id')->get()
+            : collect();
+
+        $defaultSavedAddress = $savedAddresses->firstWhere('is_default', true);
+        $selectedAddressId = $defaultSavedAddress ? 'address-' . $defaultSavedAddress->id : 'primary';
+
+        $addressBook = collect([
+            $this->checkoutPrimaryAddressPayload($user, ! $defaultSavedAddress),
+        ])->merge(
+            $savedAddresses->map(fn (Address $address) => $this->checkoutAddressPayload($address))
+        )->values()->all();
+
+        return [$addressBook, $selectedAddressId];
+    }
+
+    protected function checkoutPrimaryAddressPayload($user, bool $isDefault = true): array
+    {
+        return [
+            'id' => 'primary',
+            'name' => trim((string) ($user->name ?? '')) ?: 'Chưa cập nhật',
+            'phone' => trim((string) ($user->phone ?? '')) ?: 'Chưa cập nhật',
+            'street' => trim((string) ($user->address ?? '')),
+            'area' => trim((string) ($user->area ?? '')),
+            'latitude' => $user->latitude,
+            'longitude' => $user->longitude,
+            'type' => 'Nhà Riêng',
+            'isDefault' => $isDefault,
+            'source' => 'primary',
+        ];
+    }
+
+    protected function checkoutAddressPayload(Address $address): array
+    {
+        $area = collect([
+            $address->ward,
+            $address->district,
+            $address->province,
+        ])->filter()->implode(', ');
+
+        return [
+            'id' => 'address-' . $address->id,
+            'name' => trim((string) ($address->receiver_name ?? '')) ?: 'Chưa cập nhật',
+            'phone' => trim((string) ($address->phone ?? '')) ?: 'Chưa cập nhật',
+            'street' => trim((string) ($address->detail ?? '')),
+            'area' => trim($area),
+            'latitude' => $address->latitude,
+            'longitude' => $address->longitude,
+            'type' => trim((string) ($address->label ?? 'Nhà')) ?: 'Nhà',
+            'isDefault' => (bool) $address->is_default,
+            'source' => 'saved',
+        ];
+    }
+
+    protected function normalizeNullableString(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    public function updatePrimaryAddress(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'is_default' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $user->forceFill([
+            'name' => trim((string) $validated['name']),
+            'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+            'address' => $this->normalizeNullableString($validated['street'] ?? null),
+            'area' => $this->normalizeNullableString($validated['area'] ?? null),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+        ])->save();
+
+        if ($request->boolean('is_default') && Schema::hasTable('addresses')) {
+            Address::query()
+                ->where('user_id', $user->id)
+                ->update(['is_default' => false]);
+        }
+
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user->fresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã lưu địa chỉ chính.',
+            'address' => $this->checkoutPrimaryAddressPayload($user->fresh()),
+            'address_book' => $addressBook,
+            'selected_address_id' => $selectedAddressId,
         ]);
     }
 
-    private function resolveVoucher(?string $code, int $subtotal): array
+    public function storeAddress(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'label' => ['nullable', 'string', 'max:100'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'is_default' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+
+        if ($request->boolean('is_default')) {
+            Address::query()
+                ->where('user_id', $user->id)
+                ->update(['is_default' => false]);
+        }
+
+        $address = Address::create([
+            'user_id' => $user->id,
+            'label' => trim((string) ($validated['label'] ?? 'Nhà')) ?: 'Nhà',
+            'receiver_name' => trim((string) $validated['name']),
+            'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+            'province' => $this->normalizeNullableString($validated['area'] ?? null),
+            'district' => null,
+            'ward' => null,
+            'detail' => $this->normalizeNullableString($validated['street'] ?? null),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+            'is_default' => $request->boolean('is_default'),
+        ]);
+
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user->fresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã lưu địa chỉ mới.',
+            'address' => $this->checkoutAddressPayload($address),
+            'address_book' => $addressBook,
+            'selected_address_id' => $selectedAddressId,
+        ]);
+    }
+
+    public function updateAddress(Request $request, Address $address): JsonResponse
+    {
+        abort_unless($address->user_id === $request->user()->id, 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'label' => ['nullable', 'string', 'max:100'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'is_default' => ['nullable', 'boolean'],
+        ]);
+
+        if ($request->boolean('is_default')) {
+            Address::query()
+                ->where('user_id', $request->user()->id)
+                ->where('id', '!=', $address->id)
+                ->update(['is_default' => false]);
+        }
+
+        $address->fill([
+            'label' => trim((string) ($validated['label'] ?? $address->label ?: 'Nhà')) ?: 'Nhà',
+            'receiver_name' => trim((string) $validated['name']),
+            'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+            'province' => $this->normalizeNullableString($validated['area'] ?? null),
+            'district' => null,
+            'ward' => null,
+            'detail' => $this->normalizeNullableString($validated['street'] ?? null),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+            'is_default' => $request->boolean('is_default'),
+        ])->save();
+
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($request->user()->fresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã cập nhật địa chỉ.',
+            'address' => $this->checkoutAddressPayload($address->fresh()),
+            'address_book' => $addressBook,
+            'selected_address_id' => $selectedAddressId,
+        ]);
+    }
+
+    protected function resolveVoucher(?string $code, int $subtotal): array
     {
         $code = strtoupper(trim((string) $code));
 
@@ -296,7 +600,7 @@ class CheckoutController extends Controller
         return [$voucher, $discount];
     }
 
-    private function assertVoucherRankAndPoints(Voucher $voucher): void
+    protected function assertVoucherRankAndPoints(Voucher $voucher): void
     {
         $context = $this->loyaltyContext();
 
@@ -313,7 +617,7 @@ class CheckoutController extends Controller
         }
     }
 
-    private function userCanUseVoucher(Voucher $voucher, array $context): bool
+    protected function userCanUseVoucher(Voucher $voucher, array $context): bool
     {
         if ($voucher->required_rank && ! $this->rankAllows($context['rank'], $voucher->required_rank)) {
             return false;
@@ -322,7 +626,7 @@ class CheckoutController extends Controller
         return ! ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost);
     }
 
-    private function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
+    protected function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
     {
         $voucher->increment('used_count');
 
@@ -344,7 +648,7 @@ class CheckoutController extends Controller
         }
     }
 
-    private function loyaltyContext(bool $lock = true): array
+    protected function loyaltyContext(bool $lock = true): array
     {
         if (! Schema::hasTable('loyalty_points')) {
             return ['rank' => 'bronze', 'points' => 0];
@@ -364,7 +668,7 @@ class CheckoutController extends Controller
         ];
     }
 
-    private function rankAllows(?string $userRank, string $requiredRank): bool
+    protected function rankAllows(?string $userRank, string $requiredRank): bool
     {
         $rankOrder = [
             'bronze' => 1,
@@ -376,7 +680,7 @@ class CheckoutController extends Controller
         return ($rankOrder[$userRank ?: 'bronze'] ?? 1) >= ($rankOrder[$requiredRank] ?? 1);
     }
 
-    private function paymentOptions(): array
+    protected function paymentOptions(): array
     {
         return [
             'cod' => [
@@ -392,7 +696,87 @@ class CheckoutController extends Controller
         ];
     }
 
-    private function prepareOrderItems(array $cart): array
+    protected function normalizeCartForCheckout(array $cart): array
+    {
+        foreach ($cart as $cartKey => $item) {
+            $productId = $item['product_id'] ?? $cartKey;
+
+            if (is_numeric($productId)) {
+                $product = Product::query()->find((int) $productId);
+
+                if ($product) {
+                    $cart[$cartKey]['product_id'] = (int) $product->id;
+                    $cart[$cartKey]['name'] = $product->name;
+                    $cart[$cartKey]['sku'] = $product->sku ?? null;
+                    $cart[$cartKey]['category'] = $product->category?->name;
+                    $cart[$cartKey]['base_price'] = (int) ($product->price ?? 0);
+                    $cart[$cartKey]['price'] = max(0, (int) ($product->price ?? 0) + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0));
+
+                    continue;
+                }
+            }
+
+            $resolvedProduct = $this->resolveOrCreatePayableProduct($item, (string) $cartKey);
+
+            if ($resolvedProduct) {
+                $cart[$cartKey]['product_id'] = (int) $resolvedProduct->id;
+                $cart[$cartKey]['name'] = $resolvedProduct->name;
+                $cart[$cartKey]['sku'] = $resolvedProduct->sku ?? null;
+                $cart[$cartKey]['category'] = $resolvedProduct->category?->name;
+                $cart[$cartKey]['base_price'] = (int) ($resolvedProduct->price ?? 0);
+                $cart[$cartKey]['price'] = max(0, (int) ($resolvedProduct->price ?? 0) + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0));
+            }
+        }
+
+        return $cart;
+    }
+
+    protected function resolveOrCreatePayableProduct(array $item, string $cartKey): ?Product
+    {
+        $name = trim((string) ($item['name'] ?? ''));
+        $fallbackName = $name !== '' ? $name : 'Sản phẩm '.Str::upper(Str::substr($cartKey, 0, 6));
+        $candidateSlug = trim((string) ($item['slug'] ?? ''));
+        $productId = $item['product_id'] ?? null;
+        $fallbackSlug = $candidateSlug !== '' ? $candidateSlug : Str::slug($fallbackName);
+
+        $product = Product::query()
+            ->when($name !== '', fn ($query) => $query->where(function ($subQuery) use ($name, $fallbackSlug) {
+                $subQuery->where('name', $name)
+                    ->orWhere('slug', $fallbackSlug);
+            }))
+            ->when($name === '', fn ($query) => $query->where('slug', $fallbackSlug))
+            ->first();
+
+        if ($product) {
+            return $product;
+        }
+
+        $categoryName = trim((string) ($item['category'] ?? ''));
+        $category = null;
+
+        if ($categoryName !== '') {
+            $category = Category::query()->firstOrCreate(
+                ['name' => $categoryName],
+                ['slug' => Str::slug($categoryName), 'status' => true]
+            );
+        }
+
+        $price = max(0, (int) ($item['price'] ?? $item['base_price'] ?? 0));
+
+        return Product::create([
+            'category_id' => $category?->id,
+            'name' => $fallbackName,
+            'slug' => $fallbackSlug,
+            'price' => $price,
+            'stock' => 100,
+            'status' => true,
+            'description' => trim((string) ($item['description'] ?? '')) !== ''
+                ? $item['description']
+                : 'Sản phẩm được tạo tự động để hỗ trợ thanh toán.',
+        ]);
+    }
+
+    protected function prepareOrderItems(array $cart): array
     {
         $items = [];
 
@@ -446,7 +830,7 @@ class CheckoutController extends Controller
         return $items;
     }
 
-    private function hydrateCheckoutCart(array $cart): array
+    protected function hydrateCheckoutCart(array $cart): array
     {
         foreach ($cart as $cartKey => $item) {
             $productId = $item['product_id'] ?? $cartKey;
@@ -469,14 +853,14 @@ class CheckoutController extends Controller
         return $cart;
     }
 
-    private function cartSubtotal(array $cart): int
+    protected function cartSubtotal(array $cart): int
     {
         return (int) collect($cart)->sum(
             fn (array $item) => max(0, (int) ($item['price'] ?? 0)) * max(1, (int) ($item['quantity'] ?? 1))
         );
     }
 
-    private function currentUnitPriceForCheckoutItem(array $item, ?Product $product = null): int
+    protected function currentUnitPriceForCheckoutItem(array $item, ?Product $product = null): int
     {
         $productId = $product?->id ?? (int) ($item['product_id'] ?? 0);
         $fallbackPrice = max(0, (int) ($item['price'] ?? $product?->price ?? 0));
@@ -522,7 +906,7 @@ class CheckoutController extends Controller
         return $fallbackPrice;
     }
 
-    private function recordOrderItemToppings(int $orderItemId, array $toppings): void
+    protected function recordOrderItemToppings(int $orderItemId, array $toppings): void
     {
         if ($orderItemId <= 0 || empty($toppings) || ! Schema::hasTable('order_item_toppings') || ! Schema::hasTable('toppings')) {
             return;
@@ -555,7 +939,7 @@ class CheckoutController extends Controller
         }
     }
 
-    private function resolveProductSizeId(int $productId, array $item, int $unitPrice): ?int
+    protected function resolveProductSizeId(int $productId, array $item, int $unitPrice): ?int
     {
         if (! Schema::hasColumn('order_items', 'product_size_id')) {
             return null;
@@ -609,7 +993,7 @@ class CheckoutController extends Controller
         )->id;
     }
 
-    private function orderItemData(int $orderId, array $item): array
+    protected function orderItemData(int $orderId, array $item): array
     {
         $data = [
             'order_id' => $orderId,
@@ -630,7 +1014,7 @@ class CheckoutController extends Controller
         return $data;
     }
 
-    private function removeCheckedOutItems(array $fullCart, mixed $selectedKeys): void
+    protected function removeCheckedOutItems(array $fullCart, mixed $selectedKeys): void
     {
         if (is_array($selectedKeys) && count($selectedKeys) > 0) {
             foreach ($selectedKeys as $cartKey) {
@@ -651,7 +1035,7 @@ class CheckoutController extends Controller
         session()->forget(['cart', 'checkout_cart_keys']);
     }
 
-    private function selectedCartKeys(mixed $keys, array $cart): array
+    protected function selectedCartKeys(mixed $keys, array $cart): array
     {
         $keys = is_array($keys) ? $keys : [$keys];
 
@@ -661,7 +1045,7 @@ class CheckoutController extends Controller
         ));
     }
 
-    private function cartForCheckout(array $cart, mixed $selectedKeys): array
+    protected function cartForCheckout(array $cart, mixed $selectedKeys): array
     {
         if (! is_array($selectedKeys) || empty($selectedKeys)) {
             return $cart;
@@ -670,7 +1054,7 @@ class CheckoutController extends Controller
         return array_intersect_key($cart, array_flip($this->selectedCartKeys($selectedKeys, $cart)));
     }
 
-    private function invalidCheckoutCartKeys(array $cart): array
+    protected function invalidCheckoutCartKeys(array $cart): array
     {
         $invalidKeys = [];
 

@@ -89,6 +89,15 @@ class ProductController extends Controller
             });
         }
 
+        // Filter by price range
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', (int) $request->input('min_price'));
+        }
+        
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', (int) $request->input('max_price'));
+        }
+
         match ($request->input('sort')) {
             'newest' => $query->latest('id'),
             'price_asc' => $query->orderBy('price'),
@@ -139,6 +148,14 @@ class ProductController extends Controller
      */
     public function show(Request $request, string $slug)
     {
+        $legacySlugAliases = [
+            'cam-vat-nguyen-chat' => 'nuoc-ep-cam',
+        ];
+
+        if (isset($legacySlugAliases[$slug])) {
+            return redirect()->route('products.show', $legacySlugAliases[$slug], 301);
+        }
+
         $hasReviewsTable = Schema::hasTable('reviews');
         $productQuery = Product::where('slug', $slug)
             ->where('status', true)

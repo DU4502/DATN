@@ -4,9 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -19,32 +17,8 @@ class DatabaseSeeder extends Seeder
     {
         // Ensure roles exist before creating users
         $this->call(RoleSeeder::class);
-
-        // Keep the default admin account usable after reseeding.
-        $adminData = [
-            'name' => 'Admin',
-            'password' => Hash::make('12345678'),
-            'role_id' => 2,
-            'phone' => '0123456789',
-            'is_active' => 1,
-        ];
-
-        if (Schema::hasColumn('users', 'role')) {
-            $adminData['role'] = 'admin';
-        }
-
-        if (Schema::hasColumn('users', 'address')) {
-            $adminData['address'] = 'Hà Nội, Việt Nam';
-        }
-
-        if (Schema::hasColumn('users', 'points')) {
-            $adminData['points'] = 0;
-        }
-
-        User::updateOrCreate(
-            ['email' => 'admin@chilldrink.com'],
-            $adminData
-        );
+        $this->call(BranchSeeder::class);
+        $this->call(AuthAccountSeeder::class);
 
         $this->call(VoucherSeeder::class);
 
