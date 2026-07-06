@@ -11,6 +11,13 @@
     $primaryAddress = trim((string) ($user->address ?? ''));
     $primaryArea = trim((string) ($user->area ?? ''));
     $primaryAddressText = trim(collect([$primaryAddress, $primaryArea])->filter()->implode(', '));
+    $checkoutAddresses = collect($checkoutAddresses ?? []);
+    if ($checkoutAddresses->isEmpty()) {
+        $checkoutAddresses->push([
+            'id' => 'primary', 'name' => $user->name, 'phone' => $user->phone ?: '',
+            'street' => $primaryAddress, 'area' => $primaryArea, 'type' => 'Nhà Riêng', 'isDefault' => true,
+        ]);
+    }
     $selectedShippingMethod = old('shipping_method_ui', 'standard');
     $shippingQuote = \App\Support\ShippingFee::quoteForAddress(
         old('shipping_address_ui', $primaryAddress),
@@ -963,6 +970,12 @@
                             </div>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="scheduled_at" class="form-label fw-semibold">Thời gian muốn nhận (không bắt buộc)</label>
+                            <input type="datetime-local" id="scheduled_at" name="scheduled_at" min="{{ now()->addMinutes(15)->format('Y-m-d\TH:i') }}" max="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_at') }}" class="form-control checkout-input @error('scheduled_at') is-invalid @enderror">
+                            @error('scheduled_at')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="form-text">Đặt trước tối thiểu 15 phút và tối đa 7 ngày. Cửa hàng sẽ ưu tiên chuẩn bị theo thời gian này.</div>
+                        </div>
                         <textarea
                             id="note"
                             name="note"
@@ -1401,23 +1414,39 @@
         const summaryShippingDistance = document.getElementById('summaryShippingDistance');
         const summaryGrandTotal = document.getElementById('summaryGrandTotal');
 
-        let selectedAddressId = 'primary';
+        const addressStoreEndpoint = @json(route('checkout.addresses.store'));
+        const addressUpdateEndpoint = @json(url('/checkout/addresses'));
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        let selectedAddressId = String(@json($checkoutAddresses->firstWhere('isDefault', true)['id'] ?? $checkoutAddresses->first()['id'] ?? 'primary'));
         let pendingVoucher = {
             code: document.querySelector('[data-voucher-card].active')?.dataset.voucherCode || '',
             label: document.querySelector('[data-voucher-card].active')?.dataset.voucherLabel || '',
             discount: Number(document.querySelector('[data-voucher-card].active')?.dataset.voucherDiscount || {{ (int) $discount }}),
         };
-        const addressBook = [
-            {
-                id: 'primary',
-                name: @json($user->name),
-                phone: @json($user->phone ?: 'Chưa cập nhật'),
-                street: @json($primaryAddress),
-                area: @json($primaryArea),
-                type: 'Nhà Riêng',
-                isDefault: true,
-            },
-        ];
+        const addressBook = @json($checkoutAddresses->values());
+
+        async function persistAddress(address, isNew) {
+            const endpoint = isNew ? addressStoreEndpoint : `${addressUpdateEndpoint}/${address.id}`;
+            const requestData = {
+                name: address.name,
+                phone: address.phone,
+                area: address.area,
+                street: address.street,
+                type: address.type,
+                is_default: Boolean(address.isDefault),
+            };
+            const response = await fetch(endpoint, {
+                method: isNew ? 'POST' : 'PUT',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify(requestData),
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                const message = Object.values(payload.errors || {}).flat()[0] || payload.message || 'Không thể lưu địa chỉ.';
+                throw new Error(message);
+            }
+            return payload.address;
+        }
 
         function compactAddress(parts) {
             return parts.filter(Boolean).join(', ');
@@ -1664,7 +1693,8 @@
             }
         });
 
-        document.getElementById('saveEditedAddress')?.addEventListener('click', function () {
+        document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {
+            const button = this;
             const address = getAddressById(selectedAddressId);
             address.name = document.getElementById('editAddressName').value.trim();
             address.phone = document.getElementById('editAddressPhone').value.trim();
@@ -1673,19 +1703,26 @@
             address.type = getTypeValue('edit');
             address.isDefault = document.getElementById('editAddressDefault').checked;
 
-            if (address.isDefault) {
-                addressBook.forEach((item) => {
-                    item.isDefault = item.id === address.id;
-                });
-            }
-
-            applyAddress(address);
-            addressEditModal.hide();
+            const status = document.getElementById('editAddressStatus');
+            try {
+                button.disabled = true;
+                status.textContent = 'Đang lưu địa chỉ...';
+                const saved = await persistAddress(address, address.id === 'primary');
+                const index = addressBook.findIndex((item) => item.id === address.id);
+                if (saved.isDefault) addressBook.forEach((item) => item.isDefault = false);
+                if (index >= 0) addressBook[index] = saved; else addressBook.push(saved);
+                applyAddress(saved);
+                status.textContent = 'Đã lưu địa chỉ.';
+                addressEditModal.hide();
+            } catch (error) {
+                status.textContent = error.message;
+                status.classList.add('text-danger');
+            } finally { button.disabled = false; }
         });
 
-        document.getElementById('saveNewAddress')?.addEventListener('click', function () {
+        document.getElementById('saveNewAddress')?.addEventListener('click', async function () {
+            const button = this;
             const address = {
-                id: `new-${Date.now()}`,
                 name: document.getElementById('newAddressName').value.trim(),
                 phone: document.getElementById('newAddressPhone').value.trim(),
                 area: document.getElementById('newAddressArea').value.trim(),
@@ -1694,13 +1731,21 @@
                 isDefault: document.getElementById('newAddressDefault').checked,
             };
 
-            if (address.isDefault) {
-                addressBook.forEach((item) => item.isDefault = false);
-            }
-
-            addressBook.push(address);
-            applyAddress(address);
-            addressAddModal.hide();
+            const status = document.getElementById('newAddressStatus');
+            try {
+                button.disabled = true;
+                status.textContent = 'Đang lưu địa chỉ...';
+                status.classList.remove('text-danger');
+                const saved = await persistAddress(address, true);
+                if (saved.isDefault) addressBook.forEach((item) => item.isDefault = false);
+                addressBook.push(saved);
+                applyAddress(saved);
+                status.textContent = 'Đã lưu địa chỉ.';
+                addressAddModal.hide();
+            } catch (error) {
+                status.textContent = error.message;
+                status.classList.add('text-danger');
+            } finally { button.disabled = false; }
         });
 
         document.getElementById('voucherManualApply')?.addEventListener('click', function () {

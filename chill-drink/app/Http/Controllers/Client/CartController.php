@@ -118,6 +118,7 @@ class CartController extends Controller
      */
     public function add(Request $request, $id)
     {
+        abort_if(session()->has('checkout_group_order_id'), 422, 'Bạn đang thanh toán đơn nhóm nên không thể thêm món cá nhân vào giỏ.');
         $demoProducts = $this->demoProducts();
         $product = isset($demoProducts[$id])
             ? (object) $demoProducts[$id]
@@ -142,6 +143,7 @@ class CartController extends Controller
         $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel . ':' . md5($toppingKey);
         $basePrice = (int) ($product->price ?? 0);
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
+        $itemNote = mb_substr(trim((string) $request->input('note')), 0, 500);
         
         // If the same product and size already exist, increase quantity.
         if (isset($cart[$cartKey])) {
@@ -168,6 +170,7 @@ class CartController extends Controller
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
                 'quantity' => $quantity,
+                'note' => $itemNote !== '' ? $itemNote : null,
             ];
         }
         
@@ -189,6 +192,7 @@ class CartController extends Controller
      */
     public function update(Request $request, $id)
     {
+        abort_if(session()->has('checkout_group_order_id') && str_starts_with((string) $id, 'group-'), 422, 'Không thể sửa số lượng của đơn nhóm sau khi đã chốt.');
         $cart = session()->get('cart', []);
         
         if (isset($cart[$id])) {
@@ -208,6 +212,7 @@ class CartController extends Controller
      */
     public function remove(Request $request, $id)
     {
+        abort_if(session()->has('checkout_group_order_id') && str_starts_with((string) $id, 'group-'), 422, 'Không thể xóa món của đơn nhóm sau khi đã chốt.');
         $cart = session()->get('cart', []);
         
         if (isset($cart[$id])) {
@@ -227,6 +232,7 @@ class CartController extends Controller
      */
     public function clear(Request $request)
     {
+        abort_if(session()->has('checkout_group_order_id'), 422, 'Không thể xóa giỏ đơn nhóm. Hãy hủy đơn nhóm nếu không muốn tiếp tục.');
         session()->forget('cart');
 
         if ($request->expectsJson()) {
