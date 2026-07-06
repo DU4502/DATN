@@ -201,7 +201,11 @@ $paymentLabels = $paymentLabels ?? [
         <div>
             <h2 class="h4 fw-bold mb-0">Lịch sử mua hàng</h2>
         </div>
-        <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Tiếp tục mua sắm</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('favorites.index') }}" class="btn btn-outline-danger"><i class="bi bi-heart me-1"></i>Món yêu thích</a>
+            <a href="{{ route('group-orders.index') }}" class="btn btn-outline-primary"><i class="bi bi-people me-1"></i>Đơn nhóm</a>
+            <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Tiếp tục mua sắm</a>
+        </div>
     </div>
 
     @forelse($profileOrders as $order)
@@ -212,6 +216,9 @@ $paymentLabels = $paymentLabels ?? [
             <div>
                 <div class="fw-bold text-primary">#{{ str_pad((string) $order->id, 5, '0', STR_PAD_LEFT) }}</div>
                 <div class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</div>
+                @if($order->scheduled_at)
+                <div class="small fw-semibold text-primary mt-1"><i class="bi bi-calendar-check me-1"></i>Nhận lúc {{ $order->scheduled_at->format('H:i · d/m/Y') }}</div>
+                @endif
             </div>
             <span class="order-status-badge {{ $status['class'] }}" data-order-status-badge data-status="{{ $statusKey }}">{{ $status['label'] }}</span>
         </div>
@@ -260,6 +267,13 @@ $paymentLabels = $paymentLabels ?? [
             </div>
             <div class="d-flex flex-column align-items-end">
                 <div class="fw-bold text-primary">{{ number_format($totalSubtotal, 0, ',', '.') }}đ</div>
+
+                @if($product)
+                <form method="POST" action="{{ route('orders.items.reorder', [$order, $item]) }}" class="mt-2">
+                    @csrf
+                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-repeat me-1"></i>Mua lại món này</button>
+                </form>
+                @endif
 
                 @if(($statusKey ?? '') === 'completed' && $product)
                 @if(auth()->check() && ! $hasReviewedForThisItem)
@@ -339,6 +353,10 @@ $paymentLabels = $paymentLabels ?? [
             <div class="text-end">
                 <div class="text-secondary small">Tổng thanh toán</div>
                 <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
+                <form method="POST" action="{{ route('orders.reorder', $order) }}" class="mt-2">
+                    @csrf
+                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
+                </form>
                 
                 @if($order->payment_method === 'vnpay' && in_array($order->payment_status, ['pending', 'failed']) && $order->status !== 'cancelled')
                     <div class="mt-2">

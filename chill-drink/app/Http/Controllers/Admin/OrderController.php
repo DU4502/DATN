@@ -114,6 +114,7 @@ class OrderController extends Controller
             'status_label' => OrderStatus::label((string) $order->status),
             'status_options' => OrderStatus::selectableOptions((string) $order->status),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
+            'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
             'status_update_url' => route('admin.orders.updateStatus', $order->id),
         ];

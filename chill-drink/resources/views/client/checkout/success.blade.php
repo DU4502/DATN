@@ -149,7 +149,7 @@
     .order-summary {
         margin-top: 32px;
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
         border: 1px solid #e3ece9;
         border-radius: 16px;
         overflow: hidden;
@@ -240,6 +240,12 @@
                             <span class="summary-label">Tổng cộng</span>
                             <strong class="text-primary">{{ number_format((int) $order->total, 0, ',', '.') }}đ</strong>
                         </div>
+                        @if($order->scheduled_at)
+                        <div class="summary-item">
+                            <span class="summary-label">Thời gian muốn nhận</span>
+                            <strong class="text-primary"><i class="bi bi-calendar-check me-1"></i>{{ $order->scheduled_at->format('H:i · d/m/Y') }}</strong>
+                        </div>
+                        @endif
                     </div>
                 @endif
 
