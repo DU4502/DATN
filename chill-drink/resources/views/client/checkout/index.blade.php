@@ -1449,6 +1449,8 @@
         const addressEditModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressEditModal'));
         const addressAddModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressAddModal'));
         const voucherModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('voucherModal'));
+        const profileUpdateEndpoint = @json(route('profile.update'));
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const selectedVoucherCode = document.getElementById('selectedVoucherCode');
         const selectedVoucherText = document.getElementById('selectedVoucherText');
         const summaryVoucherText = document.getElementById('summaryVoucherText');
@@ -1695,6 +1697,31 @@
             setTypeActive('edit', address.type || 'Nhà Riêng');
         }
 
+        async function syncAddressToProfile(address) {
+            const payload = new FormData();
+
+            payload.append('_method', 'PATCH');
+            payload.append('_token', csrfToken);
+            payload.append('name', @json($user->name));
+            payload.append('phone', @json($user->phone ?? ''));
+            payload.append('email', @json($user->email));
+            payload.append('address', address.street || '');
+            payload.append('area', address.area || '');
+
+            const response = await fetch(profileUpdateEndpoint, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                },
+                body: payload,
+            });
+
+            if (!response.ok) {
+                throw new Error(`Unable to update profile: ${response.status}`);
+            }
+        }
+
         function openEditModal(id = selectedAddressId) {
             fillEditModal(getAddressById(id));
             selectedAddressId = id;
@@ -1792,7 +1819,7 @@
             }
         });
 
-        document.getElementById('saveEditedAddress')?.addEventListener('click', function () {
+        document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {
             const address = getAddressById(selectedAddressId);
             address.name = document.getElementById('editAddressName').value.trim();
             address.phone = document.getElementById('editAddressPhone').value.trim();
@@ -1808,10 +1835,15 @@
             }
 
             applyAddress(address);
+            try {
+                await syncAddressToProfile(address);
+            } catch (error) {
+                console.error(error);
+            }
             addressEditModal.hide();
         });
 
-        document.getElementById('saveNewAddress')?.addEventListener('click', function () {
+        document.getElementById('saveNewAddress')?.addEventListener('click', async function () {
             const address = {
                 id: `new-${Date.now()}`,
                 name: document.getElementById('newAddressName').value.trim(),
@@ -1828,6 +1860,11 @@
 
             addressBook.push(address);
             applyAddress(address);
+            try {
+                await syncAddressToProfile(address);
+            } catch (error) {
+                console.error(error);
+            }
             addressAddModal.hide();
         });
 
