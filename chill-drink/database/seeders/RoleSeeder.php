@@ -18,6 +18,7 @@ class RoleSeeder extends Seeder
         $roles = [
             ['id' => 1, 'name' => 'user', 'description' => 'Người dùng'],
             ['id' => 2, 'name' => 'admin', 'description' => 'Quản trị viên'],
+            ['id' => 3, 'name' => 'super_admin', 'description' => 'Quản trị toàn hệ thống'],
         ];
 
         foreach ($roles as $role) {
@@ -26,14 +27,6 @@ class RoleSeeder extends Seeder
                 $role
             );
         }
-
-        if (Schema::hasTable('users')) {
-            DB::table('users')
-                ->where('role_id', 3)
-                ->update(['role_id' => 1]);
-        }
-
-        DB::table('roles')->where('id', 3)->delete();
 
         $this->command->info('Default roles seeded.');
     }

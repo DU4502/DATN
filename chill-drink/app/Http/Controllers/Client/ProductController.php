@@ -89,6 +89,15 @@ class ProductController extends Controller
             });
         }
 
+        // Filter by price range
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', (int) $request->input('min_price'));
+        }
+        
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', (int) $request->input('max_price'));
+        }
+
         match ($request->input('sort')) {
             'newest' => $query->latest('id'),
             'price_asc' => $query->orderBy('price'),

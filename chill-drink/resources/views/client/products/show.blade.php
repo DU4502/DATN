@@ -443,7 +443,9 @@
     }
 
     .related-card img {
-        height: 230px;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1 !important;
         object-fit: contain;
         background: var(--c-bg-warm, #f0fdf9);
         padding: 0.75rem;
@@ -1003,7 +1005,7 @@
                                 :alt="$item->name"
                                 :category="$item->category?->name"
                                 class="card-img-top"
-                                style="aspect-ratio: 4/3;" />
+                                style="aspect-ratio: 1/1;" />
                         </a>
                         <div class="card-body">
                             <h3 class="h5">

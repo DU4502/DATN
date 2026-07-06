@@ -4,6 +4,21 @@
 
 @section('content')
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
+@php
+    $currentSort = request('sort', 'popular');
+    $sortOptions = [
+        'popular' => 'Phổ biến nhất',
+        'newest' => 'Mới nhất',
+        'price_asc' => 'Giá thấp đến cao',
+        'price_desc' => 'Giá cao đến thấp',
+    ];
+    $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
+    $showCatalogPromotions = !request()->filled('category')
+        && empty($searchQuery)
+        && !request()->filled('min_price')
+        && !request()->filled('max_price')
+        && $products->currentPage() === 1;
+@endphp
 <style>
     .shop-page {
         padding-top: 2rem;
@@ -12,6 +27,257 @@
 
     .shop-heading {
         max-width: 720px;
+    }
+
+    .shop-main-top {
+        display: grid;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .shop-hero {
+        display: grid;
+        grid-template-columns: 1.35fr 1fr;
+        gap: 1.75rem;
+        overflow: hidden;
+        border-radius: 32px;
+        padding: 2rem;
+        background: linear-gradient(135deg, #0e5e48 0%, #1f9577 100%);
+        color: #ffffff;
+        min-height: 320px;
+    }
+
+    .shop-hero__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .shop-hero__title {
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.03;
+        font-weight: 800;
+        margin: 1rem 0 0.75rem;
+    }
+
+    .shop-hero__text {
+        max-width: 40rem;
+        font-size: 1.05rem;
+        line-height: 1.8;
+        margin-bottom: 1.75rem;
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .shop-hero__button {
+        min-width: 170px;
+        padding: 0.95rem 1.75rem;
+        border-radius: 999px;
+        font-weight: 700;
+    }
+
+    .shop-hero__visual {
+        display: grid;
+        align-items: center;
+        justify-items: center;
+        min-height: 260px;
+    }
+
+    .shop-hero__visual img {
+        width: min(100%, 300px);
+        max-height: 270px;
+        border-radius: 22px;
+        object-fit: contain;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.14);
+    }
+
+    .shop-vouchers {
+        display: grid;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        border: 1px solid rgba(47, 185, 160, 0.18);
+        border-radius: 20px;
+        background: rgba(47, 185, 160, 0.045);
+    }
+
+    .shop-vouchers__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .shop-vouchers__header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .shop-vouchers__header a {
+        color: var(--c-primary);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .voucher-grid {
+        display: flex;
+        gap: 0.75rem;
+        overflow-x: auto;
+        padding: 0.15rem 0 0.45rem;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(47, 185, 160, 0.45) transparent;
+    }
+
+    .voucher-card {
+        flex: 0 0 330px;
+        position: relative;
+        background: linear-gradient(90deg, #2fb9a0 0 112px, #ffffff 112px 100%);
+        border: 1px solid rgba(47, 185, 160, 0.24);
+        border-radius: 18px;
+        padding: 1.05rem 1.05rem 1.05rem 1rem;
+        box-shadow: 0 18px 40px rgba(15, 78, 62, 0.08);
+        min-height: 116px;
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr);
+        grid-template-areas:
+            "left code"
+            "left info"
+            "left action";
+        column-gap: 1rem;
+        row-gap: 0.25rem;
+        align-items: center;
+        overflow: hidden;
+        scroll-snap-align: start;
+    }
+
+    .voucher-card::before,
+    .voucher-card::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #f6faf9;
+        border: 1px solid rgba(15, 78, 62, 0.08);
+        transform: translateY(-50%);
+    }
+
+    .voucher-card::before {
+        left: -9px;
+    }
+
+    .voucher-card::after {
+        right: -9px;
+    }
+
+    .voucher-card__visual {
+        grid-area: left;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        justify-self: center;
+        align-self: start;
+        margin-top: 0.2rem;
+        background: rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+        font-size: 1.25rem;
+    }
+
+    .voucher-card__top {
+        display: contents;
+    }
+
+    .voucher-card__code {
+        grid-area: code;
+        align-self: end;
+        font-size: 1.04rem;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 1.25;
+    }
+
+    .voucher-card__tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        background: rgba(255, 137, 73, 0.16);
+        color: #ff6d2d;
+        font-size: 0.68rem;
+        font-weight: 800;
+        cursor: pointer;
+        border: 1px solid rgba(255, 137, 73, 0.25);
+        transition: background 0.2s ease, transform 0.2s ease;
+        white-space: nowrap;
+        grid-area: action;
+        align-self: start;
+        justify-self: start;
+        margin-top: 0.15rem;
+    }
+
+    .voucher-card__tag:hover {
+        background: rgba(255, 137, 73, 0.24);
+        transform: translateY(-1px);
+    }
+
+    .voucher-card__info {
+        grid-area: info;
+        align-self: start;
+        margin: 0;
+        font-size: 0.88rem;
+        color: var(--c-muted);
+        line-height: 1.45;
+        min-width: 0;
+    }
+
+    .voucher-card__label {
+        grid-area: left;
+        align-self: end;
+        justify-self: center;
+        width: 90px;
+        color: #ffffff;
+        font-size: 0.86rem;
+        font-weight: 900;
+        line-height: 1.15;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 0.15rem;
+    }
+
+    .voucher-card__highlight {
+        display: inline-flex;
+        width: fit-content;
+        max-width: 100%;
+        margin-top: 0.55rem;
+        padding: 0.28rem 0.55rem;
+        border: 1px solid rgba(13, 147, 115, 0.28);
+        border-radius: 6px;
+        color: var(--drink-primary-dark);
+        background: rgba(13, 147, 115, 0.06);
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1.25;
     }
 
     .shop-sidebar {
@@ -25,6 +291,7 @@
         justify-content: space-between;
         gap: 1rem;
         margin-bottom: 1.25rem;
+        flex-wrap: wrap;
     }
 
     .shop-sort {
@@ -64,15 +331,26 @@
 
     .sort-dropdown {
         position: relative;
-        min-width: 190px;
+        min-width: 220px;
+        z-index: 20;
+    }
+
+    .sort-dropdown.open,
+    .sort-dropdown:focus-within {
+        z-index: 120;
+    }
+
+    .sort-dropdown--full {
+        width: 100%;
+        min-width: 0;
     }
 
     .sort-dropdown-toggle {
         width: 100%;
-        min-height: 42px;
+        min-height: 46px;
         border: 1.5px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-sm, 8px);
-        padding: 0.55rem 0.8rem;
+        padding: 0.62rem 0.85rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -81,11 +359,19 @@
         color: var(--c-ink, #111827);
         font-weight: 800;
         cursor: pointer;
-        transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+    }
+
+    .sort-dropdown-toggle span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .sort-dropdown.open .sort-dropdown-toggle,
+    .sort-dropdown:focus-within .sort-dropdown-toggle,
     .sort-dropdown-toggle:focus {
+        background: var(--c-primary-light, #e6f7f2);
         border-color: var(--c-primary, #0d9373);
         box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.13);
     }
@@ -95,7 +381,8 @@
         transition: transform 0.16s ease;
     }
 
-    .sort-dropdown.open .sort-dropdown-toggle i {
+    .sort-dropdown.open .sort-dropdown-toggle i,
+    .sort-dropdown:focus-within .sort-dropdown-toggle i {
         transform: rotate(180deg);
     }
 
@@ -104,33 +391,42 @@
         top: calc(100% + 0.35rem);
         left: 0;
         right: 0;
-        z-index: 50;
+        z-index: 80;
         display: none;
         overflow: hidden;
         border: 1px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-sm, 8px);
         background: #fff;
         box-shadow: var(--shadow-lg);
+        padding: 0.3rem;
     }
 
-    .sort-dropdown.open .sort-dropdown-menu {
+    .sort-dropdown.open .sort-dropdown-menu,
+    .sort-dropdown:focus-within .sort-dropdown-menu {
         display: block;
     }
 
     .sort-dropdown-option {
+        display: block !important;
         width: 100%;
         border: 0;
-        background: #fff;
+        border-radius: 7px;
+        background: transparent;
         color: var(--c-ink, #111827);
         text-align: left;
-        padding: 0.72rem 0.9rem;
-        font-weight: 700;
+        padding: 0.75rem 0.85rem;
+        font-weight: 800;
+        transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
     }
 
     .sort-dropdown-option:hover,
     .sort-dropdown-option.active {
         background: var(--c-primary-light, #e6f7f2);
         color: var(--c-primary-dark, #067a5f);
+    }
+
+    .sort-dropdown-option:hover {
+        transform: translateX(2px);
     }
 
     .filter-panel,
@@ -143,7 +439,7 @@
     }
 
     .filter-panel {
-        overflow: hidden;
+        overflow: visible;
     }
 
     .filter-title {
@@ -230,7 +526,6 @@
         position: relative;
         min-height: 250px;
         overflow: hidden;
-        color: #ffffff;
     }
 
     .promo-panel img {
@@ -243,24 +538,7 @@
     }
 
     .promo-panel:hover img {
-        transform: scale(1.08);
-    }
-
-    .promo-panel::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(180deg, transparent 15%, rgba(0, 82, 70, 0.84));
-    }
-
-    .promo-panel-content {
-        position: relative;
-        z-index: 1;
-        min-height: 250px;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        padding: 1.5rem;
+        transform: scale(1.03);
     }
 
     .shop-product-card {
@@ -269,6 +547,12 @@
         display: flex;
         flex-direction: column;
         transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+    }
+
+    .shop-product-price {
+        display: flex;
+        justify-content: center;
+        text-align: center;
     }
 
     .shop-product-card:hover {
@@ -281,7 +565,7 @@
         position: relative;
         overflow: hidden;
         border-radius: var(--radius-sm);
-        aspect-ratio: 4 / 3;
+        aspect-ratio: 1 / 1;
         background: var(--drink-primary-soft);
     }
 
@@ -292,7 +576,7 @@
         min-height: 100%;
         object-fit: contain !important;
         object-position: center !important;
-        padding: 0.55rem;
+        padding: 0.75rem;
         display: block;
         background: var(--drink-primary-soft) !important;
         transition: transform 0.55s ease, filter 0.35s ease;
@@ -593,33 +877,49 @@
         border-color: var(--drink-primary);
     }
 
-    .pagination {
-        justify-content: center;
-        gap: 0.4rem;
+    @media (max-width: 1199.98px) {
+        .shop-hero {
+            grid-template-columns: 1fr;
+            min-height: auto;
+        }
+
+        .shop-hero__visual img {
+            width: min(100%, 280px);
+            max-height: 250px;
+        }
+
     }
 
-    .pagination .page-link {
-        min-width: 36px;
-        min-height: 36px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: var(--radius-sm) !important;
-        color: var(--drink-primary);
-        border-color: var(--drink-border);
-        font-weight: 800;
-    }
-
-    .pagination .active .page-link,
-    .pagination .page-link:hover {
-        background: var(--drink-primary);
-        border-color: var(--drink-primary);
-        color: #fff;
-    }
-
-    @media (max-width: 991.98px) {
+    @media (max-width: 767.98px) {
         .shop-sidebar {
             position: static;
+        }
+
+        .shop-main-top,
+        .shop-hero,
+        .shop-vouchers {
+            grid-template-columns: 1fr;
+        }
+
+        .voucher-card {
+            flex-basis: min(320px, calc(100vw - 3rem));
+            min-height: 112px;
+            background: linear-gradient(90deg, #2fb9a0 0 128px, #ffffff 128px 100%);
+            grid-template-columns: 128px minmax(0, 1fr);
+            grid-template-areas:
+                "left code"
+                "left info"
+                "left action";
+            column-gap: 1rem;
+        }
+
+        .voucher-card__tag {
+            justify-self: start;
+            margin-top: 0.25rem;
+        }
+
+        .voucher-card__label {
+            width: 90px;
         }
 
         .category-list {
@@ -651,6 +951,9 @@
         <div class="row g-4">
             <aside class="col-lg-3">
                 <div class="shop-sidebar d-flex flex-column gap-4">
+                    <div class="d-grid mb-3">
+                        <a href="{{ route('products.index') }}" class="btn btn-warning btn-lg rounded-pill text-white">Sản phẩm mới</a>
+                    </div>
                     <div class="filter-panel p-4">
                         <h2 class="h5 fw-bold mb-4">
                             Bộ lọc
@@ -677,57 +980,174 @@
 
                         <div class="border-top mt-4 pt-4">
                             <h3 class="filter-title mb-3">Lọc theo giá</h3>
-                            <input class="range-control w-100" type="range" min="0" max="100000" value="50000">
-                            <div class="d-flex justify-content-between text-secondary small fw-semibold mt-2">
-                                <span>0đ</span>
-                                <span>100.000đ</span>
-                            </div>
+                            <form action="{{ route('products.index') }}" method="GET" id="priceFilterForm">
+                                @if(request('category'))
+                                    <input type="hidden" name="category" value="{{ request('category') }}">
+                                @endif
+                                @if(!empty($searchQuery))
+                                    <input type="hidden" name="search" value="{{ $searchQuery }}">
+                                @endif
+                                @if(request('sort'))
+                                    <input type="hidden" name="sort" value="{{ request('sort') }}">
+                                @endif
+                                
+                                <input type="hidden" name="min_price" id="minPriceInput" value="{{ request('min_price', 0) }}">
+                                <input type="hidden" name="max_price" id="maxPriceInput" value="{{ request('max_price', 100000) }}">
+                                
+                                <input 
+                                    class="range-control w-100" 
+                                    type="range" 
+                                    min="0" 
+                                    max="100000" 
+                                    step="5000"
+                                    value="{{ request('max_price', 100000) }}"
+                                    id="priceRange"
+                                >
+                                <div class="d-flex justify-content-between text-secondary small fw-semibold mt-2">
+                                    <span id="minPriceLabel">{{ number_format(request('min_price', 0), 0, ',', '.') }}đ</span>
+                                    <span id="maxPriceLabel">{{ number_format(request('max_price', 100000), 0, ',', '.') }}đ</span>
+                                </div>
+                                
+                                @if(request('min_price') || request('max_price'))
+                                    <div class="mt-3">
+                                        <a href="{{ route('products.index', request()->except(['min_price', 'max_price'])) }}" class="btn btn-outline-secondary w-100 fw-bold btn-sm">Xóa lọc giá</a>
+                                    </div>
+                                @endif
+                            </form>
                         </div>
 
-                        <div class="mt-4">
-                            <button type="button" class="btn btn-primary w-100 fw-bold">Áp dụng bộ lọc</button>
+                        <div class="border-top mt-4 pt-4">
+                            <h2 class="filter-title mb-3">Sắp xếp</h2>
+                            <form method="GET" action="{{ route('products.index') }}">
+                                @foreach(request()->except(['sort', 'page']) as $key => $value)
+                                    @if(is_array($value))
+                                        @foreach($value as $nestedValue)
+                                            <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
+                                        @endforeach
+                                    @else
+                                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                    @endif
+                                @endforeach
+                                <input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
+                                <div class="sort-dropdown sort-dropdown--full" data-sort-dropdown>
+                                    <button type="button" class="sort-dropdown-toggle" aria-expanded="false">
+                                        <span data-sort-label>{{ $currentSortLabel }}</span>
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                    <div class="sort-dropdown-menu">
+                                        @foreach($sortOptions as $value => $label)
+                                            <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active' : '' }}" data-sort-value="{{ $value }}">
+                                                {{ $label }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </form>
                         </div>
+                    </div>
+
+                    <div class="promo-panel">
+                        <img src="{{ asset('images/chill-drink-promo.png') }}" alt="Thành viên Chill Drink">
                     </div>
                 </div>
             </aside>
 
             <div class="col-lg-9">
+                @if($showCatalogPromotions)
+                    <div class="shop-main-top">
+                        <div class="shop-hero">
+                            <div>
+                                <span class="shop-hero__badge">Món mới nhất</span>
+                                <h2 class="shop-hero__title">Matcha Dừa Mây</h2>
+                                <p class="shop-hero__text">Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.</p>
+                                <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
+                            </div>
+                            <div class="shop-hero__visual">
+                                <img src="{{ asset('images/matcha.png') }}" alt="Matcha Dừa Mây" loading="lazy">
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="shop-grid-head">
-                    <h1 class="section-title h2 mb-0">Sản phẩm nổi bật</h1>
-                    <form action="{{ route('products.index') }}" method="GET" class="shop-sort">
-                        @if(request('category'))
-                            <input type="hidden" name="category" value="{{ request('category') }}">
-                        @endif
-                        @if(!empty($searchQuery))
-                            <input type="hidden" name="search" value="{{ $searchQuery }}">
-                        @endif
-                        <label class="small fw-bold text-secondary mb-0">Sắp xếp theo:</label>
-@php
-    $sortOptions = [
-        '' => 'Bán chạy nhất',
-        'newest' => 'Mới nhất',
-        'price_asc' => 'Giá thấp đến cao',
-        'price_desc' => 'Giá cao đến thấp',
-    ];
-    $currentSort = request('sort', '');
-    $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions[''];
-@endphp
-<input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
-<div class="sort-dropdown" data-sort-dropdown>
-    <button type="button" class="sort-dropdown-toggle">
-        <span data-sort-label>{{ $currentSortLabel }}</span>
-        <i class="bi bi-chevron-down"></i>
-    </button>
-    <div class="sort-dropdown-menu">
-        @foreach($sortOptions as $value => $label)
-            <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active d-none' : '' }}" data-sort-value="{{ $value }}">
-                {{ $label }}
-            </button>
-        @endforeach
-    </div>
-</div>
+                    <div>
+                        <h2 class="h4 fw-bold mb-1">Danh sách đồ uống</h2>
+                        <p class="text-secondary mb-0">{{ $products->total() }} sản phẩm phù hợp</p>
+                    </div>
+                    <form method="GET" action="{{ route('products.index') }}" class="shop-sort">
+                        @foreach(request()->except(['sort', 'page']) as $key => $value)
+                            @if(is_array($value))
+                                @foreach($value as $nestedValue)
+                                    <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
+                                @endforeach
+                            @else
+                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            @endif
+                        @endforeach
+                        <input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
+                        <span class="text-secondary fw-semibold small">Sắp xếp</span>
+                        <div class="sort-dropdown" data-sort-dropdown>
+                            <button type="button" class="sort-dropdown-toggle" aria-expanded="false">
+                                <span data-sort-label>{{ $currentSortLabel }}</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                            <div class="sort-dropdown-menu">
+                                @foreach($sortOptions as $value => $label)
+                                    <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active' : '' }}" data-sort-value="{{ $value }}">
+                                        {{ $label }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
                     </form>
                 </div>
+
+                @if($showCatalogPromotions)
+                    <div class="shop-vouchers">
+                        <div class="shop-vouchers__header">
+                            <h3>Mã giảm giá phổ biến</h3>
+                            <span class="text-secondary small">Sao chép mã để dùng khi thanh toán</span>
+                        </div>
+                        <div class="voucher-grid">
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
+                                <span class="voucher-card__label">TANGNANG20</span>
+                                <div class="voucher-card__code">TANGNANG20</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG20">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Giảm 20.000đ cho đơn từ 100.000đ <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
+                        </div>
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
+                                <span class="voucher-card__label">TANGNANG15</span>
+                                <div class="voucher-card__code">TANGNANG15</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG15">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Giảm 15% tổng đơn <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
+                        </div>
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
+                                <span class="voucher-card__label">CHOCHILL</span>
+                                <div class="voucher-card__code">CHOCHILL</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="CHOCHILL">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Miễn phí giao hàng cho đơn từ 50.000đ <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
+                        </div>
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
+                                <span class="voucher-card__label">SUMMER24</span>
+                                <div class="voucher-card__code">SUMMER24</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="SUMMER24">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Giảm 10.000đ cho mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
+                        </div>
+                        </div>
+                    </div>
+                @endif
 
                 @if(!empty($searchQuery))
                     <div class="search-results-banner">
@@ -772,7 +1192,7 @@
                                 @endif
                                 <p class="text-secondary small mb-3 shop-product-desc">{{ \Illuminate\Support\Str::limit($product->display_description, 70) }}</p>
 
-                                <div class="mb-3">
+                                <div class="shop-product-price mb-3">
                                     <span class="h5 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2 shop-product-actions">
@@ -821,7 +1241,7 @@
                                         </div>
                                         <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
                                         <p class="text-secondary small mb-3 shop-product-desc">{{ $item[1] }}</p>
-                                        <div class="mb-3">
+                                        <div class="shop-product-price mb-3">
                                             <span class="h5 fw-bold text-primary mb-0">{{ $item[2] }}</span>
                                         </div>
                                         <div class="d-flex align-items-center gap-2 shop-product-actions">
@@ -953,19 +1373,25 @@
             const toggle = dropdown.querySelector('.sort-dropdown-toggle');
             const options = dropdown.querySelectorAll('.sort-dropdown-option');
 
-            toggle?.addEventListener('click', () => {
+            options.forEach((item) => item.classList.remove('d-none'));
+
+            toggle?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                options.forEach((item) => item.classList.remove('d-none'));
                 document.querySelectorAll('.sort-dropdown.open').forEach((item) => {
                     if (item !== dropdown) {
                         item.classList.remove('open');
+                        item.querySelector('.sort-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
                     }
                 });
                 dropdown.classList.toggle('open');
+                toggle.setAttribute('aria-expanded', dropdown.classList.contains('open') ? 'true' : 'false');
             });
 
             options.forEach((option) => {
                 option.addEventListener('click', () => {
-                    options.forEach((item) => item.classList.remove('active', 'd-none'));
-                    option.classList.add('active', 'd-none');
+                    options.forEach((item) => item.classList.remove('active'));
+                    option.classList.add('active');
                     if (input) {
                         input.value = option.dataset.sortValue || '';
                     }
@@ -973,6 +1399,7 @@
                         label.textContent = option.textContent.trim();
                     }
                     dropdown.classList.remove('open');
+                    toggle?.setAttribute('aria-expanded', 'false');
                     form?.submit();
                 });
             });
@@ -980,7 +1407,10 @@
 
         document.addEventListener('click', (event) => {
             if (!event.target.closest('[data-sort-dropdown]')) {
-                document.querySelectorAll('.sort-dropdown.open').forEach((item) => item.classList.remove('open'));
+                document.querySelectorAll('.sort-dropdown.open').forEach((item) => {
+                    item.classList.remove('open');
+                    item.querySelector('.sort-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
+                });
             }
         });
 
@@ -1117,17 +1547,99 @@
             });
         });
 
-        fields.toppingGroup?.addEventListener('click', (event) => {
-            const button = event.target.closest('.quick-topping-choice');
+        document.querySelectorAll('[data-receive-code]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const code = button.dataset.receiveCode;
+                const guestIdentifier = sessionStorage.getItem('guest_identifier') || null;
 
-            if (!button) {
-                return;
-            }
+                try {
+                    const response = await fetch('/api/vouchers/receive', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({
+                            voucher_code: code,
+                            guest_identifier: guestIdentifier,
+                        }),
+                    });
 
-            button.classList.toggle('active');
-            syncQuickToppings();
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        // Show error message
+                        alert(data.message || 'Lỗi khi nhận voucher');
+                        return;
+                    }
+
+                    // Save guest identifier if not already saved
+                    if (!guestIdentifier) {
+                        sessionStorage.setItem('guest_identifier', sessionStorage.getItem('guest_identifier') || Date.now().toString());
+                    }
+
+                    // Show success message
+                    button.textContent = 'ĐÃ NHẬN';
+                    button.setAttribute('disabled', 'true');
+                    
+                    // Show toast notification
+                    showToast(`Nhận voucher thành công: ${data.voucher.code}`, 'success');
+
+                    setTimeout(() => {
+                        button.textContent = 'NHẬN';
+                        button.removeAttribute('disabled');
+                    }, 2000);
+                } catch (err) {
+                    console.error(err);
+                    alert('Lỗi khi nhận voucher. Vui lòng thử lại.');
+                }
+            });
         });
+
+        // Toast notification helper
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 9999;
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Price range slider functionality with auto-submit
+        const priceRange = document.getElementById('priceRange');
+        const minPriceInput = document.getElementById('minPriceInput');
+        const maxPriceInput = document.getElementById('maxPriceInput');
+        const minPriceLabel = document.getElementById('minPriceLabel');
+        const maxPriceLabel = document.getElementById('maxPriceLabel');
+        const priceFilterForm = document.getElementById('priceFilterForm');
+
+        if (priceRange && minPriceInput && maxPriceInput && minPriceLabel && maxPriceLabel && priceFilterForm) {
+            let debounceTimer;
+            
+            priceRange.addEventListener('input', function() {
+                const value = parseInt(this.value);
+                maxPriceInput.value = value;
+                maxPriceLabel.textContent = value.toLocaleString('vi-VN') + 'đ';
+                
+                // Clear previous timer
+                clearTimeout(debounceTimer);
+                
+                // Auto-submit after 500ms of inactivity
+                debounceTimer = setTimeout(() => {
+                    priceFilterForm.submit();
+                }, 500);
+            });
+        }
     });
 </script>
 @endsection
-
