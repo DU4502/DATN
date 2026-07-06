@@ -244,7 +244,7 @@
 
         /* Slider Controls */
         .slider-controls {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 30;
+            position: absolute; bottom: calc(3.5rem + 5px); left: 50%; transform: translateX(-50%); z-index: 30;
             display: flex; align-items: center; justify-content: center; gap: 40px; width: 90%; max-width: 500px;
         }
 
@@ -289,7 +289,7 @@
             .content h2 { font-size: 1.3rem; }
             .content .description { display: none; }
             .content .btn-group { justify-content: center; }
-            .slider-controls { bottom: 20px; }
+            .slider-controls { bottom: calc(2rem + 5px); }
             
             /* Adjust positions for small screens */
             --item3-transform: translate(35%, 15%) scale(0.6);
