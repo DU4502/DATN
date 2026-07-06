@@ -65,6 +65,11 @@ class Order extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+
     public function voucher()
     {
         return $this->belongsTo(Voucher::class, 'coupon_id');

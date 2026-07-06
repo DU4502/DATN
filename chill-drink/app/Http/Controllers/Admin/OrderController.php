@@ -20,6 +20,8 @@ class OrderController extends Controller
         $filters = [
             'q' => trim((string) $request->query('q', '')),
             'status' => trim((string) $request->query('status', '')),
+            'payment_status' => trim((string) $request->query('payment_status', '')),
+            'payment_method' => trim((string) $request->query('payment_method', '')),
             'date_from' => trim((string) $request->query('date_from', '')),
             'date_to' => trim((string) $request->query('date_to', '')),
         ];
@@ -27,7 +29,7 @@ class OrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'orderItems'])
+            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {
@@ -52,6 +54,12 @@ class OrderController extends Controller
             })
             ->when(isset($statusOptions[$filters['status']]) && $filters['status'] !== '', function ($query) use ($filters) {
                 $query->where('status', $filters['status']);
+            })
+            ->when($filters['payment_status'] !== '', function ($query) use ($filters) {
+                $query->where('payment_status', $filters['payment_status']);
+            })
+            ->when($filters['payment_method'] !== '', function ($query) use ($filters) {
+                $query->where('payment_method', $filters['payment_method']);
             });
 
         if (Schema::hasColumn('orders', 'created_at')) {
@@ -82,7 +90,7 @@ class OrderController extends Controller
         $afterId = max(0, (int) $request->query('after_id', 0));
 
         $orders = Order::query()
-            ->with('user')
+            ->with(['user', 'branch'])
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId))
             ->orderByDesc('id')
@@ -104,19 +112,52 @@ class OrderController extends Controller
 
         return [
             'order_id' => $order->id,
+            'branch_name' => $order->branch?->name ?? 'Chưa gán',
             'customer_name' => $customerName,
             'customer_email' => $order->user->email ?? '',
+            'customer_phone' => $order->user->phone ?? '',
+            'note' => $order->note ?? '',
             'total' => $total,
             'total_formatted' => number_format($total, 0, ',', '.').'đ',
+            'subtotal_formatted' => number_format((int) ($order->subtotal ?? 0), 0, ',', '.').'đ',
+            'shipping_fee_formatted' => number_format((int) ($order->shipping_fee ?? 0), 0, ',', '.').'đ',
+            'discount_formatted' => number_format((int) ($order->discount ?? 0), 0, ',', '.').'đ',
             'payment_method' => $order->payment_method,
             'payment_status' => $order->payment_status,
+            'payment_method_label' => $this->paymentMethodLabel($order->payment_method),
+            'payment_status_label' => $this->paymentStatusLabel($order->payment_status),
+            'address_receiver_name' => $order->address?->receiver_name,
+            'address_detail' => $order->address?->detail ?? $order->user?->address,
             'status' => $order->status,
             'status_label' => OrderStatus::label((string) $order->status),
-            'status_options' => OrderStatus::selectableOptions((string) $order->status),
+            'next_status' => OrderStatus::nextStatus((string) $order->status),
+            'can_cancel' => ! in_array(OrderStatus::normalize((string) $order->status), [OrderStatus::COMPLETED, OrderStatus::CANCELLED], true),
+            'status_options' => OrderStatus::stepwiseOptions((string) $order->status),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
             'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
             'status_update_url' => route('admin.orders.updateStatus', $order->id),
         ];
+    }
+
+    private function paymentMethodLabel(?string $method): string
+    {
+        return [
+            'cod' => 'COD',
+            'bank_transfer' => 'Chuyển khoản',
+            'vnpay' => 'VNPay',
+            'momo' => 'MoMo',
+            'card' => 'Thẻ',
+            'wallet' => 'Ví điện tử',
+        ][$method ?? ''] ?? ucfirst((string) $method);
+    }
+
+    private function paymentStatusLabel(?string $status): string
+    {
+        return [
+            'pending' => 'Chưa thanh toán',
+            'paid' => 'Đã thanh toán',
+            'failed' => 'Thất bại',
+        ][$status ?? ''] ?? ucfirst((string) $status);
     }
 
     /**
@@ -151,8 +192,8 @@ class OrderController extends Controller
         $order = Order::findOrFail($id);
         $newStatus = OrderStatus::normalize($request->status);
 
-        if (! OrderStatus::canTransition((string) $order->status, $newStatus)) {
-            return redirect()->back()->with('error', 'Không thể quay lại trạng thái trước.');
+        if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus)) {
+            return redirect()->back()->with('error', 'Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn.');
         }
 
         $order->status = $newStatus;
