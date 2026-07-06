@@ -16,6 +16,9 @@ use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
 use App\Http\Controllers\Client\VnpayController;
+use App\Http\Controllers\Client\GroupOrderController;
+use App\Http\Controllers\Client\QuickOrderController;
+use App\Http\Controllers\Client\AddressController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -69,7 +72,24 @@ Broadcast::routes(['middleware' => ['web', 'auth']]);
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
+    Route::post('/checkout/addresses', [AddressController::class, 'store'])->name('checkout.addresses.store');
+    Route::put('/checkout/addresses/{address}', [AddressController::class, 'update'])->name('checkout.addresses.update');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
+    Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
+    Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
+    Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
+    Route::delete('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'removeItem'])->name('group-orders.items.destroy');
+    Route::get('/group-orders', [GroupOrderController::class, 'index'])->name('group-orders.index');
+    Route::get('/group-orders/create', [GroupOrderController::class, 'create'])->name('group-orders.create');
+    Route::post('/group-orders', [GroupOrderController::class, 'store'])->name('group-orders.store');
+    Route::post('/group-orders/{code}/close', [GroupOrderController::class, 'close'])->name('group-orders.close');
+    Route::post('/group-orders/{code}/cancel', [GroupOrderController::class, 'cancel'])->name('group-orders.cancel');
+    Route::post('/group-orders/{code}/resume', [GroupOrderController::class, 'resume'])->name('group-orders.resume');
+    Route::get('/favorites', [QuickOrderController::class, 'favorites'])->name('favorites.index');
+    Route::post('/favorites/{product}', [QuickOrderController::class, 'toggleFavorite'])->name('favorites.toggle');
+    Route::post('/orders/{order}/reorder', [QuickOrderController::class, 'reorderOrder'])->name('orders.reorder');
+    Route::post('/orders/{order}/items/{item}/reorder', [QuickOrderController::class, 'reorderItem'])->name('orders.items.reorder');
+    Route::post('/products/{product}/taste-profile', [QuickOrderController::class, 'saveTaste'])->name('taste-profiles.store');
 });
 
 /*
