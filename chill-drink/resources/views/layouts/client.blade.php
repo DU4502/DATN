@@ -643,9 +643,16 @@
             border-bottom: 1px solid var(--c-border-light);
             background: var(--c-surface);
             transition: background 0.15s;
+            text-decoration: none;
+            color: inherit;
         }
 
-        .notification-item:hover {
+        .notification-item.is-clickable {
+            cursor: pointer;
+        }
+
+        .notification-item:hover,
+        .notification-item.is-clickable:hover {
             background: var(--c-bg);
         }
 
@@ -1071,6 +1078,73 @@
 </head>
 
 <body>
+    <!-- Flash Notifications Container -->
+    <div id="flashNotifications" style="position: fixed; top: 80px; right: 20px; z-index: 10000; width: 350px; max-width: calc(100vw - 40px);">
+        @if(session('success'))
+            <div class="alert alert-success alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #10b981;">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-check-circle-fill me-2 fs-5" style="color: #10b981;"></i>
+                    <div class="flex-grow-1">
+                        <strong class="d-block mb-1">Thành công!</strong>
+                        {{ session('success') }}
+                    </div>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="alert alert-danger alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #ef4444;">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5" style="color: #ef4444;"></i>
+                    <div class="flex-grow-1">
+                        <strong class="d-block mb-1">Lỗi!</strong>
+                        {{ session('error') }}
+                    </div>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+
+        @if(session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #f59e0b;">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-exclamation-circle-fill me-2 fs-5" style="color: #f59e0b;"></i>
+                    <div class="flex-grow-1">
+                        <strong class="d-block mb-1">Cảnh báo!</strong>
+                        {{ session('warning') }}
+                    </div>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+
+        @if(session('info'))
+            <div class="alert alert-info alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #3b82f6;">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-info-circle-fill me-2 fs-5" style="color: #3b82f6;"></i>
+                    <div class="flex-grow-1">
+                        <strong class="d-block mb-1">Thông tin</strong>
+                        {{ session('info') }}
+                    </div>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+
+        @if(session('status'))
+            <div class="alert alert-primary alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #0d9373;">
+                <div class="d-flex align-items-start">
+                    <i class="bi bi-info-circle-fill me-2 fs-5" style="color: #0d9373;"></i>
+                    <div class="flex-grow-1">
+                        {{ session('status') }}
+                    </div>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        @endif
+    </div>
+
     <header class="site-header sticky-top" id="siteHeader">
         <nav class="navbar navbar-expand-md container py-2">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
@@ -1091,18 +1165,6 @@
                         <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
                     </li>
                 </ul>
-
-                {{-- COMMENTED OUT - Mini chart decoration (not used) - Có thể xóa sau
-                <div class="d-none d-lg-flex align-items-end ms-lg-5 me-lg-4" aria-hidden="true">
-                    <div class="mini-chart">
-                        <span class="mini-chart-bar" data-h="sm"></span>
-                        <span class="mini-chart-bar" data-h="md"></span>
-                        <span class="mini-chart-bar" data-h="lg"></span>
-                        <span class="mini-chart-bar" data-h="md"></span>
-                        <span class="mini-chart-bar" data-h="xl"></span>
-                    </div>
-                </div>
-                --}}
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
@@ -1128,9 +1190,13 @@
                     $avatarUrl = $avatar && ! $avatarIsPreset ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null;
                     @endphp
                     <div class="dropdown">
-                        <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng">
+                        <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng" id="clientNotificationButton">
                             <i class="bi bi-bell" style="font-size: 1.05rem;"></i>
-                            <span class="notification-dot" aria-hidden="true"></span>
+                            @if(Auth::user()->unreadNotifications->count() > 0)
+                                <span class="notification-dot" id="clientNotificationDot" aria-hidden="true"></span>
+                            @else
+                                <span class="notification-dot d-none" id="clientNotificationDot" aria-hidden="true"></span>
+                            @endif
                         </button>
                         <div class="dropdown-menu dropdown-menu-end notification-menu">
                             <div class="notification-head">
@@ -1139,34 +1205,51 @@
                                         <div class="fw-bold" style="font-size: 0.9rem;">Thông báo</div>
                                         <div class="text-secondary" style="font-size: 0.8rem;">Cập nhật đơn hàng của bạn</div>
                                     </div>
-                                    <span class="badge rounded-pill" style="background: var(--c-primary-light); color: var(--c-primary); font-size: 0.7rem;">3 mới</span>
+                                    <span class="badge rounded-pill {{ Auth::user()->unreadNotifications->count() > 0 ? '' : 'd-none' }}" id="clientNotificationBadge" style="background: var(--c-primary-light); color: var(--c-primary); font-size: 0.7rem;">
+                                        {{ Auth::user()->unreadNotifications->count() }} mới
+                                    </span>
                                 </div>
                             </div>
-                            <div class="notification-list">
-                                <div class="notification-item">
-                                    <span class="notification-icon"><i class="bi bi-truck"></i></span>
-                                    <div>
-                                        <div class="fw-semibold" style="font-size: 0.85rem;">Shipper sắp đến</div>
-                                        <div class="text-secondary" style="font-size: 0.8rem;">Đơn hàng đang ở gần địa chỉ nhận.</div>
-                                        <div class="notification-time mt-1">Vừa xong</div>
+                            <div class="notification-list" id="clientNotificationList">
+                                @forelse(Auth::user()->notifications->take(10) as $notification)
+                                    @php
+                                        $notificationOrderId = $notification->data['order_id'] ?? null;
+                                        $notificationUrl = is_numeric($notificationOrderId)
+                                            ? route('orders.index', ['order' => (int) $notificationOrderId])
+                                            : route('orders.index');
+                                    @endphp
+                                    <a href="{{ $notificationUrl }}"
+                                       class="notification-item is-clickable {{ is_null($notification->read_at) ? 'unread' : '' }}"
+                                       data-notification-id="{{ $notification->id }}"
+                                       @if(is_numeric($notificationOrderId)) data-order-id="{{ (int) $notificationOrderId }}" @endif>
+                                        <span class="notification-icon">
+                                            @include('partials.notification-icon', ['type' => $notification->data['type'] ?? null])
+                                        </span>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                                <div class="fw-semibold" style="font-size: 0.85rem;">
+                                                    {{ $notification->data['title'] ?? 'Thông báo' }}
+                                                </div>
+                                                @if(!empty($notification->data['status_label']))
+                                                    <span class="badge rounded-pill" style="background: var(--c-primary-light); color: var(--c-primary); font-size: 0.68rem;">
+                                                        {{ $notification->data['status_label'] }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <div class="text-secondary" style="font-size: 0.8rem;">
+                                                {{ $notification->data['message'] ?? '' }}
+                                            </div>
+                                            <div class="notification-time mt-1">
+                                                {{ $notification->created_at->diffForHumans() }}
+                                            </div>
+                                        </div>
+                                    </a>
+                                @empty
+                                    <div class="text-center py-4 text-secondary">
+                                        <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>
+                                        <div style="font-size: 0.85rem;">Chưa có thông báo mới</div>
                                     </div>
-                                </div>
-                                <div class="notification-item">
-                                    <span class="notification-icon"><i class="bi bi-cup-straw"></i></span>
-                                    <div>
-                                        <div class="fw-semibold" style="font-size: 0.85rem;">Đơn đang được giao</div>
-                                        <div class="text-secondary" style="font-size: 0.8rem;">Đồ uống đã rời cửa hàng.</div>
-                                        <div class="notification-time mt-1">10 phút trước</div>
-                                    </div>
-                                </div>
-                                <div class="notification-item">
-                                    <span class="notification-icon"><i class="bi bi-check2-circle"></i></span>
-                                    <div>
-                                        <div class="fw-semibold" style="font-size: 0.85rem;">Giao hàng thành công</div>
-                                        <div class="text-secondary" style="font-size: 0.8rem;">Cảm ơn bạn đã đặt tại Chill Drink.</div>
-                                        <div class="notification-time mt-1">Hôm nay</div>
-                                    </div>
-                                </div>
+                                @endforelse
                             </div>
                             <div class="p-3 border-top">
                                 <a href="{{ route('orders.index') }}" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
@@ -1185,6 +1268,9 @@
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
                             <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                            @if(auth()->user()->isAdmin() || auth()->user()->isSuperAdmin())
+                                <li><a class="dropdown-item" href="{{ auth()->user()->isSuperAdmin() ? route('admin.super-admin') : route('admin.dashboard') }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
+                            @endif
                             <li>
                                 <hr class="dropdown-divider" style="margin: 0.25rem 0;">
                             </li>
@@ -1215,6 +1301,7 @@
         @yield('content')
     </main>
 
+    @unless(request()->routeIs('login', 'register', 'password.*', 'verification.*'))
     <footer class="site-footer mt-5">
         <div class="container py-5">
             <div class="row g-4 g-lg-5">
@@ -1267,6 +1354,7 @@
             </div>
         </div>
     </footer>
+    @endunless
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -1576,6 +1664,45 @@
             }
         });
     </script>
+
+    <!-- Auto-dismiss flash notifications with animation -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationContainer = document.getElementById('flashNotifications');
+            if (!notificationContainer) return;
+
+            const alerts = notificationContainer.querySelectorAll('.alert');
+            
+            alerts.forEach(function(alert) {
+                // Auto-dismiss after 5 seconds
+                const dismissTimer = setTimeout(function() {
+                    // Add fade-out animation
+                    alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateX(100%)';
+                    
+                    // Remove from DOM after animation
+                    setTimeout(function() {
+                        if (alert.parentNode) {
+                            const bsAlert = bootstrap.Alert.getInstance(alert);
+                            if (bsAlert) {
+                                bsAlert.close();
+                            } else {
+                                alert.remove();
+                            }
+                        }
+                    }, 500);
+                }, 5000);
+
+                // Clear timer if manually closed
+                alert.addEventListener('closed.bs.alert', function() {
+                    clearTimeout(dismissTimer);
+                });
+            });
+        });
+    </script>
+    @include('partials.realtime')
+    @include('partials.client-notifications')
 </body>
 
 </html>

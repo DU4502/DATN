@@ -6,8 +6,8 @@
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
     .product-detail-wrap {
-        padding-top: 1.5rem;
-        padding-bottom: 4rem;
+        padding-top: 1rem;
+        padding-bottom: 3rem;
     }
 
     .breadcrumb-soft {
@@ -28,13 +28,14 @@
     .detail-photo-card {
         position: relative;
         overflow: hidden;
+        width: 100%;
         border: 0;
         border-radius: var(--radius-md, 12px);
-        background: var(--c-bg-warm, #f0fdf9);
-        box-shadow: var(--shadow-lg);
-        aspect-ratio: 1 / 1;
-        height: auto;
-        min-height: 0;
+        background: #ffffff;
+        box-shadow: 0 18px 42px rgba(7, 52, 58, 0.08);
+        aspect-ratio: 4 / 3;
+        min-height: 420px;
+        max-height: 560px;
     }
 
     .detail-photo-card img {
@@ -42,7 +43,7 @@
         height: 100%;
         object-fit: contain !important;
         object-position: center;
-        padding: 1rem;
+        padding: 0.65rem;
         transition: opacity 0.18s ease;
     }
 
@@ -79,20 +80,23 @@
 
     .detail-gallery {
         position: sticky;
-        top: 108px;
+        top: 104px;
+        width: 100%;
+        max-width: 680px;
+        z-index: 1;
     }
 
     .detail-thumbs {
         display: flex;
         gap: 0.65rem;
-        margin-top: 0.75rem;
+        margin-top: 0.85rem;
         overflow-x: auto;
         padding-bottom: 0.2rem;
     }
 
     .detail-thumb {
-        width: 86px;
-        height: 70px;
+        width: 92px;
+        height: 78px;
         border: 1.5px solid transparent;
         border-radius: var(--radius-sm, 8px);
         background: #ffffff;
@@ -130,11 +134,21 @@
     }
 
     .detail-layout {
-        --bs-gutter-x: 2.25rem;
+        display: grid;
+        grid-template-columns: minmax(420px, 0.92fr) minmax(0, 1.08fr);
+        gap: clamp(2rem, 3.5vw, 3.75rem);
+        align-items: start;
+        overflow: visible;
+    }
+
+    .detail-media-panel,
+    .detail-info-panel {
+        min-width: 0;
     }
 
     .detail-summary {
-        max-width: 560px;
+        max-width: 760px;
+        width: 100%;
     }
 
     .detail-summary h1 {
@@ -142,8 +156,8 @@
     }
 
     .detail-summary .detail-desc {
-        font-size: 0.95rem;
-        line-height: 1.7;
+        font-size: 0.98rem;
+        line-height: 1.62;
         margin-bottom: 0;
     }
 
@@ -157,11 +171,11 @@
     }
 
     .option-card {
-        max-width: 560px;
+        max-width: 760px;
     }
 
     .option-block {
-        margin-bottom: 1.05rem;
+        margin-bottom: 0.9rem;
     }
 
     .option-label {
@@ -173,7 +187,7 @@
     }
 
     .choice-btn {
-        min-height: 50px;
+        min-height: 48px;
         border: 1.5px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-sm, 8px);
         background: var(--c-surface, #ffffff);
@@ -223,44 +237,45 @@
         border: 1px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-full, 999px);
         background: #ffffff;
-        padding: 0.45rem 0.75rem;
+        padding: 0.38rem 0.7rem;
     }
 
     .detail-action-row {
         display: grid;
         grid-template-columns: 142px minmax(0, 1fr);
-        gap: 0.9rem;
+        gap: 0.8rem;
         align-items: stretch;
     }
 
     .detail-button-row {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.9rem;
+        gap: 0.8rem;
     }
 
     .product-detail-actions {
         border-top: 0;
-        padding-top: 0.5rem;
+        padding-top: 0.35rem;
     }
 
     .product-detail-actions .btn-primary {
-        min-height: 52px;
+        min-height: 50px;
     }
 
     .detail-buy-btn {
-        min-height: 52px;
+        min-height: 50px;
         border-radius: var(--radius-full, 999px);
         font-weight: 800;
     }
 
     .detail-info-card {
-        max-width: 560px;
+        max-width: 760px;
     }
 
     .product-detail-wrap .display-5 {
-        font-size: clamp(1.55rem, 2.3vw, 2rem);
+        font-size: clamp(1.65rem, 2.4vw, 2.35rem);
         line-height: 1.12;
+        overflow-wrap: anywhere;
     }
 
     .qty-control button {
@@ -271,28 +286,6 @@
         background: var(--c-primary-light, #e6f7f2);
         color: var(--c-primary-dark, #067a5f);
         font-weight: 800;
-    }
-
-    .detail-benefits {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.75rem;
-        padding-top: 0.9rem;
-    }
-
-    .detail-benefit {
-        text-align: center;
-        color: var(--c-muted, #6b7280);
-        font-size: 0.74rem;
-        font-weight: 800;
-        text-transform: uppercase;
-    }
-
-    .detail-benefit i {
-        display: block;
-        color: var(--c-primary, #0d9373);
-        font-size: 1.15rem;
-        margin-bottom: 0.35rem;
     }
 
     .topping-choice {
@@ -334,10 +327,10 @@
 
     .compact-select-toggle {
         width: 100%;
-        min-height: 50px;
+        min-height: 48px;
         border: 1.5px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-sm, 8px);
-        padding: 0.65rem 0.9rem;
+        padding: 0.55rem 0.9rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -347,6 +340,33 @@
         background: var(--c-surface, #fff);
         cursor: pointer;
         transition: border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .compact-select-text {
+        min-width: 0;
+        display: grid;
+        gap: 0.08rem;
+        text-align: left;
+    }
+
+    .compact-select-title {
+        color: var(--c-primary-dark, #067a5f);
+        font-size: 0.68rem;
+        font-weight: 800;
+        line-height: 1;
+        text-transform: uppercase;
+    }
+
+    .compact-select-value {
+        color: var(--c-ink, #111827);
+        font-size: 0.94rem;
+        font-weight: 850;
+        line-height: 1.2;
+    }
+
+    .compact-select.open .compact-select-value,
+    .compact-select-toggle:focus .compact-select-value {
+        color: var(--c-primary-dark, #067a5f);
     }
 
     .compact-select.open .compact-select-toggle,
@@ -489,6 +509,11 @@
     }
 
     @media (max-width: 991.98px) {
+        .detail-layout {
+            grid-template-columns: 1fr;
+            gap: 1.75rem;
+        }
+
         .detail-photo-card {
             height: auto;
             min-height: 0;
@@ -525,8 +550,7 @@
         }
 
         .detail-action-row,
-        .detail-button-row,
-        .detail-benefits {
+        .detail-button-row {
             grid-template-columns: 1fr;
         }
 
@@ -546,8 +570,8 @@
             <span class="text-primary">{{ $product->name }}</span>
         </nav>
 
-        <div class="row g-4 align-items-start detail-layout">
-            <div class="col-lg-5">
+        <div class="detail-layout">
+            <div class="detail-media-panel">
                 @php
                 $detailCategory = $product->category->name ?? null;
                 $detailGalleryImages = $product instanceof \App\Models\Product
@@ -640,7 +664,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-7">
+            <div class="detail-info-panel">
                 <div class="d-flex flex-column gap-3 detail-summary">
                     <div>
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
@@ -681,7 +705,10 @@
                                 <label class="option-label d-block mb-3">Mức đường</label>
                                 <div class="compact-select" data-compact-choice="sugar">
                                     <button type="button" class="compact-select-toggle">
-                                        <span data-compact-label>100% (Tiêu chuẩn)</span>
+                                        <span class="compact-select-text">
+                                            <span class="compact-select-title">Mức đường</span>
+                                            <span class="compact-select-value" data-compact-label>100% (Tiêu chuẩn)</span>
+                                        </span>
                                         <i class="bi bi-chevron-down"></i>
                                     </button>
                                     <div class="compact-select-menu">
@@ -697,7 +724,10 @@
                                 <label class="option-label d-block mb-3">Mức đá</label>
                                 <div class="compact-select" data-compact-choice="ice">
                                     <button type="button" class="compact-select-toggle">
-                                        <span data-compact-label>100% (Tiêu chuẩn)</span>
+                                        <span class="compact-select-text">
+                                            <span class="compact-select-title">Mức đá</span>
+                                            <span class="compact-select-value" data-compact-label>100% (Tiêu chuẩn)</span>
+                                        </span>
                                         <i class="bi bi-chevron-down"></i>
                                     </button>
                                     <div class="compact-select-menu">
@@ -750,20 +780,6 @@
                             @endif
                         </div>
 
-                        <div class="detail-benefits">
-                            <div class="detail-benefit">
-                                <i class="bi bi-patch-check"></i>
-                                Tự nhiên 100%
-                            </div>
-                            <div class="detail-benefit">
-                                <i class="bi bi-truck"></i>
-                                Giao nhanh 30'
-                            </div>
-                            <div class="detail-benefit">
-                                <i class="bi bi-shield-check"></i>
-                                Đảm bảo an toàn
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
