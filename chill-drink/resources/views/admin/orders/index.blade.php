@@ -40,6 +40,9 @@
                     <th>Mã đơn</th>
                     <th>Ngày đặt</th>
                     <th>Khách hàng</th>
+                    @if(auth()->user()->isSuperAdmin())
+                        <th>Chi nhánh</th>
+                    @endif
                     <th>Thanh toán</th>
                     <th class="text-end">Tổng tiền</th>
                     <th class="text-center">Trạng thái</th>
@@ -63,6 +66,15 @@
                             </span>
                         </div>
                     </td>
+                    @if(auth()->user()->isSuperAdmin())
+                        <td>
+                            @if($order->branch)
+                                <span class="badge bg-light text-dark">{{ $order->branch->name }}</span>
+                            @else
+                                <span class="text-secondary small">-</span>
+                            @endif
+                        </td>
+                    @endif
                     <td>
                         @if(isset($order->payment_status))
                             @if($order->payment_status === 'paid')

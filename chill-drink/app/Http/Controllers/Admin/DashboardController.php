@@ -28,16 +28,6 @@ class DashboardController extends Controller
         $chartBars = $chartDatasets['revenue']['bars'] ?? [];
         $topProducts = $topProducts ?? $this->topProducts();
 
-        // Get recent orders
-        $recentOrdersQuery = Order::with('user');
-
-        if (Schema::hasColumn('orders', 'created_at')) {
-            $recentOrdersQuery->latest();
-        } else {
-            $recentOrdersQuery->orderByDesc('id');
-        }
-
-        $recentOrders = $recentOrdersQuery->take(5)->get();
         // Đảm bảo tất cả các biến đã được định nghĩa đầy đủ ở trên
         return view('admin.dashboard', compact(
             'totalUsers',
@@ -123,6 +113,9 @@ class DashboardController extends Controller
         $topProducts = $this->topProducts($currentFrom, $currentTo);
 
         $recentOrdersQuery = Order::with('user');
+        // Apply branch scope
+        $recentOrdersQuery = $this->applyBranchScope($recentOrdersQuery);
+        
         if (Schema::hasColumn('orders', 'created_at')) {
             $recentOrdersQuery->latest();
         } else {
@@ -145,6 +138,23 @@ class DashboardController extends Controller
             'topProducts',
             'recentOrders'
         );
+    }
+
+    /**
+     * Apply branch scope to a query based on current user's role and branch
+     * Super Admin sees all data, Admin sees only their branch's data
+     */
+    private function applyBranchScope($query)
+    {
+        $user = auth()->user();
+        
+        // Super Admin (role_id = 3) can see all data
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+        
+        // Regular Admin (role_id = 2) can only see their branch's data
+        return $query->where('branch_id', $user->branch_id);
     }
 
     private function orderAmountColumn(): ?string
@@ -172,6 +182,9 @@ class DashboardController extends Controller
         }
 
         $query = Order::query();
+        
+        // Apply branch scope
+        $query = $this->applyBranchScope($query);
 
         if (Schema::hasColumn('orders', 'status')) {
             $query->where('status', 'completed');
@@ -196,6 +209,9 @@ class DashboardController extends Controller
         }
 
         $query = Order::query()->whereBetween('created_at', [$from, $to]);
+        
+        // Apply branch scope
+        $query = $this->applyBranchScope($query);
 
         if (Schema::hasColumn('orders', 'status')) {
             $query->where('status', 'completed');
@@ -214,6 +230,9 @@ class DashboardController extends Controller
         }
 
         $query = Order::query();
+        
+        // Apply branch scope
+        $query = $this->applyBranchScope($query);
 
         if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
             $query->whereBetween('created_at', [$from, $to]);
@@ -467,6 +486,7 @@ class DashboardController extends Controller
                 $value = $this->orderCountFor($slot['from'], $slot['to']);
                 $tooltipValue = number_format($value, 0, ',', '.') . ' đơn';
             } elseif ($metric === 'users') {
+                // New users don't need branch scope (global metric)
                 $value = $this->newUsersBetween($slot['from'], $slot['to']);
                 $tooltipValue = number_format($value, 0, ',', '.') . ' tài khoản';
             }
@@ -543,6 +563,12 @@ class DashboardController extends Controller
 
         if ($orderCreatedAtAvailable && $from && $to) {
             $salesQuery->whereBetween('orders.created_at', [$from, $to]);
+        }
+
+        // Apply branch scope to orders
+        $user = auth()->user();
+        if ($orderJoinAvailable && !$user->isSuperAdmin()) {
+            $salesQuery->where('orders.branch_id', $user->branch_id);
         }
 
         if ($orderJoinAvailable && Schema::hasColumn('orders', 'status')) {
