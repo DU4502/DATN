@@ -49,6 +49,7 @@ class RegisteredUserController extends Controller
 
         $request->session()->forget('url.intended');
 
-        return redirect()->route('home');
+        // Sau khi đăng ký, chuyển đến trang nhắc xác nhận email
+        return redirect()->route('verification.notice');
     }
 }

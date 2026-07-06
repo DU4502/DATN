@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Order;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use App\Models\Review;
+use App\Support\OrderStatus;
 
 class ProfileController extends Controller
 {
@@ -37,6 +39,34 @@ class ProfileController extends Controller
             'profileOrders' => $orderHistoryData['profileOrders'],
             'orderStatusLabels' => $orderHistoryData['orderStatusLabels'],
             'paymentLabels' => $orderHistoryData['paymentLabels'],
+        ]);
+    }
+
+    public function notificationsFeed(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $notifications = $user->notifications()
+            ->take(10)
+            ->get()
+            ->map(fn ($notification) => [
+                'id' => $notification->id,
+                'title' => $notification->data['title'] ?? 'Thông báo',
+                'message' => $notification->data['message'] ?? '',
+                'type' => $notification->data['type'] ?? null,
+                'icon' => OrderStatus::notificationIconByType($notification->data['type'] ?? null),
+                'order_id' => $notification->data['order_id'] ?? null,
+                'url' => $this->orderNotificationUrl($notification->data['order_id'] ?? null),
+                'status' => $notification->data['status'] ?? null,
+                'status_label' => $notification->data['status_label'] ?? null,
+                'read_at' => $notification->read_at?->toIso8601String(),
+                'created_at' => $notification->created_at?->diffForHumans(),
+            ])
+            ->values();
+
+        return response()->json([
+            'unread_count' => $user->unreadNotifications()->count(),
+            'notifications' => $notifications,
         ]);
     }
 
@@ -98,7 +128,7 @@ class ProfileController extends Controller
             ->take(15)
             ->get()
             ->map(function (Order $order) {
-                $statusKey = $this->normalizeOrderStatus((string) $order->status);
+                $statusKey = OrderStatus::normalize((string) $order->status);
                 $displayTotal = $this->resolveOrderDisplayTotal($order);
 
                 $order->setAttribute('status_display_key', $statusKey);
@@ -129,13 +159,7 @@ class ProfileController extends Controller
 
         return [
             'profileOrders' => $profileOrders,
-            'orderStatusLabels' => [
-                'pending' => ['label' => 'Chờ xử lý', 'class' => 'order-status-pending'],
-                'processing' => ['label' => 'Đang xử lý', 'class' => 'order-status-processing'],
-                'shipping' => ['label' => 'Đang giao', 'class' => 'order-status-shipping'],
-                'completed' => ['label' => 'Hoàn tất', 'class' => 'order-status-completed'],
-                'cancelled' => ['label' => 'Đã hủy', 'class' => 'order-status-cancelled'],
-            ],
+            'orderStatusLabels' => OrderStatus::userBadgeStyles(),
             'paymentLabels' => [
                 'cod' => 'Tiền mặt (COD)',
                 'bank_transfer' => 'Chuyển khoản',
@@ -147,13 +171,18 @@ class ProfileController extends Controller
         ];
     }
 
+    private function orderNotificationUrl(mixed $orderId): string
+    {
+        if (! is_numeric($orderId)) {
+            return route('orders.index');
+        }
+
+        return route('orders.index', ['order' => (int) $orderId]);
+    }
+
     private function normalizeOrderStatus(string $status): string
     {
-        return match ($status) {
-            'preparing' => 'processing',
-            'shipped', 'delivering' => 'shipping',
-            default => $status,
-        };
+        return OrderStatus::normalize($status);
     }
 
     private function resolveOrderDisplayTotal(Order $order): int

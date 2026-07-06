@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable;
+
+    public const SUPER_ADMIN_EMAIL = 'superadmin@chilldrink.com';
 
     /**
      * Các trường được phép fill (Đã đồng bộ với database trong ảnh)
@@ -23,10 +26,13 @@ class User extends Authenticatable
         'phone',
         'address',
         'area',
+        'branch_id',
         'reset_token',
         'reset_expire',
         'avatar',
         'is_active',
+        'last_login_at',
+        'last_login_ip',
     ];
 
     protected $hidden = [
@@ -42,6 +48,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'reset_expire' => 'datetime',
             'is_active' => 'boolean', // Tự động cast về true/false
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -99,7 +106,12 @@ class User extends Authenticatable
      */
     public function isAdmin(): bool
     {
-        return (int) ($this->role_id ?? 1) === 2;
+        return in_array((int) ($this->role_id ?? 1), [2, 3], true);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return (int) ($this->role_id ?? 1) === 3;
     }
 
     public function isCustomer(): bool
@@ -114,7 +126,20 @@ class User extends Authenticatable
 
     public function scopeAdmins($query)
     {
-        return $query->where('role_id', 2);
+        return $query->whereIn('role_id', [2, 3]);
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * Get the user's received vouchers.
+     */
+    public function vouchers()
+    {
+        return $this->hasMany(UserVoucher::class);
     }
 
     /**

@@ -44,7 +44,7 @@ class UserManagementTest extends TestCase
         $response->assertRedirect(route('admin.users.index'));
     }
 
-    public function test_staff_role_is_not_allowed(): void
+    public function test_unknown_role_is_not_allowed(): void
     {
         $admin = $this->admin();
         $user = $this->user();
@@ -52,7 +52,7 @@ class UserManagementTest extends TestCase
         $this->actingAs($admin)
             ->from(route('admin.users.index'))
             ->put(route('admin.users.update', $user), [
-                'role_id' => 3,
+                'role_id' => 4,
             ])
             ->assertSessionHasErrors('role_id');
 
