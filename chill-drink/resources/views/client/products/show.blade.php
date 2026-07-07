@@ -253,6 +253,30 @@
         gap: 0.8rem;
     }
 
+    .detail-action-content {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 50px;
+        gap: 0.8rem;
+        align-items: stretch;
+    }
+
+    .detail-action-content form {
+        min-width: 0;
+        margin: 0;
+    }
+
+    .detail-favorite-btn {
+        width: 50px;
+        height: 50px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50% !important;
+        font-size: 1.15rem;
+    }
+
     .product-detail-actions {
         border-top: 0;
         padding-top: 0.35rem;
@@ -580,14 +604,22 @@
                 ? $product->gallery_images
                 : ($product->gallery_images ?? []);
 
-                if (empty($detailGalleryImages)) {
-                $detailGalleryImages = $uiGetProductGallery(
-                $product->sku ?? null,
-                $detailCategory,
-                $product->name,
-                6,
-                $product->image_url ?? $product->image ?? null
-                );
+                if (count($detailGalleryImages) < 4) {
+                    $generatedGallery = $uiGetProductGallery(
+                        $product->sku ?? null,
+                        $detailCategory,
+                        $product->name,
+                        4,
+                        $detailGalleryImages[0] ?? $product->image_url ?? $product->image ?? null
+                    );
+
+                    $detailGalleryImages = collect($detailGalleryImages)
+                        ->merge($generatedGallery)
+                        ->filter()
+                        ->unique()
+                        ->take(4)
+                        ->values()
+                        ->all();
                 }
 
                     $detailMainImage = $detailGalleryImages[0]
@@ -763,6 +795,7 @@
                             </div>
 
                             @if(($product->stock ?? 1) > 0)
+                            <div class="detail-action-content">
                                 <form action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
                                     @csrf
                                     <input type="hidden" name="size" value="M" data-size-input>
@@ -777,6 +810,15 @@
                                         <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill">Mua ngay</button>
                                     </div>
                                 </form>
+                                @auth
+                                <form action="{{ route('favorites.toggle', $product) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline-danger detail-favorite-btn" aria-label="Lưu món yêu thích" title="Lưu món yêu thích">
+                                        <i class="bi bi-heart"></i>
+                                    </button>
+                                </form>
+                                @endauth
+                            </div>
                             @else
                             <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
                             @endif

@@ -134,6 +134,7 @@ class OrderController extends Controller
             'can_cancel' => ! in_array(OrderStatus::normalize((string) $order->status), [OrderStatus::COMPLETED, OrderStatus::CANCELLED], true),
             'status_options' => OrderStatus::stepwiseOptions((string) $order->status),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
+            'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
             'status_update_url' => route('admin.orders.updateStatus', $order->id),
         ];

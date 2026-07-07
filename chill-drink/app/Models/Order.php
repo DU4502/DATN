@@ -36,6 +36,7 @@ class Order extends Model
         'vnpay_transaction_id',
         'status',
         'note',
+        'scheduled_at',
     ];
 
     /**
@@ -50,6 +51,7 @@ class Order extends Model
         'discount'                       => 'integer',
         'total'                          => 'integer',
         'confirmation_token_expires_at'  => 'datetime',
+        'scheduled_at'                   => 'datetime',
     ];
 
     /**

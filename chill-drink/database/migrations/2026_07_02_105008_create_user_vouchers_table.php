@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        // Bảng này đã được tạo ở migration 2026_05_17_121831.
+        // Giữ guard để migrate:fresh hoạt động với cả database cũ lẫn mới.
+        if (Schema::hasTable('user_vouchers')) {
+            return;
+        }
+
         Schema::create('user_vouchers', function (Blueprint $table) {
             $table->integer('id')->autoIncrement();
             $table->integer('user_id');
@@ -25,6 +31,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('user_vouchers');
+        // Không xóa bảng thuộc migration 2026_05_17_121831 khi rollback migration tương thích này.
     }
 };
