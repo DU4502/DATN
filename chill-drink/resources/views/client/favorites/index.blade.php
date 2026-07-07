@@ -1,0 +1,5 @@
+@extends('layouts.client')
+@section('title', 'Món yêu thích')
+@section('content')
+<section class="py-5"><div class="container"><h1 class="fw-bold mb-4">Món yêu thích</h1><div class="row g-4">@forelse($favorites as $favorite)@if($favorite->product)<div class="col-sm-6 col-lg-3"><div class="card h-100 border-0 shadow-sm overflow-hidden"><x-product-image :src="$favorite->product->image_url" :name="$favorite->product->name" class="w-100" style="height:220px;object-fit:cover"/><div class="p-3"><h2 class="h5 fw-bold">{{ $favorite->product->name }}</h2><p class="text-primary fw-bold">{{ number_format($favorite->product->price) }}đ</p><div class="d-flex gap-2"><a class="btn btn-primary flex-grow-1" href="{{ route('products.show', $favorite->product->slug) }}">Đặt ngay</a><form method="POST" action="{{ route('favorites.toggle', $favorite->product) }}">@csrf<button class="btn btn-outline-danger">♥</button></form></div></div></div></div>@endif @empty<div class="alert alert-info">Bạn chưa lưu món yêu thích nào.</div>@endforelse</div></div></section>
+@endsection

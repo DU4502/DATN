@@ -66,6 +66,15 @@ class CheckoutController extends Controller
         $locationReadyBranchCount = Branch::query()->availableForLocation()->count();
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
+        $checkoutAddresses = auth()->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get()->map(fn ($address) => [
+            'id' => (string) $address->id,
+            'name' => $address->receiver_name,
+            'phone' => $address->phone,
+            'street' => $address->detail,
+            'area' => collect([$address->ward, $address->district, $address->province])->filter()->implode(', '),
+            'type' => $address->label,
+            'isDefault' => (bool) $address->is_default,
+        ])->values();
         $now = now();
         $availableVouchers = Voucher::query()
             ->where('status', true)
@@ -95,7 +104,8 @@ class CheckoutController extends Controller
             'availableVouchers',
             'locationReadyBranchCount',
             'loyaltyContext',
-            'subtotal'
+            'subtotal',
+            'checkoutAddresses'
         ));
     }
 
@@ -116,12 +126,21 @@ class CheckoutController extends Controller
             ],
             'voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
+            'scheduled_at' => [
+                'nullable',
+                'date',
+                'after_or_equal:'.now()->addMinutes(15)->format('Y-m-d H:i'),
+                'before_or_equal:'.now()->addDays(7)->format('Y-m-d H:i'),
+            ],
         ], [
             'shipping_address_ui.required' => 'Vui lòng nhập địa chỉ nhận hàng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
+            'scheduled_at.date' => 'Thời gian muốn nhận không hợp lệ.',
+            'scheduled_at.after_or_equal' => 'Thời gian muốn nhận phải cách hiện tại ít nhất 15 phút.',
+            'scheduled_at.before_or_equal' => 'Chỉ có thể đặt lịch nhận trong vòng 7 ngày tới.',
             'branch_id.exists' => 'Chi nhánh đã chọn không còn hoạt động. Vui lòng tìm lại chi nhánh gần nhất.',
         ]);
 
@@ -172,6 +191,7 @@ class CheckoutController extends Controller
                 'payment_method' => $request->payment_method,
                 'status' => 'pending',
                 'note' => $note,
+                'scheduled_at' => $request->filled('scheduled_at') ? $request->date('scheduled_at') : null,
             ];
 
             if (Schema::hasColumn('orders', 'branch_id') && $request->filled('branch_id')) {
@@ -206,7 +226,20 @@ class CheckoutController extends Controller
                 $orderData['payment_status'] = 'pending';
             }
 
+            $groupOrderId = session()->get('checkout_group_order_id');
+            if ($groupOrderId) {
+                $groupOrder = \App\Models\GroupOrder::query()->lockForUpdate()->findOrFail($groupOrderId);
+                abort_unless($groupOrder->owner_id === auth()->id() && $groupOrder->status === 'closed' && ! $groupOrder->order_id, 422, 'Đơn nhóm không còn hợp lệ để thanh toán.');
+                $expectedKeys = collect(session()->get('group_cart_keys', []))->sort()->values()->all();
+                $actualKeys = collect(array_keys($cart))->sort()->values()->all();
+                abort_unless($expectedKeys === $actualKeys, 422, 'Giỏ hàng đơn nhóm đã bị thay đổi. Vui lòng chốt lại đơn.');
+            }
+
             $order = Order::create($orderData);
+
+            if ($groupOrderId) {
+                $groupOrder->update(['order_id' => $order->id, 'status' => 'ordered']);
+            }
 
             // Create order items
             foreach ($orderItems as $item) {
@@ -218,7 +251,12 @@ class CheckoutController extends Controller
                 $this->recordVoucherUsage($voucher, $order->id, $discount);
             }
 
-            $this->removeCheckedOutItems($fullCart, $selectedKeys);
+            if ($groupOrderId) {
+                session()->put('cart', session()->pull('personal_cart_backup', []));
+                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys']);
+            } else {
+                $this->removeCheckedOutItems($fullCart, $selectedKeys);
+            }
 
             DB::commit();
 
@@ -548,7 +586,8 @@ class CheckoutController extends Controller
                 'total_price' => $unitPrice * $quantity,
                 'ice_level' => (int) ($item['ice_level'] ?? 100),
                 'sugar_level' => (int) ($item['sugar_level'] ?? 100),
-                'toppings' => $item['toppings'] ?? [],
+            'toppings' => $item['toppings'] ?? [],
+            'item_note' => $item['note'] ?? null,
             ];
         }
 
@@ -730,7 +769,7 @@ class CheckoutController extends Controller
             'quantity' => $item['quantity'],
         ];
 
-        foreach (['product_size_id', 'unit_price', 'total_price', 'ice_level', 'sugar_level'] as $column) {
+        foreach (['product_size_id', 'unit_price', 'total_price', 'ice_level', 'sugar_level', 'item_note'] as $column) {
             if (Schema::hasColumn('order_items', $column)) {
                 $data[$column] = $item[$column];
             }

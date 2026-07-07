@@ -141,6 +141,7 @@
                 <tr>
                     <th>Mã đơn</th>
                     <th>Ngày đặt</th>
+                    <th>Thời gian nhận</th>
                     <th>Khách hàng</th>
                     <th>Số điện thoại</th>
                     <th>Thanh toán</th>
@@ -159,6 +160,13 @@
                 <tr data-order-id="{{ $order->id }}">
                     <td class="fw-bold text-primary">#{{ $order->id }}</td>
                     <td class="text-secondary">{{ optional($order->created_at)->format('d/m/Y H:i') }}</td>
+                    <td>
+                        @if($order->scheduled_at)
+                            <span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-calendar-check me-1"></i>{{ $order->scheduled_at->format('H:i · d/m/Y') }}</span>
+                        @else
+                            <span class="text-secondary small">Nhận sớm nhất</span>
+                        @endif
+                    </td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
                             <span class="admin-avatar" style="width:34px;height:34px;font-size:.8rem;">{{ mb_substr($order->customerName() ?: 'K', 0, 1) }}</span>
@@ -286,12 +294,11 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="8" class="text-center text-secondary py-5">
-                        <div class="fw-bold text-dark mb-1">Chưa có đơn hàng</div>
-                        <div>Các đơn mới sẽ xuất hiện tại đây.</div>
-                    </td>
-                </tr>
+ <tr>
+    <td colspan="9" class="text-center text-secondary py-5">
+        <div class="fw-bold text-dark mb-1">Chưa có đơn hàng</div>
+        <div>Các đơn mới sẽ xuất hiện tại đây.</div>
+    </td>
                 @endforelse
             </tbody>
         </table>
@@ -488,6 +495,7 @@
             row.innerHTML = `
                 <td class="fw-bold text-primary">#${escapeHtml(payload.order_id)}</td>
                 <td class="text-secondary">${escapeHtml(payload.created_at || 'Vừa xong')}</td>
+                <td>${payload.scheduled_at ? `<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-calendar-check me-1"></i>${escapeHtml(payload.scheduled_at)}</span>` : '<span class="text-secondary small">Nhận sớm nhất</span>'}</td>
                 <td>
                     <div class="d-flex align-items-center gap-2">
                         <span class="admin-avatar" style="width:34px;height:34px;font-size:.8rem;">${escapeHtml((payload.customer_name || 'K').charAt(0))}</span>
