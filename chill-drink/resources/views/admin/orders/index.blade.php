@@ -35,46 +35,42 @@
             padding-right: 0.5rem;
         }
     }
+    
+    /* Custom status tabs matching image 2 */
     .status-pill {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.4rem 1.2rem;
+        padding: 0.5rem 1.25rem;
         border-radius: 50rem;
-        font-weight: 600;
+        font-weight: 500;
         font-size: 0.875rem;
         text-decoration: none;
         transition: all 0.2s ease;
         white-space: nowrap;
-        background: #f3f4f6; 
-        color: #6b7280;
-        border: 1px solid transparent;
+        background: #e9ecef; 
+        color: #374151;
+        border: none;
     }
 
     .status-pill:hover {
-        opacity: 0.8;
+        background: #dee2e6;
+        color: #111827;
     }
 
-    .status-pill-all { background: #f3f4f6; color: #4b5563; }
-    .status-pill-all.active { background: #2563eb; color: #ffffff; }
+    .status-pill.active {
+        background: #0D9373 !important;
+        color: #ffffff !important;
+        font-weight: 600;
+    }
 
-    .status-pill-pending { background: #fef3c7; color: #d97706; }
-    .status-pill-pending.active { background: #d97706; color: #ffffff; }
-
-    .status-pill-in_progress { background: #e0f2fe; color: #0284c7; }
-    .status-pill-in_progress.active { background: #0284c7; color: #ffffff; }
-
-    .status-pill-shipper_accepted { background: #ede9fe; color: #7c3aed; }
-    .status-pill-shipper_accepted.active { background: #7c3aed; color: #ffffff; }
-
-    .status-pill-arrived { background: #cffafe; color: #0891b2; }
-    .status-pill-arrived.active { background: #0891b2; color: #ffffff; }
-
-    .status-pill-completed { background: #dcfce3; color: #16a34a; }
-    .status-pill-completed.active { background: #16a34a; color: #ffffff; }
-
-    .status-pill-cancelled { background: #fee2e2; color: #dc2626; }
-    .status-pill-cancelled.active { background: #dc2626; color: #ffffff; }
+    /* Custom order status texts matching image 1 */
+    .status-text-pending { color: #d97706 !important; }
+    .status-text-in_progress { color: #0284c7 !important; }
+    .status-text-shipper_accepted { color: #7c3aed !important; }
+    .status-text-arrived { color: #0891b2 !important; }
+    .status-text-completed { color: #16a34a !important; }
+    .status-text-cancelled { color: #dc2626 !important; }
 </style>
 
 <div class="mb-4">
@@ -230,63 +226,114 @@
                     </td>
                 </tr>
                 <tr id="{{ $detailId }}" class="d-none order-detail-row">
-                    <td colspan="8" class="border-0 pt-0">
+                    <td colspan="9" class="border-0 pt-0">
                         <div class="order-detail-card p-4 shadow-sm">
                             <div class="row g-4">
-                                <div class="col-12">
+                                <!-- Cột Trái: Sản phẩm -->
+                                <div class="col-lg-7">
                                     <div class="mb-3">
-                                        <div class="admin-kicker mb-1 text-secondary">Sản phẩm trong đơn hàng</div>
+                                        <div class="admin-kicker mb-3 text-secondary fw-bold" style="letter-spacing: 0.05em;">SẢN PHẨM TRONG ĐƠN HÀNG</div>
                                     </div>
                                     <div class="d-grid gap-3">
                                         @foreach($order->orderItems as $item)
-                                            <div class="border rounded-4 p-3">
-                                                <div class="d-flex flex-column flex-sm-row gap-3 align-items-sm-center">
+                                            <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
+                                                <div class="d-flex align-items-center gap-3">
                                                     <div class="flex-shrink-0">
-                                                        <img src="{{ $item->product?->image_url }}" alt="{{ $item->product?->name ?? 'Sản phẩm' }}" style="width:72px;height:72px;object-fit:cover;border-radius:16px;background:#f3f4f6;">
+                                                        <img src="{{ $item->product?->image_url }}" alt="{{ $item->product?->name ?? 'Sản phẩm' }}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;background:#f8f9fa;">
                                                     </div>
                                                     <div class="flex-grow-1">
-                                                        <div class="fw-bold fs-5">{{ $item->product?->name ?? 'Sản phẩm đã xóa' }}</div>
-                                                        <div class="text-secondary">Size: {{ $item->productSize?->size?->name ?? 'Chưa chọn' }}</div>
-                                                        <div class="text-secondary">Đá: {{ (int) $item->ice_level }}% · Đường: {{ (int) $item->sugar_level }}% · Số lượng: {{ (int) $item->quantity }}</div>
+                                                        <h4 class="fw-bold mb-1" style="font-size: 0.95rem; color: var(--a-ink);">{{ $item->product?->name ?? 'Sản phẩm đã xóa' }}</h4>
+                                                        <div class="text-muted small mb-1">Size: {{ $item->productSize?->size?->name ?? 'Chưa chọn' }}</div>
+                                                        <div class="text-muted small">Đá: {{ (int) $item->ice_level }}% • Đường: {{ (int) $item->sugar_level }}%</div>
                                                     </div>
-                                                    <div class="text-sm-end">
-                                                        <div class="fw-bold fs-5">{{ number_format((int) $item->getSubtotal(), 0, ',', '.') }}đ</div>
-                                                        <div class="text-secondary small">{{ number_format((int) $item->unit_price, 0, ',', '.') }}đ/sp</div>
+                                                    <div class="text-end d-flex flex-column align-items-end gap-1">
+                                                        <div class="fw-bold" style="font-size: 0.95rem; color: var(--a-ink);">{{ number_format((int) $item->getSubtotal(), 0, ',', '.') }}đ</div>
+                                                        <div class="text-muted small">{{ number_format((int) $item->unit_price, 0, ',', '.') }}đ/sp</div>
+                                                        <span class="badge px-2 py-1 text-dark" style="background-color: #f1f3f5; font-size: 0.75rem; border-radius: 6px; font-weight: 500;">Số lượng: {{ (int) $item->quantity }}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         @endforeach
                                     </div>
-                                    <div class="border-top mt-4 pt-3 d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
-                                        <div class="text-secondary fw-semibold">
-                                            <div class="mb-1">Tạm tính: <span class="text-dark fw-bold">{{ number_format((int) ($order->subtotal ?? 0), 0, ',', '.') }}đ</span></div>
-                                            <div class="mb-1">Phí vận chuyển: <span class="text-dark fw-bold">{{ number_format((int) ($order->shipping_fee ?? 0), 0, ',', '.') }}đ</span></div>
-                                            <div class="mb-1">Giảm giá: <span class="text-dark fw-bold">-{{ number_format((int) ($order->discount ?? 0), 0, ',', '.') }}đ</span></div>
+                                </div>
+
+                                <!-- Cột Phải: Thông tin khách hàng & Tổng hợp đơn hàng -->
+                                <div class="col-lg-5">
+                                    <div class="mb-3">
+                                        <div class="admin-kicker mb-3 text-secondary fw-bold" style="letter-spacing: 0.05em;">THÔNG TIN KHÁCH HÀNG</div>
+                                    </div>
+                                    
+                                    <div class="mb-4 d-flex flex-column gap-2 text-secondary" style="font-size: 0.9rem;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-telephone text-muted" style="font-size: 1.1rem;"></i>
+                                            <span class="fw-semibold">{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</span>
                                         </div>
-                                        <div class="text-md-end order-detail-summary">
-                                            <div class="admin-kicker mb-1 text-secondary">Phương thức thanh toán</div>
-                                            <div class="text-secondary fw-semibold mb-1">Phương thức: <span class="text-dark fw-bold text-uppercase">{{ $order->payment_method }}</span></div>
-                                            <div class="text-secondary fw-semibold mb-2">Thanh toán: <span class="text-dark fw-bold">{{ $order->payment_status }}</span></div>
-                                            <div class="fs-2 fw-bold text-dark mt-2" style="line-height: 1;">{{ number_format((int) ($order->total_price ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-envelope text-muted" style="font-size: 1.1rem;"></i>
+                                            <span>{{ $order->customerEmail() ?: 'Chưa cập nhật' }}</span>
+                                        </div>
+                                        <div class="d-flex align-items-start gap-2">
+                                            <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1.1rem;"></i>
+                                            <span>{{ $order->getShippingAddress() }}</span>
                                         </div>
                                     </div>
-                                    <div class="d-flex flex-wrap gap-2 mt-3">
-                                        @if($nextStatus !== null)
-                                            <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST">
-                                                @csrf
-                                                @method('PUT')
-                                                <input type="hidden" name="status" value="{{ $nextStatus }}">
-                                                <button type="submit" class="btn btn-primary">Chuyển bước tiếp theo</button>
-                                            </form>
-                                        @endif
-                                        @if(!in_array($order->status, [\App\Support\OrderStatus::COMPLETED, \App\Support\OrderStatus::CANCELLED], true))
-                                            <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" onsubmit="return confirm('Hủy đơn hàng #{{ $order->id }}?');">
-                                                @csrf
-                                                @method('PUT')
-                                                <input type="hidden" name="status" value="cancelled">
-                                                <button type="submit" class="btn btn-outline-danger">Hủy đơn</button>
-                                            </form>
-                                        @endif
+
+                                    <!-- Thẻ tóm tắt thanh toán -->
+                                    <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
+                                        <div class="d-flex flex-column gap-2" style="font-size: 0.875rem;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Tạm tính</span>
+                                                <span class="fw-semibold text-dark">{{ number_format((int) ($order->subtotal ?? 0), 0, ',', '.') }}đ</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Phí vận chuyển</span>
+                                                <span class="fw-semibold text-dark">{{ number_format((int) ($order->shipping_fee ?? 0), 0, ',', '.') }}đ</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Giảm giá</span>
+                                                <span class="fw-semibold text-danger">-{{ number_format((int) ($order->discount ?? 0), 0, ',', '.') }}đ</span>
+                                            </div>
+                                            
+                                            <div style="border-top: 1px dashed #e9ecef; margin: 0.75rem 0;"></div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <div class="text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em; font-weight: 600;">TỔNG CỘNG</div>
+                                                    <div class="fw-bold mt-1 text-primary" style="font-size: 1.5rem; line-height: 1;">{{ number_format((int) ($order->total_price ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
+                                                </div>
+                                                <div class="text-end" style="font-size: 0.85rem;">
+                                                    <div class="text-dark">Phương thức: <strong class="text-uppercase">{{ $order->payment_method }}</strong></div>
+                                                    <div class="mt-1">
+                                                        Trạng thái: <strong class="status-text-{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">{{ strtoupper(\App\Support\OrderStatus::label((string) $order->status)) }}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Các nút hành động -->
+                                            <div class="d-flex gap-2 align-items-stretch mt-3 w-100">
+                                                @if($nextStatus !== null)
+                                                    <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="flex-grow-1 m-0">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <input type="hidden" name="status" value="{{ $nextStatus }}">
+                                                        <button type="submit" class="btn btn-primary w-100 h-100 d-flex align-items-center justify-content-center gap-2 px-3 py-2 text-center" style="background-color: #0b6b5f; border-color: #0b6b5f; border-radius: 12px; font-size: 0.875rem;">
+                                                            <span>Chuyển bước tiếp theo</span>
+                                                            <i class="bi bi-arrow-right"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                                @if(!in_array($order->status, [\App\Support\OrderStatus::COMPLETED, \App\Support\OrderStatus::CANCELLED], true))
+                                                    <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="m-0" onsubmit="return confirm('Hủy đơn hàng #{{ $order->id }}?');">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <input type="hidden" name="status" value="cancelled">
+                                                        <button type="submit" class="btn btn-outline-danger h-100 px-3 py-2" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.875rem; white-space: nowrap;">
+                                                            Hủy đơn
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -391,66 +438,118 @@
         function detailRowHtml(payload) {
             const items = Array.isArray(payload.items) ? payload.items : [];
             const lines = items.map((item) => `
-                <div class="border rounded-4 p-3">
-                    <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
+                <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
+                    <div class="d-flex align-items-center gap-3">
                         <div class="flex-shrink-0">
-                            <img src="${escapeHtml(item.image_url || '')}" alt="${escapeHtml(item.product_name || 'Sản phẩm')}" style="width:72px;height:72px;object-fit:cover;border-radius:16px;background:#f3f4f6;">
+                            <img src="${escapeHtml(item.image_url || '')}" alt="${escapeHtml(item.product_name || 'Sản phẩm')}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;background:#f8f9fa;">
                         </div>
                         <div class="flex-grow-1">
-                            <div class="fw-bold fs-5">${escapeHtml(item.product_name || 'Sản phẩm')}</div>
-                            <div class="text-secondary">Size: ${escapeHtml(item.size_name || 'Chưa chọn')}</div>
-                            <div class="text-secondary">Đá: ${escapeHtml(item.ice_level || '100')}% · Đường: ${escapeHtml(item.sugar_level || '100')}% · Số lượng: ${escapeHtml(item.quantity || '1')}</div>
+                            <h4 class="fw-bold mb-1" style="font-size: 0.95rem; color: var(--a-ink);">${escapeHtml(item.product_name || 'Sản phẩm')}</h4>
+                            <div class="text-muted small mb-1">Size: ${escapeHtml(item.size_name || 'Chưa chọn')}</div>
+                            <div class="text-muted small">Đá: ${parseInt(item.ice_level || 0)}% • Đường: ${parseInt(item.sugar_level || 0)}%</div>
                         </div>
-                        <div class="text-md-end">
-                            <div class="fw-bold fs-5">${escapeHtml(item.total_formatted || '')}</div>
-                            <div class="text-secondary small">${escapeHtml(item.unit_price_formatted || '')}/sp</div>
+                        <div class="text-end d-flex flex-column align-items-end gap-1">
+                            <div class="fw-bold" style="font-size: 0.95rem; color: var(--a-ink);">${escapeHtml(item.total_formatted || '')}</div>
+                            <div class="text-muted small">${escapeHtml(item.unit_price_formatted || '')}/sp</div>
+                            <span class="badge px-2 py-1 text-dark" style="background-color: #f1f3f5; font-size: 0.75rem; border-radius: 6px; font-weight: 500;">Số lượng: ${parseInt(item.quantity || 1)}</span>
                         </div>
                     </div>
                 </div>
             `).join('');
 
+            const statusKey = payload.status || 'pending';
+            const statusLabel = (payload.status_label || 'Chờ xử lý').toUpperCase();
+
             return `
                 <tr id="order-detail-${escapeHtml(payload.order_id)}" class="d-none order-detail-row">
-                    <td colspan="8" class="border-0 pt-0">
-                        <div class="border rounded-4 bg-white p-4 shadow-sm">
+                    <td colspan="9" class="border-0 pt-0">
+                        <div class="order-detail-card p-4 shadow-sm">
                             <div class="row g-4">
-                                <div class="col-12">
+                                <!-- Cột Trái: Sản phẩm -->
+                                <div class="col-lg-7">
                                     <div class="mb-3">
-                                        <div class="admin-kicker mb-1 text-secondary">Sản phẩm trong đơn hàng</div>
+                                        <div class="admin-kicker mb-3 text-secondary fw-bold" style="letter-spacing: 0.05em;">SẢN PHẨM TRONG ĐƠN HÀNG</div>
                                     </div>
                                     <div class="d-grid gap-3">
-                                        ${lines || '<div class="text-secondary">Chưa có dữ liệu sản phẩm.</div>'}
+                                        ${lines || '<div class="text-secondary p-3 border rounded-4 text-center">Chưa có dữ liệu sản phẩm.</div>'}
                                     </div>
-                                    <div class="border-top mt-4 pt-3 d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
-                                        <div class="text-secondary fw-semibold">
-                                            <div class="mb-1">Tạm tính: <span class="text-dark fw-bold">${escapeHtml(payload.subtotal_formatted || '')}</span></div>
-                                            <div class="mb-1">Phí vận chuyển: <span class="text-dark fw-bold">${escapeHtml(payload.shipping_fee_formatted || '')}</span></div>
-                                            <div class="mb-1">Giảm giá: <span class="text-dark fw-bold">-${escapeHtml(payload.discount_formatted || '')}</span></div>
+                                </div>
+                                <!-- Cột Phải: Thông tin khách hàng & Tổng hợp đơn hàng -->
+                                <div class="col-lg-5">
+                                    <div class="mb-3">
+                                        <div class="admin-kicker mb-3 text-secondary fw-bold" style="letter-spacing: 0.05em;">THÔNG TIN KHÁCH HÀNG</div>
+                                    </div>
+                                    <div class="mb-4 d-flex flex-column gap-2 text-secondary" style="font-size: 0.9rem;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-telephone text-muted" style="font-size: 1.1rem;"></i>
+                                            <span class="fw-semibold">${escapeHtml(payload.customer_phone || 'Chưa cập nhật')}</span>
                                         </div>
-                                        <div class="text-md-end order-detail-summary">
-                                            <div class="admin-kicker mb-1 text-secondary">Phương thức thanh toán</div>
-                                            <div class="text-secondary fw-semibold mb-1">Phương thức: <span class="text-dark fw-bold text-uppercase">${escapeHtml(payload.payment_method || 'cod')}</span></div>
-                                            <div class="text-secondary fw-semibold mb-2">Thanh toán: <span class="text-dark fw-bold">${escapeHtml(payload.payment_status || 'pending')}</span></div>
-                                            <div class="fs-2 fw-bold text-dark mt-2" style="line-height: 1;">${escapeHtml(payload.total_formatted || '')}</div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="bi bi-envelope text-muted" style="font-size: 1.1rem;"></i>
+                                            <span>${escapeHtml(payload.customer_email || 'Chưa cập nhật')}</span>
+                                        </div>
+                                        <div class="d-flex align-items-start gap-2">
+                                            <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1.1rem;"></i>
+                                            <span>${escapeHtml(payload.shipping_address || 'Chưa cập nhật địa chỉ')}</span>
                                         </div>
                                     </div>
-                                    <div class="d-flex flex-wrap gap-2 mt-3">
-                                        ${payload.next_status ? `
-                                            <form action="${escapeHtml(payload.status_update_url || '#')}" method="POST">
-                                                <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
-                                                <input type="hidden" name="_method" value="PUT">
-                                                <input type="hidden" name="status" value="${escapeHtml(payload.next_status)}">
-                                                <button type="submit" class="btn btn-primary">Chuyển bước tiếp theo</button>
-                                            </form>
-                                        ` : ''}
-                                        ${payload.can_cancel ? `
-                                            <form action="${escapeHtml(payload.status_update_url || '#')}" method="POST" onsubmit="return confirm('Hủy đơn hàng #${escapeHtml(payload.order_id)}?');">
-                                                <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
-                                                <input type="hidden" name="_method" value="PUT">
-                                                <input type="hidden" name="status" value="cancelled">
-                                                <button type="submit" class="btn btn-outline-danger">Hủy đơn</button>
-                                            </form>
-                                        ` : ''}
+
+                                    <!-- Thẻ tóm tắt thanh toán -->
+                                    <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
+                                        <div class="d-flex flex-column gap-2" style="font-size: 0.875rem;">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Tạm tính</span>
+                                                <span class="fw-semibold text-dark">${escapeHtml(payload.subtotal_formatted || '')}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Phí vận chuyển</span>
+                                                <span class="fw-semibold text-dark">${escapeHtml(payload.shipping_fee_formatted || '')}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Giảm giá</span>
+                                                <span class="fw-semibold text-danger">-${escapeHtml(payload.discount_formatted || '')}</span>
+                                            </div>
+                                            
+                                            <div style="border-top: 1px dashed #e9ecef; margin: 0.75rem 0;"></div>
+                                            
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <div class="text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em; font-weight: 600;">TỔNG CỘNG</div>
+                                                    <div class="fw-bold mt-1 text-primary" style="font-size: 1.5rem; line-height: 1;">${escapeHtml(payload.total_formatted || '')}</div>
+                                                </div>
+                                                <div class="text-end" style="font-size: 0.85rem;">
+                                                    <div class="text-dark">Phương thức: <strong class="text-uppercase">${escapeHtml(payload.payment_method || 'cod')}</strong></div>
+                                                    <div class="mt-1">
+                                                        Trạng thái: <strong class="status-text-${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Các nút hành động -->
+                                            <div class="d-flex gap-2 align-items-stretch mt-3 w-100">
+                                                ${payload.next_status ? `
+                                                    <form action="${escapeHtml(payload.status_update_url || '#')}" method="POST" class="flex-grow-1 m-0">
+                                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                                        <input type="hidden" name="_method" value="PUT">
+                                                        <input type="hidden" name="status" value="${escapeHtml(payload.next_status)}">
+                                                        <button type="submit" class="btn btn-primary w-100 h-100 d-flex align-items-center justify-content-center gap-2 px-3 py-2 text-center" style="background-color: #0b6b5f; border-color: #0b6b5f; border-radius: 12px; font-size: 0.875rem;">
+                                                            <span>Chuyển bước tiếp theo</span>
+                                                            <i class="bi bi-arrow-right"></i>
+                                                        </button>
+                                                    </form>
+                                                ` : ''}
+                                                ${payload.can_cancel ? `
+                                                    <form action="${escapeHtml(payload.status_update_url || '#')}" method="POST" class="m-0" onsubmit="return confirm('Hủy đơn hàng #${escapeHtml(payload.order_id)}?');">
+                                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                                        <input type="hidden" name="_method" value="PUT">
+                                                        <input type="hidden" name="status" value="cancelled">
+                                                        <button type="submit" class="btn btn-outline-danger h-100 px-3 py-2" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.875rem; white-space: nowrap;">
+                                                            Hủy đơn
+                                                        </button>
+                                                    </form>
+                                                ` : ''}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -525,6 +624,7 @@
                 payment_status_label: payload.payment_status_label || '',
                 payment_method_label: payload.payment_method_label || '',
                 note: payload.note || '',
+                status: payload.status || 'pending',
                 status_label: payload.status_label || '',
                 total_formatted: payload.total_formatted || '',
                 subtotal_formatted: payload.subtotal_formatted || '',
@@ -533,7 +633,8 @@
                 next_status: payload.next_status || '',
                 status_update_url: payload.status_update_url || '#',
                 can_cancel: payload.can_cancel ?? true,
-                items: [],
+                shipping_address: payload.shipping_address || '',
+                items: payload.items || [],
             }));
 
             const countElement = document.getElementById('adminOrdersCount');
