@@ -161,6 +161,34 @@ class Order extends Model
         return $this->user?->phone;
     }
 
+    public function getShippingAddress(): string
+    {
+        if ($this->address) {
+            return trim(implode(', ', array_filter([
+                $this->address->detail,
+                $this->address->ward,
+                $this->address->district,
+                $this->address->province
+            ])));
+        }
+
+        if ($this->note && preg_match('/địa chỉ:\s*([^\r\n]*)/iu', $this->note, $matches)) {
+            return trim($matches[1]);
+        }
+
+        if ($this->user && $this->user->addresses()->exists()) {
+            $addr = $this->user->addresses()->where('is_default', true)->first() ?? $this->user->addresses()->first();
+            return trim(implode(', ', array_filter([
+                $addr->detail,
+                $addr->ward,
+                $addr->district,
+                $addr->province
+            ])));
+        }
+
+        return 'Chưa cập nhật địa chỉ';
+    }
+
     public function pointsEarnable(): int
     {
         return max(0, (int) floor(((int) $this->total) / 1000));

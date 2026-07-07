@@ -90,7 +90,7 @@ class OrderController extends Controller
         $afterId = max(0, (int) $request->query('after_id', 0));
 
         $orders = Order::query()
-            ->with(['user', 'branch'])
+            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId))
             ->orderByDesc('id')
@@ -107,15 +107,17 @@ class OrderController extends Controller
 
     private function orderBroadcastPayload(Order $order): array
     {
-        $customerName = $order->user->name ?? 'Khách hàng';
+        $customerName = $order->customerName() ?: 'Khách hàng';
+        $customerEmail = $order->customerEmail() ?: '';
+        $customerPhone = $order->customerPhone() ?: '';
         $total = (int) ($order->total ?? $order->total_price ?? 0);
 
         return [
             'order_id' => $order->id,
             'branch_name' => $order->branch?->name ?? 'Chưa gán',
             'customer_name' => $customerName,
-            'customer_email' => $order->user->email ?? '',
-            'customer_phone' => $order->user->phone ?? '',
+            'customer_email' => $customerEmail,
+            'customer_phone' => $customerPhone,
             'note' => $order->note ?? '',
             'total' => $total,
             'total_formatted' => number_format($total, 0, ',', '.').'đ',
@@ -126,8 +128,7 @@ class OrderController extends Controller
             'payment_status' => $order->payment_status,
             'payment_method_label' => $this->paymentMethodLabel($order->payment_method),
             'payment_status_label' => $this->paymentStatusLabel($order->payment_status),
-            'address_receiver_name' => $order->address?->receiver_name,
-            'address_detail' => $order->address?->detail ?? $order->user?->address,
+            'shipping_address' => $order->getShippingAddress(),
             'status' => $order->status,
             'status_label' => OrderStatus::label((string) $order->status),
             'next_status' => OrderStatus::nextStatus((string) $order->status),
@@ -137,6 +138,17 @@ class OrderController extends Controller
             'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
             'status_update_url' => route('admin.orders.updateStatus', $order->id),
+            'items' => $order->orderItems->map(fn ($item) => [
+                'product_name' => $item->product?->name ?? 'Sản phẩm đã xóa',
+                'image_url' => $item->product?->image_url,
+                'size_name' => $item->productSize?->size?->name ?? 'Chưa chọn',
+                'ice_level' => (int) $item->ice_level,
+                'sugar_level' => (int) $item->sugar_level,
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (int) $item->unit_price,
+                'unit_price_formatted' => number_format((int) $item->unit_price, 0, ',', '.') . 'đ',
+                'total_formatted' => number_format((int) $item->getSubtotal(), 0, ',', '.') . 'đ',
+            ])->toArray(),
         ];
     }
 
