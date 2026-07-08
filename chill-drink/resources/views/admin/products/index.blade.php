@@ -36,6 +36,9 @@
             </button>
             <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a> 
          </div>
+            <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
+        </div>
+>>>>>>> origin/cong1
         <div class="admin-category-scroller">
             @foreach($categories as $category)
                 @php
