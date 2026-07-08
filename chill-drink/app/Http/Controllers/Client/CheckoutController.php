@@ -15,6 +15,7 @@ use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
 use App\Support\ShippingFee;
+use App\Support\ScheduledDelivery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -114,6 +115,13 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
+        if ($request->filled('scheduled_at') && ! $request->filled('delivery_type')) {
+            $request->merge([
+                'delivery_type' => 'scheduled',
+                'scheduled_delivery_time' => $request->input('scheduled_at'),
+            ]);
+        }
+
         $request->validate([
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
@@ -125,12 +133,16 @@ class CheckoutController extends Controller
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
             ],
             'voucher_code' => 'nullable|string|max:50',
+            'shipping_voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
-            'scheduled_at' => [
-                'nullable',
-                'date',
-                'after_or_equal:'.now()->addMinutes(15)->format('Y-m-d H:i'),
-                'before_or_equal:'.now()->addDays(7)->format('Y-m-d H:i'),
+            'delivery_note' => 'nullable|string|max:1000',
+            'delivery_type' => ['nullable', Rule::in(['now', 'scheduled'])],
+            'scheduled_delivery_time' => [
+                'nullable', 'date', 'required_if:delivery_type,scheduled',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('delivery_type') !== 'scheduled') return;
+                    if ($message = ScheduledDelivery::validate($value)) $fail($message);
+                },
             ],
         ], [
             'shipping_address_ui.required' => 'Vui lòng nhập địa chỉ nhận hàng.',
@@ -138,9 +150,7 @@ class CheckoutController extends Controller
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
-            'scheduled_at.date' => 'Thời gian muốn nhận không hợp lệ.',
-            'scheduled_at.after_or_equal' => 'Thời gian muốn nhận phải cách hiện tại ít nhất 15 phút.',
-            'scheduled_at.before_or_equal' => 'Chỉ có thể đặt lịch nhận trong vòng 7 ngày tới.',
+            'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
             'branch_id.exists' => 'Chi nhánh đã chọn không còn hoạt động. Vui lòng tìm lại chi nhánh gần nhất.',
         ]);
 
@@ -170,7 +180,10 @@ class CheckoutController extends Controller
                 $request->shipping_area_ui,
                 $request->shipping_method_ui
             );
-            [$voucher, $discount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal);
+            [$voucher, $orderDiscount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal, false);
+            [$shippingVoucher, $rawShippingDiscount] = $this->resolveVoucher($request->input('shipping_voucher_code'), $subtotal, true);
+            $shippingDiscount = min((int) $shippingQuote['total_fee'], $rawShippingDiscount);
+            $discount = $orderDiscount + $shippingDiscount;
             $grandTotal = max(0, $subtotal + $shippingQuote['total_fee'] - $discount);
             $addressText = trim(collect([
                 $request->shipping_address_ui,
@@ -191,7 +204,11 @@ class CheckoutController extends Controller
                 'payment_method' => $request->payment_method,
                 'status' => 'pending',
                 'note' => $note,
-                'scheduled_at' => $request->filled('scheduled_at') ? $request->date('scheduled_at') : null,
+                'delivery_type' => $request->input('delivery_type', 'now'),
+                'fulfillment_type' => 'delivery',
+                'scheduled_delivery_time' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
+                'scheduled_at' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
+                'delivery_note' => $request->input('delivery_note'),
             ];
 
             if (Schema::hasColumn('orders', 'branch_id') && $request->filled('branch_id')) {
@@ -214,8 +231,8 @@ class CheckoutController extends Controller
                 $orderData['discount'] = $discount;
             }
 
-            if ($voucher && Schema::hasColumn('orders', 'coupon_id')) {
-                $orderData['coupon_id'] = $voucher->id;
+            if (($voucher || $shippingVoucher) && Schema::hasColumn('orders', 'coupon_id')) {
+                $orderData['coupon_id'] = ($voucher ?? $shippingVoucher)->id;
             }
 
             if (Schema::hasColumn('orders', 'total')) {
@@ -248,7 +265,10 @@ class CheckoutController extends Controller
             }
 
             if ($voucher) {
-                $this->recordVoucherUsage($voucher, $order->id, $discount);
+                $this->recordVoucherUsage($voucher, $order->id, $orderDiscount);
+            }
+            if ($shippingVoucher) {
+                $this->recordVoucherUsage($shippingVoucher, $order->id, $shippingDiscount);
             }
 
             if ($groupOrderId) {
@@ -315,7 +335,7 @@ class CheckoutController extends Controller
         return view('client.checkout.success', $payload);
     }
 
-    protected function resolveVoucher(?string $code, int $subtotal): array
+    protected function resolveVoucher(?string $code, int $subtotal, ?bool $expectShipping = null): array
     {
         $code = strtoupper(trim((string) $code));
 
@@ -330,6 +350,12 @@ class CheckoutController extends Controller
 
         if (! $voucher) {
             throw new \RuntimeException('Mã voucher không tồn tại.');
+        }
+
+        if ($expectShipping !== null && $this->isShippingVoucher($voucher) !== $expectShipping) {
+            throw new \RuntimeException($expectShipping
+                ? 'Mã đã chọn không phải voucher miễn phí vận chuyển.'
+                : 'Mã freeship không thể dùng ở ô giảm giá đơn hàng.');
         }
 
         if (! $voucher->status) {
@@ -365,6 +391,11 @@ class CheckoutController extends Controller
         }
 
         return [$voucher, $discount];
+    }
+
+    protected function isShippingVoucher(Voucher $voucher): bool
+    {
+        return Str::contains(Str::upper((string) $voucher->code), ['SHIP', 'FREE']);
     }
 
     protected function assertVoucherRankAndPoints(Voucher $voucher): void

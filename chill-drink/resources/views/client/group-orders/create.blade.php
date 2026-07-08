@@ -17,7 +17,16 @@
                     <div class="group-eyebrow mb-2">Tạo phòng mới</div><h2 class="h3 fw-bold mb-4">Thông tin đơn nhóm</h2>
                     @if($errors->any())<div class="alert alert-danger rounded-4"><i class="bi bi-exclamation-circle me-2"></i>{{ $errors->first() }}</div>@endif
                     <div class="mb-4"><label class="group-form-label" for="groupName">Tên nhóm</label><input id="groupName" name="name" value="{{ old('name') }}" class="form-control group-input" required maxlength="120" placeholder="Ví dụ: Team Marketing đặt trà chiều"></div>
-                    <div class="mb-4"><label class="group-form-label" for="closesAt">Thời gian chốt đơn</label><input id="closesAt" type="datetime-local" name="closes_at" value="{{ old('closes_at') }}" min="{{ now()->addMinute()->format('Y-m-d\TH:i') }}" class="form-control group-input @error('closes_at') is-invalid @enderror" required data-closes-at><div class="invalid-feedback" data-closes-at-error>@error('closes_at'){{ $message }}@else Thời gian chốt đơn phải ở tương lai. @enderror</div><div class="form-text">Sau thời gian này, thành viên không thể thêm món.</div></div>
+                    <div class="group-option-box mb-4">
+                        <div class="d-flex align-items-start gap-3">
+                            <i class="bi bi-calendar2-check fs-3 text-primary mt-1"></i>
+                            <div class="flex-grow-1">
+                                <label class="group-form-label d-block" for="groupClosesAt">Ngày và giờ kết thúc</label>
+                                <input id="groupClosesAt" type="datetime-local" name="closes_at" value="{{ old('closes_at', now()->addMinutes(30)->format('Y-m-d\TH:i')) }}" min="{{ now()->addMinutes(5)->format('Y-m-d\TH:i') }}" max="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" class="form-control group-input" required>
+                                <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Phòng bắt đầu ngay sau khi tạo và tự đóng vào thời gian này.</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="mb-4"><label class="group-form-label" for="groupNote">Ghi chú chung <span class="text-secondary fw-normal">(không bắt buộc)</span></label><textarea id="groupNote" name="note" class="form-control group-input" maxlength="500" rows="4" placeholder="Ví dụ: Giao tại lễ tân tầng 5">{{ old('note') }}</textarea></div>
                     <button class="btn btn-primary group-btn w-100"><i class="bi bi-people me-2"></i>Tạo phòng đặt hàng</button>
                 </form>
@@ -25,39 +34,4 @@
         </div>
     </div>
 </section>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const form = document.querySelector('[data-group-create-form]');
-    const input = document.querySelector('[data-closes-at]');
-    if (!form || !input) return;
-
-    const toLocalDateTime = function (date) {
-        const offset = date.getTimezoneOffset();
-        return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
-    };
-    const refreshMinimum = function () {
-        const minimum = new Date(Date.now() + 60000);
-        input.min = toLocalDateTime(minimum);
-        return minimum;
-    };
-    refreshMinimum();
-
-    input.addEventListener('change', function () {
-        const valid = input.value && new Date(input.value).getTime() > Date.now();
-        input.classList.toggle('is-invalid', !valid);
-        input.setCustomValidity(valid ? '' : 'Thời gian chốt đơn phải ở tương lai.');
-    });
-
-    form.addEventListener('submit', function (event) {
-        const minimum = refreshMinimum();
-        const selected = input.value ? new Date(input.value) : null;
-        if (!selected || selected < minimum) {
-            event.preventDefault();
-            input.classList.add('is-invalid');
-            input.setCustomValidity('Thời gian chốt đơn phải ở tương lai.');
-            input.reportValidity();
-        }
-    });
-});
-</script>
 @endsection

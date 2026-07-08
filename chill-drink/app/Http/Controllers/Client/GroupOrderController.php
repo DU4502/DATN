@@ -8,6 +8,7 @@ use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMember;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -16,6 +17,8 @@ class GroupOrderController extends Controller
 {
     public function index()
     {
+        GroupOrder::closeExpiredOrders();
+
         $groups = GroupOrder::withCount(['members', 'items'])
             ->where('owner_id', auth()->id())->latest()->get();
 
@@ -29,20 +32,38 @@ class GroupOrderController extends Controller
 
     public function store(Request $request)
     {
+        $minimumClosingTime = now()->addMinutes(5)->format('Y-m-d H:i:s');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'closes_at' => ['required', 'date', 'after:now'],
             'note' => ['nullable', 'string', 'max:500'],
+            'closes_at' => ['nullable', 'date', 'after_or_equal:'.$minimumClosingTime, 'before_or_equal:+7 days'],
         ], [
-            'closes_at.required' => 'Vui lòng chọn thời gian chốt đơn.',
-            'closes_at.date' => 'Thời gian chốt đơn không hợp lệ.',
-            'closes_at.after' => 'Thời gian chốt đơn phải ở tương lai.',
+            'closes_at.after_or_equal' => 'Thời gian kết thúc phải cách thời điểm hiện tại ít nhất 5 phút.',
+            'closes_at.before_or_equal' => 'Thời gian kết thúc không được vượt quá 7 ngày.',
         ]);
 
-        $group = GroupOrder::create($data + [
-            'owner_id' => auth()->id(),
-            'code' => $this->uniqueCode(),
-        ]);
+        $closesAt = isset($data['closes_at'])
+            ? \Illuminate\Support\Carbon::parse($data['closes_at'])
+            : now()->addMinutes(GroupOrder::ORDER_WINDOW_MINUTES);
+
+        // Lớp bảo vệ cuối: không để bất kỳ giá trị cũ/sai nào tạo phòng chỉ tồn tại vài giây.
+        if ($closesAt->lessThan(now()->addMinutes(5))) {
+            $closesAt = now()->addMinutes(GroupOrder::ORDER_WINDOW_MINUTES);
+        }
+        unset($data['closes_at']);
+
+        $group = DB::transaction(function () use ($data, $closesAt) {
+            GroupOrder::query()
+                ->where('owner_id', auth()->id())
+                ->where('status', 'open')
+                ->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+
+            return GroupOrder::create($data + [
+                'owner_id' => auth()->id(),
+                'code' => $this->uniqueCode(),
+                'closes_at' => $closesAt,
+            ]);
+        });
 
         return redirect()->route('group-orders.show', $group->code)
             ->with('success', 'Đã tạo đơn nhóm. Hãy gửi đường link cho mọi người!');
@@ -51,19 +72,43 @@ class GroupOrderController extends Controller
     public function show(string $code)
     {
         $group = GroupOrder::where('code', $code)->firstOrFail();
+        $group->closeIfExpired();
+        if ($group->owner_id === auth()->id() && $group->isOpen()) {
+            $group->update(['owner_last_seen_at' => now()]);
+        }
         $group->load(['owner', 'members.items.product', 'items']);
-        $products = Product::where('status', true)->orderBy('name')->get();
+        $products = Product::with('category')->where('status', true)->orderBy('name')->get();
         $toppings = Schema::hasTable('toppings')
-            ? DB::table('toppings')->orderBy('name')->get(['id', 'name', 'price'])
+            ? DB::table('toppings')->where('status', 1)->orderBy('name')->get(['id', 'name', 'price'])
             : collect();
+        $productToppingMap = $products->mapWithKeys(fn (Product $product) => [
+            $product->id => $this->toppingIdsForProduct($product, $toppings),
+        ]);
         $currentMember = $group->members->firstWhere('user_id', auth()->id());
 
-        return view('client.group-orders.show', compact('group', 'products', 'toppings', 'currentMember'));
+        return view('client.group-orders.show', compact('group', 'products', 'toppings', 'productToppingMap', 'currentMember'));
+    }
+
+    public function presence(string $code): JsonResponse
+    {
+        $group = GroupOrder::where('code', $code)->firstOrFail();
+        $group->closeIfExpired();
+
+        if ($group->owner_id === auth()->id() && $group->isOpen()) {
+            $group->update(['owner_last_seen_at' => now()]);
+        }
+
+        return response()->json([
+            'owner_present' => $group->fresh()->ownerIsPresent(),
+            'is_open' => $group->isOpen(),
+            'closes_at' => $group->closes_at->toIso8601String(),
+        ]);
     }
 
     public function join(Request $request, string $code)
     {
         $group = GroupOrder::where('code', $code)->firstOrFail();
+        $group->closeIfExpired();
         abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng hoặc hết hạn.');
         $data = $request->validate(['name' => ['required', 'string', 'max:100']]);
 
@@ -109,6 +154,7 @@ class GroupOrderController extends Controller
 
         DB::transaction(function () use ($code, $data) {
             $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
+            $group->closeIfExpired();
             abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng hoặc hết hạn.');
             $member = $this->currentMember($group);
             $product = Product::whereKey($data['product_id'])->lockForUpdate()->firstOrFail();
@@ -118,8 +164,9 @@ class GroupOrderController extends Controller
             abort_if($alreadyReserved + $data['quantity'] > (int) $product->stock, 422, 'Sản phẩm không đủ số lượng tồn kho.');
 
             $selectedIds = collect($data['toppings'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
-            $allowedIds = DB::table('product_toppings')->where('product_id', $product->id)->pluck('topping_id');
-            if ($allowedIds->isNotEmpty() && $selectedIds->diff($allowedIds)->isNotEmpty()) {
+            $availableToppings = DB::table('toppings')->where('status', 1)->get(['id', 'name', 'price']);
+            $allowedIds = $this->toppingIdsForProduct($product->loadMissing('category'), $availableToppings);
+            if ($selectedIds->diff($allowedIds)->isNotEmpty()) {
                 abort(422, 'Topping đã chọn không áp dụng cho sản phẩm này.');
             }
             $selectedToppings = $selectedIds->isEmpty() ? collect() : DB::table('toppings')->whereIn('id', $selectedIds)->get(['name', 'price']);
@@ -142,6 +189,7 @@ class GroupOrderController extends Controller
     {
         DB::transaction(function () use ($code, $item) {
             $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
+            $group->closeIfExpired();
             $member = $this->currentMember($group);
             $lockedItem = GroupOrderItem::lockForUpdate()->findOrFail($item->id);
             abort_unless($lockedItem->group_order_id === $group->id && $lockedItem->group_order_member_id === $member->id, 403);
@@ -150,6 +198,31 @@ class GroupOrderController extends Controller
         });
 
         return back()->with('success', 'Đã xóa món khỏi đơn nhóm.');
+    }
+
+    public function incrementItem(string $code, GroupOrderItem $item)
+    {
+        DB::transaction(function () use ($code, $item) {
+            $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
+            $group->closeIfExpired();
+            abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng hoặc hết hạn.');
+
+            $member = $this->currentMember($group);
+            $lockedItem = GroupOrderItem::lockForUpdate()->findOrFail($item->id);
+            abort_unless(
+                $lockedItem->group_order_id === $group->id && $lockedItem->group_order_member_id === $member->id,
+                403
+            );
+            abort_if($lockedItem->quantity >= 20, 422, 'Mỗi món chỉ được chọn tối đa 20 phần.');
+
+            $product = Product::whereKey($lockedItem->product_id)->lockForUpdate()->firstOrFail();
+            $reserved = (int) $group->items()->where('product_id', $product->id)->sum('quantity');
+            abort_if($reserved + 1 > (int) $product->stock, 422, 'Sản phẩm không đủ số lượng tồn kho.');
+
+            $lockedItem->increment('quantity');
+        });
+
+        return back()->with('success', 'Đã thêm 1 phần của món này.');
     }
 
     public function close(string $code)
@@ -220,6 +293,26 @@ class GroupOrderController extends Controller
     {
         $sizeExtra = ['S' => 0, 'M' => 5000, 'L' => 10000][$size] ?? 0;
         return max(0, (int) $product->price + $sizeExtra + (int) collect($toppings)->sum('price'));
+    }
+
+    private function toppingIdsForProduct(Product $product, $toppings)
+    {
+        $pivotIds = DB::table('product_toppings')->where('product_id', $product->id)->pluck('topping_id');
+        if ($pivotIds->isNotEmpty()) {
+            return $pivotIds->map(fn ($id) => (int) $id)->values();
+        }
+
+        $text = Str::lower(($product->name ?? '').' '.($product->category?->name ?? ''));
+        $allowedNames = match (true) {
+            str_contains($text, 'matcha') => ['Trân châu đen', 'Kem cheese', 'Thạch matcha'],
+            str_contains($text, 'trà sữa') => ['Trân châu đen', 'Pudding trứng', 'Thạch phô mai'],
+            str_contains($text, 'cà phê'), str_contains($text, 'bạc xỉu') => ['Kem cheese'],
+            str_contains($text, 'soda'), str_contains($text, 'nước ép'), str_contains($text, 'trà trái cây') => ['Trân châu trắng', 'Thạch nha đam'],
+            str_contains($text, 'sinh tố') => ['Trân châu trắng', 'Thạch nha đam'],
+            default => ['Trân châu đen', 'Trân châu trắng', 'Kem cheese'],
+        };
+
+        return $toppings->whereIn('name', $allowedNames)->pluck('id')->map(fn ($id) => (int) $id)->values();
     }
 
     private function activateGroupCart(GroupOrder $group): void

@@ -5,7 +5,8 @@
 @section('content')
 @php
     $guestInfo = $guestInfo ?? [];
-    $deliveryType = old('delivery_type', $guestInfo['delivery_type'] ?? 'delivery');
+    $deliveryType = old('fulfillment_type', $guestInfo['fulfillment_type'] ?? 'delivery');
+    $orderTiming = old('delivery_type', $guestInfo['delivery_type'] ?? 'now');
 @endphp
 
 <style>
@@ -99,11 +100,20 @@
                         <div class="mb-3">
                             <label class="form-label fw-semibold d-block">Nhận hàng *</label>
                             <div class="btn-group delivery-toggle w-100" role="group">
-                                <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
+                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
                                 <label class="btn btn-outline-primary" for="deliveryTypeDelivery"><i class="bi bi-truck me-1"></i>Giao đến địa chỉ</label>
-                                <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
+                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypePickup"><i class="bi bi-shop me-1"></i>Lấy tại chi nhánh</label>
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold d-block">Thời gian nhận *</label>
+                            <div class="btn-group delivery-toggle w-100"><input class="btn-check" type="radio" name="delivery_type" id="guestDeliveryNow" value="now" @checked($orderTiming === 'now')><label class="btn btn-outline-primary" for="guestDeliveryNow">Giao ngay</label><input class="btn-check" type="radio" name="delivery_type" id="guestDeliveryScheduled" value="scheduled" @checked($orderTiming === 'scheduled')><label class="btn btn-outline-primary" for="guestDeliveryScheduled">Đặt giao sau</label></div>
+                        </div>
+                        <div class="mb-4 {{ $orderTiming === 'scheduled' ? '' : 'is-hidden' }}" data-guest-schedule>
+                            <label class="form-label fw-semibold" for="scheduled_delivery_time">Ngày và giờ nhận</label><input class="form-control guest-input" type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time', $guestInfo['scheduled_delivery_time'] ?? '') }}"><div class="form-text">Tối thiểu 30 phút · Giờ mở cửa 07:00–22:00.</div>
+                            <label class="form-label fw-semibold mt-3" for="delivery_note">Ghi chú giao hàng</label><input class="form-control guest-input" id="delivery_note" name="delivery_note" value="{{ old('delivery_note', $guestInfo['delivery_note'] ?? '') }}" placeholder="Giao đúng giờ giúp mình">
                         </div>
 
                         <div class="delivery-fields {{ $deliveryType === 'pickup' ? 'is-hidden' : '' }}" data-delivery-fields>
@@ -172,6 +182,8 @@
         const pickupFields = document.querySelector('[data-pickup-fields]');
         const deliveryInput = document.getElementById('deliveryTypeDelivery');
         const pickupInput = document.getElementById('deliveryTypePickup');
+        const guestSchedule = document.querySelector('[data-guest-schedule]');
+        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', () => guestSchedule?.classList.toggle('is-hidden', input.value !== 'scheduled')));
 
         function syncDeliveryMode() {
             const isPickup = pickupInput?.checked;

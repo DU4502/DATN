@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Favorite;
 use App\Models\Product;
 
 class HomeController extends Controller
@@ -41,10 +42,15 @@ class HomeController extends Controller
             ->filter()
             ->values();
 
+        $favoriteProductIds = auth()->check()
+            ? Favorite::where('user_id', auth()->id())->pluck('product_id')
+            : collect();
+
         return view('client.home', compact(
             'featuredProducts',
             'categories',
-            'discoverProducts'
+            'discoverProducts',
+            'favoriteProductIds'
         ));
     }
 }

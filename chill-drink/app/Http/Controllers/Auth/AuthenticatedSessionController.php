@@ -28,17 +28,20 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
-        $request->session()->forget('url.intended');
 
         if ($request->user()->isSuperAdmin()) {
+            $request->session()->forget('url.intended');
+
             return redirect()->route('admin.super-admin');
         }
 
         if ($request->user()->isAdmin()) {
+            $request->session()->forget('url.intended');
+
             return redirect()->route('admin.dashboard');
         }
 
-        return redirect()->route('home');
+        return redirect()->intended(route('home', absolute: false));
     }
 
     /**

@@ -62,17 +62,20 @@ class GoogleController extends Controller
 
         Auth::login($user, true);
         request()->session()->regenerate();
-        request()->session()->forget('url.intended');
 
         if ($user->isSuperAdmin()) {
+            request()->session()->forget('url.intended');
+
             return redirect()->route('admin.super-admin');
         }
 
         if ($user->isAdmin()) {
+            request()->session()->forget('url.intended');
+
             return redirect()->route('admin.dashboard');
         }
 
-        return redirect()->route('home');
+        return redirect()->intended(route('home', absolute: false));
     }
 
     private function resolveUserFromGoogle(object $googleUser): ?User
