@@ -30,6 +30,7 @@ class Branch extends Model
     {
         return $query
             ->where('status', true)
+            ->where('status', 1)
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
     }
@@ -57,5 +58,24 @@ class Branch extends Model
     public function orders()
     {
         return $this->hasMany(Order::class);
+        $earthRadius = 6371;
+
+        $latFrom = deg2rad($latitude);
+        $lonFrom = deg2rad($longitude);
+
+        $latTo = deg2rad($this->latitude);
+        $lonTo = deg2rad($this->longitude);
+
+        $latDelta = $latTo - $latFrom;
+        $lonDelta = $lonTo - $lonFrom;
+
+        $angle = 2 * asin(sqrt(
+            pow(sin($latDelta / 2), 2) +
+                cos($latFrom) * cos($latTo) *
+                pow(sin($lonDelta / 2), 2)
+        ));
+
+        return $angle * $earthRadius;
+>>>>>>> origin/cong1
     }
 }
