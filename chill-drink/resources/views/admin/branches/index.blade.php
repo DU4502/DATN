@@ -29,6 +29,19 @@
     </div>
 @endif
 
+@if(request()->boolean('create_branch'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('createBranchModal');
+            if (!modal || !window.bootstrap) {
+                return;
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
+    </script>
+@endif
+
 <!-- Search & Filter Form -->
 <form method="GET" action="{{ route('admin.branches.index') }}" class="mb-4">
     <div class="row g-3 align-items-end">

@@ -1270,18 +1270,22 @@
                     <div class="col-md-6">
                         <label class="form-label small text-secondary mb-1" for="editAddressName">Họ và tên</label>
                         <input id="editAddressName" type="text" class="form-control address-modal-field" value="{{ $user->name }}">
+                        <div id="editAddressNameError" class="form-text text-danger small mt-1 d-none"></div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-secondary mb-1" for="editAddressPhone">Số điện thoại</label>
-                        <input id="editAddressPhone" type="text" class="form-control address-modal-field" value="{{ $user->phone }}">
+                        <label class="form-label small text-secondary mb-1" for="editAddressPhone">Số điện thoại *</label>
+                        <input id="editAddressPhone" type="text" class="form-control address-modal-field" value="{{ $user->phone ?: '' }}">
+                        <div id="editAddressPhoneError" class="form-text text-danger small mt-1 d-none"></div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label small text-secondary mb-1" for="editAddressArea">Tỉnh/Thành phố, Quận/Huyện</label>
-                        <input id="editAddressArea" type="text" class="form-control address-modal-field" value="{{ $primaryArea }}" placeholder="Ví dụ: Thanh Hóa, Phường Quảng Phú">
+                        <label class="form-label small text-secondary mb-1" for="editAddressArea">Phường/Xã, Tỉnh/Thành phố</label>
+                        <input id="editAddressArea" type="text" class="form-control address-modal-field" value="{{ $primaryArea }}" placeholder="Ví dụ: Phường Quảng Phú, Thanh Hóa">
                     </div>
                     <div class="col-12">
-                        <label class="form-label small text-secondary mb-1" for="editAddressStreet">Địa chỉ cụ thể</label>
-                        <textarea id="editAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Số nhà, tên đường, thôn/xóm...">{{ $primaryAddress }}</textarea>
+                        <label class="form-label small text-secondary mb-1" for="editAddressStreet">Địa chỉ cụ thể *</label>
+                        <textarea id="editAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Ví dụ: 12 Hà Huy Tập">{{ $primaryAddress }}</textarea>
+                        <div id="editAddressStreetHint" class="form-text text-warning small mt-1 d-none"></div>
+                        <div id="editAddressStreetError" class="form-text text-danger small mt-1 d-none"></div>
                     </div>
                     <div class="col-12">
                         @include('admin.partials.location-picker', [
@@ -1293,6 +1297,8 @@
                             'defaultLat' => 16.047079,
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
+                            'autoFillAreaTarget' => 'editAddressArea',
+                            'autoFillStreetTarget' => 'editAddressStreet',
                         ])
                     </div>
                     <div class="col-12">
@@ -1330,18 +1336,22 @@
                     <div class="col-md-6">
                         <label class="form-label small text-secondary mb-1" for="newAddressName">Họ và tên</label>
                         <input id="newAddressName" type="text" class="form-control address-modal-field" placeholder="Họ và tên" value="{{ $user->name }}">
+                        <div id="newAddressNameError" class="form-text text-danger small mt-1 d-none"></div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label small text-secondary mb-1" for="newAddressPhone">Số điện thoại</label>
-                        <input id="newAddressPhone" type="text" class="form-control address-modal-field" placeholder="Số điện thoại" value="{{ $user->phone }}">
+                        <label class="form-label small text-secondary mb-1" for="newAddressPhone">Số điện thoại *</label>
+                        <input id="newAddressPhone" type="text" class="form-control address-modal-field" placeholder="Số điện thoại" value="{{ $user->phone ?: '' }}">
+                        <div id="newAddressPhoneError" class="form-text text-danger small mt-1 d-none"></div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label small text-secondary mb-1" for="newAddressArea">Tỉnh/Thành phố, Quận/Huyện</label>
-                        <input id="newAddressArea" type="text" class="form-control address-modal-field" placeholder="Tỉnh/Thành phố, Quận/Huyện">
+                        <label class="form-label small text-secondary mb-1" for="newAddressArea">Phường/Xã, Tỉnh/Thành phố</label>
+                        <input id="newAddressArea" type="text" class="form-control address-modal-field" placeholder="Phường/Xã, Tỉnh/Thành phố">
                     </div>
                     <div class="col-12">
-                        <label class="form-label small text-secondary mb-1" for="newAddressStreet">Địa chỉ cụ thể</label>
-                        <textarea id="newAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Địa chỉ cụ thể"></textarea>
+                        <label class="form-label small text-secondary mb-1" for="newAddressStreet">Địa chỉ cụ thể *</label>
+                        <textarea id="newAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Ví dụ: 12 Hà Huy Tập"></textarea>
+                        <div id="newAddressStreetHint" class="form-text text-warning small mt-1 d-none"></div>
+                        <div id="newAddressStreetError" class="form-text text-danger small mt-1 d-none"></div>
                     </div>
                     <div class="col-12">
                         @include('admin.partials.location-picker', [
@@ -1353,6 +1363,8 @@
                             'defaultLat' => 16.047079,
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
+                            'autoFillAreaTarget' => 'newAddressArea',
+                            'autoFillStreetTarget' => 'newAddressStreet',
                         ])
                     </div>
                     <div class="col-12">
@@ -1542,6 +1554,32 @@
         const selectedAddressText = document.getElementById('selectedAddressText');
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
+        const addressFieldState = {
+            edit: {
+                areaDirty: false,
+                streetDirty: false,
+            },
+            new: {
+                areaDirty: false,
+                streetDirty: false,
+            },
+        };
+        const addressStreetHints = {
+            edit: document.getElementById('editAddressStreetHint'),
+            new: document.getElementById('newAddressStreetHint'),
+        };
+        const addressFieldErrors = {
+            edit: {
+                name: document.getElementById('editAddressNameError'),
+                phone: document.getElementById('editAddressPhoneError'),
+                street: document.getElementById('editAddressStreetError'),
+            },
+            new: {
+                name: document.getElementById('newAddressNameError'),
+                phone: document.getElementById('newAddressPhoneError'),
+                street: document.getElementById('newAddressStreetError'),
+            },
+        };
 
         const addressListModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressListModal'));
         const addressEditModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressEditModal'));
@@ -1653,30 +1691,269 @@
             };
         }
 
-        function showAddressToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            const palette = type === 'success'
-                ? { bg: '#10b981', border: '#059669' }
-                : { bg: '#ef4444', border: '#dc2626' };
+        function formatReverseGeocodeParts(parts) {
+            return parts
+                .map((part) => String(part || '').trim())
+                .filter(Boolean)
+                .join(', ');
+        }
 
-            toast.textContent = message;
-            toast.style.cssText = `
-                position: fixed;
-                right: 20px;
-                bottom: 20px;
-                z-index: 1080;
-                max-width: min(92vw, 360px);
-                padding: 12px 16px;
-                border-radius: 12px;
-                color: #fff;
-                background: ${palette.bg};
-                border: 1px solid ${palette.border};
-                box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
-                font-weight: 600;
-            `;
+        function getAddressInputs(scope) {
+            return {
+                areaInput: document.getElementById(scope === 'edit' ? 'editAddressArea' : 'newAddressArea'),
+                streetInput: document.getElementById(scope === 'edit' ? 'editAddressStreet' : 'newAddressStreet'),
+                hintEl: addressStreetHints[scope] || null,
+                state: addressFieldState[scope] || addressFieldState.new,
+            };
+        }
 
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 2600);
+        function setAddressFieldValue(input, value) {
+            if (!input) {
+                return;
+            }
+
+            input.value = value;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function setStreetHint(scope, message = '') {
+            const { hintEl } = getAddressInputs(scope);
+
+            if (!hintEl) {
+                return;
+            }
+
+            hintEl.textContent = message || '';
+            hintEl.classList.toggle('d-none', !message);
+        }
+
+        function setAddressFieldError(scope, field, message = '') {
+            const errorEl = addressFieldErrors[scope]?.[field] || null;
+            const inputIdMap = {
+                name: scope === 'edit' ? 'editAddressName' : 'newAddressName',
+                phone: scope === 'edit' ? 'editAddressPhone' : 'newAddressPhone',
+                street: scope === 'edit' ? 'editAddressStreet' : 'newAddressStreet',
+            };
+            const input = document.getElementById(inputIdMap[field] || '');
+
+            if (errorEl) {
+                errorEl.textContent = message || '';
+                errorEl.classList.toggle('d-none', !message);
+            }
+
+            if (input) {
+                input.classList.toggle('is-invalid', Boolean(message));
+            }
+        }
+
+        function clearAddressFieldErrors(scope) {
+            ['name', 'phone', 'street'].forEach((field) => setAddressFieldError(scope, field, ''));
+        }
+
+        function normalizeAddressFieldValue(value) {
+            const normalized = String(value || '').trim();
+            return normalized === 'Chưa cập nhật' ? '' : normalized;
+        }
+
+        function isPlaceholderAddressValue(value) {
+            const normalized = String(value || '').trim().toLowerCase();
+
+            if (!normalized) {
+                return true;
+            }
+
+            return [
+                'phường',
+                'xã',
+                'thị trấn',
+                'quận',
+                'huyện',
+                'tỉnh',
+                'thành phố',
+                'phường/xã, tỉnh/thành phố',
+                'ví dụ: thanh hóa, phường quảng phú',
+                'ví dụ: phường quảng phú, thanh hóa',
+            ].includes(normalized);
+        }
+
+        function isDetailedStreet(value) {
+            return /^\s*\d+(?:\s*[-\/]\s*|\s+)\S.+/u.test(String(value || '').trim());
+        }
+
+        function resetAddressFieldState(scope) {
+            const { state } = getAddressInputs(scope);
+            state.areaDirty = false;
+            state.streetDirty = false;
+            setStreetHint(scope, '');
+            clearAddressFieldErrors(scope);
+        }
+
+        function bindAddressFieldTracking(scope) {
+            const { areaInput, streetInput, state } = getAddressInputs(scope);
+            const nameInput = document.getElementById(scope === 'edit' ? 'editAddressName' : 'newAddressName');
+            const phoneInput = document.getElementById(scope === 'edit' ? 'editAddressPhone' : 'newAddressPhone');
+
+            areaInput?.addEventListener('input', (event) => {
+                if (!event.isTrusted) {
+                    return;
+                }
+
+                state.areaDirty = true;
+            });
+
+            streetInput?.addEventListener('input', (event) => {
+                if (!event.isTrusted) {
+                    return;
+                }
+
+                state.streetDirty = true;
+                setStreetHint(scope, '');
+                setAddressFieldError(scope, 'street', '');
+            });
+
+            nameInput?.addEventListener('input', (event) => {
+                if (!event.isTrusted) {
+                    return;
+                }
+
+                setAddressFieldError(scope, 'name', '');
+            });
+
+            phoneInput?.addEventListener('input', (event) => {
+                if (!event.isTrusted) {
+                    return;
+                }
+
+                setAddressFieldError(scope, 'phone', '');
+            });
+        }
+
+        function reverseGeocodeLocation(latitude, longitude) {
+            const url = new URL(@json(route('api.reverse-geocode')), window.location.origin);
+            url.searchParams.set('format', 'jsonv2');
+            url.searchParams.set('latitude', String(latitude));
+            url.searchParams.set('longitude', String(longitude));
+
+            return fetch(url.toString(), {
+                headers: {
+                    'Accept': 'application/json',
+                },
+            })
+                .then((response) => response.ok ? response.json() : null)
+                .catch(() => null);
+        }
+
+        function deriveAddressFieldsFromGeocode(result, latitude, longitude) {
+            const area = String(result?.area || '').trim() || formatReverseGeocodeParts([
+                result?.ward,
+                result?.province,
+            ]);
+            const street = formatReverseGeocodeParts([
+                result?.house_number,
+                result?.road,
+            ]);
+
+            return {
+                area,
+                street,
+            };
+        }
+
+        async function fillAddressFieldsFromLocation(scope, latitude, longitude) {
+            const { areaInput, streetInput, state } = getAddressInputs(scope);
+
+            if (!areaInput || !streetInput) {
+                return;
+            }
+
+            const result = await reverseGeocodeLocation(latitude, longitude);
+            if (!result) {
+                return;
+            }
+
+            const resolved = deriveAddressFieldsFromGeocode(result, latitude, longitude);
+            const areaValue = String(resolved.area || '').trim();
+            const streetValue = String(resolved.street || '').trim();
+            const currentArea = String(areaInput.value || '').trim();
+            const currentStreet = String(streetInput.value || '').trim();
+            const canFillArea = Boolean(areaValue)
+                && !state.areaDirty
+                && (isPlaceholderAddressValue(currentArea) || !currentArea);
+            const canFillStreet = Boolean(streetValue)
+                && !state.streetDirty
+                && (isPlaceholderAddressValue(currentStreet) || !currentStreet);
+
+            if (canFillArea) {
+                setAddressFieldValue(areaInput, areaValue);
+            }
+
+            if (canFillStreet) {
+                setAddressFieldValue(streetInput, streetValue);
+                setStreetHint(scope, '');
+            } else if (!streetValue) {
+                setStreetHint(scope, 'Không xác định được số nhà hoặc tên đường từ GPS. Vui lòng nhập địa chỉ cụ thể.');
+            } else {
+                setStreetHint(scope, '');
+            }
+        }
+
+        function validateAddressSave(scope) {
+            const nameInput = document.getElementById(scope === 'edit' ? 'editAddressName' : 'newAddressName');
+            const phoneInput = document.getElementById(scope === 'edit' ? 'editAddressPhone' : 'newAddressPhone');
+            const streetInput = document.getElementById(scope === 'edit' ? 'editAddressStreet' : 'newAddressStreet');
+
+            clearAddressFieldErrors(scope);
+
+            const name = normalizeAddressFieldValue(nameInput?.value);
+            const phone = normalizeAddressFieldValue(phoneInput?.value);
+            const street = normalizeAddressFieldValue(streetInput?.value);
+
+            if (!name) {
+                setAddressFieldError(scope, 'name', 'Vui lòng nhập họ và tên.');
+                nameInput?.focus();
+                return null;
+            }
+
+            if (!phone) {
+                setAddressFieldError(scope, 'phone', 'Vui lòng nhập số điện thoại.');
+                phoneInput?.focus();
+                return null;
+            }
+
+            if (!street) {
+                setAddressFieldError(scope, 'street', 'Vui lòng nhập địa chỉ cụ thể.');
+                streetInput?.focus();
+                return null;
+            }
+
+            if (!isDetailedStreet(street)) {
+                setAddressFieldError(scope, 'street', 'Địa chỉ cụ thể phải có số ở đầu và tên đường, ví dụ: 12 Hà Huy Tập, 12-Hà Huy Tập hoặc 12/Hà Huy Tập.');
+                streetInput?.focus();
+                return null;
+            }
+
+            return {
+                name,
+                phone,
+                street,
+            };
+        }
+
+        function applyAddressServerErrors(scope, errors = {}) {
+            clearAddressFieldErrors(scope);
+
+            Object.entries({
+                name: errors?.name,
+                phone: errors?.phone,
+                street: errors?.street,
+            }).forEach(([field, messages]) => {
+                const message = Array.isArray(messages) ? messages[0] : String(messages || '').trim();
+
+                if (message) {
+                    setAddressFieldError(scope, field, message);
+                }
+            });
         }
 
         function tierForDistance(distance) {
@@ -1935,6 +2212,7 @@
                 renderBranchOptions();
                 window.ChillDrinkLocationPicker?.clear(picker);
             }
+            resetAddressFieldState('edit');
             updateBranchSelectorState();
             addressListModal.hide();
             addressEditModal.show();
@@ -1953,11 +2231,15 @@
                 longitude: null,
             };
             renderBranchOptions();
+            resetAddressFieldState('new');
             updateBranchSelectorState();
             window.ChillDrinkLocationPicker?.clear(picker);
             addressListModal.hide();
             addressAddModal.show();
         }
+
+        bindAddressFieldTracking('edit');
+        bindAddressFieldTracking('new');
 
         function setVoucherActive(card) {
             if (!card) {
@@ -2068,14 +2350,24 @@
 
             renderBranchOptions(latitude, longitude);
             updateBranchSelectorState();
+
+            const scope = picker.dataset.locationPicker === 'checkout-edit-location-picker' ? 'edit' : 'new';
+            fillAddressFieldsFromLocation(scope, latitude, longitude).catch((error) => {
+                console.error('Không thể tự điền địa chỉ từ vị trí hiện tại:', error);
+            });
         });
 
         document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {
             const address = getAddressById(selectedAddressId);
-            const name = document.getElementById('editAddressName').value.trim();
-            const phone = document.getElementById('editAddressPhone').value.trim();
+            const validated = validateAddressSave('edit');
+            if (!validated) {
+                return;
+            }
+
+            const name = validated.name;
+            const phone = validated.phone;
             const area = document.getElementById('editAddressArea').value.trim();
-            const street = document.getElementById('editAddressStreet').value.trim();
+            const street = validated.street;
             const resolvedLocation = getPickerCoordinates('edit');
 
             const payload = {
@@ -2110,28 +2402,33 @@
                 if (response.ok) {
                     try {
                         syncAddressBook(data);
+                        addressEditModal.hide();
                     } catch (syncError) {
                         console.error(syncError);
                     }
                 } else {
-                    console.error(
-                        data?.message
-                            || Object.values(data?.errors || {})?.flat()?.[0]
-                            || 'Không thể lưu địa chỉ.'
-                    );
+                    applyAddressServerErrors('edit', data?.errors || {});
+                    if (!data?.errors) {
+                        setAddressFieldError('edit', 'street', data?.message || 'Không thể lưu địa chỉ.');
+                    }
+                    console.error(data?.message || 'Không thể lưu địa chỉ.');
                 }
             } catch (error) {
                 console.error(error);
-            } finally {
-                addressEditModal.hide();
+                setAddressFieldError('edit', 'street', 'Không thể lưu địa chỉ. Vui lòng thử lại.');
             }
         });
 
         document.getElementById('saveNewAddress')?.addEventListener('click', async function () {
-            const name = document.getElementById('newAddressName').value.trim();
-            const phone = document.getElementById('newAddressPhone').value.trim();
+            const validated = validateAddressSave('new');
+            if (!validated) {
+                return;
+            }
+
+            const name = validated.name;
+            const phone = validated.phone;
             const area = document.getElementById('newAddressArea').value.trim();
-            const street = document.getElementById('newAddressStreet').value.trim();
+            const street = validated.street;
             const resolvedLocation = getPickerCoordinates('new');
 
             const payload = {
@@ -2161,20 +2458,20 @@
                 if (response.ok) {
                     try {
                         syncAddressBook(data);
+                        addressAddModal.hide();
                     } catch (syncError) {
                         console.error(syncError);
                     }
                 } else {
-                    console.error(
-                        data?.message
-                            || Object.values(data?.errors || {})?.flat()?.[0]
-                            || 'Không thể lưu địa chỉ mới.'
-                    );
+                    applyAddressServerErrors('new', data?.errors || {});
+                    if (!data?.errors) {
+                        setAddressFieldError('new', 'street', data?.message || 'Không thể lưu địa chỉ mới.');
+                    }
+                    console.error(data?.message || 'Không thể lưu địa chỉ mới.');
                 }
             } catch (error) {
                 console.error(error);
-            } finally {
-                addressAddModal.hide();
+                setAddressFieldError('new', 'street', 'Không thể lưu địa chỉ mới. Vui lòng thử lại.');
             }
         });
 

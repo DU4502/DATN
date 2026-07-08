@@ -423,12 +423,17 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
-            'street' => ['nullable', 'string', 'max:255'],
+            'street' => ['required', 'string', 'max:255', 'regex:/^\s*\d+(?:\s*[-\/]\s*|\s+)\S.+/u'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
+        ], [
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.not_in' => 'Vui lòng nhập số điện thoại.',
+            'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
+            'street.regex' => 'Địa chỉ cụ thể phải có số ở đầu và tên đường, ví dụ: 12 Hà Huy Tập, 12-Hà Huy Tập hoặc 12/Hà Huy Tập.',
         ]);
 
         $user = $request->user();
@@ -462,13 +467,18 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
-            'street' => ['nullable', 'string', 'max:255'],
+            'street' => ['required', 'string', 'max:255', 'regex:/^\s*\d+(?:\s*[-\/]\s*|\s+)\S.+/u'],
             'label' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
+        ], [
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.not_in' => 'Vui lòng nhập số điện thoại.',
+            'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
+            'street.regex' => 'Địa chỉ cụ thể phải có số ở đầu và tên đường, ví dụ: 12 Hà Huy Tập, 12-Hà Huy Tập hoặc 12/Hà Huy Tập.',
         ]);
 
         $user = $request->user();
@@ -510,13 +520,18 @@ class CheckoutController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
-            'street' => ['nullable', 'string', 'max:255'],
+            'street' => ['required', 'string', 'max:255', 'regex:/^\s*\d+(?:\s*[-\/]\s*|\s+)\S.+/u'],
             'label' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
+        ], [
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.not_in' => 'Vui lòng nhập số điện thoại.',
+            'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
+            'street.regex' => 'Địa chỉ cụ thể phải có số ở đầu và tên đường, ví dụ: 12 Hà Huy Tập, 12-Hà Huy Tập hoặc 12/Hà Huy Tập.',
         ]);
 
         if ($request->boolean('is_default')) {

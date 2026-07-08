@@ -28,6 +28,7 @@ class Branch extends Model
     {
         return $query
             ->where('status', true)
+            ->where('status', 1)
             ->whereNotNull('latitude')
             ->whereNotNull('longitude');
     }

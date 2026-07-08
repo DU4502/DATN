@@ -579,7 +579,15 @@ class SuperAdminController extends Controller
     public function updateBranch(Request $request, User $user)
     {
         $validated = $request->validate([
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => [
+                'nullable',
+                'exists:branches,id',
+                Rule::unique('users', 'branch_id')
+                    ->ignore($user->id)
+                    ->whereNotNull('branch_id'),
+            ],
+        ], [
+            'branch_id.unique' => 'Chi nhánh này đã được gán cho admin khác.',
         ]);
 
         $user->update(['branch_id' => $validated['branch_id'] ?? null]);
