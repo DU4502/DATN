@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use GuzzleHttp\TransferStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
-use GuzzleHttp\TransferStats;
 
 class BranchController extends Controller
 {
@@ -258,7 +258,7 @@ class BranchController extends Controller
      */
     public function toggleStatus(Branch $branch)
     {
-        $branch->update(['status' => !$branch->status]);
+        $branch->update(['status' => ! $branch->status]);
 
         if (request()->expectsJson()) {
             return response()->json(['success' => true, 'status' => $branch->status]);
