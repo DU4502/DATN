@@ -80,7 +80,7 @@ class GuestCheckoutController extends CheckoutController
             'guest_email' => ['required', 'string', 'email', 'max:255'],
             'delivery_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:delivery_type,delivery'],
-            'branch_id' => ['nullable', 'integer', 'exists:branches,id', 'required_if:delivery_type,pickup'],
+            'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'note' => ['nullable', 'string', 'max:500'],
         ], [
             'guest_name.required' => 'Vui lòng nhập họ tên.',
@@ -89,7 +89,8 @@ class GuestCheckoutController extends CheckoutController
             'guest_email.required' => 'Vui lòng nhập email.',
             'guest_email.email' => 'Email không đúng định dạng.',
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
-            'branch_id.required_if' => 'Vui lòng chọn chi nhánh lấy hàng.',
+            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
         ]);
 
         session(['guest_checkout' => $validated]);
@@ -220,6 +221,12 @@ class GuestCheckoutController extends CheckoutController
             $note = mb_substr($note, 0, 500);
             $guestToken = Str::random(48);
 
+            // Branch_id is always required and comes from guest_checkout session
+            $branchId = $guestInfo['branch_id'] ?? null;
+            if (!$branchId) {
+                throw new \RuntimeException('Vui lòng chọn chi nhánh trước khi đặt hàng.');
+            }
+
             $orderData = [
                 'user_id'       => null,
                 'guest_name'    => $guestInfo['guest_name'],
@@ -227,7 +234,7 @@ class GuestCheckoutController extends CheckoutController
                 'guest_email'   => strtolower($guestInfo['guest_email']),
                 'guest_token'   => $guestToken,
                 'delivery_type' => $deliveryType,
-                'branch_id'     => $deliveryType === 'pickup' ? ($guestInfo['branch_id'] ?? null) : null,
+                'branch_id'     => $branchId,
                 'payment_method' => $request->payment_method,
                 // Đơn hàng ẩn với admin cho đến khi guest xác nhận email
                 'status'                         => 'awaiting_email_confirmation',

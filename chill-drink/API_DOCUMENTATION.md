@@ -391,40 +391,6 @@ PUT    /api/admin/orders/{id}/status
 }
 ```
 
-### Gợi ý chi nhánh gần nhất
-
-```http
-GET /api/branches/nearest?latitude=10.7750000&longitude=106.6990000&limit=3
-```
-
-| Tham số | Bắt buộc | Quy tắc |
-|---|---:|---|
-| `latitude` | Có | Từ `-90` đến `90` |
-| `longitude` | Có | Từ `-180` đến `180` |
-| `limit` | Không | Từ `1` đến `5`, mặc định `3` |
-
-API chỉ trả về chi nhánh đang hoạt động và đã có tọa độ. Kết quả được sắp xếp từ gần đến xa theo công thức Haversine.
-
-```json
-{
-  "message": "Đã tìm thấy chi nhánh gần vị trí của bạn.",
-  "data": [
-    {
-      "id": 1,
-      "name": "Chi nhánh trung tâm",
-      "code": "CN-TT",
-      "address": "Địa chỉ chi nhánh thực tế",
-      "phone": "0900000000",
-      "latitude": 10.7769,
-      "longitude": 106.7009,
-      "distance_km": 0.31
-    }
-  ]
-}
-```
-
-Checkout gửi `branch_id` đã chọn trong `POST /checkout/process`. Backend chỉ chấp nhận chi nhánh còn hoạt động và lưu mã chi nhánh vào đơn hàng.
-
 ## 📊 Status Codes
 
 - `200` - Success

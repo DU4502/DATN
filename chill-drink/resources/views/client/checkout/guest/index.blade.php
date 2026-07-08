@@ -106,6 +106,17 @@
                             </div>
                         </div>
 
+                        <div class="mb-4">
+                            <label for="branch_id" class="form-label fw-semibold">Chọn chi nhánh *</label>
+                            <select id="branch_id" name="branch_id" class="form-select guest-input @error('branch_id') is-invalid @enderror">
+                                <option value="">Chọn chi nhánh</option>
+                                @foreach($branches as $branch)
+                                    <option value="{{ $branch->id }}" @selected((string) old('branch_id', $guestInfo['branch_id'] ?? '') === (string) $branch->id)>{{ $branch->name }} — {{ $branch->address }}</option>
+                                @endforeach
+                            </select>
+                            @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+
                         <div class="delivery-fields {{ $deliveryType === 'pickup' ? 'is-hidden' : '' }}" data-delivery-fields>
                             <div class="mb-3">
                                 <label for="shipping_address_ui" class="form-label fw-semibold">Địa chỉ giao hàng *</label>
@@ -113,19 +124,6 @@
                                 @error('shipping_address_ui')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
 
-                        </div>
-
-                        <div class="pickup-fields {{ $deliveryType === 'delivery' ? 'is-hidden' : '' }}" data-pickup-fields>
-                            <div class="mb-4">
-                                <label for="branch_id" class="form-label fw-semibold">Chọn chi nhánh *</label>
-                                <select id="branch_id" name="branch_id" class="form-select guest-input @error('branch_id') is-invalid @enderror">
-                                    <option value="">Chọn chi nhánh</option>
-                                    @foreach($branches as $branch)
-                                        <option value="{{ $branch->id }}" @selected((string) old('branch_id', $guestInfo['branch_id'] ?? '') === (string) $branch->id)>{{ $branch->name }} — {{ $branch->address }}</option>
-                                    @endforeach
-                                </select>
-                                @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
                         </div>
 
                         <div class="mb-4">
