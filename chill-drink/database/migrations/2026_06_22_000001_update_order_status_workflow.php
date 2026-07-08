@@ -12,11 +12,7 @@ return new class extends Migration
             return;
         }
 
-        $usesMySql = DB::getDriverName() === 'mysql';
-
-        if ($usesMySql) {
-            DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
-        }
+        DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
 
         DB::table('orders')
             ->whereIn('status', ['processing', 'preparing'])
@@ -26,18 +22,16 @@ return new class extends Migration
             ->whereIn('status', ['shipped', 'delivering', 'shipping'])
             ->update(['status' => 'shipper_accepted']);
 
-        if ($usesMySql) {
-            DB::statement(
-                "ALTER TABLE orders MODIFY status ENUM(
-                    'pending',
-                    'in_progress',
-                    'shipper_accepted',
-                    'arrived',
-                    'completed',
-                    'cancelled'
-                ) NOT NULL DEFAULT 'pending'"
-            );
-        }
+        DB::statement(
+            "ALTER TABLE orders MODIFY status ENUM(
+                'pending',
+                'in_progress',
+                'shipper_accepted',
+                'arrived',
+                'completed',
+                'cancelled'
+            ) NOT NULL DEFAULT 'pending'"
+        );
     }
 
     public function down(): void
@@ -46,11 +40,7 @@ return new class extends Migration
             return;
         }
 
-        $usesMySql = DB::getDriverName() === 'mysql';
-
-        if ($usesMySql) {
-            DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
-        }
+        DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
 
         DB::table('orders')
             ->where('status', 'in_progress')
@@ -64,18 +54,16 @@ return new class extends Migration
             ->where('status', 'arrived')
             ->update(['status' => 'delivering']);
 
-        if ($usesMySql) {
-            DB::statement(
-                "ALTER TABLE orders MODIFY status ENUM(
-                    'pending',
-                    'processing',
-                    'preparing',
-                    'shipped',
-                    'delivering',
-                    'completed',
-                    'cancelled'
-                ) NOT NULL DEFAULT 'pending'"
-            );
-        }
+        DB::statement(
+            "ALTER TABLE orders MODIFY status ENUM(
+                'pending',
+                'processing',
+                'preparing',
+                'shipped',
+                'delivering',
+                'completed',
+                'cancelled'
+            ) NOT NULL DEFAULT 'pending'"
+        );
     }
 };

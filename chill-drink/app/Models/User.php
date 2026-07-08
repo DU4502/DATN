@@ -26,6 +26,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone',
         'address',
         'area',
+        'latitude',
+        'longitude',
         'branch_id',
         'reset_token',
         'reset_expire',
@@ -160,6 +162,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function orders()
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany(Address::class);
     }
 
     public function reviews()
