@@ -130,7 +130,6 @@
             flex: 1 1 auto;
             min-height: 0;
             margin-top: 0.45rem;
-            overflow-y: auto;
         }
 
         .root-nav-label {
@@ -243,6 +242,8 @@
         .root-content {
             min-height: 100vh;
             margin-left: var(--root-sidebar-width);
+            display: flex;
+            flex-direction: column;
         }
 
         .root-topbar {
@@ -319,11 +320,109 @@
             color: var(--root-muted);
         }
 
+        .root-topbar-search {
+            width: min(320px, 28vw);
+            height: 38px;
+            border: 1px solid var(--root-border);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .root-topbar-search i { margin-left: 0.75rem; color: #8a9490; }
+        .root-topbar-search input {
+            min-width: 0;
+            flex: 1;
+            height: 100%;
+            border: 0;
+            padding: 0 0.7rem;
+            outline: 0;
+            color: var(--root-ink);
+            font-size: 0.72rem;
+        }
+
+        .root-user-button {
+            min-height: 40px;
+            border: 0;
+            padding: 0.25rem 0.4rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            background: transparent;
+            color: var(--root-ink);
+            text-align: left;
+        }
+
+        .root-user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 7px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #dcf6ed;
+            color: var(--root-green-dark);
+            font-weight: 800;
+        }
+
+        .root-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .root-user-copy strong, .root-user-copy span { display: block; }
+        .root-user-copy strong { font-size: 0.68rem; }
+        .root-user-copy span { color: var(--root-muted); font-size: 0.58rem; }
+
+        .root-notification-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 17px;
+            height: 17px;
+            border: 2px solid #fff;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #dc3545;
+            color: #fff;
+            font-size: 0.52rem;
+            font-weight: 800;
+        }
+
+        .root-dropdown {
+            min-width: 260px;
+            border: 1px solid var(--root-border);
+            border-radius: 8px;
+            padding: 0.45rem;
+            box-shadow: 0 14px 35px rgba(20, 29, 26, 0.14);
+        }
+
+        .root-dropdown-title { padding: 0.45rem 0.65rem; font-size: 0.72rem; font-weight: 800; }
+        .root-dropdown-empty { padding: 0.8rem 0.65rem; color: var(--root-muted); font-size: 0.68rem; }
+        .root-dropdown .dropdown-item { border-radius: 6px; padding: 0.55rem 0.65rem; font-size: 0.68rem; }
+        .root-notification-item strong, .root-notification-item span { display: block; }
+        .root-notification-item span { margin-top: 0.12rem; color: var(--root-muted); font-size: 0.58rem; }
+
         .root-page {
             width: 100%;
             max-width: 1540px;
             margin: 0 auto;
             padding: 1.35rem 1.5rem 2rem;
+            flex: 1 0 auto;
+        }
+
+        .root-footer {
+            min-height: 52px;
+            padding: 0.75rem 1.5rem;
+            border-top: 1px solid var(--root-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            color: var(--root-muted);
+            background: #fff;
+            font-size: 0.62rem;
         }
 
         .root-sidebar-backdrop { display: none; }
@@ -340,12 +439,14 @@
                 background: rgba(15,18,17,0.45);
             }
             .root-sidebar-backdrop.show { display: block; }
+            .root-user-copy { display: none; }
         }
 
         @media (max-width: 575.98px) {
             .root-topbar { padding: 0 0.85rem; }
             .root-page { padding: 1rem 0.85rem 1.5rem; }
-            .root-live, .root-breadcrumb span { display: none; }
+            .root-live, .root-breadcrumb span, .root-topbar-search { display: none; }
+            .root-footer { align-items: flex-start; flex-direction: column; padding: 0.75rem 0.85rem; }
         }
     </style>
 </head>
@@ -364,27 +465,18 @@
 
             <nav class="root-nav">
                 <p class="root-nav-label">Điều hành</p>
-                <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-command"></i> Trung tâm kiểm soát</a>
+                <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Dashboard</a>
                 <a href="#admins" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
                 <a href="#permissions" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
-                <a href="#audit" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
 
-                <p class="root-nav-label">Nền tảng</p>
-                <a href="#" class="root-nav-link"><i class="bi bi-diagram-3"></i> Tích hợp dịch vụ</a>
-                <a href="#" class="root-nav-link"><i class="bi bi-database-check"></i> Sao lưu dữ liệu</a>
-                <a href="#" class="root-nav-link"><i class="bi bi-sliders"></i> Cấu hình hệ thống</a>
+                <p class="root-nav-label">Hệ thống</p>
+                <a href="#security" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
+                <a href="#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
+                <a href="#audit" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
             </nav>
 
             <div class="root-sidebar-footer">
-                <a href="{{ route('admin.dashboard') }}" class="root-nav-link"><i class="bi bi-arrow-left-square"></i> Về Admin thường</a>
-                <div class="root-session">
-                    <span class="root-session-avatar">{{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}</span>
-                    <div><strong>{{ Auth::user()->name }}</strong><span>Phiên Super Admin</span></div>
-                </div>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="root-logout"><i class="bi bi-box-arrow-right"></i> Đăng xuất</button>
-                </form>
+                <a href="{{ route('home') }}" class="root-nav-link"><i class="bi bi-house-door"></i> Về trang chủ</a>
             </div>
         </aside>
 
@@ -397,15 +489,61 @@
                     <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Super Admin')</strong></div>
                 </div>
                 <div class="root-topbar-right">
-                    <span class="root-live">Hệ thống trực tuyến</span>
-                    <button type="button" class="root-topbar-btn" title="Tìm kiếm"><i class="bi bi-search"></i></button>
-                    <button type="button" class="root-topbar-btn position-relative" title="Thông báo"><i class="bi bi-bell"></i><span class="position-absolute top-0 end-0 translate-middle p-1 bg-danger border border-light rounded-circle"></span></button>
+                    <form class="root-topbar-search" method="GET" action="{{ route('admin.super-admin') }}" role="search">
+                        <i class="bi bi-search"></i>
+                        <input type="search" name="q" value="{{ request('q') }}" placeholder="Tìm tên hoặc email Admin" aria-label="Tìm quản trị viên">
+                    </form>
+                    <div class="dropdown">
+                        <button type="button" class="root-topbar-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo">
+                            <i class="bi bi-bell"></i>
+                            @if(($unreadNotificationCount ?? 0) > 0)
+                                <span class="root-notification-count">{{ min(99, $unreadNotificationCount) }}</span>
+                            @endif
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end root-dropdown">
+                            <div class="root-dropdown-title">Thông báo</div>
+                            @forelse(($notifications ?? collect()) as $notification)
+                                <div class="dropdown-item-text root-notification-item">
+                                    <strong>{{ data_get($notification->data, 'title', 'Thông báo hệ thống') }}</strong>
+                                    <span>{{ data_get($notification->data, 'message', $notification->created_at?->diffForHumans()) }}</span>
+                                </div>
+                            @empty
+                                <div class="root-dropdown-empty">Chưa có thông báo mới.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button type="button" class="root-user-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản Super Admin">
+                            <span class="root-user-avatar">
+                                @if(Auth::user()->avatar)
+                                    <img src="{{ str_starts_with(Auth::user()->avatar, 'http') ? Auth::user()->avatar : asset('storage/'.ltrim(Auth::user()->avatar, '/')) }}" alt="{{ Auth::user()->name }}">
+                                @else
+                                    {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
+                                @endif
+                            </span>
+                            <span class="root-user-copy"><strong>{{ Auth::user()->name }}</strong><span>Super Admin</span></span>
+                            <i class="bi bi-chevron-down small"></i>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end root-dropdown">
+                            <a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Thông tin cá nhân</a>
+                            <div class="dropdown-divider"></div>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </header>
 
             <main class="root-page">
                 @yield('content')
             </main>
+
+            <footer class="root-footer">
+                <span>© 2026 Chill Drink · Super Admin</span>
+                <span>Phiên bản 1.0.0 · Cập nhật {{ now()->format('d/m/Y') }}</span>
+            </footer>
         </div>
     </div>
 

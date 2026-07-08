@@ -1268,6 +1268,9 @@
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
                             <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                            @if(auth()->user()->isAdmin() || auth()->user()->isSuperAdmin())
+                                <li><a class="dropdown-item" href="{{ auth()->user()->isSuperAdmin() ? route('admin.super-admin') : route('admin.dashboard') }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
+                            @endif
                             <li>
                                 <hr class="dropdown-divider" style="margin: 0.25rem 0;">
                             </li>

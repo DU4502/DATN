@@ -5,8 +5,11 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReviewController;
+use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
 use App\Http\Controllers\Client\HomeController;
@@ -40,14 +43,32 @@ Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear
 Route::get('/vnpay/ipn', [VnpayController::class, 'ipn'])->name('vnpay.ipn');
 Route::get('/vnpay/return', [VnpayController::class, 'return'])->name('vnpay.return');
 
+// Guest checkout (no authentication required)
+Route::prefix('checkout/guest')->name('checkout.guest.')->group(function () {
+    Route::get('/', [GuestCheckoutController::class, 'index'])->name('index');
+    Route::post('/info', [GuestCheckoutController::class, 'storeInfo'])->name('info.store');
+    Route::get('/payment', [GuestCheckoutController::class, 'payment'])->name('payment');
+    Route::post('/process', [GuestCheckoutController::class, 'process'])->name('process');
+    Route::get('/pending-confirmation/{order}', [GuestCheckoutController::class, 'pendingConfirmation'])->name('pending-confirmation');
+    Route::get('/confirm-email/{order}', [GuestCheckoutController::class, 'confirmEmail'])->name('confirm-email');
+    Route::get('/track/{order}', [GuestCheckoutController::class, 'track'])
+        ->middleware('signed')
+        ->name('track');
+});
+
+Route::post('/register/guest-convert', [GuestConvertController::class, 'store'])
+    ->middleware('guest')
+    ->name('register.guest-convert');
+
+Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
+Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name('vnpay.payment');
+
 Broadcast::routes(['middleware' => ['web', 'auth']]);
 
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-    Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
-    Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name('vnpay.payment');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
 });
 
@@ -59,6 +80,10 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
+        if (auth()->user()->isSuperAdmin()) {
+            return redirect()->route('admin.super-admin');
+        }
+
         if (auth()->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
         }
@@ -80,10 +105,12 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------https://antigravity.google/support
 */
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->group(function () {
+    Route::get('/super-admin', [SuperAdminController::class, 'index'])->name('super-admin');
+    Route::post('/super-admin/admins', [SuperAdminController::class, 'storeAdmin'])->name('super-admin.admins.store');
+});
 
-    // Super Admin interface preview (frontend only)
-    Route::view('/super-admin', 'admin.super-admin')->name('super-admin');
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -96,8 +123,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Product Management
     Route::resource('products', AdminProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
-
-    Route::resource('products', AdminProductController::class)->only(['index']);
 
     // Category Management
     Route::resource('categories', CategoryController::class)->except(['show']);

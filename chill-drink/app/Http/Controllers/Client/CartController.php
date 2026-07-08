@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class CartController extends Controller
 {
@@ -120,7 +123,7 @@ class CartController extends Controller
     {
         $demoProducts = $this->demoProducts();
         $product = isset($demoProducts[$id])
-            ? (object) $demoProducts[$id]
+            ? $this->resolveOrCreatePayableProduct($demoProducts[$id], $id)
             : Product::findOrFail($id);
         
         $cart = session()->get('cart', []);
@@ -141,6 +144,7 @@ class CartController extends Controller
         $toppingKey = collect($toppings)->pluck('name')->implode(',');
         $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel . ':' . md5($toppingKey);
         $basePrice = (int) ($product->price ?? 0);
+        $productId = $product instanceof Product ? (int) $product->id : $id;
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
         
         // If the same product and size already exist, increase quantity.
@@ -153,7 +157,7 @@ class CartController extends Controller
                 : ($product->image ?? \App\Support\ProductImage::forCategory(null, crc32((string) $id)));
 
             $cart[$cartKey] = [
-                'product_id' => $id,
+                'product_id' => $productId,
                 'name' => $product->name,
                 'base_price' => $basePrice,
                 'price' => $basePrice + $size['extra'] + $toppingTotal,
@@ -178,10 +182,55 @@ class CartController extends Controller
         }
 
         if ($request->boolean('buy_now')) {
-            return redirect()->route('checkout.index', ['items' => [$cartKey]]);
+            $route = auth()->check() ? 'checkout.index' : 'checkout.guest.index';
+            return redirect()->route($route, ['items' => [$cartKey]]);
         }
         
         return redirect()->back();
+    }
+
+    private function resolveOrCreatePayableProduct(array $demoProduct, string $demoId): Product
+    {
+        $name = trim((string) ($demoProduct['name'] ?? ''));
+        $slug = Str::slug($name !== '' ? $name : $demoId);
+        $price = max(0, (int) ($demoProduct['price'] ?? 0));
+
+        $product = Product::query()
+            ->where(function ($query) use ($name, $slug) {
+                $query->where('name', $name);
+
+                if ($slug !== '') {
+                    $query->orWhere('slug', $slug);
+                }
+            })
+            ->first();
+
+        if ($product) {
+            return $product;
+        }
+
+        $categoryName = trim((string) ($demoProduct['category'] ?? ''));
+        $category = null;
+
+        if (Schema::hasTable('categories') && $categoryName !== '') {
+            $category = Category::query()->firstOrCreate(
+                ['name' => $categoryName],
+                ['slug' => Str::slug($categoryName), 'status' => true]
+            );
+        }
+
+        return Product::create([
+            'category_id' => $category?->id,
+            'name' => $name !== '' ? $name : 'Sản phẩm demo',
+            'slug' => $slug,
+            'price' => $price,
+            'stock' => 100,
+            'status' => true,
+            'description' => trim((string) ($demoProduct['description'] ?? '')) !== ''
+                ? $demoProduct['description']
+                : 'Sản phẩm được tạo tự động để hỗ trợ thanh toán.',
+            'image' => $demoProduct['image'] ?? null,
+        ]);
     }
 
     /**

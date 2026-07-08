@@ -18,6 +18,11 @@ final class OrderStatus
 
     public const CANCELLED = 'cancelled';
 
+    /**
+     * Trạng thái chờ khách xác nhận qua email (ẩn với admin).
+     */
+    public const AWAITING_EMAIL_CONFIRMATION = 'awaiting_email_confirmation';
+
     public const SEQUENCE = [
         self::PENDING,
         self::IN_PROGRESS,
@@ -29,6 +34,7 @@ final class OrderStatus
     public static function labels(): array
     {
         return [
+            self::AWAITING_EMAIL_CONFIRMATION => 'Chờ xác nhận email',
             self::PENDING => 'Chờ xử lý',
             self::IN_PROGRESS => 'Đang thực hiện',
             self::SHIPPER_ACCEPTED => 'Shiper đã nhận đơn',
@@ -38,9 +44,20 @@ final class OrderStatus
         ];
     }
 
+    /**
+     * Labels hiển thị cho Admin (ẩn trạng thái chờ xác nhận email).
+     */
+    public static function adminLabels(): array
+    {
+        $all = self::labels();
+        unset($all[self::AWAITING_EMAIL_CONFIRMATION]);
+
+        return $all;
+    }
+
     public static function filterOptions(): array
     {
-        return ['' => 'Tất cả trạng thái'] + self::labels();
+        return ['' => 'Tất cả trạng thái'] + self::adminLabels();
     }
 
     public static function label(string $status): string

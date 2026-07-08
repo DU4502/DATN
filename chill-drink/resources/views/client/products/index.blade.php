@@ -13,6 +13,11 @@
         'price_desc' => 'Giá cao đến thấp',
     ];
     $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
+    $showCatalogPromotions = !request()->filled('category')
+        && empty($searchQuery)
+        && !request()->filled('min_price')
+        && !request()->filled('max_price')
+        && $products->currentPage() === 1;
 @endphp
 <style>
     .shop-page {
@@ -96,7 +101,12 @@
 
     .shop-vouchers {
         display: grid;
-        gap: 1rem;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        border: 1px solid rgba(47, 185, 160, 0.18);
+        border-radius: 20px;
+        background: rgba(47, 185, 160, 0.045);
     }
 
     .shop-vouchers__header {
@@ -108,6 +118,7 @@
 
     .shop-vouchers__header h3 {
         margin: 0;
+        font-size: 1.1rem;
         font-weight: 700;
     }
 
@@ -118,29 +129,35 @@
     }
 
     .voucher-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 1rem;
-        align-items: stretch;
+        display: flex;
+        gap: 0.75rem;
+        overflow-x: auto;
+        padding: 0.15rem 0 0.45rem;
+        scroll-snap-type: x proximity;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(47, 185, 160, 0.45) transparent;
     }
 
     .voucher-card {
+        flex: 0 0 330px;
         position: relative;
-        background: linear-gradient(90deg, #2fb9a0 0 156px, #ffffff 156px 100%);
+        background: linear-gradient(90deg, #2fb9a0 0 112px, #ffffff 112px 100%);
         border: 1px solid rgba(47, 185, 160, 0.24);
         border-radius: 18px;
         padding: 1.05rem 1.05rem 1.05rem 1rem;
         box-shadow: 0 18px 40px rgba(15, 78, 62, 0.08);
-        min-height: 132px;
+        min-height: 116px;
         display: grid;
-        grid-template-columns: 156px minmax(0, 1fr) auto;
+        grid-template-columns: 112px minmax(0, 1fr);
         grid-template-areas:
-            "left code action"
-            "left info action";
-        column-gap: 1.45rem;
-        row-gap: 0.35rem;
+            "left code"
+            "left info"
+            "left action";
+        column-gap: 1rem;
+        row-gap: 0.25rem;
         align-items: center;
         overflow: hidden;
+        scroll-snap-align: start;
     }
 
     .voucher-card::before,
@@ -166,8 +183,8 @@
 
     .voucher-card__visual {
         grid-area: left;
-        width: 48px;
-        height: 48px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
@@ -213,7 +230,8 @@
         white-space: nowrap;
         grid-area: action;
         align-self: start;
-        margin-top: 0.05rem;
+        justify-self: start;
+        margin-top: 0.15rem;
     }
 
     .voucher-card__tag:hover {
@@ -235,7 +253,7 @@
         grid-area: left;
         align-self: end;
         justify-self: center;
-        width: 112px;
+        width: 90px;
         color: #ffffff;
         font-size: 0.86rem;
         font-weight: 900;
@@ -547,7 +565,7 @@
         position: relative;
         overflow: hidden;
         border-radius: var(--radius-sm);
-        aspect-ratio: 4 / 3;
+        aspect-ratio: 1 / 1;
         background: var(--drink-primary-soft);
     }
 
@@ -558,7 +576,7 @@
         min-height: 100%;
         object-fit: contain !important;
         object-position: center !important;
-        padding: 0.55rem;
+        padding: 0.75rem;
         display: block;
         background: var(--drink-primary-soft) !important;
         transition: transform 0.55s ease, filter 0.35s ease;
@@ -870,9 +888,6 @@
             max-height: 250px;
         }
 
-        .voucher-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
     }
 
     @media (max-width: 767.98px) {
@@ -886,12 +901,9 @@
             grid-template-columns: 1fr;
         }
 
-        .voucher-grid {
-            grid-template-columns: 1fr;
-        }
-
         .voucher-card {
-            min-height: 108px;
+            flex-basis: min(320px, calc(100vw - 3rem));
+            min-height: 112px;
             background: linear-gradient(90deg, #2fb9a0 0 128px, #ffffff 128px 100%);
             grid-template-columns: 128px minmax(0, 1fr);
             grid-template-areas:
@@ -1041,64 +1053,21 @@
             </aside>
 
             <div class="col-lg-9">
-                <div class="shop-main-top">
-                    <div class="shop-hero">
-                        <div>
-                            <span class="shop-hero__badge">Món mới nhất</span>
-                            <h2 class="shop-hero__title">Matcha Dừa Mây</h2>
-                            <p class="shop-hero__text">Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.</p>
-                            <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
-                        </div>
-                        <div class="shop-hero__visual">
-                            <img src="{{ asset('images/matcha.png') }}" alt="Matcha Dừa Mây" loading="lazy">
-                        </div>
-                    </div>
-
-                    <div class="shop-vouchers">
-                        <div class="shop-vouchers__header">
-                            <h3>Mã Giảm Giá Phổ Biến</h3>
-                            <a href="{{ route('products.index') }}">Xem tất cả</a>
-                        </div>
-                        <div class="voucher-grid">
-                            <div class="voucher-card">
-                                <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
-                                    <span class="voucher-card__label">TANGNANG20</span>
-                                    <div class="voucher-card__code">TANGNANG20</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG20">SAO CHÉP</button>
-                                </div>
-                                <p class="voucher-card__info">Giảm 20k đơn 100k <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
+                @if($showCatalogPromotions)
+                    <div class="shop-main-top">
+                        <div class="shop-hero">
+                            <div>
+                                <span class="shop-hero__badge">Món mới nhất</span>
+                                <h2 class="shop-hero__title">Matcha Dừa Mây</h2>
+                                <p class="shop-hero__text">Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.</p>
+                                <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
                             </div>
-                            <div class="voucher-card">
-                                <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
-                                    <span class="voucher-card__label">TANGNANG15</span>
-                                    <div class="voucher-card__code">TANGNANG15</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG15">SAO CHÉP</button>
-                                </div>
-                                <p class="voucher-card__info">Giảm 15% tổng bill <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
-                            </div>
-                            <div class="voucher-card">
-                                <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
-                                    <span class="voucher-card__label">CHOCHILL</span>
-                                    <div class="voucher-card__code">CHOCHILL</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="CHOCHILL">SAO CHÉP</button>
-                                </div>
-                                <p class="voucher-card__info">Freeship đơn từ 50k <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
-                            </div>
-                            <div class="voucher-card">
-                                <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
-                                    <span class="voucher-card__label">SUMMER24</span>
-                                    <div class="voucher-card__code">SUMMER24</div>
-                                    <button type="button" class="voucher-card__tag" data-copy-code="SUMMER24">SAO CHÉP</button>
-                                </div>
-                                <p class="voucher-card__info">Giảm 10k mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
+                            <div class="shop-hero__visual">
+                                <img src="{{ asset('images/matcha.png') }}" alt="Matcha Dừa Mây" loading="lazy">
                             </div>
                         </div>
                     </div>
-                </div>
+                @endif
 
                 <div class="shop-grid-head">
                     <div>
@@ -1132,6 +1101,53 @@
                         </div>
                     </form>
                 </div>
+
+                @if($showCatalogPromotions)
+                    <div class="shop-vouchers">
+                        <div class="shop-vouchers__header">
+                            <h3>Mã giảm giá phổ biến</h3>
+                            <span class="text-secondary small">Sao chép mã để dùng khi thanh toán</span>
+                        </div>
+                        <div class="voucher-grid">
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
+                                <span class="voucher-card__label">TANGNANG20</span>
+                                <div class="voucher-card__code">TANGNANG20</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG20">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Giảm 20.000đ cho đơn từ 100.000đ <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
+                        </div>
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
+                                <span class="voucher-card__label">TANGNANG15</span>
+                                <div class="voucher-card__code">TANGNANG15</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG15">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Giảm 15% tổng đơn <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
+                        </div>
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
+                                <span class="voucher-card__label">CHOCHILL</span>
+                                <div class="voucher-card__code">CHOCHILL</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="CHOCHILL">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Miễn phí giao hàng cho đơn từ 50.000đ <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
+                        </div>
+                        <div class="voucher-card">
+                            <div class="voucher-card__top">
+                                <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
+                                <span class="voucher-card__label">SUMMER24</span>
+                                <div class="voucher-card__code">SUMMER24</div>
+                                <button type="button" class="voucher-card__tag" data-copy-code="SUMMER24">SAO CHÉP</button>
+                            </div>
+                            <p class="voucher-card__info">Giảm 10.000đ cho mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
+                        </div>
+                        </div>
+                    </div>
+                @endif
 
                 @if(!empty($searchQuery))
                     <div class="search-results-banner">
@@ -1531,22 +1547,73 @@
             });
         });
 
-        document.querySelectorAll('[data-copy-code]').forEach((button) => {
+        document.querySelectorAll('[data-receive-code]').forEach((button) => {
             button.addEventListener('click', async () => {
-                const code = button.dataset.copyCode;
+                const code = button.dataset.receiveCode;
+                const guestIdentifier = sessionStorage.getItem('guest_identifier') || null;
+
                 try {
-                    await navigator.clipboard.writeText(code);
-                    button.textContent = 'ĐÃ SAO CHÉP';
+                    const response = await fetch('/api/vouchers/receive', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({
+                            voucher_code: code,
+                            guest_identifier: guestIdentifier,
+                        }),
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        // Show error message
+                        alert(data.message || 'Lỗi khi nhận voucher');
+                        return;
+                    }
+
+                    // Save guest identifier if not already saved
+                    if (!guestIdentifier) {
+                        sessionStorage.setItem('guest_identifier', sessionStorage.getItem('guest_identifier') || Date.now().toString());
+                    }
+
+                    // Show success message
+                    button.textContent = 'ĐÃ NHẬN';
                     button.setAttribute('disabled', 'true');
+                    
+                    // Show toast notification
+                    showToast(`Nhận voucher thành công: ${data.voucher.code}`, 'success');
+
                     setTimeout(() => {
-                        button.textContent = 'SAO CHÉP';
+                        button.textContent = 'NHẬN';
                         button.removeAttribute('disabled');
-                    }, 1500);
+                    }, 2000);
                 } catch (err) {
                     console.error(err);
+                    alert('Lỗi khi nhận voucher. Vui lòng thử lại.');
                 }
             });
         });
+
+        // Toast notification helper
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#3b82f6'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 9999;
+                animation: slideIn 0.3s ease;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
 
         // Price range slider functionality with auto-submit
         const priceRange = document.getElementById('priceRange');

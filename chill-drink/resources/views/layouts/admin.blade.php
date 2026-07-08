@@ -707,8 +707,6 @@
             </a>
 
             <nav class="nav flex-column">
-                <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock"></i> Super Admin</a>
-                <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock"></i> Super Admin</a>
                 <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-grid-1x2"></i> Tổng quát</a>
                 <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
                 <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
@@ -734,6 +732,7 @@
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
 
+
                     @unless(View::hasSection('hide-topbar-search'))
                         <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search" role="search">
                             @foreach(request()->except(['q', 'page']) as $key => $value)
@@ -749,6 +748,7 @@
                             <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
                         </form>
                     @endunless
+
 
                 </div>
                 <div class="admin-topbar-actions">
@@ -863,17 +863,6 @@
                 });
             });
         });
-
-        const filterToggle = document.querySelector('[data-admin-filter-toggle]');
-        const filterPanel = document.querySelector('[data-admin-filter-panel]');
-
-        if (filterToggle && filterPanel) {
-            filterToggle.addEventListener('click', () => {
-                const isHidden = filterPanel.classList.contains('d-none');
-                filterPanel.classList.toggle('d-none', !isHidden ? true : false);
-                filterToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-            });
-        }
 
         const filterToggle = document.querySelector('[data-admin-filter-toggle]');
         const filterPanel = document.querySelector('[data-admin-filter-panel]');
