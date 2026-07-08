@@ -49,6 +49,11 @@
         /* ─── Base ─── */
         *, *::before, *::after { box-sizing: border-box; }
 
+        html {
+            overflow-y: scroll;
+            scrollbar-gutter: stable;
+        }
+
         body {
             margin: 0;
             color: var(--a-ink);
@@ -174,10 +179,11 @@
             display: flex; align-items: center; justify-content: space-between;
             gap: 16px;
             padding: 12px 28px;
-            background: rgba(248, 250, 251, 0.88);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: #f8fafb;
             border-bottom: 1px solid var(--a-border);
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            contain: paint;
         }
 
         .admin-topbar-actions {
@@ -650,12 +656,7 @@
             }
         }
 
-        /* ─── Page Transition ─── */
-        .admin-page { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        /* Không animate toàn bộ trang: tránh nhấp nháy khi Chrome dựng lại lớp sticky. */
     </style>
 </head>
 <body>
@@ -675,6 +676,7 @@
                 <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
                 <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.group-orders.index') }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
             </nav>

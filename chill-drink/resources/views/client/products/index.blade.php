@@ -414,6 +414,7 @@
     .filter-panel,
     .promo-panel,
     .shop-product-card {
+        position: relative;
         border: 1px solid var(--drink-border);
         border-radius: var(--radius-md);
         background: rgba(255, 255, 255, 0.84);
@@ -568,6 +569,12 @@
         filter: saturate(1.12) contrast(1.03);
         transform: scale(1.07);
     }
+
+    .product-favorite-btn { position: absolute; top: 1.3rem; right: 1.3rem; z-index: 5; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; color: #687875; background: rgba(255,255,255,.94); box-shadow: 0 8px 22px rgba(16,63,55,.15); backdrop-filter: blur(8px); transition: transform .18s ease, color .18s ease, background .18s ease; }
+    .product-favorite-btn:hover { color: #e83e5b; transform: scale(1.08); }
+    .product-favorite-btn.is-active { color: #fff; border-color: #e83e5b; background: #e83e5b; }
+    .product-favorite-btn i { font-size: 1.12rem; line-height: 1; }
+    .product-favorite-btn.is-loading { opacity: .6; pointer-events: none; }
 
     .product-tag {
         position: absolute;
@@ -1145,6 +1152,12 @@
                     @forelse($products as $product)
                         <div class="col-sm-6 col-xl-4">
                             <article class="shop-product-card">
+                                @auth
+                                    @php($isFavorite = $favoriteProductIds->contains($product->id))
+                                    <form method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>@csrf<button type="submit" class="product-favorite-btn {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button><i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i></button></form>
+                                @else
+                                    <a href="{{ route('login') }}" class="product-favorite-btn" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích"><i class="bi bi-heart"></i></a>
+                                @endauth
                                 <a href="{{ route('products.show', $product->slug) }}" class="shop-product-image d-block mb-3">
                                     <x-product-image
                                         :src="$product->image_url"
@@ -1350,6 +1363,34 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-favorite-form]').forEach((favoriteForm) => {
+            favoriteForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const favoriteButton = favoriteForm.querySelector('[data-favorite-button]');
+                if (!favoriteButton || favoriteButton.classList.contains('is-loading')) return;
+                favoriteButton.classList.add('is-loading');
+
+                try {
+                    const response = await fetch(favoriteForm.action, {
+                        method: 'POST', body: new FormData(favoriteForm),
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                    });
+                    if (!response.ok) throw new Error('favorite_failed');
+                    const result = await response.json();
+                    favoriteButton.classList.toggle('is-active', result.favorited);
+                    favoriteButton.setAttribute('aria-pressed', result.favorited ? 'true' : 'false');
+                    favoriteButton.setAttribute('aria-label', result.favorited ? 'Bỏ yêu thích' : 'Thêm vào yêu thích');
+                    favoriteButton.title = result.favorited ? 'Bỏ yêu thích' : 'Yêu thích';
+                    favoriteButton.querySelector('i').className = 'bi ' + (result.favorited ? 'bi-heart-fill' : 'bi-heart');
+                } catch (error) {
+                    favoriteForm.submit();
+                } finally {
+                    favoriteButton.classList.remove('is-loading');
+                }
+            });
+        });
+
         document.querySelectorAll('[data-sort-dropdown]').forEach((dropdown) => {
             const form = dropdown.closest('form');
             const input = form?.querySelector('[data-sort-input]');

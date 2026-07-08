@@ -185,6 +185,20 @@
         border-radius: 18px 18px 0 0;
     }
 
+    .cart-recommend-wrap { position: relative; height: 100%; }
+    .cart-recommend-actions { position: absolute; top: 1rem; right: 1rem; bottom: 1rem; z-index: 6; display: flex; flex-direction: column; justify-content: space-between; gap: .65rem; pointer-events: none; }
+    .cart-recommend-actions form, .cart-recommend-actions a, .cart-recommend-actions button { pointer-events: auto; }
+    .cart-recommend-action { display: grid; place-items: center; width: 45px; height: 45px; padding: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; background: rgba(255,255,255,.94); box-shadow: 0 10px 24px rgba(15,65,57,.18); backdrop-filter: blur(8px); transition: transform .18s ease, color .18s ease, background .18s ease; }
+    .cart-recommend-action:hover { transform: scale(1.08); }
+    .cart-recommend-action.is-favorite { color: #e83e5b; }
+    .cart-recommend-action.is-favorite.is-active,
+    .cart-recommend-action.is-favorite.is-active:hover,
+    .cart-recommend-action.is-favorite.is-active:focus { color: #e83e5b; border-color: rgba(255,255,255,.9); background: rgba(255,255,255,.96); }
+    .cart-recommend-action.is-add { color: #fff; border-color: #079b7d; background: #079b7d; }
+    .cart-recommend-action.is-add:hover { background: #06735f; }
+    .cart-recommend-action i { font-size: 1.18rem; line-height: 1; }
+    .cart-recommend-card > .p-3 { min-height: 106px; padding-right: 4.75rem !important; }
+
     @media (max-width: 767.98px) {
         .cart-page {
             padding-top: 2rem;
@@ -377,6 +391,18 @@
                     <div class="row g-4">
                         @foreach($suggestions->take(4) as $product)
                             <div class="col-sm-6 col-lg-3">
+                                <div class="cart-recommend-wrap">
+                                <div class="cart-recommend-actions">
+                                    @auth
+                                        @php($isFavorite = $favoriteProductIds->contains($product->id))
+                                        <form method="POST" action="{{ route('favorites.toggle', $product) }}" data-cart-favorite-form>@csrf<button type="submit" class="cart-recommend-action is-favorite {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" data-cart-favorite-button><i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i></button></form>
+                                    @else
+                                        <a href="{{ route('login') }}" class="cart-recommend-action is-favorite" aria-label="Đăng nhập để yêu thích"><i class="bi bi-heart"></i></a>
+                                    @endauth
+                                    @if(($product->stock ?? 1) > 0)
+                                        <form method="POST" action="{{ route('cart.add', $product->id) }}" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="cart-recommend-action is-add" aria-label="Thêm {{ $product->name }} vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
+                                    @endif
+                                </div>
                                 <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
                                     <x-product-image
                                         :src="$product->image_url ?? null"
@@ -391,6 +417,7 @@
                                         <p class="text-primary fw-semibold mb-0">{{ number_format($product->price, 0, ',', '.') }}đ</p>
                                     </div>
                                 </a>
+                                </div>
                             </div>
                         @endforeach
                     </div>
@@ -449,6 +476,27 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-cart-favorite-form]').forEach((form) => {
+            form.addEventListener('submit', async function (event) {
+                event.preventDefault();
+                const button = form.querySelector('[data-cart-favorite-button]');
+                if (!button || button.disabled) return;
+                button.disabled = true;
+                try {
+                    const response = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' });
+                    if (!response.ok) throw new Error('favorite_failed');
+                    const result = await response.json();
+                    button.classList.toggle('is-active', result.favorited);
+                    button.querySelector('i').className = 'bi ' + (result.favorited ? 'bi-heart-fill' : 'bi-heart');
+                    button.setAttribute('aria-label', result.favorited ? 'Bỏ yêu thích' : 'Thêm vào yêu thích');
+                } catch (error) {
+                    form.submit();
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        });
+
         const selectAll = document.getElementById('cartSelectAll');
         const checkoutButton = document.querySelector('[data-cart-checkout-button]');
         const selectionWarning = document.querySelector('[data-cart-selection-warning]');

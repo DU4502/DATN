@@ -39,6 +39,7 @@ class OrderController extends Controller
             'status' => trim((string) $request->query('status', '')),
             'date_from' => trim((string) $request->query('date_from', '')),
             'date_to' => trim((string) $request->query('date_to', '')),
+            'delivery' => trim((string) $request->query('delivery', '')),
         ];
 
         $statusOptions = OrderStatus::filterOptions();
@@ -69,6 +70,15 @@ class OrderController extends Controller
             })
             ->when(isset($statusOptions[$filters['status']]) && $filters['status'] !== '', function ($query) use ($filters) {
                 $query->where('status', $filters['status']);
+            })
+            ->when($filters['delivery'] !== '', function ($query) use ($filters) {
+                match ($filters['delivery']) {
+                    'now' => $query->where('delivery_type', 'now'),
+                    'scheduled' => $query->where('delivery_type', 'scheduled'),
+                    'today' => $query->where('delivery_type', 'scheduled')->whereDate('scheduled_delivery_time', today()),
+                    'upcoming' => $query->where('delivery_type', 'scheduled')->whereBetween('scheduled_delivery_time', [now(), now()->addHours(2)]),
+                    default => $query,
+                };
             });
 
         if (Schema::hasColumn('orders', 'created_at')) {
@@ -146,6 +156,9 @@ class OrderController extends Controller
             'status_label' => OrderStatus::label((string) $order->status),
             'status_options' => OrderStatus::selectableOptions((string) $order->status),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
+            'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
+            'delivery_type' => $order->delivery_type,
+            'delivery_note' => $order->delivery_note,
             'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
             'status_update_url' => route('admin.orders.updateStatus', $order->id),
         ];

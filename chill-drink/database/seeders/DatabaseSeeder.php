@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $this->call(AuthAccountSeeder::class);
 
         $this->call(VoucherSeeder::class);
+        $this->call(ToppingSeeder::class);
 
         // Create Categories
         $categories = [

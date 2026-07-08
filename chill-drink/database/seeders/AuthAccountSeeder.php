@@ -49,15 +49,22 @@ class AuthAccountSeeder extends Seeder
         ];
 
         foreach ($accounts as $account) {
+            $data = [
+                'name' => $account['name'],
+                'password' => Hash::make($account['password']),
+                'role_id' => $account['role_id'],
+                'phone' => $account['phone'],
+                'is_active' => true,
+            ];
+
+            // Tài khoản mẫu/hệ thống phải đăng nhập được ngay sau khi seed.
+            if (Schema::hasColumn('users', 'email_verified_at')) {
+                $data['email_verified_at'] = now();
+            }
+
             User::updateOrCreate(
                 ['email' => $account['email']],
-                [
-                    'name' => $account['name'],
-                    'password' => Hash::make($account['password']),
-                    'role_id' => $account['role_id'],
-                    'phone' => $account['phone'],
-                    'is_active' => true,
-                ]
+                $data
             );
         }
 

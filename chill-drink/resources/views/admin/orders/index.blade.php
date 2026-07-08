@@ -5,7 +5,7 @@
 @section('content')
 <form method="GET" action="{{ route('admin.orders.index') }}">
     <section class="row g-3 align-items-end mb-4">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="admin-kicker mb-2 d-block">Trạng thái đơn</label>
             <select class="admin-filter" name="status">
                 @foreach($statusOptions as $value => $label)
@@ -13,17 +13,23 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="admin-kicker mb-2 d-block">Tìm kiếm</label>
             <input class="admin-input" type="text" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Mã đơn, tên hoặc email">
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <label class="admin-kicker mb-2 d-block">Khoảng ngày</label>
             <div class="d-flex gap-2 align-items-center">
                 <input class="admin-input" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}">
                 <span class="text-secondary">đến</span>
                 <input class="admin-input" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}">
             </div>
+        </div>
+        <div class="col-md-3">
+            <label class="admin-kicker mb-2 d-block">Loại giao</label>
+            <select class="admin-filter" name="delivery">
+                <option value="">Tất cả đơn</option><option value="now" @selected(($filters['delivery'] ?? '') === 'now')>Giao ngay</option><option value="scheduled" @selected(($filters['delivery'] ?? '') === 'scheduled')>Giao sau</option><option value="today" @selected(($filters['delivery'] ?? '') === 'today')>Giao hôm nay</option><option value="upcoming" @selected(($filters['delivery'] ?? '') === 'upcoming')>Sắp đến giờ (2h)</option>
+            </select>
         </div>
         <div class="col-md-2 d-flex gap-2">
             <button class="btn btn-primary flex-grow-1" type="submit">Áp dụng lọc</button>
@@ -39,6 +45,7 @@
                 <tr>
                     <th>Mã đơn</th>
                     <th>Ngày đặt</th>
+                    <th>Thời gian nhận</th>
                     <th>Khách hàng</th>
                     @if(auth()->user()->isSuperAdmin())
                         <th>Chi nhánh</th>
@@ -53,6 +60,14 @@
                 <tr data-order-id="{{ $order->id }}">
                     <td class="fw-bold text-primary">#{{ $order->id }}</td>
                     <td class="text-secondary">{{ optional($order->created_at)->format('d/m/Y H:i') }}</td>
+                    <td>
+                        @if($order->delivery_type === 'scheduled' && ($order->scheduled_delivery_time || $order->scheduled_at))
+                            <span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-calendar-check me-1"></i>Giao sau · {{ ($order->scheduled_delivery_time ?? $order->scheduled_at)->format('H:i · d/m/Y') }}</span>
+                            @if($order->delivery_note)<small class="d-block text-secondary mt-1" title="{{ $order->delivery_note }}">{{ \Illuminate\Support\Str::limit($order->delivery_note, 42) }}</small>@endif
+                        @else
+                            <span class="text-secondary small"><i class="bi bi-lightning-charge me-1"></i>Giao ngay</span>
+                        @endif
+                    </td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
                             <span class="admin-avatar" style="width:34px;height:34px;font-size:.8rem;">{{ mb_substr($order->customerName() ?: 'K', 0, 1) }}</span>
@@ -125,7 +140,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="6" class="text-center text-secondary py-5">
+                    <td colspan="7" class="text-center text-secondary py-5">
                         <div class="fw-bold text-dark mb-1">Chưa có đơn hàng</div>
                         <div>Các đơn mới sẽ xuất hiện tại đây.</div>
                     </td>
@@ -229,6 +244,7 @@
             row.innerHTML = `
                 <td class="fw-bold text-primary">#${escapeHtml(payload.order_id)}</td>
                 <td class="text-secondary">${escapeHtml(payload.created_at || 'Vừa xong')}</td>
+                <td>${payload.scheduled_at ? `<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-calendar-check me-1"></i>${escapeHtml(payload.scheduled_at)}</span>` : '<span class="text-secondary small">Nhận sớm nhất</span>'}</td>
                 <td>
                     <div class="d-flex align-items-center gap-2">
                         <span class="admin-avatar" style="width:34px;height:34px;font-size:.8rem;">${escapeHtml((payload.customer_name || 'K').charAt(0))}</span>
