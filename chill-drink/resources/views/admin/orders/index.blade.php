@@ -155,7 +155,6 @@
                     <th>Ngày đặt</th>
                     <th>Thời gian nhận</th>
                     <th>Khách hàng</th>
-                    <th>Số điện thoại</th>
                     <th>Thanh toán</th>
                     <th class="text-end">Tổng tiền</th>
                     <th class="text-center">Trạng thái</th>
@@ -188,9 +187,6 @@
                                 <small class="text-secondary">{{ $order->customerEmail() ?: '' }}</small>
                             </span>
                         </div>
-                    </td>
-                    <td>
-                        <div class="fw-semibold">{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</div>
                     </td>
                     <td>
                         @if(isset($order->payment_status))
