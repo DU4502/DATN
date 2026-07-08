@@ -1342,6 +1342,19 @@
                         <div class="fw-bold mb-2">Topping</div>
                         <div class="d-flex flex-wrap gap-2" data-quick-topping-group></div>
                     </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between">
+                        <div class="fw-bold">Số lượng</div>
+                        <div class="d-flex align-items-center gap-3">
+                            <button type="button" class="btn btn-outline-secondary rounded-circle p-0 d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 36px; height: 36px;" data-quick-qty-minus>
+                                -
+                            </button>
+                            <span class="fw-bold fs-5" data-quick-qty-display>1</span>
+                            <button type="button" class="btn btn-outline-secondary rounded-circle p-0 d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 36px; height: 36px;" data-quick-qty-plus>
+                                +
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="modal-footer border-0 pt-0">
@@ -1456,6 +1469,10 @@
             ice: modalElement.querySelector('[data-quick-ice-input]'),
             toppings: modalElement.querySelector('[data-quick-toppings-input]'),
             toppingGroup: modalElement.querySelector('[data-quick-topping-group]'),
+            qtyInput: modalElement.querySelector('input[name="quantity"]'),
+            qtyDisplay: modalElement.querySelector('[data-quick-qty-display]'),
+            qtyMinus: modalElement.querySelector('[data-quick-qty-minus]'),
+            qtyPlus: modalElement.querySelector('[data-quick-qty-plus]'),
         };
 
         function setGroupValue(group, value) {
@@ -1539,6 +1556,8 @@
                 fields.sugar.value = '50';
                 fields.ice.value = '100';
                 fields.toppings.value = '[]';
+                if (fields.qtyInput) fields.qtyInput.value = '1';
+                if (fields.qtyDisplay) fields.qtyDisplay.textContent = '1';
                 setGroupValue('size', 'M');
                 setGroupValue('sugar', '50');
                 setGroupValue('ice', '100');
@@ -1571,6 +1590,33 @@
                 }
             });
         });
+
+        if (fields.toppingGroup) {
+            fields.toppingGroup.addEventListener('click', (event) => {
+                const button = event.target.closest('.quick-topping-choice');
+                if (!button) return;
+                
+                button.classList.toggle('active');
+                syncQuickToppings();
+            });
+        }
+
+        if (fields.qtyMinus && fields.qtyPlus && fields.qtyInput && fields.qtyDisplay) {
+            fields.qtyMinus.addEventListener('click', () => {
+                let val = parseInt(fields.qtyInput.value) || 1;
+                if (val > 1) {
+                    val--;
+                    fields.qtyInput.value = val;
+                    fields.qtyDisplay.textContent = val;
+                }
+            });
+            fields.qtyPlus.addEventListener('click', () => {
+                let val = parseInt(fields.qtyInput.value) || 1;
+                val++;
+                fields.qtyInput.value = val;
+                fields.qtyDisplay.textContent = val;
+            });
+        }
 
         document.querySelectorAll('[data-receive-code]').forEach((button) => {
             button.addEventListener('click', async () => {
