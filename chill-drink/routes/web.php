@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\GroupOrderController as AdminGroupOrderController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -13,9 +14,11 @@ use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
+use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
+use App\Http\Controllers\Client\QuickOrderController;
 use App\Http\Controllers\Client\VnpayController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Broadcast;
@@ -74,6 +77,24 @@ Route::middleware('auth')->group(function () {
     Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->name('checkout.addresses.update');
     Route::patch('/checkout/address/primary', [CheckoutController::class, 'updatePrimaryAddress'])->name('checkout.addresses.primary.update');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
+
+    Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
+    Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
+    Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
+    Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
+    Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
+    Route::delete('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'removeItem'])->name('group-orders.items.destroy');
+    Route::get('/group-orders', [GroupOrderController::class, 'index'])->name('group-orders.index');
+    Route::get('/group-orders/create', [GroupOrderController::class, 'create'])->name('group-orders.create');
+    Route::post('/group-orders', [GroupOrderController::class, 'store'])->name('group-orders.store');
+    Route::post('/group-orders/{code}/close', [GroupOrderController::class, 'close'])->name('group-orders.close');
+    Route::post('/group-orders/{code}/cancel', [GroupOrderController::class, 'cancel'])->name('group-orders.cancel');
+    Route::post('/group-orders/{code}/resume', [GroupOrderController::class, 'resume'])->name('group-orders.resume');
+    Route::get('/favorites', [QuickOrderController::class, 'favorites'])->name('favorites.index');
+    Route::post('/favorites/{product}', [QuickOrderController::class, 'toggleFavorite'])->name('favorites.toggle');
+    Route::post('/orders/{order}/reorder', [QuickOrderController::class, 'reorderOrder'])->name('orders.reorder');
+    Route::post('/orders/{order}/items/{item}/reorder', [QuickOrderController::class, 'reorderItem'])->name('orders.items.reorder');
+    Route::post('/products/{product}/taste-profile', [QuickOrderController::class, 'saveTaste'])->name('taste-profiles.store');
 });
 
 /*
@@ -121,6 +142,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::put('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
     Route::delete('/branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
     Route::patch('/branches/{branch}/status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
+    Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {

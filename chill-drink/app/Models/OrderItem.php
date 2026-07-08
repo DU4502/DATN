@@ -26,6 +26,7 @@ class OrderItem extends Model
         'price',
         'unit_price',
         'total_price',
+        'item_note',
     ];
 
     /**
