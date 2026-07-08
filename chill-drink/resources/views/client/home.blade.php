@@ -587,6 +587,27 @@
         box-shadow: 0 20px 40px rgba(13, 147, 115, 0.34);
     }
 
+    .home-quick-modal .modal-dialog { max-width: 620px; }
+    .home-quick-modal .modal-content { overflow: hidden; border: 0; border-radius: 24px; box-shadow: 0 26px 70px rgba(8, 42, 38, .24); }
+    .home-quick-modal .modal-header { padding: 1.2rem 1.4rem .7rem; }
+    .home-quick-modal .modal-body { padding: .8rem 1.4rem 1.1rem; }
+    .home-quick-thumb { width: 76px; height: 76px; border: 1px solid var(--c-border); border-radius: 18px; padding: .35rem; object-fit: contain; background: #fff; }
+    .home-quick-product { padding: .75rem; border: 1px solid var(--c-border); border-radius: 18px; background: var(--c-bg-warm); }
+    .home-quick-section { padding-top: .9rem; margin-top: .9rem; border-top: 1px solid var(--c-border-light); }
+    .home-quick-label { display: flex; align-items: center; gap: .45rem; margin-bottom: .65rem; color: var(--c-ink); font-size: .82rem; font-weight: 800; }
+    .home-quick-label i { color: var(--c-primary); }
+    .home-quick-choice { min-width: 64px; min-height: 46px; border: 1.5px solid var(--c-border); border-radius: 12px; padding: .48rem .8rem; color: var(--c-ink); background: #fff; font-weight: 800; }
+    .home-quick-choice:hover, .home-quick-choice.active { border-color: var(--c-primary); color: var(--c-primary-dark); background: var(--c-primary-light); box-shadow: 0 0 0 3px rgba(13,147,115,.12); }
+    .home-quick-size { flex: 1 1 0; }
+    .home-quick-choice small { display: block; margin-top: .08rem; color: var(--c-muted); font-size: .68rem; font-weight: 700; }
+    .home-quick-topping { min-width: 0; flex: 1 1 30%; text-align: left; }
+    .home-quick-topping small { display: block; font-size: .72rem; opacity: .8; }
+    .home-quick-footer { display: flex; align-items: center; gap: .8rem; width: 100%; }
+    .home-quick-qty { display: inline-flex; align-items: center; border: 1px solid var(--c-border); border-radius: 999px; background: #fff; }
+    .home-quick-qty button { width: 36px; height: 42px; border: 0; color: var(--c-primary); background: transparent; font-size: 1.15rem; }
+    .home-quick-qty strong { min-width: 24px; text-align: center; }
+    @media (max-width: 575.98px) { .home-quick-topping { flex-basis: 46%; } .home-quick-modal .modal-body { padding-inline: 1rem; } }
+
     .home-product__tag {
         position: absolute;
         top: 0.875rem;
@@ -603,6 +624,48 @@
         box-shadow: var(--shadow-sm);
         z-index: 2;
     }
+
+    .home-product__favorite-form {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 5;
+        margin: 0;
+    }
+
+    .home-product__favorite {
+        display: inline-grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        color: #687875;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 8px 22px rgba(16, 63, 55, 0.15);
+        text-decoration: none;
+        backdrop-filter: blur(8px);
+        transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease;
+    }
+
+    .home-product__favorite:hover {
+        color: #e83e5b;
+        transform: scale(1.08);
+    }
+
+    .home-product__favorite.is-active {
+        color: #fff;
+        border-color: #e83e5b;
+        background: #e83e5b;
+    }
+
+    .home-product__favorite.is-loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .home-product__favorite i { font-size: 1.1rem; line-height: 1; }
 
     .home-product__body {
         display: flex;
@@ -1246,6 +1309,19 @@
                     <article class="home-product">
                         <div class="home-product__img">
                             <span class="home-product__tag">{{ $product->category->name }}</span>
+                            @auth
+                                @php($isFavorite = $favoriteProductIds->contains($product->id))
+                                <form class="home-product__favorite-form" method="POST" action="{{ route('favorites.toggle', $product) }}" data-home-favorite-form>
+                                    @csrf
+                                    <button type="submit" class="home-product__favorite {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-home-favorite-button>
+                                        <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            @else
+                                <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
+                                    <i class="bi bi-heart" aria-hidden="true"></i>
+                                </a>
+                            @endauth
                             <a href="{{ route('products.show', $product->slug) }}">
                                 <x-product-image
                                     :src="$product->image_url"
@@ -1259,13 +1335,13 @@
                                 <button
                                     type="button"
                                     class="product-cart-btn"
-                                    aria-label="Chọn size và topping cho {{ $product->name }}"
-                                    data-quick-add
+                                    aria-label="Chọn tùy chọn cho {{ $product->name }}"
+                                    data-home-quick-add
                                     data-action="{{ route('cart.add', $product->id) }}"
                                     data-name="{{ $product->name }}"
                                     data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
+                                    data-base-price="{{ (float) $product->price }}"
                                     data-image="{{ $product->image_url }}"
-                                    data-category="{{ $product->category?->name }}"
                                 >
                                     <i class="bi bi-cart-plus" aria-hidden="true"></i>
                                 </button>
@@ -1306,6 +1382,9 @@
                         <article class="home-product">
                             <div class="home-product__img">
                                 <span class="home-product__tag">{{ $item[3] }}</span>
+                                <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
+                                    <i class="bi bi-heart" aria-hidden="true"></i>
+                                </a>
                                 <a href="{{ route('products.show', $item[4]) }}">
                                     <img src="{{ $item[2] }}" alt="{{ $item[0] }}" loading="lazy">
                                 </a>
@@ -1313,13 +1392,13 @@
                                     <button
                                         type="button"
                                         class="product-cart-btn"
-                                        aria-label="Chọn size và topping cho {{ $item[0] }}"
-                                        data-quick-add
+                                        aria-label="Chọn tùy chọn cho {{ $item[0] }}"
+                                        data-home-quick-add
                                         data-action="{{ route('cart.add', 'demo-' . $item[4]) }}"
                                         data-name="{{ $item[0] }}"
                                         data-price="{{ $item[1] }}"
+                                        data-base-price="{{ preg_replace('/\D/', '', $item[1]) }}"
                                         data-image="{{ $item[2] }}"
-                                        data-category="{{ $item[3] }}"
                                     >
                                         <i class="bi bi-cart-plus" aria-hidden="true"></i>
                                     </button>
@@ -1510,4 +1589,156 @@
     </section>
 
 </div>
+
+<div class="modal fade home-quick-modal" id="homeQuickAddModal" tabindex="-1" aria-labelledby="homeQuickAddTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="homeQuickAddForm" method="POST" data-ajax-cart>
+                @csrf
+                <input type="hidden" name="size" value="S" data-home-quick-input="size">
+                <input type="hidden" name="sugar_level" value="50" data-home-quick-input="sugar">
+                <input type="hidden" name="ice_level" value="100" data-home-quick-input="ice">
+                <input type="hidden" name="toppings" value="[]" data-home-quick-input="toppings">
+                <input type="hidden" name="quantity" value="1" data-home-quick-input="quantity">
+                <div class="modal-header border-0 pb-0">
+                    <h2 class="modal-title h4 fw-bold" id="homeQuickAddTitle">Tùy chọn đồ uống</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="home-quick-product d-flex gap-3 align-items-center">
+                        <img class="home-quick-thumb" src="" alt="" data-home-quick-image>
+                        <div><div class="fw-bold fs-5" data-home-quick-name></div><div class="text-primary fw-bold" data-home-quick-price></div></div>
+                    </div>
+                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-cup-straw"></i>Chọn size</div><div class="d-flex gap-2" data-home-quick-group="size">
+                        <button type="button" class="home-quick-choice home-quick-size active" data-value="S" data-extra="0">S<small>Giá gốc</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="M" data-extra="5000">M<small>+5.000đ</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="L" data-extra="10000">L<small>+10.000đ</small></button>
+                    </div></div>
+                    <div class="home-quick-section row g-3"><div class="col-md-6"><div class="home-quick-label"><i class="bi bi-droplet"></i>Mức đường</div><div class="d-flex flex-wrap gap-2" data-home-quick-group="sugar">
+                        <button type="button" class="home-quick-choice" data-value="0">0%</button><button type="button" class="home-quick-choice active" data-value="50">50%</button><button type="button" class="home-quick-choice" data-value="100">100%</button>
+                    </div></div>
+                    <div class="col-md-6"><div class="home-quick-label"><i class="bi bi-snow"></i>Mức đá</div><div class="d-flex flex-wrap gap-2" data-home-quick-group="ice">
+                        <button type="button" class="home-quick-choice" data-value="0">Không đá</button><button type="button" class="home-quick-choice" data-value="50">Ít đá</button><button type="button" class="home-quick-choice active" data-value="100">Thường</button>
+                    </div></div></div>
+                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-plus-circle"></i>Thêm topping <span class="text-secondary fw-normal">(có thể chọn nhiều)</span></div><div class="d-flex flex-wrap gap-2" data-home-toppings>
+                        <button type="button" class="home-quick-choice home-quick-topping" data-name="Trân châu đen" data-price="5000">Trân châu đen<small>+5.000đ</small></button>
+                        <button type="button" class="home-quick-choice home-quick-topping" data-name="Kem cheese" data-price="7000">Kem cheese<small>+7.000đ</small></button>
+                        <button type="button" class="home-quick-choice home-quick-topping" data-name="Thạch nha đam" data-price="6000">Thạch nha đam<small>+6.000đ</small></button>
+                    </div></div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4"><div class="home-quick-footer">
+                    <div class="home-quick-qty"><button type="button" data-home-qty-minus aria-label="Giảm số lượng">−</button><strong data-home-qty-label>1</strong><button type="button" data-home-qty-plus aria-label="Tăng số lượng">+</button></div>
+                    <button type="submit" class="btn btn-primary flex-grow-1 rounded-pill py-3 fw-bold">Thêm vào giỏ · <span data-home-quick-total>0đ</span></button>
+                </div></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const element = document.getElementById('homeQuickAddModal');
+        const form = document.getElementById('homeQuickAddForm');
+        if (!element || !form || !window.bootstrap) return;
+        const modal = new bootstrap.Modal(element);
+        const input = (name) => form.querySelector(`[data-home-quick-input="${name}"]`);
+        let basePrice = 0;
+        const updateTotal = () => {
+            const sizeButton = element.querySelector('[data-home-quick-group="size"] .active');
+            const sizeExtra = Number(sizeButton?.dataset.extra || 0);
+            const toppings = JSON.parse(input('toppings').value || '[]');
+            const toppingTotal = toppings.reduce((sum, item) => sum + Number(item.price || 0), 0);
+            const quantity = Number(input('quantity').value || 1);
+            element.querySelector('[data-home-quick-total]').textContent = ((basePrice + sizeExtra + toppingTotal) * quantity).toLocaleString('vi-VN') + 'đ';
+        };
+        const resetGroup = (name, value) => {
+            input(name).value = value;
+            element.querySelectorAll(`[data-home-quick-group="${name}"] .home-quick-choice`).forEach((button) => button.classList.toggle('active', button.dataset.value === value));
+            updateTotal();
+        };
+
+        document.querySelectorAll('[data-home-quick-add]').forEach((button) => button.addEventListener('click', () => {
+            form.action = button.dataset.action;
+            element.querySelector('[data-home-quick-name]').textContent = button.dataset.name || '';
+            element.querySelector('[data-home-quick-price]').textContent = button.dataset.price || '';
+            basePrice = Number(button.dataset.basePrice || 0);
+            const image = element.querySelector('[data-home-quick-image]');
+            image.src = button.dataset.image || '';
+            image.alt = button.dataset.name || 'Đồ uống';
+            input('quantity').value = '1';
+            element.querySelector('[data-home-qty-label]').textContent = '1';
+            resetGroup('size', 'S'); resetGroup('sugar', '50'); resetGroup('ice', '100');
+            element.querySelectorAll('[data-home-toppings] .home-quick-choice').forEach((item) => item.classList.remove('active'));
+            input('toppings').value = '[]';
+            updateTotal();
+            modal.show();
+        }));
+
+        element.querySelectorAll('[data-home-quick-group]').forEach((group) => group.addEventListener('click', (event) => {
+            const button = event.target.closest('.home-quick-choice');
+            if (button) resetGroup(group.dataset.homeQuickGroup, button.dataset.value);
+        }));
+
+        element.querySelector('[data-home-toppings]').addEventListener('click', (event) => {
+            const button = event.target.closest('.home-quick-choice');
+            if (!button) return;
+            button.classList.toggle('active');
+            input('toppings').value = JSON.stringify(Array.from(element.querySelectorAll('[data-home-toppings] .active')).map((item) => ({ name: item.dataset.name, price: Number(item.dataset.price) })));
+            updateTotal();
+        });
+
+        const changeQuantity = (amount) => {
+            const quantity = Math.max(1, Math.min(20, Number(input('quantity').value || 1) + amount));
+            input('quantity').value = String(quantity);
+            element.querySelector('[data-home-qty-label]').textContent = String(quantity);
+            updateTotal();
+        };
+        element.querySelector('[data-home-qty-minus]').addEventListener('click', () => changeQuantity(-1));
+        element.querySelector('[data-home-qty-plus]').addEventListener('click', () => changeQuantity(1));
+
+        document.addEventListener('cart:updated', () => {
+            if (element.classList.contains('show')) modal.hide();
+        });
+    });
+</script>
+
+@auth
+<script>
+    document.querySelectorAll('[data-home-favorite-form]').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const button = form.querySelector('[data-home-favorite-button]');
+            if (!button || button.classList.contains('is-loading')) return;
+
+            button.classList.add('is-loading');
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) throw new Error('favorite_failed');
+
+                const result = await response.json();
+                const favorited = Boolean(result.favorited);
+                const label = favorited ? 'Bỏ yêu thích' : 'Thêm vào yêu thích';
+
+                button.classList.toggle('is-active', favorited);
+                button.setAttribute('aria-pressed', favorited ? 'true' : 'false');
+                button.setAttribute('aria-label', label);
+                button.title = favorited ? 'Bỏ yêu thích' : 'Yêu thích';
+                button.querySelector('i').className = `bi ${favorited ? 'bi-heart-fill' : 'bi-heart'}`;
+            } catch (error) {
+                form.submit();
+            } finally {
+                button.classList.remove('is-loading');
+            }
+        });
+    });
+</script>
+@endauth
 @endsection

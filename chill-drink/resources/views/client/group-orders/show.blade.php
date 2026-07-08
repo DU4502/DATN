@@ -20,7 +20,7 @@
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><span class="group-code">{{ $group->code }}</span><span class="group-status {{ $isOpen ? 'is-open' : 'is-closed' }}"><span class="group-status-dot"></span>{{ $isOpen ? 'Đang nhận món' : 'Đã đóng' }}</span></div>
                     <h1 class="display-6 fw-bold mb-2">{{ $group->name }}</h1>
                     <p class="text-white-50 mb-1"><i class="bi bi-person me-1"></i>Chủ nhóm: {{ $group->owner->name }}</p>
-                    <p class="text-white-50 mb-0"><i class="bi bi-clock me-1"></i>Chốt lúc {{ $group->closes_at->format('H:i · d/m/Y') }}</p>
+                    <p class="text-white-50 mb-0"><i class="bi bi-clock me-1"></i>@if($isOpen)Còn <strong class="text-white" data-group-countdown data-closes-at="{{ $group->closes_at->toIso8601String() }}">30:00</strong> để chọn món · Kết thúc lúc <strong class="text-white">{{ $group->closes_at->format('H:i · d/m/Y') }}</strong> @else Đã đóng lúc {{ $group->closes_at->format('H:i · d/m/Y') }} @endif</p>
                     @if($group->note)<p class="mt-3 mb-0"><i class="bi bi-chat-left-text me-2"></i>{{ $group->note }}</p>@endif
                 </div>
                 <div class="group-share">
@@ -31,6 +31,16 @@
             </div>
         </div>
 
+        @if($isOpen && auth()->id() !== $group->owner_id)
+            <div class="group-owner-away mb-4 {{ $group->ownerIsPresent() ? '' : 'is-visible' }}" data-owner-away-notice data-presence-url="{{ route('group-orders.presence', $group->code) }}" data-closes-at="{{ $group->closes_at->toIso8601String() }}">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="group-owner-away-icon"><i class="bi bi-person-exclamation"></i></span>
+                    <div><strong class="d-block">Chủ nhóm đã rời khỏi phòng</strong><span class="small">Bạn vẫn có thể chọn món. Phòng sẽ tự kết thúc khi hết thời gian.</span></div>
+                </div>
+                <span class="group-owner-away-time" data-owner-away-countdown>--:--</span>
+            </div>
+        @endif
+
         @if(!$currentMember && $isOpen && !$isFull)
             <form method="POST" action="{{ route('group-orders.join', $group->code) }}" class="group-card p-4 mb-4">@csrf
                 <div class="row g-3 align-items-end"><div class="col-md"><div class="group-eyebrow mb-1">Bước đầu tiên</div><h2 class="group-section-title mb-2">Bạn muốn hiển thị tên gì?</h2><input name="name" value="{{ old('name', auth()->user()->name) }}" class="form-control group-input" required maxlength="100" placeholder="Tên của bạn"></div><div class="col-md-auto"><button class="btn btn-primary group-btn w-100"><i class="bi bi-box-arrow-in-right me-2"></i>Tham gia phòng</button></div></div>
@@ -40,27 +50,50 @@
         @endif
 
         @if($currentMember && $isOpen)
-            <form method="POST" action="{{ route('group-orders.items.store', $group->code) }}" class="group-card p-4 p-md-5 mb-5">@csrf
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4"><div><div class="group-eyebrow mb-1">Món của bạn</div><h2 class="group-section-title mb-0">Chọn đồ uống cho {{ $currentMember->name }}</h2></div><span class="text-secondary small"><i class="bi bi-info-circle me-1"></i>Có thể thêm nhiều món</span></div>
-                <div class="row g-3">
-                    <div class="col-lg-5"><label class="group-form-label">Đồ uống</label><select name="product_id" class="form-select group-input" required><option value="">Chọn đồ uống...</option>@foreach($products as $product)<option value="{{ $product->id }}" @selected(old('product_id') == $product->id)>{{ $product->name }} — {{ number_format($product->price, 0, ',', '.') }}đ</option>@endforeach</select></div>
-                    <div class="col-6 col-lg-2"><label class="group-form-label">Size</label><select name="size" class="form-select group-input"><option>S</option><option selected>M</option><option>L</option></select></div>
-                    <div class="col-6 col-lg-2"><label class="group-form-label">Mức đường</label><select name="sugar_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div>
-                    <div class="col-6 col-lg-2"><label class="group-form-label">Mức đá</label><select name="ice_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div>
-                    <div class="col-6 col-lg-1"><label class="group-form-label">SL</label><input type="number" name="quantity" value="1" min="1" max="20" class="form-control group-input text-center"></div>
-                    @if($toppings->isNotEmpty())<div class="col-12"><div class="group-option-box"><label class="group-form-label d-block mb-3">Topping thêm</label><div class="d-flex flex-wrap gap-2">@foreach($toppings as $topping)<label class="group-topping"><input class="form-check-input m-0" type="checkbox" name="toppings[]" value="{{ $topping->id }}"><span><strong>{{ $topping->name }}</strong> <small class="text-secondary">+{{ number_format($topping->price, 0, ',', '.') }}đ</small></span></label>@endforeach</div></div></div>@endif
-                    <div class="col-md"><label class="group-form-label">Ghi chú riêng</label><input name="note" maxlength="500" class="form-control group-input" placeholder="Ví dụ: Ít ngọt, không ống hút..."></div>
-                    <div class="col-md-auto d-flex align-items-end"><button class="btn btn-primary group-btn w-100"><i class="bi bi-plus-circle me-2"></i>Thêm vào đơn nhóm</button></div>
+            <form method="POST" action="{{ route('group-orders.items.store', $group->code) }}" class="group-card group-order-form mb-5" data-group-async-action>@csrf
+                <div class="group-order-form-head"><div><div class="group-eyebrow mb-1">Món của bạn</div><h2 class="group-section-title mb-0">Chọn đồ uống cho {{ $currentMember->name }}</h2></div><span class="group-status is-open"><i class="bi bi-plus-circle"></i>Thêm nhiều món</span></div>
+                <div class="group-order-form-body">
+                <div class="row g-3 mb-3">
+                    @php($selectedProduct = $products->firstWhere('id', (int) old('product_id')))
+                    <div class="col-lg-6"><div class="group-field-panel"><label class="group-form-label" for="groupProductSearch">Đồ uống</label><div class="group-product-picker" data-product-picker><div class="group-product-search"><i class="bi bi-search"></i><input id="groupProductSearch" type="search" class="form-control group-input" value="{{ $selectedProduct?->name }}" placeholder="Tìm và chọn đồ uống..." autocomplete="off" required data-product-search><i class="bi bi-chevron-down"></i></div><input type="hidden" name="product_id" value="{{ old('product_id') }}" data-product-value><div class="group-product-menu" data-product-menu>
+                        @foreach($products as $product)
+                            <button type="button" class="group-product-option" data-product-option data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-search="{{ $product->name }} {{ $product->sku }}" data-toppings="{{ $productToppingMap->get($product->id, collect())->implode(',') }}">
+                                <x-product-image :src="$product->image_url" :sku="$product->sku" :name="$product->name" :category="$product->category?->name" class="group-product-option-image" />
+                                <span class="group-product-option-copy"><strong>{{ $product->name }}</strong><span class="text-secondary small">{{ $product->sku }} · {{ $product->category?->name }}</span></span>
+                                <small class="group-product-option-price">{{ number_format($product->price, 0, ',', '.') }}đ</small>
+                            </button>
+                        @endforeach
+                        <div class="group-search-empty" data-product-empty><i class="bi bi-exclamation-circle me-1"></i>Không tìm thấy đồ uống phù hợp.</div>
+                    </div></div></div></div>
+                    <div class="col-lg-6"><div class="group-field-panel"><div class="group-custom-grid"><div><label class="group-form-label">Size</label><select name="size" class="form-select group-input"><option selected>S</option><option>M</option><option>L</option></select></div><div><label class="group-form-label">Mức đường</label><select name="sugar_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Mức đá</label><select name="ice_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Số lượng</label><input type="number" name="quantity" value="1" min="1" max="20" class="form-control group-input text-center"></div></div></div></div>
+                    @if($toppings->isNotEmpty())
+                        @php($initialToppingIds = $selectedProduct ? $productToppingMap->get($selectedProduct->id, collect()) : collect())
+                        <div class="col-12" data-group-topping-section>
+                            <div class="group-option-box">
+                                <label class="group-form-label d-block mb-1">Topping phù hợp</label>
+                                <p class="text-secondary small mb-3" data-topping-help>{{ $selectedProduct ? 'Chỉ hiển thị topping dùng được với món đã chọn.' : 'Hãy chọn đồ uống trước để xem topping phù hợp.' }}</p>
+                                <div class="d-flex flex-wrap gap-2" data-group-toppings>
+                                    @foreach($toppings as $topping)
+                                        <label class="group-topping {{ $initialToppingIds->contains((int) $topping->id) ? '' : 'd-none' }}" data-topping-id="{{ $topping->id }}"><input class="form-check-input m-0" type="checkbox" name="toppings[]" value="{{ $topping->id }}"><span><strong>{{ $topping->name }}</strong> <small class="text-secondary">+{{ number_format($topping->price, 0, ',', '.') }}đ</small></span></label>
+                                    @endforeach
+                                </div>
+                                <div class="text-secondary small {{ $selectedProduct ? 'd-none' : '' }}" data-choose-product-for-toppings><i class="bi bi-cup-straw me-1"></i>Chưa chọn đồ uống.</div>
+                                <div class="text-secondary small d-none" data-no-toppings><i class="bi bi-info-circle me-1"></i>Món này không có topping thêm.</div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+                <div class="group-submit-row"><div class="group-note"><label class="group-form-label">Ghi chú riêng</label><input name="note" maxlength="500" class="form-control group-input" placeholder="Ví dụ: Ít ngọt, không ống hút..."></div><button class="btn btn-primary group-btn group-add-button"><i class="bi bi-plus-circle me-2"></i>Thêm vào đơn nhóm</button></div>
                 </div>
             </form>
         @endif
 
-        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3"><div><div class="group-eyebrow mb-1">Đơn hiện tại</div><h2 class="group-section-title mb-0">Mọi người đã chọn gì?</h2></div><span class="text-secondary">{{ $memberCount }}/{{ \App\Models\GroupOrder::MAX_MEMBERS }} thành viên · {{ $group->items->sum('quantity') }} món</span></div>
-        <div class="row g-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3" data-group-order-heading><div><div class="group-eyebrow mb-1">Đơn hiện tại</div><h2 class="group-section-title mb-0">Mọi người đã chọn gì?</h2></div><span class="text-secondary">{{ $memberCount }}/{{ \App\Models\GroupOrder::MAX_MEMBERS }} thành viên · {{ $group->items->sum('quantity') }} món</span></div>
+        <div class="row g-4 mb-4" data-group-members>
             @forelse($group->members as $member)
                 <div class="col-lg-6"><article class="group-card member-card"><header class="member-head"><div class="d-flex align-items-center gap-2"><span class="member-avatar">{{ mb_strtoupper(mb_substr($member->name, 0, 1)) }}</span><div><h3 class="h6 fw-bold mb-0">{{ $member->name }}</h3><small class="text-secondary">{{ $member->items->sum('quantity') }} món</small></div></div><strong class="text-primary">{{ number_format($member->items->sum(fn($item) => $item->subtotal()), 0, ',', '.') }}đ</strong></header>
                     @forelse($member->items as $item)
-                        <div class="member-item"><x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div><small class="text-secondary">Size {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>@if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif</div><div class="text-end"><strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>@if($currentMember?->id === $member->id && $isOpen)<form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item]) }}" class="mt-1">@csrf @method('DELETE')<button class="btn btn-sm btn-link text-danger p-0" aria-label="Xóa món"><i class="bi bi-trash3"></i></button></form>@endif</div></div>
+                        <div class="member-item"><x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div><small class="text-secondary">Size {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>@if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif</div><div class="text-end"><strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>@if($currentMember?->id === $member->id && $isOpen)<div class="group-item-actions"><form method="POST" action="{{ route('group-orders.items.increment', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-item-action is-add" aria-label="Thêm một phần {{ $item->product->name }}" title="Thêm 1 phần"><i class="bi bi-plus-lg"></i></button></form><form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item]) }}" data-group-async-action>@csrf @method('DELETE')<button class="group-item-action is-remove" aria-label="Xóa món" title="Xóa món"><i class="bi bi-trash3"></i></button></form></div>@endif</div></div>
                     @empty<div class="p-4 text-center text-secondary"><i class="bi bi-cup-straw d-block fs-3 mb-2"></i>Chưa chọn món</div>@endforelse
                 </article></div>
             @empty
@@ -68,7 +101,7 @@
             @endforelse
         </div>
 
-        <div class="group-summary">
+        <div class="group-summary" data-group-summary>
             <div><small class="text-secondary d-block">Tổng tiền cả nhóm</small><strong class="h3 text-primary mb-0">{{ number_format($groupTotal, 0, ',', '.') }}đ</strong></div>
             <div class="d-flex flex-wrap gap-2">
                 @if(auth()->id() === $group->owner_id && $group->status === 'open')
@@ -90,6 +123,51 @@
 </section>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const showLiveMessage = function (message, isError = false) {
+        document.querySelector('.group-live-toast')?.remove();
+        const toast = document.createElement('div');
+        toast.className = 'group-live-toast' + (isError ? ' is-error' : '');
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        window.setTimeout(() => toast.remove(), 2600);
+    };
+
+    document.addEventListener('submit', async function (event) {
+        const form = event.target.closest('form[data-group-async-action]');
+        if (!form || event.defaultPrevented) return;
+        event.preventDefault();
+
+        const submitter = event.submitter || form.querySelector('button[type="submit"], button:not([type])');
+        if (submitter) submitter.disabled = true;
+
+        try {
+            const response = await fetch(form.action, {
+                method: form.method,
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+            const html = await response.text();
+            const page = new DOMParser().parseFromString(html, 'text/html');
+            const error = page.querySelector('.alert-danger');
+            if (!response.ok || error) {
+                showLiveMessage(error?.textContent.trim() || 'Không thể cập nhật món. Vui lòng thử lại.', true);
+                return;
+            }
+
+            ['[data-group-order-heading]', '[data-group-members]', '[data-group-summary]'].forEach(selector => {
+                const current = document.querySelector(selector);
+                const updated = page.querySelector(selector);
+                if (current && updated) current.replaceWith(updated);
+            });
+            showLiveMessage(page.querySelector('.alert-success')?.textContent.trim() || 'Đã cập nhật đơn nhóm.');
+        } catch (error) {
+            showLiveMessage('Kết nối bị gián đoạn. Vui lòng thử lại.', true);
+        } finally {
+            if (submitter?.isConnected) submitter.disabled = false;
+        }
+    });
+
     const button = document.querySelector('[data-copy-group-link]');
     const input = document.getElementById('groupShareUrl');
     button?.addEventListener('click', async function () {
@@ -97,6 +175,128 @@ document.addEventListener('DOMContentLoaded', function () {
         button.innerHTML = '<i class="bi bi-check2 me-1"></i>Đã sao chép';
         window.setTimeout(() => button.innerHTML = '<i class="bi bi-copy me-1"></i>Sao chép', 1800);
     });
+
+    const productPicker = document.querySelector('[data-product-picker]');
+    const productSearch = document.querySelector('[data-product-search]');
+    const productValue = document.querySelector('[data-product-value]');
+    const productEmpty = document.querySelector('[data-product-empty]');
+    if (productPicker && productSearch && productValue) {
+        const options = Array.from(productPicker.querySelectorAll('[data-product-option]'));
+        const toppingSection = document.querySelector('[data-group-topping-section]');
+        const toppingLabels = Array.from(document.querySelectorAll('[data-topping-id]'));
+        const noToppings = document.querySelector('[data-no-toppings]');
+        const chooseProductForToppings = document.querySelector('[data-choose-product-for-toppings]');
+        const toppingHelp = document.querySelector('[data-topping-help]');
+        const normalize = value => value.toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+
+        const showToppingsFor = option => {
+            const allowedIds = new Set((option?.dataset.toppings || '').split(',').filter(Boolean).map(Number));
+            chooseProductForToppings?.classList.toggle('d-none', Boolean(option));
+            if (toppingHelp) toppingHelp.textContent = option ? 'Chỉ hiển thị topping dùng được với món đã chọn.' : 'Hãy chọn đồ uống trước để xem topping phù hợp.';
+            toppingLabels.forEach(label => {
+                const isAllowed = allowedIds.has(Number(label.dataset.toppingId));
+                label.classList.toggle('d-none', !isAllowed);
+                if (!isAllowed) label.querySelector('input').checked = false;
+            });
+            noToppings?.classList.toggle('d-none', !option || allowedIds.size > 0);
+        };
+
+        const openPicker = () => productPicker.classList.add('is-open');
+        productSearch.addEventListener('focus', openPicker);
+        productSearch.addEventListener('click', openPicker);
+        productSearch.addEventListener('input', function () {
+            const keyword = normalize(productSearch.value.trim());
+            productValue.value = '';
+            showToppingsFor(null);
+            productSearch.setCustomValidity('Vui lòng chọn một đồ uống trong danh sách.');
+            const matches = options.filter(option => normalize(option.dataset.search).includes(keyword));
+            options.forEach(option => option.hidden = !matches.includes(option));
+            productEmpty?.classList.toggle('is-visible', matches.length === 0);
+            openPicker();
+        });
+
+        options.forEach(option => option.addEventListener('click', function () {
+            productValue.value = option.dataset.value;
+            productSearch.value = option.dataset.name;
+            productSearch.setCustomValidity('');
+            productSearch.classList.remove('is-invalid');
+            productPicker.classList.remove('is-open');
+            showToppingsFor(option);
+        }));
+
+        document.addEventListener('click', event => {
+            if (!productPicker.contains(event.target)) productPicker.classList.remove('is-open');
+        });
+        productSearch.addEventListener('keydown', event => {
+            if (event.key === 'Escape') productPicker.classList.remove('is-open');
+        });
+        productSearch.closest('form')?.addEventListener('submit', event => {
+            if (!productValue.value) {
+                event.preventDefault();
+                productSearch.classList.add('is-invalid');
+                productSearch.setCustomValidity('Vui lòng tìm và chọn một đồ uống trong danh sách.');
+                productSearch.reportValidity();
+                openPicker();
+            }
+        });
+    }
+
+    const countdown = document.querySelector('[data-group-countdown]');
+    if (countdown) {
+        const closesAt = new Date(countdown.dataset.closesAt).getTime();
+        const tick = function () {
+            const seconds = Math.max(0, Math.ceil((closesAt - Date.now()) / 1000));
+            const minutes = Math.floor(seconds / 60);
+            countdown.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+            if (seconds === 0) window.location.reload();
+        };
+        tick();
+        window.setInterval(tick, 1000);
+    }
+
+    const awayNotice = document.querySelector('[data-owner-away-notice]');
+    const presenceUrl = awayNotice?.dataset.presenceUrl || @json($isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code) : null);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (presenceUrl && csrfToken) {
+        let presenceTimer = null;
+        let hasReloadedForClosing = false;
+        const syncPresence = async function () {
+            try {
+                const response = await fetch(presenceUrl, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok) return;
+                const state = await response.json();
+                awayNotice?.classList.toggle('is-visible', state.is_open && !state.owner_present);
+                if (!state.is_open) {
+                    if (presenceTimer) window.clearInterval(presenceTimer);
+                    if (!hasReloadedForClosing) {
+                        hasReloadedForClosing = true;
+                        window.location.reload();
+                    }
+                }
+            } catch (error) {
+                // Giữ trạng thái gần nhất khi kết nối tạm thời gián đoạn.
+            }
+        };
+        syncPresence();
+        presenceTimer = window.setInterval(syncPresence, 10000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) syncPresence(); });
+    }
+
+    const awayCountdown = document.querySelector('[data-owner-away-countdown]');
+    if (awayNotice && awayCountdown) {
+        const awayClosesAt = new Date(awayNotice.dataset.closesAt).getTime();
+        const tickAway = function () {
+            const seconds = Math.max(0, Math.ceil((awayClosesAt - Date.now()) / 1000));
+            const minutes = Math.floor(seconds / 60);
+            awayCountdown.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+        };
+        tickAway();
+        window.setInterval(tickAway, 1000);
+    }
 });
 </script>
 @endsection
