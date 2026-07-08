@@ -305,43 +305,6 @@
         .admin-category-scroller .btn {
             flex: 0 0 auto;
             white-space: nowrap;
-            overflow: visible;
-        }
-
-        .admin-filter-panel {
-            position: relative;
-            z-index: 36;
-            margin-bottom: 1.5rem;
-        }
-
-        .admin-filter-panel.d-none {
-            display: none !important;
-        }
-
-        .admin-category-scroller {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 0.5rem;
-            overflow-x: auto;
-            overflow-y: hidden;
-            padding-bottom: 0.25rem;
-            scrollbar-width: thin;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .admin-category-scroller::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .admin-category-scroller::-webkit-scrollbar-thumb {
-            background: var(--a-border);
-            border-radius: var(--radius-full);
-        }
-
-        .admin-category-scroller .btn {
-            flex: 0 0 auto;
-            white-space: nowrap;
         }
 
         /* ─── Metrics ─── */
@@ -748,7 +711,6 @@
                             <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
                         </form>
                     @endunless
-
 
                 </div>
                 <div class="admin-topbar-actions">

@@ -29,16 +29,14 @@
                 aria-expanded="{{ $hasAdvancedFilters ? 'true' : 'false' }}"
                 aria-controls="productFilterPanel"
             
+
                 <i class="bi bi-sliders me-1"></i>Bộ lọc
                 @if($activeFiltersCount > 0)
                     <span class="badge text-bg-light text-primary ms-1">{{ $activeFiltersCount }}</span>
                 @endif
             </button>
-            <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a> 
-         </div>
             <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
         </div>
->>>>>>> origin/cong1
         <div class="admin-category-scroller">
             @foreach($categories as $category)
                 @php
@@ -109,8 +107,6 @@
         </div>
     </form>
 </section>
-
-
 
 <section class="admin-card">
     <div class="table-responsive">
