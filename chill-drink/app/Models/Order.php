@@ -24,6 +24,9 @@ class Order extends Model
         'confirmation_token',
         'confirmation_token_expires_at',
         'delivery_type',
+        'fulfillment_type',
+        'scheduled_delivery_time',
+        'delivery_note',
         'branch_id',
         'coupon_id',
         'subtotal',
@@ -52,6 +55,7 @@ class Order extends Model
         'total'                          => 'integer',
         'confirmation_token_expires_at'  => 'datetime',
         'scheduled_at'                   => 'datetime',
+        'scheduled_delivery_time'        => 'datetime',
     ];
 
     /**

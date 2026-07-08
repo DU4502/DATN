@@ -19,14 +19,16 @@ class QuickOrderController extends Controller
         return view('client.favorites.index', compact('favorites'));
     }
 
-    public function toggleFavorite(Product $product)
+    public function toggleFavorite(Request $request, Product $product)
     {
         $favorite = Favorite::where(['user_id' => auth()->id(), 'product_id' => $product->id])->first();
         if ($favorite) {
             $favorite->delete();
+            if ($request->expectsJson()) return response()->json(['favorited' => false]);
             return back()->with('success', 'Đã bỏ khỏi danh sách yêu thích.');
         }
         Favorite::create(['user_id' => auth()->id(), 'product_id' => $product->id]);
+        if ($request->expectsJson()) return response()->json(['favorited' => true]);
         return back()->with('success', 'Đã thêm vào món yêu thích.');
     }
 
