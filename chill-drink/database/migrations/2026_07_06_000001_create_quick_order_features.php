@@ -38,7 +38,7 @@ return new class extends Migration {
             $table->string('name', 120);
             $table->string('code', 16)->unique();
             $table->string('status', 20)->default('open')->index();
-            $table->timestamp('closes_at');
+            $table->dateTime('closes_at');
             $table->string('note', 500)->nullable();
             $table->integer('order_id')->nullable();
             $table->timestamps();

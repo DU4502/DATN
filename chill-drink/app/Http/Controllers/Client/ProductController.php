@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Review;
+use App\Models\Favorite;
 use App\Support\ProductCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -106,6 +107,9 @@ class ProductController extends Controller
         };
 
         $products = $query->paginate(12)->withQueryString();
+        $favoriteProductIds = auth()->check()
+            ? Favorite::where('user_id', auth()->id())->pluck('product_id')
+            : collect();
         $categories = Category::withCount([
             'products' => fn ($query) => $this->onlyVisibleProducts($query),
         ])
@@ -140,7 +144,7 @@ class ProductController extends Controller
             $demoProducts = collect();
         }
 
-        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts'));
+        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds'));
     }
 
     /**
