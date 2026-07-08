@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
+    private bool $dashboardUseBranchScope = false;
+
+    private ?int $dashboardBranchId = null;
+
     /**
      * Display admin dashboard
      */
@@ -21,23 +26,16 @@ class DashboardController extends Controller
         $selectedPeriod = in_array($request->query('period'), ['today', 'week', 'month', 'year'], true)
             ? $request->query('period')
             : 'week';
+
+        $this->resolveDashboardScope($request);
         $data = $this->gatherDashboardData($selectedPeriod);
+        $dashboardBranch = $this->dashboardBranch();
 
         extract($data);
         $comparisonLabel = $this->comparisonLabel($selectedPeriod);
         $chartBars = $chartDatasets['revenue']['bars'] ?? [];
         $topProducts = $topProducts ?? $this->topProducts();
 
-        // Get recent orders
-        $recentOrdersQuery = Order::with('user');
-
-        if (Schema::hasColumn('orders', 'created_at')) {
-            $recentOrdersQuery->latest();
-        } else {
-            $recentOrdersQuery->orderByDesc('id');
-        }
-
-        $recentOrders = $recentOrdersQuery->take(5)->get();
         // Đảm bảo tất cả các biến đã được định nghĩa đầy đủ ở trên
         return view('admin.dashboard', compact(
             'totalUsers',
@@ -52,7 +50,8 @@ class DashboardController extends Controller
             'chartBars',
             'chartDatasets',
             'topProducts',
-            'recentOrders'
+            'recentOrders',
+            'dashboardBranch'
         ));
     }
 
@@ -65,6 +64,7 @@ class DashboardController extends Controller
             ? $request->query('period')
             : 'week';
 
+        $this->resolveDashboardScope($request);
         $data = $this->gatherDashboardData($selectedPeriod);
 
         // Convert Eloquent collections/models to arrays for JSON
@@ -123,6 +123,9 @@ class DashboardController extends Controller
         $topProducts = $this->topProducts($currentFrom, $currentTo);
 
         $recentOrdersQuery = Order::with('user');
+        // Apply branch scope
+        $recentOrdersQuery = $this->applyBranchScope($recentOrdersQuery);
+        
         if (Schema::hasColumn('orders', 'created_at')) {
             $recentOrdersQuery->latest();
         } else {
@@ -145,6 +148,59 @@ class DashboardController extends Controller
             'topProducts',
             'recentOrders'
         );
+    }
+
+    /**
+     * Apply branch scope to a query based on current user's role and branch
+     * Super Admin sees all data, Admin sees only their branch's data
+     */
+    private function applyBranchScope($query)
+    {
+        if (! $this->dashboardUseBranchScope) {
+            return $query;
+        }
+
+        return $query->where('branch_id', $this->dashboardBranchId);
+    }
+
+    private function resolveDashboardScope(Request $request): void
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            $this->dashboardUseBranchScope = false;
+            $this->dashboardBranchId = null;
+
+            return;
+        }
+
+        if ($user->isSuperAdmin()) {
+            $branchId = $request->query('branch_id');
+
+            if (is_numeric($branchId) && Branch::query()->whereKey((int) $branchId)->exists()) {
+                $this->dashboardUseBranchScope = true;
+                $this->dashboardBranchId = (int) $branchId;
+
+                return;
+            }
+
+            $this->dashboardUseBranchScope = false;
+            $this->dashboardBranchId = null;
+
+            return;
+        }
+
+        $this->dashboardUseBranchScope = true;
+        $this->dashboardBranchId = $user->branch_id ? (int) $user->branch_id : null;
+    }
+
+    private function dashboardBranch(): ?Branch
+    {
+        if (! $this->dashboardUseBranchScope || ! $this->dashboardBranchId) {
+            return null;
+        }
+
+        return Branch::query()->find($this->dashboardBranchId);
     }
 
     private function orderAmountColumn(): ?string
@@ -172,6 +228,9 @@ class DashboardController extends Controller
         }
 
         $query = Order::query();
+        
+        // Apply branch scope
+        $query = $this->applyBranchScope($query);
 
         if (Schema::hasColumn('orders', 'status')) {
             $query->where('status', 'completed');
@@ -196,6 +255,9 @@ class DashboardController extends Controller
         }
 
         $query = Order::query()->whereBetween('created_at', [$from, $to]);
+        
+        // Apply branch scope
+        $query = $this->applyBranchScope($query);
 
         if (Schema::hasColumn('orders', 'status')) {
             $query->where('status', 'completed');
@@ -214,6 +276,9 @@ class DashboardController extends Controller
         }
 
         $query = Order::query();
+        
+        // Apply branch scope
+        $query = $this->applyBranchScope($query);
 
         if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
             $query->whereBetween('created_at', [$from, $to]);
@@ -467,6 +532,7 @@ class DashboardController extends Controller
                 $value = $this->orderCountFor($slot['from'], $slot['to']);
                 $tooltipValue = number_format($value, 0, ',', '.') . ' đơn';
             } elseif ($metric === 'users') {
+                // New users don't need branch scope (global metric)
                 $value = $this->newUsersBetween($slot['from'], $slot['to']);
                 $tooltipValue = number_format($value, 0, ',', '.') . ' tài khoản';
             }
@@ -543,6 +609,11 @@ class DashboardController extends Controller
 
         if ($orderCreatedAtAvailable && $from && $to) {
             $salesQuery->whereBetween('orders.created_at', [$from, $to]);
+        }
+
+        // Apply branch scope to orders
+        if ($orderJoinAvailable && $this->dashboardUseBranchScope) {
+            $salesQuery->where('orders.branch_id', $this->dashboardBranchId);
         }
 
         if ($orderJoinAvailable && Schema::hasColumn('orders', 'status')) {

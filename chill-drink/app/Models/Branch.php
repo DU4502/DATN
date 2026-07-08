@@ -21,8 +21,6 @@ class Branch extends Model
     ];
 
     protected $casts = [
-        'latitude' => 'float',
-        'longitude' => 'float',
         'status' => 'boolean',
     ];
 
@@ -36,14 +34,22 @@ class Branch extends Model
 
     public function distanceTo(float $latitude, float $longitude): float
     {
+        if ($this->latitude === null || $this->longitude === null) {
+            return INF;
+        }
+
         $earthRadiusKm = 6371.0088;
         $originLatitude = deg2rad($latitude);
+        $originLongitude = deg2rad($longitude);
         $branchLatitude = deg2rad((float) $this->latitude);
-        $latitudeDelta = deg2rad((float) $this->latitude - $latitude);
-        $longitudeDelta = deg2rad((float) $this->longitude - $longitude);
+        $branchLongitude = deg2rad((float) $this->longitude);
+
+        $latitudeDelta = $branchLatitude - $originLatitude;
+        $longitudeDelta = $branchLongitude - $originLongitude;
 
         $haversine = sin($latitudeDelta / 2) ** 2
             + cos($originLatitude) * cos($branchLatitude) * sin($longitudeDelta / 2) ** 2;
+
         $haversine = min(1, max(0, $haversine));
 
         return $earthRadiusKm * 2 * atan2(sqrt($haversine), sqrt(1 - $haversine));
