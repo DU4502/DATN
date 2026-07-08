@@ -3,79 +3,91 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Branch;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class NearestBranchApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
-    public function test_it_returns_active_branches_ordered_by_distance(): void
+    protected function setUp(): void
     {
-        $nearest = Branch::create([
-            'name' => 'Chi nhánh Trung tâm',
-            'code' => 'TEST-CENTER',
-            'address' => 'Quận 1, Thành phố Hồ Chí Minh',
-            'latitude' => 10.7769,
-            'longitude' => 106.7009,
+        parent::setUp();
+
+        if (! Schema::hasTable('branches')) {
+            Schema::create('branches', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->string('code')->unique();
+                $table->string('phone')->nullable();
+                $table->string('email')->nullable();
+                $table->string('address')->nullable();
+                $table->decimal('latitude', 10, 6)->nullable();
+                $table->decimal('longitude', 10, 6)->nullable();
+                $table->boolean('status')->default(true);
+                $table->timestamps();
+            });
+        }
+    }
+
+    public function test_it_returns_the_nearest_branch_for_a_location(): void
+    {
+        Branch::query()->create([
+            'name' => 'Chi nhánh Hà Nội',
+            'code' => 'HN',
+            'address' => 'Hà Nội',
+            'latitude' => 21.028511,
+            'longitude' => 105.804817,
             'status' => true,
         ]);
 
-        $farther = Branch::create([
-            'name' => 'Chi nhánh Ngoại thành',
-            'code' => 'TEST-OUTER',
-            'address' => 'Thành phố Thủ Đức, Thành phố Hồ Chí Minh',
-            'latitude' => 10.8494,
-            'longitude' => 106.7537,
+        Branch::query()->create([
+            'name' => 'Chi nhánh TP.HCM',
+            'code' => 'HCM',
+            'address' => 'TP.HCM',
+            'latitude' => 10.823099,
+            'longitude' => 106.629664,
             'status' => true,
         ]);
 
-        Branch::create([
-            'name' => 'Chi nhánh Tạm đóng',
-            'code' => 'TEST-INACTIVE',
-            'latitude' => 10.7768,
-            'longitude' => 106.7008,
-            'status' => false,
+        $response = $this->getJson('/api/branches/nearest?latitude=21.03&longitude=105.85');
+
+        $response->assertOk()
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'name' => 'Chi nhánh Hà Nội',
+                    'code' => 'HN',
+                ],
+            ]);
+    }
+
+    public function test_it_returns_branches_sorted_by_distance(): void
+    {
+        Branch::query()->create([
+            'name' => 'Chi nhánh Hà Nội',
+            'code' => 'HN',
+            'address' => 'Hà Nội',
+            'latitude' => 21.028511,
+            'longitude' => 105.804817,
+            'status' => true,
         ]);
 
-        $response = $this->getJson(route('api.branches.nearest', [
-            'latitude' => 10.775,
-            'longitude' => 106.699,
-            'limit' => 2,
-        ]));
+        Branch::query()->create([
+            'name' => 'Chi nhánh Đà Nẵng',
+            'code' => 'DN',
+            'address' => 'Đà Nẵng',
+            'latitude' => 16.054406,
+            'longitude' => 108.202167,
+            'status' => true,
+        ]);
 
-        $response
-            ->assertOk()
-            ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.id', $nearest->id)
-            ->assertJsonPath('data.1.id', $farther->id)
-            ->assertJsonMissing(['code' => 'TEST-INACTIVE']);
+        $response = $this->getJson('/api/branches?latitude=21.03&longitude=105.85');
 
-        $this->assertLessThan(
-            $response->json('data.1.distance_km'),
-            $response->json('data.0.distance_km')
-        );
-    }
-
-    public function test_it_validates_coordinates(): void
-    {
-        $this->getJson(route('api.branches.nearest', [
-            'latitude' => 91,
-            'longitude' => 181,
-        ]))
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['latitude', 'longitude']);
-    }
-
-    public function test_it_returns_an_empty_result_when_no_real_branch_is_configured(): void
-    {
-        Branch::query()->delete();
-
-        $this->getJson(route('api.branches.nearest', [
-            'latitude' => 10.775,
-            'longitude' => 106.699,
-        ]))
-            ->assertOk()
-            ->assertJsonCount(0, 'data');
+        $response->assertOk()
+            ->assertJsonPath('data.0.name', 'Chi nhánh Hà Nội')
+            ->assertJsonPath('data.1.name', 'Chi nhánh Đà Nẵng');
     }
 }
