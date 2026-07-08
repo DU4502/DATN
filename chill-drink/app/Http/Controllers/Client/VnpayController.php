@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -15,15 +16,19 @@ class VnpayController extends Controller
 {
     public function payment(Order $order): RedirectResponse
     {
-        abort_unless((int) $order->user_id === (int) auth()->id(), 403);
+        abort_unless(GuestOrderAccess::canView($order), 403);
 
         if ($order->payment_method !== 'vnpay') {
-            return redirect()->route('orders.index')
+            $redirectRoute = auth()->check() ? 'orders.index' : 'checkout.success';
+
+            return redirect()->route($redirectRoute, $order)
                 ->with('error', 'Đơn hàng này không sử dụng phương thức thanh toán VNPay.');
         }
 
         if ($order->payment_status === 'paid') {
-            return redirect()->route('orders.index')
+            $redirectRoute = auth()->check() ? 'orders.index' : 'checkout.success';
+
+            return redirect()->route($redirectRoute, $order)
                 ->with('success', 'Đơn hàng này đã được thanh toán.');
         }
 
@@ -33,14 +38,18 @@ class VnpayController extends Controller
         }
 
         if (! $this->isConfigured()) {
-            return redirect()->route('orders.index')
+            $redirectRoute = auth()->check() ? 'orders.index' : 'checkout.success';
+
+            return redirect()->route($redirectRoute, $order)
                 ->with('error', 'VNPay chưa được cấu hình đầy đủ. Vui lòng thử lại sau.');
         }
 
         $total = (int) $order->total;
 
         if ($total <= 0) {
-            return redirect()->route('orders.index')
+            $redirectRoute = auth()->check() ? 'orders.index' : 'checkout.success';
+
+            return redirect()->route($redirectRoute, $order)
                 ->with('error', 'Số tiền thanh toán không hợp lệ.');
         }
 
@@ -253,8 +262,16 @@ class VnpayController extends Controller
 
     private function resultView(?Order $order, string $result, string $title, string $message): View
     {
-        $order?->load('orderItems.product');
+        $order?->load('orderItems.product', 'branch');
 
-        return view('client.checkout.success', compact('order', 'result', 'title', 'message'));
+        $payload = compact('order', 'result', 'title', 'message');
+
+        if ($order && $order->isGuest()) {
+            GuestOrderAccess::remember($order);
+            GuestOrderAccess::storeConvertPayload($order);
+            $payload['guestConvert'] = session('guest_convert');
+        }
+
+        return view('client.checkout.success', $payload);
     }
 }
