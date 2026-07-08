@@ -1,11 +1,10 @@
 @extends('layouts.admin')
 
 @section('page-title', 'Sản phẩm')
-<<<<<<< HEAD
-=======
+
 @section('search-placeholder', 'Tìm đồ uống, mã sản phẩm...')
 @section('topbar-search-action', route('admin.products.index'))
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
+
 
 @section('content')
 @php
@@ -29,7 +28,7 @@
 @endphp
 
 <section class="admin-sticky-tools d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
-<<<<<<< HEAD
+
     <div class="d-flex flex-wrap gap-2">
         <a href="{{ route('admin.products.index') }}" class="btn {{ !request('category') ? 'btn-primary' : 'btn-outline-primary' }}">Tất cả sản phẩm</a>
         @foreach($categories as $category)
@@ -39,8 +38,8 @@
             </a>
         @endforeach
         <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
-=======
-    <div class="d-flex flex-column gap-2 flex-grow-1">
+
+    <!-- <div class="d-flex flex-column gap-2 flex-grow-1">
         <div class="d-flex flex-wrap gap-2 align-items-center">
             <a href="{{ route('admin.products.index') }}" class="btn {{ empty($filterParams) ? 'btn-primary' : 'btn-outline-primary' }}">Tất cả sản phẩm</a>
             <button
@@ -55,8 +54,8 @@
                     <span class="badge text-bg-light text-primary ms-1">{{ $activeFiltersCount }}</span>
                 @endif
             </button>
-            <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
-        </div>
+            <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a> -->
+        <!-- </div>
         <div class="admin-category-scroller">
             @foreach($categories as $category)
                 @php
@@ -66,8 +65,8 @@
                     {{ $category->name }}
                 </a>
             @endforeach
-        </div>
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
+        </div> -->
+
     </div>
     <div class="text-lg-end">
         <p class="admin-kicker mb-1">Tình trạng kho</p>
@@ -81,7 +80,7 @@
     </div>
 </section>
 
-<<<<<<< HEAD
+
 <!-- Search Form -->
 <form method="GET" action="{{ route('admin.products.index') }}" class="mb-4">
     <div class="row g-3 align-items-end">
@@ -101,7 +100,7 @@
         </div>
     </div>
 </form>
-=======
+
 <section class="admin-filter-panel {{ $hasAdvancedFilters ? '' : 'd-none' }}" id="productFilterPanel" data-admin-filter-panel>
     <form method="GET" action="{{ route('admin.products.index') }}" class="admin-card p-4 mb-4">
         <input type="hidden" name="q" value="{{ $filters['q'] ?? '' }}">
@@ -148,7 +147,7 @@
         </div>
     </form>
 </section>
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
+
 
 <section class="admin-card">
     <div class="table-responsive">

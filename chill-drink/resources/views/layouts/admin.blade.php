@@ -733,8 +733,7 @@
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
-<<<<<<< HEAD
-=======
+
                     @unless(View::hasSection('hide-topbar-search'))
                         <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search" role="search">
                             @foreach(request()->except(['q', 'page']) as $key => $value)
@@ -750,7 +749,7 @@
                             <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
                         </form>
                     @endunless
->>>>>>> fba37b9408af9cf408c9e680e1867783baa22fcc
+
                 </div>
                 <div class="admin-topbar-actions">
                     <span class="text-secondary fw-medium d-none d-lg-inline" style="font-size: 0.8125rem;">{{ Auth::user()->name }}</span>
