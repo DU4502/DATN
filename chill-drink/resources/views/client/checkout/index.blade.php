@@ -921,6 +921,24 @@
                                 type="hidden"
                                 value="{{ old('shipping_address_ui', $primaryAddress) }}"
                             >
+                            <input
+                                id="shipping_area_ui"
+                                name="shipping_area_ui"
+                                type="hidden"
+                                value="{{ old('shipping_area_ui', $primaryArea) }}"
+                            >
+                            <input
+                                id="checkout_latitude"
+                                name="latitude"
+                                type="hidden"
+                                value="{{ old('latitude', $userLatitude) }}"
+                            >
+                            <input
+                                id="checkout_longitude"
+                                name="longitude"
+                                type="hidden"
+                                value="{{ old('longitude', $userLongitude) }}"
+                            >
 
                             <div class="selected-address-row">
                                 <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
@@ -1669,7 +1687,7 @@
             return shippingTiers.find((tier) => Number(distance) <= Number(tier.max)) || shippingTiers[shippingTiers.length - 1];
         }
 
-        function updateShippingSummary() {
+        window.updateShippingSummary = function updateShippingSummary() {
             const methodInput = document.querySelector('input[name="shipping_method_ui"]:checked')
                 || document.querySelector('input[name="shipping_method_ui"]');
 
@@ -1677,14 +1695,55 @@
                 return;
             }
 
-            const shippingFee = Number(shippingConfig.fixedShippingFee || 0);
-            const grandTotal = shippingConfig.subtotal + shippingFee - Number(shippingConfig.discount || 0);
+            const branchSelect = document.getElementById('branch_id');
+            const selectedOption = branchSelect?.options[branchSelect.selectedIndex];
+            const isPickup = document.getElementById('deliveryTypePickup')?.checked === true;
+
+            let shippingFee = 0;
+            let distance = null;
+            let distanceLabel = 'Cố định';
+            let estimateLabel = 'Giao tận nơi';
+            let estimateDetail = 'Phí cố định';
+
+            if (isPickup) {
+                shippingFee = 0;
+                distanceLabel = 'Tự nhận';
+                estimateLabel = 'Nhận tại cửa hàng';
+                estimateDetail = selectedOption?.value ? selectedOption.textContent.split(' — ')[0] : 'Chưa chọn chi nhánh';
+            } else {
+                const userLat = confirmedLocation.latitude;
+                const userLon = confirmedLocation.longitude;
+                const branchLat = selectedOption ? Number.parseFloat(selectedOption.dataset.latitude) : null;
+                const branchLon = selectedOption ? Number.parseFloat(selectedOption.dataset.longitude) : null;
+
+                if (Number.isFinite(userLat) && Number.isFinite(userLon) && Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
+                    distance = calculateDistance(userLat, userLon, branchLat, branchLon);
+                    
+                    // Find shipping tier
+                    const tier = tierForDistance(distance);
+                    const baseFee = Number(tier.base_fee);
+                    const surcharge = Number(methodInput.dataset.methodFee || 0);
+                    shippingFee = baseFee + surcharge;
+                    
+                    distanceLabel = `${distance.toFixed(1)} km`;
+                    estimateLabel = tier.label;
+                    estimateDetail = tier.description;
+                } else {
+                    // Fallback to fixed shipping fee
+                    shippingFee = Number(shippingConfig.fixedShippingFee || 15000) + Number(methodInput.dataset.methodFee || 0);
+                    distanceLabel = 'Chờ địa chỉ';
+                    estimateLabel = 'Ước tính';
+                    estimateDetail = 'Vui lòng chọn địa chỉ và chi nhánh';
+                }
+            }
+
+            const grandTotal = Math.max(0, shippingConfig.subtotal + shippingFee - Number(shippingConfig.discount || 0));
 
             if (shippingDistanceLabel) {
-                shippingDistanceLabel.textContent = 'Cố định';
+                shippingDistanceLabel.textContent = distanceLabel;
             }
             if (shippingEstimateDetail) {
-                shippingEstimateDetail.textContent = 'Tạm thời chưa tính theo kilomet';
+                shippingEstimateDetail.textContent = `${estimateLabel} · ${estimateDetail}`;
             }
             if (shippingInlineFee) {
                 shippingInlineFee.textContent = formatVnd(shippingFee);
@@ -1693,7 +1752,7 @@
                 shippingEta.textContent = methodInput.dataset.methodEta || '';
             }
             summaryShippingFee.textContent = formatVnd(shippingFee);
-            summaryShippingDistance.textContent = 'Phí giao hàng cố định';
+            summaryShippingDistance.textContent = distance !== null ? `Khoảng cách: ${distance.toFixed(1)} km` : 'Phí giao hàng';
             summaryGrandTotal.textContent = formatVnd(grandTotal);
         }
 
@@ -1838,12 +1897,20 @@
                     latitude: addressLatitude,
                     longitude: addressLongitude,
                 };
+                const latInput = document.getElementById('checkout_latitude');
+                const lngInput = document.getElementById('checkout_longitude');
+                if (latInput) latInput.value = String(addressLatitude);
+                if (lngInput) lngInput.value = String(addressLongitude);
                 renderBranchOptions(addressLatitude, addressLongitude);
             } else {
                 confirmedLocation = {
                     latitude: null,
                     longitude: null,
                 };
+                const latInput = document.getElementById('checkout_latitude');
+                const lngInput = document.getElementById('checkout_longitude');
+                if (latInput) latInput.value = '';
+                if (lngInput) lngInput.value = '';
                 renderBranchOptions();
             }
             renderAddressList();
@@ -2098,6 +2165,11 @@
                 longitude,
             };
 
+            const latInput = document.getElementById('checkout_latitude');
+            const lngInput = document.getElementById('checkout_longitude');
+            if (latInput) latInput.value = String(latitude);
+            if (lngInput) lngInput.value = String(longitude);
+
             renderBranchOptions(latitude, longitude);
             updateBranchSelectorState();
         });
@@ -2258,6 +2330,8 @@
             input.addEventListener('change', updateShippingSummary);
         });
 
+        document.getElementById('branch_id')?.addEventListener('change', () => window.updateShippingSummary?.());
+
         document.querySelector('[data-toggle-checkout-items]')?.addEventListener('click', function () {
             const extraItems = document.querySelectorAll('[data-checkout-extra-item]');
             const isOpening = Array.from(extraItems).some((item) => item.classList.contains('d-none'));
@@ -2368,15 +2442,8 @@
             }
 
             // Update shipping fee display
-            const shippingInlineFee = document.getElementById('shippingInlineFee');
-            if (shippingInlineFee) {
-                if (isPickup) {
-                    shippingInlineFee.textContent = '0đ';
-                } else {
-                    // Recalculate shipping fee
-                    const methodFee = parseInt(document.querySelector('input[name="shipping_method_ui"]')?.dataset.methodFee || '0');
-                    shippingInlineFee.textContent = (methodFee || 0).toLocaleString('vi-VN') + 'đ';
-                }
+            if (typeof window.updateShippingSummary === 'function') {
+                window.updateShippingSummary();
             }
 
             if (typeof window.updateBranchSelectorState === 'function') {

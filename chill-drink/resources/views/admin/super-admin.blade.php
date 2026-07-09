@@ -260,7 +260,7 @@
                     <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'month'])) }}#branch-ranking" data-ranking-period="month" class="sa-btn {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
                     <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'year'])) }}#branch-ranking" data-ranking-period="year" class="sa-btn {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
                 </div>
-                <a href="{{ route('admin.branches.index') }}" class="sa-btn sa-btn-primary" style="min-height:32px; padding:0.28rem 0.7rem; border-radius:999px; white-space:nowrap; font-size:0.75rem;"><i class="bi bi-shop"></i> Mở trang chi nhánh</a>
+                <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal" style="min-height:32px; padding:0.28rem 0.7rem; border-radius:999px; white-space:nowrap; font-size:0.75rem;"><i class="bi bi-plus-lg"></i> Thêm chi nhánh</button>
             </div>
         </div>
 
@@ -810,12 +810,97 @@
     </div>
 </div>
 
+<div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" method="POST" action="{{ route('admin.branches.store') }}" style="border:0;border-radius:8px;">
+            @csrf
+            <input type="hidden" name="form_type" value="branch">
+            <input type="hidden" name="return_to" value="super-admin">
+            
+            <div class="modal-header">
+                <h2 class="modal-title fs-6 fw-bold" id="createBranchModalLabel">Thêm chi nhánh mới</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold" for="new_branch_name">Tên chi nhánh <span class="text-danger">*</span></label>
+                    <input id="new_branch_name" class="form-control @error('name', 'createBranch') is-invalid @enderror" name="name" value="{{ old('name') }}" required>
+                    @error('name', 'createBranch')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold" for="new_branch_code">Mã chi nhánh <span class="text-danger">*</span></label>
+                    <input id="new_branch_code" class="form-control @error('code', 'createBranch') is-invalid @enderror" name="code" value="{{ old('code') }}" placeholder="Ví dụ: CN1, CN2, CN3" required>
+                    @error('code', 'createBranch')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-bold" for="new_branch_email">Email</label>
+                        <input id="new_branch_email" class="form-control @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="branch@example.com">
+                        @error('email', 'createBranch')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-bold" for="new_branch_phone">Điện thoại</label>
+                        <input id="new_branch_phone" class="form-control @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123456789">
+                        @error('phone', 'createBranch')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold" for="new_branch_address">Địa chỉ</label>
+                    <textarea id="new_branch_address" class="form-control @error('address', 'createBranch') is-invalid @enderror" name="address" rows="3" placeholder="Nhập địa chỉ chi nhánh">{{ old('address') }}</textarea>
+                    @error('address', 'createBranch')
+                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                <div class="mb-3">
+                    @include('admin.partials.branch-map-link', [
+                        'pickerId' => 'create-branch-map-link',
+                        'label' => 'Link Google Maps',
+                        'hint' => 'Dán link Google Maps có chứa tọa độ rồi bấm lấy tọa độ.',
+                        'mapLinkValue' => old('map_link'),
+                        'latValue' => old('latitude'),
+                        'lngValue' => old('longitude'),
+                        'errorBag' => 'createBranch',
+                    ])
+                </div>
+
+                <div class="form-check form-switch mt-3">
+                    <input type="hidden" name="status" value="0">
+                    <input id="new_branch_status" class="form-check-input" type="checkbox" name="status" value="1" @checked(old('status', '1') === '1')>
+                    <label class="form-check-label small fw-semibold" for="new_branch_status">Kích hoạt chi nhánh ngay</label>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="gap: 0.75rem;">
+                <button type="button" class="sa-btn" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="sa-btn sa-btn-primary" style="min-width: 160px; background: var(--sa-green); color: #fff; border-color: var(--sa-green);">
+                    <i class="bi bi-shop"></i>Thêm chi nhánh
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @include('admin.partials.branch-map-link-script')
 
 @php
     $modalToOpen = old('form_type') === 'admin'
         ? 'createAdminModal'
-        : (old('form_type') === 'branch-edit' && old('branch_modal_id') ? 'branchEditModal'.old('branch_modal_id') : null);
+        : (old('form_type') === 'branch'
+            ? 'createBranchModal'
+            : (old('form_type') === 'branch-edit' && old('branch_modal_id') ? 'branchEditModal'.old('branch_modal_id') : null));
 @endphp
 
 @if($modalToOpen)
