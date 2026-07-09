@@ -9,16 +9,27 @@ class Address extends Model
 {
     use HasFactory;
 
+    protected $table = 'addresses';
+
     public $timestamps = false;
 
     protected $fillable = [
-        'user_id', 'label', 'receiver_name', 'phone', 'province',
-        'district', 'ward', 'detail', 'is_default', 'created_at',
+        'user_id',
+        'label',
+        'receiver_name',
+        'phone',
+        'province',
+        'district',
+        'ward',
+        'detail',
+        'latitude',
+        'longitude',
+        'is_default',
     ];
 
     protected $casts = [
         'is_default' => 'boolean',
-        'created_at' => 'datetime',
+
     ];
 
     public function user()

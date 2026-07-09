@@ -107,13 +107,15 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold d-block">Thời gian nhận *</label>
-                            <div class="btn-group delivery-toggle w-100"><input class="btn-check" type="radio" name="delivery_type" id="guestDeliveryNow" value="now" @checked($orderTiming === 'now')><label class="btn btn-outline-primary" for="guestDeliveryNow">Giao ngay</label><input class="btn-check" type="radio" name="delivery_type" id="guestDeliveryScheduled" value="scheduled" @checked($orderTiming === 'scheduled')><label class="btn btn-outline-primary" for="guestDeliveryScheduled">Đặt giao sau</label></div>
-                        </div>
-                        <div class="mb-4 {{ $orderTiming === 'scheduled' ? '' : 'is-hidden' }}" data-guest-schedule>
-                            <label class="form-label fw-semibold" for="scheduled_delivery_time">Ngày và giờ nhận</label><input class="form-control guest-input" type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time', $guestInfo['scheduled_delivery_time'] ?? '') }}"><div class="form-text">Tối thiểu 30 phút · Giờ mở cửa 07:00–22:00.</div>
-                            <label class="form-label fw-semibold mt-3" for="delivery_note">Ghi chú giao hàng</label><input class="form-control guest-input" id="delivery_note" name="delivery_note" value="{{ old('delivery_note', $guestInfo['delivery_note'] ?? '') }}" placeholder="Giao đúng giờ giúp mình">
+                        <div class="mb-4">
+                            <label for="branch_id" class="form-label fw-semibold">Chọn chi nhánh *</label>
+                            <select id="branch_id" name="branch_id" class="form-select guest-input @error('branch_id') is-invalid @enderror">
+                                <option value="">Chọn chi nhánh</option>
+                                @foreach($branches as $branch)
+                                    <option value="{{ $branch->id }}" @selected((string) old('branch_id', $guestInfo['branch_id'] ?? '') === (string) $branch->id)>{{ $branch->name }} — {{ $branch->address }}</option>
+                                @endforeach
+                            </select>
+                            @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
                         <div class="delivery-fields {{ $deliveryType === 'pickup' ? 'is-hidden' : '' }}" data-delivery-fields>
@@ -123,19 +125,6 @@
                                 @error('shipping_address_ui')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
 
-                        </div>
-
-                        <div class="pickup-fields {{ $deliveryType === 'delivery' ? 'is-hidden' : '' }}" data-pickup-fields>
-                            <div class="mb-4">
-                                <label for="branch_id" class="form-label fw-semibold">Chọn chi nhánh *</label>
-                                <select id="branch_id" name="branch_id" class="form-select guest-input @error('branch_id') is-invalid @enderror">
-                                    <option value="">Chọn chi nhánh</option>
-                                    @foreach($branches as $branch)
-                                        <option value="{{ $branch->id }}" @selected((string) old('branch_id', $guestInfo['branch_id'] ?? '') === (string) $branch->id)>{{ $branch->name }} — {{ $branch->address }}</option>
-                                    @endforeach
-                                </select>
-                                @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
                         </div>
 
                         <div class="mb-4">
