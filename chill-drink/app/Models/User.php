@@ -114,9 +114,29 @@ class User extends Authenticatable implements MustVerifyEmail
         return (int) ($this->role_id ?? 1) === 3;
     }
 
+    public function canMonitorChat(): bool
+    {
+        return $this->isSuperAdmin();
+    }
+
+    public function canImpersonateInChat(): bool
+    {
+        return $this->isSuperAdmin();
+    }
+
+    public function isCskh(): bool
+    {
+        return (int) ($this->role_id ?? 1) === 4;
+    }
+
+    public function isStaff(): bool
+    {
+        return in_array((int) ($this->role_id ?? 1), [2, 3, 4], true);
+    }
+
     public function isCustomer(): bool
     {
-        return ! $this->isAdmin();
+        return ! $this->isStaff();
     }
 
     public function scopeCustomers($query)
@@ -165,5 +185,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function conversations()
+    {
+        return $this->hasMany(Conversation::class, 'user_id');
+    }
+
+    public function cskhConversations()
+    {
+        return $this->hasMany(Conversation::class, 'cskh_id');
     }
 }
