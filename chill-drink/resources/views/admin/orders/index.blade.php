@@ -400,6 +400,7 @@
         const recentOrdersUrl = @json(route('admin.orders.recent'));
         const hasActiveFilters = @json($hasActiveOrderFilters);
         const initialLatestId = @json($latestOrderId ?? 0);
+        window.isSuperAdmin = @json(auth()->user()->isSuperAdmin());
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -630,9 +631,11 @@
                         </span>
                     </div>
                 </td>
+                ${window.isSuperAdmin ? `
                 <td>
-                    <div class="fw-semibold">${escapeHtml(payload.customer_phone || 'Chưa cập nhật')}</div>
+                    ${payload.branch_name && payload.branch_name !== 'Chưa gán' ? `<span class="badge bg-light text-dark">${escapeHtml(payload.branch_name)}</span>` : `<span class="text-secondary small">-</span>`}
                 </td>
+                ` : ''}
                 <td>${paymentBadgeHtml(payload)}</td>
                 <td class="text-end fw-bold text-primary">${escapeHtml(payload.total_formatted || '')}</td>
                 <td class="text-center">${tableStatusSelectHtml(payload)}</td>

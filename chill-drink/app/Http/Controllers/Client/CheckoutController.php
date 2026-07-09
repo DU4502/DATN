@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\ScheduledDelivery;
 use Throwable;
 
 class CheckoutController extends Controller
@@ -68,9 +69,6 @@ class CheckoutController extends Controller
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $branches = Branch::where('status', true)
-            ->whereHas('users', function ($query) {
-                $query->where('role_id', 2);
-            })
             ->orderBy('name')
             ->get();
         
@@ -180,13 +178,17 @@ class CheckoutController extends Controller
                 'scheduled_delivery_time' => $request->input('scheduled_at'),
             ]);
         }
+        
+        if (! $request->filled('fulfillment_type') && in_array($request->input('delivery_type'), ['delivery', 'pickup'], true)) {
+            $request->merge(['fulfillment_type' => $request->input('delivery_type'), 'delivery_type' => 'now']);
+        }
 
         $request->validate([
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => ['required_if:delivery_type,delivery', 'nullable', 'string', 'max:255'],
+            'shipping_address_ui' => ['required_if:fulfillment_type,delivery', 'nullable', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
-            'delivery_type' => ['required', Rule::in(['delivery', 'pickup'])],
+            'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'voucher_code' => 'nullable|string|max:50',
             'shipping_voucher_code' => 'nullable|string|max:50',
@@ -206,8 +208,8 @@ class CheckoutController extends Controller
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
-            'delivery_type.required' => 'Vui lòng chọn phương thức nhận hàng.',
-            'delivery_type.in' => 'Phương thức nhận hàng không hợp lệ.',
+            'fulfillment_type.required' => 'Vui lòng chọn phương thức nhận hàng.',
+            'fulfillment_type.in' => 'Phương thức nhận hàng không hợp lệ.',
             'branch_id.required' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
         ]);
@@ -232,10 +234,10 @@ class CheckoutController extends Controller
 
             $orderItems = $this->prepareOrderItems($cart);
             $subtotal = collect($orderItems)->sum('total_price');
-            $deliveryType = $request->input('delivery_type', 'delivery');
+            $fulfillmentType = $request->input('fulfillment_type', 'delivery');
 
             // Handle shipping fee based on delivery type
-            if ($deliveryType === 'pickup') {
+            if ($fulfillmentType === 'pickup') {
                 $shippingFee = 0;
             } else {
                 $shippingQuote = ShippingFee::quoteForAddress(
@@ -250,6 +252,8 @@ class CheckoutController extends Controller
             $branchId = $request->input('branch_id');
 
             [$voucher, $discount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal);
+            $shippingVoucher = null;
+            $shippingDiscount = 0;
             $grandTotal = max(0, $subtotal + $shippingFee - $discount);
             $addressText = trim(collect([
                 $request->shipping_address_ui,
@@ -268,12 +272,11 @@ class CheckoutController extends Controller
             $orderData = [
                 'user_id' => auth()->id(),
                 'payment_method' => $request->payment_method,
-                'delivery_type' => $deliveryType,
+                'fulfillment_type' => $fulfillmentType,
                 'branch_id' => $branchId,
                 'status' => 'pending',
                 'note' => $note,
                 'delivery_type' => $request->input('delivery_type', 'now'),
-                'fulfillment_type' => 'delivery',
                 'scheduled_delivery_time' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
                 'scheduled_at' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
                 'delivery_note' => $request->input('delivery_note'),

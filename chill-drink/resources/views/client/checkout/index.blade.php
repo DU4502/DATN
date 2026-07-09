@@ -17,14 +17,14 @@
     $userLatitude = $userLatitude ?? null;
     $userLongitude = $userLongitude ?? null;
     $hasUserLocation = !empty($userLatitude) && !empty($userLongitude);
-    $deliveryType = old('delivery_type', 'delivery');
+    $fulfillmentType = old('fulfillment_type', 'delivery');
     $selectedShippingMethod = old('shipping_method_ui', 'standard');
     $shippingQuote = \App\Support\ShippingFee::quoteForAddress(
         old('shipping_address_ui', $primaryAddress),
         old('shipping_area_ui', $primaryArea),
         $selectedShippingMethod
     );
-    $shippingFee = $deliveryType === 'pickup' ? 0 : $shippingQuote['total_fee'];
+    $shippingFee = $fulfillmentType === 'pickup' ? 0 : $shippingQuote['total_fee'];
     $availableVouchers = collect($availableVouchers ?? []);
     $loyaltyContext = $loyaltyContext ?? ['rank' => 'bronze', 'points' => 0];
     $rankOrder = ['bronze' => 1, 'silver' => 2, 'gold' => 3, 'diamond' => 4];
@@ -884,23 +884,23 @@
                         </div>
 
                         <div class="btn-group w-100" role="group">
-                            <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
+                            <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypeDelivery" value="delivery" @checked($fulfillmentType === 'delivery')>
                             <label class="btn btn-outline-primary flex-grow-1" for="deliveryTypeDelivery">
                                 <i class="bi bi-truck me-2"></i>Giao đến địa chỉ
                             </label>
 
-                            <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
+                            <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypePickup" value="pickup" @checked($fulfillmentType === 'pickup')>
                             <label class="btn btn-outline-primary flex-grow-1" for="deliveryTypePickup">
                                 <i class="bi bi-shop me-2"></i>Lấy tại chi nhánh
                             </label>
                         </div>
 
-                        @error('delivery_type')
+                        @error('fulfillment_type')
                             <div class="text-danger small mt-2">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="checkout-panel checkout-address-panel mb-4 delivery-fields {{ $deliveryType === 'pickup' ? 'd-none' : '' }}" data-delivery-fields>
+                    <div class="checkout-panel checkout-address-panel mb-4 delivery-fields {{ $fulfillmentType === 'pickup' ? 'd-none' : '' }}" data-delivery-fields>
                         <div class="address-panel-head d-flex flex-wrap justify-content-between align-items-center gap-3 px-4 py-3">
                             <div class="d-flex align-items-center gap-3">
                                 <span class="checkout-step"><i class="bi bi-geo-alt"></i></span>
@@ -964,12 +964,11 @@
 
                         <div class="mb-3">
                             <label for="branch_id" class="form-label fw-semibold">Chi nhánh <span class="text-danger">*</span></label>
-                            <div class="branch-select-shell {{ $deliveryType === 'delivery' && ! $hasUserLocation ? 'is-disabled' : '' }}">
+                            <div class="branch-select-shell">
                                 <select id="branch_id" name="branch_id" class="form-select checkout-input @error('branch_id') is-invalid @enderror"
                                     data-branches='{{ json_encode($branchesJson ?? []) }}'
                                     data-user-latitude="{{ $userLatitude }}"
-                                    data-user-longitude="{{ $userLongitude }}"
-                                    @disabled($deliveryType === 'delivery' && ! $hasUserLocation)>
+                                    data-user-longitude="{{ $userLongitude }}">
                                     <option value="">Chọn chi nhánh</option>
                                     @foreach($branches as $branch)
                                         @php
@@ -1005,7 +1004,7 @@
                                 </select>
                                 <i class="bi bi-chevron-down branch-select-chevron" aria-hidden="true"></i>
                             </div>
-                            <div class="branch-select-note {{ $deliveryType === 'delivery' && ! $hasUserLocation ? '' : 'd-none' }}" data-branch-select-note>
+                            <div class="branch-select-note d-none" data-branch-select-note>
                                 Cập nhật địa chỉ nhận hàng trước để chọn chi nhánh phù hợp.
                             </div>
                             @error('branch_id')
@@ -1553,10 +1552,17 @@
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
 
         let selectedAddressId = @json($selectedAddressId ?? 'primary');
-        let pendingVoucher = {
-            code: document.querySelector('[data-voucher-card].active')?.dataset.voucherCode || '',
-            label: document.querySelector('[data-voucher-card].active')?.dataset.voucherLabel || '',
-            discount: Number(document.querySelector('[data-voucher-card].active')?.dataset.voucherDiscount || {{ (int) $discount }}),
+        let pendingVouchers = {
+            shipping: {
+                code: document.querySelector('[data-voucher-card][data-voucher-type="shipping"].active')?.dataset.voucherCode || '',
+                label: document.querySelector('[data-voucher-card][data-voucher-type="shipping"].active')?.dataset.voucherLabel || '',
+                discount: Number(document.querySelector('[data-voucher-card][data-voucher-type="shipping"].active')?.dataset.voucherDiscount || 0),
+            },
+            discount: {
+                code: document.querySelector('[data-voucher-card][data-voucher-type="discount"].active')?.dataset.voucherCode || '',
+                label: document.querySelector('[data-voucher-card][data-voucher-type="discount"].active')?.dataset.voucherLabel || '',
+                discount: Number(document.querySelector('[data-voucher-card][data-voucher-type="discount"].active')?.dataset.voucherDiscount || {{ (int) $discount }}),
+            }
         };
         let addressBook = @json($addressBook ?? []);
         const addressSaveUrls = {
@@ -1592,7 +1598,7 @@
             return Number.isFinite(confirmedLocation.latitude) && Number.isFinite(confirmedLocation.longitude);
         }
 
-        function updateBranchSelectorState() {
+        window.updateBranchSelectorState = function updateBranchSelectorState() {
             const branchSelect = document.getElementById('branch_id');
             const isPickup = document.getElementById('deliveryTypePickup')?.checked === true;
 
@@ -1600,20 +1606,15 @@
                 return;
             }
 
-            const shouldLock = !isPickup && !hasConfirmedLocation();
-            branchSelect.disabled = shouldLock;
-            branchSelect.required = !shouldLock;
+            branchSelect.disabled = false;
+            branchSelect.required = true;
 
             if (branchSelectShell) {
-                branchSelectShell.classList.toggle('is-disabled', shouldLock);
+                branchSelectShell.classList.remove('is-disabled');
             }
 
             if (branchSelectNote) {
-                branchSelectNote.classList.toggle('d-none', !shouldLock);
-            }
-
-            if (shouldLock && !isPickup) {
-                branchSelect.value = '';
+                branchSelectNote.classList.add('d-none');
             }
         }
 
@@ -1958,7 +1959,11 @@
             card.classList.add('active');
             card.querySelector('.voucher-radio')?.classList.add('active');
             card.querySelector('.voucher-radio')?.setAttribute('aria-pressed', 'true');
-            pendingVouchers[type] = voucherState(card);
+            pendingVouchers[type] = {
+                code: card.dataset.voucherCode || '',
+                label: card.dataset.voucherLabel || '',
+                discount: Number(card.dataset.voucherDiscount || 0)
+            };
             voucherCodeInput.value = pendingVouchers[type].code;
         }
 
@@ -1969,10 +1974,9 @@
                 item.querySelector('.voucher-radio')?.setAttribute('aria-pressed', 'false');
             });
 
-            pendingVoucher = {
-                code: '',
-                label: '',
-                discount: 0,
+            pendingVouchers = {
+                shipping: { code: '', label: '', discount: 0 },
+                discount: { code: '', label: '', discount: 0 }
             };
             voucherCodeInput.value = '';
             commitVoucherSelection();
@@ -2029,6 +2033,50 @@
 
             if (voucherCard && !event.target.closest('a')) {
                 setVoucherActive(voucherCard);
+            }
+
+            const cartActionBtn = event.target.closest('[data-checkout-cart-action]');
+            if (cartActionBtn) {
+                event.preventDefault();
+                
+                const confirmMsg = cartActionBtn.dataset.confirm;
+                if (confirmMsg && !confirm(confirmMsg)) {
+                    return;
+                }
+
+                const url = cartActionBtn.dataset.checkoutCartAction;
+                const method = cartActionBtn.dataset.method || 'POST';
+                const quantity = cartActionBtn.dataset.quantity;
+
+                const payload = {
+                    _token: csrfToken,
+                    _method: method,
+                };
+                if (quantity !== undefined) {
+                    payload.quantity = quantity;
+                }
+
+                cartActionBtn.disabled = true;
+
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                }).then(async (res) => {
+                    if (res.ok || res.redirected) {
+                        window.location.reload();
+                    } else {
+                        const data = await res.json().catch(() => ({}));
+                        alert(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+                        cartActionBtn.disabled = false;
+                    }
+                }).catch(() => {
+                    alert('Lỗi kết nối, vui lòng thử lại.');
+                    cartActionBtn.disabled = false;
+                });
             }
         });
 
@@ -2331,14 +2379,28 @@
                 }
             }
 
-            updateBranchSelectorState();
+            if (typeof window.updateBranchSelectorState === 'function') {
+                window.updateBranchSelectorState();
+            }
         }
 
         deliveryTypeDelivery?.addEventListener('change', syncDeliveryMode);
         deliveryTypePickup?.addEventListener('change', syncDeliveryMode);
 
         syncDeliveryMode();
-        updateBranchSelectorState();
+        if (typeof window.updateBranchSelectorState === 'function') {
+            window.updateBranchSelectorState();
+        }
+        
+        // Scheduled delivery toggle
+        const scheduledFields = document.querySelector('[data-scheduled-delivery-fields]');
+        document.querySelectorAll('input[name="delivery_type"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                if (scheduledFields) {
+                    scheduledFields.classList.toggle('is-visible', e.target.value === 'scheduled');
+                }
+            });
+        });
     });
 
     // Haversine formula to calculate distance between two coordinates

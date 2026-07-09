@@ -62,6 +62,14 @@ class AuthAccountSeeder extends Seeder
                 $data['email_verified_at'] = now();
             }
 
+            // Gán tài khoản Admin Chill Drink vào Chi nhánh 1 (CN1)
+            if ($account['email'] === 'admin@chilldrink.com') {
+                $branch = DB::table('branches')->where('code', 'CN1')->first();
+                if ($branch) {
+                    $data['branch_id'] = $branch->id;
+                }
+            }
+
             User::updateOrCreate(
                 ['email' => $account['email']],
                 $data
