@@ -41,7 +41,7 @@ class BranchController extends Controller
         ]);
 
         $coordinates = $this->coordinatesFromMapLink($request->input('map_link'));
-        if ($request->filled('map_link') && ! $coordinates) {
+        if ($request->filled('map_link') && ! $coordinates && (! $request->filled('latitude') || ! $request->filled('longitude'))) {
             throw ValidationException::withMessages([
                 'map_link' => 'Không đọc được tọa độ từ link Google Maps. Hãy dán link có chứa tọa độ.',
             ])->errorBag('createBranch');
@@ -50,11 +50,13 @@ class BranchController extends Controller
         if ($coordinates) {
             $validated['latitude'] = $coordinates['latitude'];
             $validated['longitude'] = $coordinates['longitude'];
+        } else {
+            $validated['latitude'] = $request->input('latitude');
+            $validated['longitude'] = $request->input('longitude');
         }
 
         if (
-            ! isset($validated['latitude'], $validated['longitude'])
-            || $validated['latitude'] === null
+            $validated['latitude'] === null
             || $validated['longitude'] === null
         ) {
             throw ValidationException::withMessages([
@@ -235,22 +237,8 @@ class BranchController extends Controller
      */
     public function destroy(Branch $branch)
     {
-        // Check if branch has users assigned
-        if ($branch->users()->exists()) {
-            return redirect()->route('admin.branches.index')
-                ->with('error', 'Không thể xóa! Chi nhánh này đang có nhân viên được gán.');
-        }
-
-        // Check if branch has orders
-        if ($branch->orders()->exists()) {
-            return redirect()->route('admin.branches.index')
-                ->with('error', 'Không thể xóa! Chi nhánh này đang có đơn hàng liên quan.');
-        }
-
-        $branch->delete();
-
-        return redirect()->route('admin.branches.index')
-            ->with('success', 'Xóa chi nhánh thành công!');
+        return redirect()->route('admin.super-admin')
+            ->with('error', 'Không được phép xóa chi nhánh! Bạn chỉ có thể đóng/tạm ngưng hoạt động của chi nhánh.');
     }
 
     /**
@@ -264,7 +252,7 @@ class BranchController extends Controller
             return response()->json(['success' => true, 'status' => $branch->status]);
         }
 
-        return redirect()->route('admin.branches.index')
+        return redirect()->route('admin.super-admin')
             ->with('success', ($branch->status ? 'Kích hoạt' : 'Vô hiệu hóa') . ' chi nhánh thành công!');
     }
 }

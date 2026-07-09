@@ -183,11 +183,13 @@ class CheckoutController extends Controller
             $request->merge(['fulfillment_type' => $request->input('delivery_type'), 'delivery_type' => 'now']);
         }
 
-        $request->validate([
+         $request->validate([
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
             'shipping_address_ui' => ['required_if:fulfillment_type,delivery', 'nullable', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'voucher_code' => 'nullable|string|max:50',
@@ -236,20 +238,30 @@ class CheckoutController extends Controller
             $subtotal = collect($orderItems)->sum('total_price');
             $fulfillmentType = $request->input('fulfillment_type', 'delivery');
 
+            // Branch_id is always required and comes from user selection
+            $branchId = $request->input('branch_id');
+
             // Handle shipping fee based on delivery type
             if ($fulfillmentType === 'pickup') {
                 $shippingFee = 0;
             } else {
-                $shippingQuote = ShippingFee::quoteForAddress(
-                    $request->shipping_address_ui,
-                    $request->shipping_area_ui,
-                    $request->shipping_method_ui
-                );
-                $shippingFee = $shippingQuote['total_fee'];
-            }
+                $lat = $request->input('latitude');
+                $lng = $request->input('longitude');
+                $branch = Branch::find($branchId);
 
-            // Branch_id is always required and comes from user selection
-            $branchId = $request->input('branch_id');
+                if ($lat !== null && $lng !== null && $branch && $branch->latitude !== null && $branch->longitude !== null) {
+                    $distance = $branch->distanceTo((float) $lat, (float) $lng);
+                    $shippingQuote = ShippingFee::calculate($distance, $request->shipping_method_ui);
+                    $shippingFee = $shippingQuote['total_fee'];
+                } else {
+                    $shippingQuote = ShippingFee::quoteForAddress(
+                        $request->shipping_address_ui,
+                        $request->shipping_area_ui,
+                        $request->shipping_method_ui
+                    );
+                    $shippingFee = $shippingQuote['total_fee'];
+                }
+            }
 
             [$voucher, $discount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal);
             $shippingVoucher = null;
@@ -259,8 +271,10 @@ class CheckoutController extends Controller
                 $request->shipping_address_ui,
                 $request->shipping_area_ui,
             ])->filter()->implode(', '));
+            $distanceText = isset($distance) ? sprintf('khoảng cách %.1f km', $distance) : 'phí cố định';
             $shippingNote = sprintf(
-                'Giao hàng: phí cố định %s%s',
+                'Giao hàng: %s, phí %s%s',
+                $distanceText,
                 ShippingFee::formatCurrency($shippingFee),
                 $addressText ? ", địa chỉ: {$addressText}" : ''
             );

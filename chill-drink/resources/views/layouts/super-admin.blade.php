@@ -130,6 +130,16 @@
             flex: 1 1 auto;
             min-height: 0;
             margin-top: 0.45rem;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.15) transparent;
+        }
+        .root-nav::-webkit-scrollbar {
+            width: 4px;
+        }
+        .root-nav::-webkit-scrollbar-thumb {
+            background-color: rgba(255,255,255,0.15);
+            border-radius: 4px;
         }
 
         .root-nav-label {
@@ -470,6 +480,15 @@
                 <a href="#branch-ranking" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh <span class="root-nav-badge">{{ \App\Models\Branch::count() }}</span></a>
                 <a href="#permissions" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
 
+                <p class="root-nav-label">Quản lý cửa hàng</p>
+                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link"><i class="bi bi-ticket-perforated"></i> Voucher</a>
+                <a href="{{ route('admin.products.index') }}" class="root-nav-link"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
+                <a href="{{ route('admin.categories.index') }}" class="root-nav-link"><i class="bi bi-folder2"></i> Danh mục</a>
+                <a href="{{ route('admin.orders.index') }}" class="root-nav-link"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.group-orders.index') }}" class="root-nav-link"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
+                <a href="{{ route('admin.reviews.index') }}" class="root-nav-link"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
+                <a href="{{ route('admin.users.index') }}" class="root-nav-link"><i class="bi bi-people"></i> Khách hàng</a>
+
                 <p class="root-nav-label">Hệ thống</p>
                 <a href="#security" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
                 <a href="#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
@@ -477,6 +496,7 @@
             </nav>
 
             <div class="root-sidebar-footer">
+                <a href="{{ route('admin.dashboard') }}" class="root-nav-link"><i class="bi bi-speedometer2"></i> Quản lý cửa hàng</a>
                 <a href="{{ route('home') }}" class="root-nav-link"><i class="bi bi-house-door"></i> Về trang chủ</a>
             </div>
         </aside>
