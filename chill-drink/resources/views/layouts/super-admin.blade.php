@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,7 +29,11 @@
             --root-sidebar-width: 272px;
         }
 
-        *, *::before, *::after { box-sizing: border-box; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+        }
 
         html {
             scroll-behavior: smooth;
@@ -52,7 +57,9 @@
             font-size: 14px;
         }
 
-        .root-shell { min-height: 100vh; }
+        .root-shell {
+            min-height: 100vh;
+        }
 
         .root-sidebar {
             position: fixed;
@@ -69,7 +76,7 @@
         .root-brand {
             min-height: 68px;
             padding: 0.55rem 0.6rem 1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -104,12 +111,12 @@
         .root-access {
             margin: 0.9rem 0.4rem 0.5rem;
             padding: 0.65rem 0.7rem;
-            border: 1px solid rgba(32,180,134,0.28);
+            border: 1px solid rgba(32, 180, 134, 0.28);
             border-radius: 7px;
             display: flex;
             align-items: center;
             gap: 0.55rem;
-            background: rgba(32,180,134,0.1);
+            background: rgba(32, 180, 134, 0.1);
         }
 
         .root-access-icon {
@@ -123,8 +130,15 @@
             color: #10241e;
         }
 
-        .root-access strong { display: block; font-size: 0.72rem; }
-        .root-access span { color: #aeb7b3; font-size: 0.62rem; }
+        .root-access strong {
+            display: block;
+            font-size: 0.72rem;
+        }
+
+        .root-access span {
+            color: #aeb7b3;
+            font-size: 0.62rem;
+        }
 
         .root-nav {
             flex: 1 1 auto;
@@ -132,13 +146,15 @@
             margin-top: 0.45rem;
             overflow-y: auto;
             scrollbar-width: thin;
-            scrollbar-color: rgba(255,255,255,0.15) transparent;
+            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
         }
+
         .root-nav::-webkit-scrollbar {
             width: 4px;
         }
+
         .root-nav::-webkit-scrollbar-thumb {
-            background-color: rgba(255,255,255,0.15);
+            background-color: rgba(255, 255, 255, 0.15);
             border-radius: 4px;
         }
 
@@ -182,7 +198,9 @@
             color: #10241e;
         }
 
-        .root-nav-link.active i { color: #10241e; }
+        .root-nav-link.active i {
+            color: #10241e;
+        }
 
         .root-nav-badge {
             margin-left: auto;
@@ -201,20 +219,20 @@
         .root-sidebar-footer {
             margin-top: auto;
             padding-top: 0.85rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
             flex: 0 0 auto;
         }
 
         .root-logout {
             width: 100%;
             min-height: 40px;
-            border: 1px solid rgba(249,115,96,0.3);
+            border: 1px solid rgba(249, 115, 96, 0.3);
             border-radius: 7px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.55rem;
-            background: rgba(249,115,96,0.08);
+            background: rgba(249, 115, 96, 0.08);
             color: #ffb0a4;
             font-size: 0.72rem;
             font-weight: 750;
@@ -246,8 +264,17 @@
             font-weight: 800;
         }
 
-        .root-session strong { display: block; color: #fff; font-size: 0.7rem; }
-        .root-session span { display: block; color: #8f9995; font-size: 0.6rem; }
+        .root-session strong {
+            display: block;
+            color: #fff;
+            font-size: 0.7rem;
+        }
+
+        .root-session span {
+            display: block;
+            color: #8f9995;
+            font-size: 0.6rem;
+        }
 
         .root-content {
             min-height: 100vh;
@@ -267,7 +294,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
-            background: rgba(255,255,255,0.96);
+            background: rgba(255, 255, 255, 0.96);
         }
 
         .root-topbar-left,
@@ -294,7 +321,9 @@
             font-weight: 600;
         }
 
-        .root-breadcrumb strong { color: var(--root-ink); }
+        .root-breadcrumb strong {
+            color: var(--root-ink);
+        }
 
         .root-live {
             min-height: 30px;
@@ -341,7 +370,11 @@
             overflow: hidden;
         }
 
-        .root-topbar-search i { margin-left: 0.75rem; color: #8a9490; }
+        .root-topbar-search i {
+            margin-left: 0.75rem;
+            color: #8a9490;
+        }
+
         .root-topbar-search input {
             min-width: 0;
             flex: 1;
@@ -378,10 +411,25 @@
             font-weight: 800;
         }
 
-        .root-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .root-user-copy strong, .root-user-copy span { display: block; }
-        .root-user-copy strong { font-size: 0.68rem; }
-        .root-user-copy span { color: var(--root-muted); font-size: 0.58rem; }
+        .root-user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .root-user-copy strong,
+        .root-user-copy span {
+            display: block;
+        }
+
+        .root-user-copy strong {
+            font-size: 0.68rem;
+        }
+
+        .root-user-copy span {
+            color: var(--root-muted);
+            font-size: 0.58rem;
+        }
 
         .root-notification-count {
             position: absolute;
@@ -408,11 +456,34 @@
             box-shadow: 0 14px 35px rgba(20, 29, 26, 0.14);
         }
 
-        .root-dropdown-title { padding: 0.45rem 0.65rem; font-size: 0.72rem; font-weight: 800; }
-        .root-dropdown-empty { padding: 0.8rem 0.65rem; color: var(--root-muted); font-size: 0.68rem; }
-        .root-dropdown .dropdown-item { border-radius: 6px; padding: 0.55rem 0.65rem; font-size: 0.68rem; }
-        .root-notification-item strong, .root-notification-item span { display: block; }
-        .root-notification-item span { margin-top: 0.12rem; color: var(--root-muted); font-size: 0.58rem; }
+        .root-dropdown-title {
+            padding: 0.45rem 0.65rem;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+
+        .root-dropdown-empty {
+            padding: 0.8rem 0.65rem;
+            color: var(--root-muted);
+            font-size: 0.68rem;
+        }
+
+        .root-dropdown .dropdown-item {
+            border-radius: 6px;
+            padding: 0.55rem 0.65rem;
+            font-size: 0.68rem;
+        }
+
+        .root-notification-item strong,
+        .root-notification-item span {
+            display: block;
+        }
+
+        .root-notification-item span {
+            margin-top: 0.12rem;
+            color: var(--root-muted);
+            font-size: 0.58rem;
+        }
 
         .root-page {
             width: 100%;
@@ -435,31 +506,70 @@
             font-size: 0.62rem;
         }
 
-        .root-sidebar-backdrop { display: none; }
+        .root-sidebar-backdrop {
+            display: none;
+        }
 
         @media (max-width: 991.98px) {
-            .root-sidebar { transform: translateX(-100%); transition: transform 0.22s ease; }
-            .root-sidebar.open { transform: translateX(0); }
-            .root-content { margin-left: 0; }
-            .root-mobile-toggle { display: inline-flex; }
+            .root-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.22s ease;
+            }
+
+            .root-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .root-content {
+                margin-left: 0;
+            }
+
+            .root-mobile-toggle {
+                display: inline-flex;
+            }
+
             .root-sidebar-backdrop {
                 position: fixed;
                 inset: 0;
                 z-index: 1025;
-                background: rgba(15,18,17,0.45);
+                background: rgba(15, 18, 17, 0.45);
             }
-            .root-sidebar-backdrop.show { display: block; }
-            .root-user-copy { display: none; }
+
+            .root-sidebar-backdrop.show {
+                display: block;
+            }
+
+            .root-user-copy {
+                display: none;
+            }
         }
 
         @media (max-width: 575.98px) {
-            .root-topbar { padding: 0 0.85rem; }
-            .root-page { padding: 1rem 0.85rem 1.5rem; }
-            .root-live, .root-breadcrumb span, .root-topbar-search { display: none; }
-            .root-footer { align-items: flex-start; flex-direction: column; padding: 0.75rem 0.85rem; }
+            .root-topbar {
+                padding: 0 0.85rem;
+            }
+
+            .root-page {
+                padding: 1rem 0.85rem 1.5rem;
+            }
+
+            .root-live,
+            .root-breadcrumb span,
+            .root-topbar-search {
+                display: none;
+            }
+
+            .root-footer {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 0.75rem 0.85rem;
+            }
         }
+
+        @include('partials.admin-styles')
     </style>
 </head>
+
 <body>
     <div class="root-shell">
         <aside class="root-sidebar" data-root-sidebar>
@@ -476,23 +586,23 @@
             <nav class="root-nav">
                 <p class="root-nav-label">Điều hành</p>
                 <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Dashboard</a>
-                <a href="#admins" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
-                <a href="#branch-ranking" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh <span class="root-nav-badge">{{ \App\Models\Branch::count() }}</span></a>
-                <a href="#permissions" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
+                <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
+                <a href="{{ route('admin.super-admin') . '#branch-ranking' }}" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh <span class="root-nav-badge">{{ \App\Models\Branch::count() }}</span></a>
+                <a href="{{ route('admin.super-admin') . '#permissions' }}" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>
-                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link"><i class="bi bi-ticket-perforated"></i> Voucher</a>
-                <a href="{{ route('admin.products.index') }}" class="root-nav-link"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
-                <a href="{{ route('admin.categories.index') }}" class="root-nav-link"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.orders.index') }}" class="root-nav-link"><i class="bi bi-receipt"></i> Đơn hàng</a>
-                <a href="{{ route('admin.group-orders.index') }}" class="root-nav-link"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
-                <a href="{{ route('admin.reviews.index') }}" class="root-nav-link"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
-                <a href="{{ route('admin.users.index') }}" class="root-nav-link"><i class="bi bi-people"></i> Khách hàng</a>
+                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
+                <a href="{{ route('admin.products.index') }}" class="root-nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
+                <a href="{{ route('admin.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
+                <a href="{{ route('admin.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
+                <a href="{{ route('admin.reviews.index') }}" class="root-nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
+                <a href="{{ route('admin.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
 
                 <p class="root-nav-label">Hệ thống</p>
-                <a href="#security" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
-                <a href="#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
-                <a href="#audit" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
+                <a href="{{ route('admin.super-admin') . '#security' }}" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
+                <a href="{{ route('admin.super-admin') . '#health' }}" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
+                <a href="{{ route('admin.super-admin') . '#audit' }}" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
             </nav>
 
             <div class="root-sidebar-footer">
@@ -518,18 +628,18 @@
                         <button type="button" class="root-topbar-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo">
                             <i class="bi bi-bell"></i>
                             @if(($unreadNotificationCount ?? 0) > 0)
-                                <span class="root-notification-count">{{ min(99, $unreadNotificationCount) }}</span>
+                            <span class="root-notification-count">{{ min(99, $unreadNotificationCount) }}</span>
                             @endif
                         </button>
                         <div class="dropdown-menu dropdown-menu-end root-dropdown">
                             <div class="root-dropdown-title">Thông báo</div>
                             @forelse(($notifications ?? collect()) as $notification)
-                                <div class="dropdown-item-text root-notification-item">
-                                    <strong>{{ data_get($notification->data, 'title', 'Thông báo hệ thống') }}</strong>
-                                    <span>{{ data_get($notification->data, 'message', $notification->created_at?->diffForHumans()) }}</span>
-                                </div>
+                            <div class="dropdown-item-text root-notification-item">
+                                <strong>{{ data_get($notification->data, 'title', 'Thông báo hệ thống') }}</strong>
+                                <span>{{ data_get($notification->data, 'message', $notification->created_at?->diffForHumans()) }}</span>
+                            </div>
                             @empty
-                                <div class="root-dropdown-empty">Chưa có thông báo mới.</div>
+                            <div class="root-dropdown-empty">Chưa có thông báo mới.</div>
                             @endforelse
                         </div>
                     </div>
@@ -537,9 +647,9 @@
                         <button type="button" class="root-user-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản Super Admin">
                             <span class="root-user-avatar">
                                 @if(Auth::user()->avatar)
-                                    <img src="{{ str_starts_with(Auth::user()->avatar, 'http') ? Auth::user()->avatar : asset('storage/'.ltrim(Auth::user()->avatar, '/')) }}" alt="{{ Auth::user()->name }}">
+                                <img src="{{ str_starts_with(Auth::user()->avatar, 'http') ? Auth::user()->avatar : asset('storage/'.ltrim(Auth::user()->avatar, '/')) }}" alt="{{ Auth::user()->name }}">
                                 @else
-                                    {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
+                                {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
                                 @endif
                             </span>
                             <span class="root-user-copy"><strong>{{ Auth::user()->name }}</strong><span>Super Admin</span></span>
@@ -585,7 +695,8 @@
         document.querySelectorAll('.root-nav-link').forEach((link) => link.addEventListener('click', closeRootSidebar));
 
         const updateRootNavigation = () => {
-            const section = window.location.hash.replace('#', '') || 'top';
+            const isDashboardPage = window.location.pathname.includes('/super-admin');
+            const section = isDashboardPage ? (window.location.hash.replace('#', '') || 'top') : 'none';
             document.querySelectorAll('[data-root-section]').forEach((link) => {
                 link.classList.toggle('active', link.dataset.rootSection === section);
             });
@@ -595,4 +706,5 @@
         updateRootNavigation();
     </script>
 </body>
+
 </html>
