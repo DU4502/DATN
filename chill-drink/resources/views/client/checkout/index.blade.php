@@ -1305,6 +1305,7 @@
                             'defaultLat' => 16.047079,
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
+                            'addressTarget' => '#editAddressStreet,#editAddressArea',
                         ])
                     </div>
                     <div class="col-12">
@@ -1365,6 +1366,7 @@
                             'defaultLat' => 16.047079,
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
+                            'addressTarget' => '#newAddressStreet,#newAddressArea',
                         ])
                     </div>
                     <div class="col-12">

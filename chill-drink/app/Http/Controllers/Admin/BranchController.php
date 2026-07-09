@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use GuzzleHttp\TransferStats;
 
@@ -25,93 +27,131 @@ class BranchController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validateWithBag('createBranch', [
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:100|unique:branches,code',
-            'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
-            'address' => 'nullable|string|max:500',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'status' => 'nullable|boolean',
+            'name'                     => 'required|string|max:255',
+            'code'                     => 'required|string|max:100|unique:branches,code',
+            'phone'                    => 'nullable|string|max:20',
+            'email'                    => 'nullable|email|max:255',
+            'address'                  => 'nullable|string|max:500',
+            'latitude'                 => 'required|numeric|between:-90,90',
+            'longitude'                => 'required|numeric|between:-180,180',
+            'status'                   => 'nullable|boolean',
+            'admin_email'              => 'required|email|max:255|unique:users,email',
+            'admin_password'           => 'required|string|min:8',
         ], [
-            'name.required' => 'Tên chi nhánh là bắt buộc.',
-            'code.required' => 'Mã chi nhánh là bắt buộc.',
-            'code.unique' => 'Mã chi nhánh đã tồn tại.',
-            'email.email' => 'Email không đúng định dạng.',
+            'name.required'            => 'Tên chi nhánh là bắt buộc.',
+            'code.required'            => 'Mã chi nhánh là bắt buộc.',
+            'code.unique'              => 'Mã chi nhánh đã tồn tại.',
+            'email.email'              => 'Email không đúng định dạng.',
+            'latitude.required'        => 'Vui lòng chọn vị trí trên bản đồ.',
+            'longitude.required'       => 'Vui lòng chọn vị trí trên bản đồ.',
+            'admin_email.required'     => 'Email đăng nhập admin là bắt buộc.',
+            'admin_email.email'        => 'Email admin không đúng định dạng.',
+            'admin_email.unique'       => 'Email admin này đã được sử dụng bởi tài khoản khác.',
+            'admin_password.required'  => 'Mật khẩu admin là bắt buộc.',
+            'admin_password.min'       => 'Mật khẩu phải có ít nhất 8 ký tự.',
         ]);
-
-        $coordinates = $this->coordinatesFromMapLink($request->input('map_link'));
-        if ($request->filled('map_link') && ! $coordinates && (! $request->filled('latitude') || ! $request->filled('longitude'))) {
-            throw ValidationException::withMessages([
-                'map_link' => 'Không đọc được tọa độ từ link Google Maps. Hãy dán link có chứa tọa độ.',
-            ])->errorBag('createBranch');
-        }
-
-        if ($coordinates) {
-            $validated['latitude'] = $coordinates['latitude'];
-            $validated['longitude'] = $coordinates['longitude'];
-        } else {
-            $validated['latitude'] = $request->input('latitude');
-            $validated['longitude'] = $request->input('longitude');
-        }
-
-        if (
-            $validated['latitude'] === null
-            || $validated['longitude'] === null
-        ) {
-            throw ValidationException::withMessages([
-                'map_link' => 'Vui lòng dán link Google Maps có chứa tọa độ để lấy vị trí chi nhánh.',
-            ])->errorBag('createBranch');
-        }
 
         $validated['status'] = $request->boolean('status', true);
 
-        Branch::create($validated);
+        DB::transaction(function () use ($validated, $request) {
+            // 1. Create the branch
+            $branch = Branch::create([
+                'name'      => $validated['name'],
+                'code'      => $validated['code'],
+                'phone'     => $validated['phone'] ?? null,
+                'email'     => $validated['email'] ?? null,
+                'address'   => $validated['address'] ?? null,
+                'latitude'  => $validated['latitude'],
+                'longitude' => $validated['longitude'],
+                'status'    => $validated['status'],
+            ]);
+
+            // 2. Create the branch admin account (role_id=2 = Admin)
+            \App\Models\User::create([
+                'name'           => 'Admin ' . $branch->name,
+                'email'          => $validated['admin_email'],
+                'password'       => $validated['admin_password'],
+                'plain_password' => $validated['admin_password'],
+                'role_id'        => 2,
+                'branch_id'      => $branch->id,
+                'is_active'      => true,
+                'email_verified_at' => now(),
+            ]);
+        });
 
         $redirectRoute = $request->input('return_to') === 'super-admin'
             ? 'admin.super-admin'
             : 'admin.branches.index';
 
         return redirect()->route($redirectRoute)
-            ->with('success', 'Thêm chi nhánh thành công!');
+            ->with('success', 'Thêm chi nhánh thành công! Tài khoản admin đã được tạo với email: ' . $validated['admin_email']);
     }
+
 
     /**
      * Update the specified branch (Super Admin only)
      */
     public function update(Request $request, Branch $branch)
     {
+        $admin = \App\Models\User::where('branch_id', $branch->id)->where('role_id', 2)->first();
+
         $validated = $request->validateWithBag('editBranch', [
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:100|unique:branches,code,' . $branch->id,
             'phone' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:255',
             'address' => 'nullable|string|max:500',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
             'status' => 'nullable|boolean',
+            'admin_email' => 'required|email|max:255|unique:users,email,' . ($admin ? $admin->id : 'NULL'),
+            'admin_password' => 'nullable|string|min:8',
         ], [
             'name.required' => 'Tên chi nhánh là bắt buộc.',
             'code.required' => 'Mã chi nhánh là bắt buộc.',
             'code.unique' => 'Mã chi nhánh đã tồn tại.',
-            'email.email' => 'Email không đúng định dạng.',
+            'latitude.required' => 'Vui lòng chọn vị trí trên bản đồ.',
+            'longitude.required' => 'Vui lòng chọn vị trí trên bản đồ.',
+            'admin_email.required' => 'Email đăng nhập admin là bắt buộc.',
+            'admin_email.email' => 'Email admin không đúng định dạng.',
+            'admin_email.unique' => 'Email admin này đã được sử dụng bởi tài khoản khác.',
+            'admin_password.min' => 'Mật khẩu phải có ít nhất 8 ký tự.',
         ]);
-
-        $coordinates = $this->coordinatesFromMapLink($request->input('map_link'));
-        if ($request->filled('map_link') && ! $coordinates && (! $request->filled('latitude') || ! $request->filled('longitude'))) {
-            throw ValidationException::withMessages([
-                'map_link' => 'Không đọc được tọa độ từ link Google Maps. Hãy dán link có chứa tọa độ.',
-            ])->errorBag('editBranch');
-        }
-
-        if ($coordinates) {
-            $validated['latitude'] = $coordinates['latitude'];
-            $validated['longitude'] = $coordinates['longitude'];
-        }
 
         $validated['status'] = $request->boolean('status', true);
 
-        $branch->update($validated);
+        DB::transaction(function () use ($branch, $validated, $admin) {
+            $branch->update([
+                'name' => $validated['name'],
+                'code' => $validated['code'],
+                'phone' => $validated['phone'] ?? null,
+                'email' => $validated['admin_email'],
+                'address' => $validated['address'] ?? null,
+                'latitude' => $validated['latitude'],
+                'longitude' => $validated['longitude'],
+                'status' => $validated['status'],
+            ]);
+
+            $adminData = [
+                'name' => 'Admin ' . $branch->name,
+                'email' => $validated['admin_email'],
+            ];
+
+            if (!empty($validated['admin_password'])) {
+                $adminData['password'] = $validated['admin_password'];
+                $adminData['plain_password'] = $validated['admin_password'];
+            }
+
+            if ($admin) {
+                $admin->update($adminData);
+            } else {
+                \App\Models\User::create($adminData + [
+                    'role_id' => 2,
+                    'branch_id' => $branch->id,
+                    'is_active' => true,
+                    'email_verified_at' => now(),
+                ]);
+            }
+        });
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -126,13 +166,16 @@ class BranchController extends Controller
                     'address' => $branch->address,
                     'latitude' => $branch->latitude,
                     'longitude' => $branch->longitude,
-                    'map_link' => $this->googleMapsLink($branch->latitude, $branch->longitude),
                     'status' => (bool) $branch->status,
                 ],
             ]);
         }
 
-        return redirect()->route('admin.branches.index')
+        $redirectRoute = $request->input('return_to') === 'super-admin' || $request->input('form_type') === 'branch-edit'
+            ? 'admin.super-admin'
+            : 'admin.branches.index';
+
+        return redirect()->route($redirectRoute)
             ->with('success', 'Cập nhật chi nhánh thành công!');
     }
 

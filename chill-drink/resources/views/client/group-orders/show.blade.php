@@ -12,6 +12,7 @@
 <section class="group-page">
     <div class="container group-shell">
         @if(session('success'))<div class="alert alert-success rounded-4 border-0 shadow-sm"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}</div>@endif
+        @if(session('error'))<div class="alert alert-danger rounded-4 border-0 shadow-sm"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}</div>@endif
         @if($errors->any())<div class="alert alert-danger rounded-4 border-0 shadow-sm"><i class="bi bi-exclamation-circle me-2"></i>{{ $errors->first() }}</div>@endif
 
         <div class="group-card group-hero mb-4">
