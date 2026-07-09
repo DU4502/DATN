@@ -1,8 +1,10 @@
 @extends('layouts.admin')
 
 @section('page-title', 'Sản phẩm')
+
 @section('search-placeholder', 'Tìm đồ uống, mã sản phẩm...')
 @section('topbar-search-action', route('admin.products.index'))
+
 
 @section('content')
 @php
@@ -17,6 +19,7 @@
 
 <section class="admin-sticky-tools d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
     <div class="d-flex flex-column gap-2 flex-grow-1">
+
         <div class="d-flex flex-wrap gap-2 align-items-center">
             <a href="{{ route('admin.products.index') }}" class="btn {{ empty($filterParams) ? 'btn-primary' : 'btn-outline-primary' }}">Tất cả sản phẩm</a>
             <button
@@ -25,7 +28,8 @@
                 data-admin-filter-toggle
                 aria-expanded="{{ $hasAdvancedFilters ? 'true' : 'false' }}"
                 aria-controls="productFilterPanel"
-            >
+            
+
                 <i class="bi bi-sliders me-1"></i>Bộ lọc
                 @if($activeFiltersCount > 0)
                     <span class="badge text-bg-light text-primary ms-1">{{ $activeFiltersCount }}</span>
@@ -43,6 +47,7 @@
                 </a>
             @endforeach
         </div>
+
     </div>
     <div class="text-lg-end">
         <p class="admin-kicker mb-1">Tình trạng kho</p>
@@ -53,6 +58,8 @@
         </div>
     </div>
 </section>
+
+
 
 <section class="admin-filter-panel {{ $hasAdvancedFilters ? '' : 'd-none' }}" id="productFilterPanel" data-admin-filter-panel>
     <form method="GET" action="{{ route('admin.products.index') }}" class="admin-card p-4 mb-4">

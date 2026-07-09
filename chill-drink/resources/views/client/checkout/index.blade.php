@@ -7,24 +7,24 @@
     $total = (int) ($subtotal ?? collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']));
     $shippingDistanceOptions = $shippingDistanceOptions ?? \App\Support\ShippingFee::distanceOptions();
     $shippingMethods = $shippingMethods ?? \App\Support\ShippingFee::methods();
+    $branches = $branches ?? \App\Models\Branch::where('status', true)->orderBy('name')->get();
     $user = auth()->user();
     $primaryAddress = trim((string) ($user->address ?? ''));
     $primaryArea = trim((string) ($user->area ?? ''));
     $primaryAddressText = trim(collect([$primaryAddress, $primaryArea])->filter()->implode(', '));
-    $checkoutAddresses = collect($checkoutAddresses ?? []);
-    if ($checkoutAddresses->isEmpty()) {
-        $checkoutAddresses->push([
-            'id' => 'primary', 'name' => $user->name, 'phone' => $user->phone ?: '',
-            'street' => $primaryAddress, 'area' => $primaryArea, 'type' => 'Nhà Riêng', 'isDefault' => true,
-        ]);
-    }
+    
+    // Get user coordinates
+    $userLatitude = $userLatitude ?? null;
+    $userLongitude = $userLongitude ?? null;
+    $hasUserLocation = !empty($userLatitude) && !empty($userLongitude);
+    $deliveryType = old('delivery_type', 'delivery');
     $selectedShippingMethod = old('shipping_method_ui', 'standard');
     $shippingQuote = \App\Support\ShippingFee::quoteForAddress(
         old('shipping_address_ui', $primaryAddress),
         old('shipping_area_ui', $primaryArea),
         $selectedShippingMethod
     );
-    $shippingFee = $shippingQuote['total_fee'];
+    $shippingFee = $deliveryType === 'pickup' ? 0 : $shippingQuote['total_fee'];
     $availableVouchers = collect($availableVouchers ?? []);
     $loyaltyContext = $loyaltyContext ?? ['rank' => 'bronze', 'points' => 0];
     $rankOrder = ['bronze' => 1, 'silver' => 2, 'gold' => 3, 'diamond' => 4];
@@ -121,6 +121,41 @@
     .checkout-input:focus {
         border-color: var(--drink-primary);
         box-shadow: 0 0 0 0.2rem rgba(0, 139, 122, 0.12);
+    }
+
+    .branch-select-shell {
+        position: relative;
+    }
+
+    .branch-select-shell .form-select {
+        padding-right: 3rem;
+        background-image: none;
+    }
+
+    .branch-select-chevron {
+        position: absolute;
+        top: 50%;
+        right: 1rem;
+        transform: translateY(-50%);
+        color: var(--drink-primary);
+        pointer-events: none;
+        font-size: 1rem;
+    }
+
+    .branch-select-shell.is-disabled .form-select {
+        background-color: #f5f7f7;
+        cursor: not-allowed;
+        opacity: 0.8;
+    }
+
+    .branch-select-shell.is-disabled .branch-select-chevron {
+        color: #94a3b8;
+    }
+
+    .branch-select-note {
+        margin-top: 0.55rem;
+        font-size: 0.85rem;
+        color: #b45309;
     }
 
     .payment-option {
@@ -267,29 +302,6 @@
         flex: 0 0 auto;
     }
 
-    .branch-suggestion-panel {
-        border-color: rgba(0, 139, 122, 0.2);
-        background: linear-gradient(135deg, #f2fffb, #ffffff);
-    }
-
-    .branch-suggestion-result {
-        border: 1px solid var(--drink-border);
-        border-radius: 16px;
-        background: #ffffff;
-    }
-
-    .branch-distance-badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.3rem 0.65rem;
-        border-radius: 999px;
-        background: var(--drink-soft);
-        color: var(--drink-primary-dark);
-        font-size: 0.78rem;
-        font-weight: 800;
-        white-space: nowrap;
-    }
-
     .voucher-box {
         border: 1px dashed rgba(0, 139, 122, 0.34);
         border-radius: 20px;
@@ -355,6 +367,31 @@
         min-width: 156px;
         border-radius: 999px !important;
         font-weight: 800;
+    }
+
+    .voucher-modal .voucher-footer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .voucher-modal .voucher-footer-actions .btn {
+        min-width: 0;
+    }
+
+    .voucher-modal .voucher-clear-btn {
+        min-width: 0;
+        color: #ef4444;
+        border-color: rgba(239, 68, 68, 0.2);
+        background: #fff5f5;
+    }
+
+    .voucher-modal .voucher-clear-btn:hover {
+        color: #dc2626;
+        border-color: rgba(220, 38, 38, 0.32);
+        background: #fff1f2;
     }
 
     .voucher-search-box {
@@ -757,19 +794,6 @@
         box-shadow: 0 0 0 0.18rem rgba(0, 139, 122, 0.12);
     }
 
-    .address-map-shell {
-        min-height: 150px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #e6eeee;
-        background:
-            linear-gradient(32deg, transparent 49%, rgba(0, 139, 122, 0.08) 50%, transparent 51%),
-            linear-gradient(145deg, transparent 49%, rgba(0, 139, 122, 0.06) 50%, transparent 51%),
-            #f6fbfa;
-        color: var(--drink-muted);
-    }
-
     .address-type-btn {
         min-width: 118px;
         border: 1px solid #dddddd;
@@ -826,6 +850,11 @@
         color: var(--drink-muted);
         padding: 1rem;
     }
+
+    .delivery-fields.d-none,
+    .pickup-fields.d-none {
+        display: none !important;
+    }
 </style>
 
 <section class="checkout-page py-5">
@@ -844,7 +873,34 @@
             @csrf
             <div class="row g-4 align-items-start">
                 <div class="col-lg-7">
-                    <div class="checkout-panel checkout-address-panel mb-4">
+                    <!-- Delivery Type Selector -->
+                    <div class="checkout-panel p-4 p-md-5 mb-4">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <span class="checkout-step"><i class="bi bi-truck"></i></span>
+                            <div>
+                                <h2 class="h4 fw-bold mb-1">Phương thức nhận hàng</h2>
+                                <p class="text-secondary mb-0">Chọn cách nhận đơn hàng của bạn.</p>
+                            </div>
+                        </div>
+
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
+                            <label class="btn btn-outline-primary flex-grow-1" for="deliveryTypeDelivery">
+                                <i class="bi bi-truck me-2"></i>Giao đến địa chỉ
+                            </label>
+
+                            <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
+                            <label class="btn btn-outline-primary flex-grow-1" for="deliveryTypePickup">
+                                <i class="bi bi-shop me-2"></i>Lấy tại chi nhánh
+                            </label>
+                        </div>
+
+                        @error('delivery_type')
+                            <div class="text-danger small mt-2">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="checkout-panel checkout-address-panel mb-4 delivery-fields {{ $deliveryType === 'pickup' ? 'd-none' : '' }}" data-delivery-fields>
                         <div class="address-panel-head d-flex flex-wrap justify-content-between align-items-center gap-3 px-4 py-3">
                             <div class="d-flex align-items-center gap-3">
                                 <span class="checkout-step"><i class="bi bi-geo-alt"></i></span>
@@ -865,13 +921,6 @@
                                 type="hidden"
                                 value="{{ old('shipping_address_ui', $primaryAddress) }}"
                             >
-                            <input
-                                id="shipping_area_ui"
-                                name="shipping_area_ui"
-                                type="hidden"
-                                value="{{ old('shipping_area_ui', $primaryArea) }}"
-                            >
-                            <input id="selectedBranchId" name="branch_id" type="hidden" value="{{ old('branch_id') }}">
 
                             <div class="selected-address-row">
                                 <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
@@ -903,34 +952,66 @@
                         </div>
                     </div>
 
-                    <div class="checkout-panel branch-suggestion-panel p-4 mb-4">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                            <div class="d-flex align-items-center gap-3">
-                                <span class="checkout-step"><i class="bi bi-shop"></i></span>
-                                <div>
-                                    <h2 class="h5 fw-bold mb-1">Chi nhánh phục vụ gần bạn</h2>
-                                    <p class="text-secondary small mb-0" id="nearestBranchStatus">
-                                        @if(($locationReadyBranchCount ?? 0) > 0)
-                                            Bấm tìm chi nhánh để hệ thống tính theo vị trí hiện tại của bạn.
-                                        @else
-                                            Chưa có chi nhánh thực tế nào được cấu hình tọa độ.
-                                        @endif
-                                    </p>
-                                </div>
+                    <!-- Branch Selector (Always Required) -->
+                    <div class="checkout-panel p-4 p-md-5 mb-4">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <span class="checkout-step"><i class="bi bi-shop"></i></span>
+                            <div>
+                                <h2 class="h4 fw-bold mb-1">Chọn chi nhánh</h2>
+                                <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn.</p>
                             </div>
-                            <button
-                                type="button"
-                                class="btn btn-outline-primary rounded-pill px-4"
-                                id="findNearestBranch"
-                                @disabled(($locationReadyBranchCount ?? 0) === 0)
-                            >
-                                <i class="bi bi-crosshair me-2"></i>Tìm chi nhánh gần nhất
-                            </button>
                         </div>
-                        <div class="branch-suggestion-result p-3 mt-3 d-none" id="nearestBranchResult" aria-live="polite"></div>
-                        @error('branch_id')
-                            <div class="text-danger small mt-2">{{ $message }}</div>
-                        @enderror
+
+                        <div class="mb-3">
+                            <label for="branch_id" class="form-label fw-semibold">Chi nhánh <span class="text-danger">*</span></label>
+                            <div class="branch-select-shell {{ $deliveryType === 'delivery' && ! $hasUserLocation ? 'is-disabled' : '' }}">
+                                <select id="branch_id" name="branch_id" class="form-select checkout-input @error('branch_id') is-invalid @enderror"
+                                    data-branches='{{ json_encode($branchesJson ?? []) }}'
+                                    data-user-latitude="{{ $userLatitude }}"
+                                    data-user-longitude="{{ $userLongitude }}"
+                                    @disabled($deliveryType === 'delivery' && ! $hasUserLocation)>
+                                    <option value="">Chọn chi nhánh</option>
+                                    @foreach($branches as $branch)
+                                        @php
+                                            $branchDistance = null;
+                                            if ($hasUserLocation && !empty($branch->latitude) && !empty($branch->longitude)) {
+                                                // Calculate distance using Haversine formula
+                                                $lat1 = deg2rad($userLatitude);
+                                                $lon1 = deg2rad($userLongitude);
+                                                $lat2 = deg2rad($branch->latitude);
+                                                $lon2 = deg2rad($branch->longitude);
+
+                                                $dlat = $lat2 - $lat1;
+                                                $dlon = $lon2 - $lon1;
+
+                                                $a = sin($dlat/2) * sin($dlat/2) + cos($lat1) * cos($lat2) * sin($dlon/2) * sin($dlon/2);
+                                                $c = 2 * asin(sqrt($a));
+                                                $radius = 6371; // Earth radius in kilometers
+                                                $branchDistance = $c * $radius;
+                                            }
+                                        @endphp
+                                        <option value="{{ $branch->id }}"
+                                            @selected((string) old('branch_id') === (string) $branch->id)
+                                            data-latitude="{{ $branch->latitude ?? '' }}"
+                                            data-longitude="{{ $branch->longitude ?? '' }}"
+                                            data-distance="{{ $branchDistance ?? '' }}">
+                                            {{ $branch->name }}
+                                            @if($branch->address) — {{ $branch->address }}@endif
+                                            @if(!empty($branchDistance))
+                                                — {{ number_format($branchDistance, 1) }} km
+                                            @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <i class="bi bi-chevron-down branch-select-chevron" aria-hidden="true"></i>
+                            </div>
+                            <div class="branch-select-note {{ $deliveryType === 'delivery' && ! $hasUserLocation ? '' : 'd-none' }}" data-branch-select-note>
+                                Cập nhật địa chỉ nhận hàng trước để chọn chi nhánh phù hợp.
+                            </div>
+                            @error('branch_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
 
                     <div class="checkout-panel p-4 p-md-5 mb-4 d-none" aria-hidden="true">
@@ -1198,12 +1279,16 @@
                         <textarea id="editAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Số nhà, tên đường, thôn/xóm...">{{ $primaryAddress }}</textarea>
                     </div>
                     <div class="col-12">
-                        <div class="address-map-shell" id="editAddressMapShell">
-                            <button type="button" class="btn btn-outline-primary rounded-1" data-locate-address="edit">
-                                <i class="bi bi-crosshair me-2"></i>Thêm vị trí
-                            </button>
-                        </div>
-                        <div class="form-text" id="editAddressStatus">Có thể bấm thêm vị trí để tự điền địa chỉ từ trình duyệt.</div>
+                        @include('admin.partials.location-picker', [
+                            'pickerId' => 'checkout-edit-location-picker',
+                            'label' => 'Vị trí đã xác nhận',
+                            'hint' => 'Chọn pin trực tiếp trên bản đồ để lưu vị trí nhận hàng.',
+                            'latValue' => $userLatitude ?? null,
+                            'lngValue' => $userLongitude ?? null,
+                            'defaultLat' => 16.047079,
+                            'defaultLng' => 108.206230,
+                            'defaultZoom' => 5,
+                        ])
                     </div>
                     <div class="col-12">
                         <div class="mb-2 fw-semibold">Loại địa chỉ:</div>
@@ -1254,12 +1339,16 @@
                         <textarea id="newAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Địa chỉ cụ thể"></textarea>
                     </div>
                     <div class="col-12">
-                        <div class="address-map-shell" id="newAddressMapShell">
-                            <button type="button" class="btn btn-outline-primary rounded-1" data-locate-address="new">
-                                <i class="bi bi-crosshair me-2"></i>Thêm vị trí
-                            </button>
-                        </div>
-                        <div class="form-text" id="newAddressStatus">Có thể bấm thêm vị trí để tự điền địa chỉ từ trình duyệt.</div>
+                        @include('admin.partials.location-picker', [
+                            'pickerId' => 'checkout-new-location-picker',
+                            'label' => 'Vị trí mới',
+                            'hint' => 'Chọn pin trực tiếp trên bản đồ để lưu vị trí nhận hàng.',
+                            'latValue' => old('latitude'),
+                            'lngValue' => old('longitude'),
+                            'defaultLat' => 16.047079,
+                            'defaultLng' => 108.206230,
+                            'defaultZoom' => 5,
+                        ])
                     </div>
                     <div class="col-12">
                         <div class="mb-2 fw-semibold">Loại địa chỉ:</div>
@@ -1413,13 +1502,20 @@
             </div>
             <div class="modal-footer border-top">
                 <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Trở lại</button>
-                <button type="button" class="btn btn-primary px-4" id="confirmVoucher">
-                    <i class="bi bi-check2 me-2"></i>Áp dụng voucher
-                </button>
+                <div class="voucher-footer-actions">
+                    <button type="button" class="btn btn-outline-danger px-4 voucher-clear-btn" id="clearVoucherSelection">
+                        <i class="bi bi-x-circle me-2"></i>Bỏ chọn tất cả
+                    </button>
+                    <button type="button" class="btn btn-primary px-4" id="confirmVoucher">
+                        <i class="bi bi-check2 me-2"></i>Áp dụng voucher
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+@include('admin.partials.location-picker-script')
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -1430,11 +1526,6 @@
         const selectedAddressText = document.getElementById('selectedAddressText');
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
-        const selectedBranchId = document.getElementById('selectedBranchId');
-        const findNearestBranchButton = document.getElementById('findNearestBranch');
-        const nearestBranchStatus = document.getElementById('nearestBranchStatus');
-        const nearestBranchResult = document.getElementById('nearestBranchResult');
-        const nearestBranchEndpoint = @json(route('api.branches.nearest'));
 
         const addressListModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressListModal'));
         const addressEditModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressEditModal'));
@@ -1451,7 +1542,6 @@
             fixedShippingFee: {{ (int) $shippingFee }},
         };
         const shippingTiers = @json($shippingDistanceOptions);
-        const shippingRules = @json(\App\Support\ShippingFee::estimationRules());
         const shippingDistanceLabel = document.getElementById('shippingDistanceLabel');
         const shippingEstimateDetail = document.getElementById('shippingEstimateDetail');
         const shippingInlineFee = document.getElementById('shippingInlineFee');
@@ -1459,123 +1549,26 @@
         const summaryShippingFee = document.getElementById('summaryShippingFee');
         const summaryShippingDistance = document.getElementById('summaryShippingDistance');
         const summaryGrandTotal = document.getElementById('summaryGrandTotal');
+        const branchSelectShell = document.querySelector('.branch-select-shell');
+        const branchSelectNote = document.querySelector('[data-branch-select-note]');
 
-        const addressStoreEndpoint = @json(route('checkout.addresses.store'));
-        const addressUpdateEndpoint = @json(url('/checkout/addresses'));
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
-        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', () => {
-            scheduledDeliveryFields?.classList.toggle('is-visible', input.value === 'scheduled' && input.checked);
-        }));
-        document.addEventListener('click', async function (event) {
-            const button = event.target.closest('[data-checkout-cart-action]');
-            if (!button || button.disabled) return;
-            if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) return;
-
-            button.disabled = true;
-            try {
-                const row = button.closest('[data-checkout-item]');
-                const cartKey = row?.dataset.checkoutItem || '';
-                const method = button.dataset.method || 'PATCH';
-                const body = new FormData();
-                body.append('_token', csrfToken);
-                body.append('_method', method);
-                if (button.dataset.quantity) body.append('quantity', button.dataset.quantity);
-                const response = await fetch(button.dataset.checkoutCartAction, {
-                    method: 'POST', body,
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                    credentials: 'same-origin',
-                });
-                if (!response.ok) throw new Error('cart_update_failed');
-                const payload = await response.json();
-
-                if (method === 'DELETE') {
-                    row?.remove();
-                    const visibleItems = document.querySelectorAll('[data-checkout-item]:not(.d-none)').length;
-                    const hiddenItems = Array.from(document.querySelectorAll('[data-checkout-item].d-none'));
-                    hiddenItems.slice(0, Math.max(0, 3 - visibleItems)).forEach(item => item.classList.remove('d-none'));
-                } else {
-                    const item = payload.items?.[cartKey];
-                    if (row && item) {
-                        row.querySelector('[data-checkout-item-quantity]').textContent = item.quantity;
-                        row.querySelector('[data-checkout-item-quantity-text]').textContent = item.quantity;
-                        row.querySelector('[data-checkout-item-subtotal]').textContent = item.subtotal_formatted;
-                        const quantityButtons = row.querySelectorAll('[data-method="PATCH"]');
-                        if (quantityButtons[0]) {
-                            quantityButtons[0].dataset.quantity = String(Math.max(1, item.quantity - 1));
-                            quantityButtons[0].disabled = item.quantity <= 1;
-                        }
-                        if (quantityButtons[1]) {
-                            quantityButtons[1].dataset.quantity = String(Math.min(99, item.quantity + 1));
-                            quantityButtons[1].disabled = item.quantity >= 99;
-                        }
-                    }
-                }
-
-                document.querySelector('[data-checkout-item-count]').textContent = payload.count;
-                document.querySelector('[data-checkout-subtotal]').textContent = payload.total_formatted;
-                shippingConfig.subtotal = Number(payload.total || 0);
-
-                // Giá trị voucher phụ thuộc tạm tính, yêu cầu chọn lại để tổng tiền luôn chính xác.
-                selectedVoucherCode.value = '';
-                selectedShippingVoucherCode.value = '';
-                pendingVouchers = { shipping: voucherState(null), discount: voucherState(null) };
-                document.querySelectorAll('[data-voucher-card].active').forEach(card => {
-                    card.classList.remove('active');
-                    card.querySelector('.voucher-radio')?.classList.remove('active');
-                });
-                selectedVoucherText.textContent = 'Giỏ hàng đã thay đổi · vui lòng chọn lại voucher';
-                shippingConfig.discount = 0;
-                summaryVoucherText.textContent = 'Chưa áp dụng';
-                updateShippingSummary();
-
-                const toggleItems = document.querySelector('[data-toggle-checkout-items]');
-                if (toggleItems) {
-                    toggleItems.dataset.totalItems = payload.count;
-                    if (payload.count <= 3) toggleItems.remove();
-                    else if (!document.querySelector('[data-checkout-extra-item]:not(.d-none)')) toggleItems.textContent = `Xem tất cả ${payload.count} món`;
-                }
-
-                if (payload.count === 0) window.location.href = @json(route('cart.index'));
-            } catch (error) {
-                button.disabled = false;
-                window.alert('Không thể cập nhật món. Vui lòng thử lại.');
-            }
-        });
-        let selectedAddressId = String(@json($checkoutAddresses->firstWhere('isDefault', true)['id'] ?? $checkoutAddresses->first()['id'] ?? 'primary'));
-        const voucherState = card => ({
-            code: card?.dataset.voucherCode || '',
-            label: card?.dataset.voucherLabel || '',
-            discount: Number(card?.dataset.voucherDiscount || 0),
-        });
-        let pendingVouchers = {
-            shipping: voucherState(document.querySelector('[data-voucher-card][data-voucher-type="shipping"].active')),
-            discount: voucherState(document.querySelector('[data-voucher-card][data-voucher-type="discount"].active')),
+        let selectedAddressId = @json($selectedAddressId ?? 'primary');
+        let pendingVoucher = {
+            code: document.querySelector('[data-voucher-card].active')?.dataset.voucherCode || '',
+            label: document.querySelector('[data-voucher-card].active')?.dataset.voucherLabel || '',
+            discount: Number(document.querySelector('[data-voucher-card].active')?.dataset.voucherDiscount || {{ (int) $discount }}),
         };
-        const addressBook = @json($checkoutAddresses->values());
-
-        async function persistAddress(address, isNew) {
-            const endpoint = isNew ? addressStoreEndpoint : `${addressUpdateEndpoint}/${address.id}`;
-            const requestData = {
-                name: address.name,
-                phone: address.phone,
-                area: address.area,
-                street: address.street,
-                type: address.type,
-                is_default: Boolean(address.isDefault),
-            };
-            const response = await fetch(endpoint, {
-                method: isNew ? 'POST' : 'PUT',
-                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify(requestData),
-            });
-            const payload = await response.json();
-            if (!response.ok) {
-                const message = Object.values(payload.errors || {}).flat()[0] || payload.message || 'Không thể lưu địa chỉ.';
-                throw new Error(message);
-            }
-            return payload.address;
-        }
+        let addressBook = @json($addressBook ?? []);
+        const addressSaveUrls = {
+            primary: @json(route('checkout.addresses.primary.update')),
+            store: @json(route('checkout.addresses.store')),
+            updateBase: @json(url('/checkout/addresses')),
+        };
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        let confirmedLocation = {
+            latitude: Number.parseFloat(@json($userLatitude ?? null) || '') || null,
+            longitude: Number.parseFloat(@json($userLongitude ?? null) || '') || null,
+        };
 
         function compactAddress(parts) {
             return parts.filter(Boolean).join(', ');
@@ -1595,38 +1588,80 @@
             return `${Math.max(0, Number(amount) || 0).toLocaleString('vi-VN')}đ`;
         }
 
-        function normalizeAddressText(value) {
-            return String(value || '')
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/đ/g, 'd');
+        function hasConfirmedLocation() {
+            return Number.isFinite(confirmedLocation.latitude) && Number.isFinite(confirmedLocation.longitude);
         }
 
-        function estimateDistanceFromAddress() {
-            const text = normalizeAddressText(`${shippingAddressInput.value} ${shippingAreaInput.value}`);
+        function updateBranchSelectorState() {
+            const branchSelect = document.getElementById('branch_id');
+            const isPickup = document.getElementById('deliveryTypePickup')?.checked === true;
 
-            if (!text.trim()) {
+            if (!branchSelect) {
+                return;
+            }
+
+            const shouldLock = !isPickup && !hasConfirmedLocation();
+            branchSelect.disabled = shouldLock;
+            branchSelect.required = !shouldLock;
+
+            if (branchSelectShell) {
+                branchSelectShell.classList.toggle('is-disabled', shouldLock);
+            }
+
+            if (branchSelectNote) {
+                branchSelectNote.classList.toggle('d-none', !shouldLock);
+            }
+
+            if (shouldLock && !isPickup) {
+                branchSelect.value = '';
+            }
+        }
+
+        function getPickerCoordinates(scope) {
+            const pickerId = scope === 'edit'
+                ? 'checkout-edit-location-picker'
+                : 'checkout-new-location-picker';
+            const picker = document.querySelector(`[data-location-picker="${pickerId}"]`);
+            const latitude = Number.parseFloat(picker?.querySelector('[data-location-lat]')?.value || '');
+            const longitude = Number.parseFloat(picker?.querySelector('[data-location-lng]')?.value || '');
+
+            if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
                 return {
-                    distance: 3.5,
-                    label: 'Chờ địa chỉ',
-                    detail: 'chưa có địa chỉ cụ thể',
+                    latitude,
+                    longitude,
                 };
             }
 
-            for (const rule of shippingRules) {
-                const matched = (rule.keywords || []).some((keyword) => text.includes(normalizeAddressText(keyword)));
-
-                if (matched) {
-                    return rule;
-                }
-            }
-
             return {
-                distance: 3.5,
-                label: 'Ước tính mặc định',
-                detail: 'cần nhân viên xác nhận lại',
+                latitude: null,
+                longitude: null,
             };
+        }
+
+        function showAddressToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            const palette = type === 'success'
+                ? { bg: '#10b981', border: '#059669' }
+                : { bg: '#ef4444', border: '#dc2626' };
+
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                right: 20px;
+                bottom: 20px;
+                z-index: 1080;
+                max-width: min(92vw, 360px);
+                padding: 12px 16px;
+                border-radius: 12px;
+                color: #fff;
+                background: ${palette.bg};
+                border: 1px solid ${palette.border};
+                box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+                font-weight: 600;
+            `;
+
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2600);
         }
 
         function tierForDistance(distance) {
@@ -1661,72 +1696,133 @@
             summaryGrandTotal.textContent = formatVnd(grandTotal);
         }
 
-        function getAddressById(id) {
-            return addressBook.find((item) => item.id === id) || addressBook[0];
-        }
+        function renderBranchOptions(userLat = null, userLon = null) {
+            const branchSelect = document.getElementById('branch_id');
 
-        function renderNearestBranch(branch) {
-            selectedBranchId.value = branch.id;
-            nearestBranchResult.classList.remove('d-none');
-            nearestBranchResult.innerHTML = `
-                <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
-                    <div>
-                        <div class="fw-bold mb-1"><i class="bi bi-shop me-2 text-primary"></i>${escapeHtml(branch.name)}</div>
-                        <div class="text-secondary small">${escapeHtml(branch.address || 'Chưa cập nhật địa chỉ')}</div>
-                        ${branch.phone ? `<div class="text-secondary small mt-1"><i class="bi bi-telephone me-1"></i>${escapeHtml(branch.phone)}</div>` : ''}
-                    </div>
-                    <span class="branch-distance-badge"><i class="bi bi-geo-alt me-1"></i>${Number(branch.distance_km).toFixed(2)} km</span>
-                </div>
-            `;
-            nearestBranchStatus.textContent = 'Đã chọn chi nhánh gần nhất để tiếp nhận đơn hàng.';
-        }
-
-        function findNearestBranch() {
-            if (!navigator.geolocation) {
-                nearestBranchStatus.textContent = 'Trình duyệt của bạn không hỗ trợ định vị.';
+            if (!branchSelect) {
                 return;
             }
 
-            findNearestBranchButton.disabled = true;
-            nearestBranchStatus.textContent = 'Đang xin quyền vị trí để tìm chi nhánh gần nhất...';
+            const lat = Number.parseFloat(userLat);
+            const lon = Number.parseFloat(userLon);
 
-            navigator.geolocation.getCurrentPosition(async function (position) {
-                const params = new URLSearchParams({
-                    latitude: position.coords.latitude.toFixed(7),
-                    longitude: position.coords.longitude.toFixed(7),
-                    limit: '1',
-                });
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                branchSelect.dataset.userLatitude = '';
+                branchSelect.dataset.userLongitude = '';
+                branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
+                branchSelect.value = '';
+                return;
+            }
 
-                try {
-                    const response = await fetch(`${nearestBranchEndpoint}?${params.toString()}`, {
-                        headers: { 'Accept': 'application/json' },
-                    });
-                    const payload = await response.json();
-                    const branch = payload.data?.[0];
+            branchSelect.dataset.userLatitude = String(lat);
+            branchSelect.dataset.userLongitude = String(lon);
 
-                    if (!response.ok || !branch) {
-                        throw new Error(payload.message || 'Không tìm thấy chi nhánh phù hợp.');
-                    }
+            const currentValue = branchSelect.disabled ? '' : (branchSelect.value || @json(old('branch_id', '')));
+            const branchesData = JSON.parse(branchSelect.dataset.branches || '[]');
+            const branchesWithDistance = branchesData.map((branch) => {
+                const branchLat = Number.parseFloat(branch.latitude);
+                const branchLon = Number.parseFloat(branch.longitude);
 
-                    renderNearestBranch(branch);
-                } catch (error) {
-                    selectedBranchId.value = '';
-                    nearestBranchResult.classList.add('d-none');
-                    nearestBranchStatus.textContent = error.message || 'Không thể tìm chi nhánh lúc này.';
-                } finally {
-                    findNearestBranchButton.disabled = false;
+                if (Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
+                    return {
+                        ...branch,
+                        distance: calculateDistance(lat, lon, branchLat, branchLon),
+                    };
                 }
-            }, function () {
-                nearestBranchStatus.textContent = 'Bạn chưa cấp quyền vị trí hoặc trình duyệt không lấy được vị trí.';
-                findNearestBranchButton.disabled = false;
-            }, {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 300000,
+
+                return {
+                    ...branch,
+                    distance: null,
+                };
             });
+
+            branchesWithDistance.sort((a, b) => {
+                if (a.distance === null && b.distance === null) return 0;
+                if (a.distance === null) return 1;
+                if (b.distance === null) return -1;
+                return a.distance - b.distance;
+            });
+
+            branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
+
+            branchesWithDistance.forEach((branch) => {
+                const option = document.createElement('option');
+                option.value = branch.id;
+                option.dataset.latitude = branch.latitude || '';
+                option.dataset.longitude = branch.longitude || '';
+                option.dataset.distance = branch.distance !== null ? branch.distance.toFixed(2) : '';
+
+                let label = branch.name;
+                if (branch.address) {
+                    label += ' — ' + branch.address;
+                }
+                if (branch.distance !== null) {
+                    label += ' — ' + branch.distance.toFixed(1) + ' km';
+                }
+
+                option.textContent = label;
+                branchSelect.appendChild(option);
+            });
+
+            if (currentValue) {
+                branchSelect.value = currentValue;
+            }
+        }
+
+        function syncAddressBook(payload) {
+            if (Array.isArray(payload?.address_book)) {
+                addressBook = payload.address_book;
+            }
+
+            if (payload?.address?.id) {
+                const normalizedId = payload.address.id;
+                const index = addressBook.findIndex((item) => item.id === normalizedId);
+
+                if (index >= 0) {
+                    addressBook[index] = { ...addressBook[index], ...payload.address };
+                } else {
+                    addressBook.push(payload.address);
+                }
+            }
+
+            if (payload?.selected_address_id) {
+                selectedAddressId = payload.selected_address_id;
+            }
+
+            renderAddressList();
+            const activeAddress = getAddressById(selectedAddressId);
+            if (activeAddress) {
+                applyAddress(activeAddress);
+            }
+
+            const payloadLatitude = Number.parseFloat(payload?.address?.latitude);
+            const payloadLongitude = Number.parseFloat(payload?.address?.longitude);
+            if (Number.isFinite(payloadLatitude) && Number.isFinite(payloadLongitude)) {
+                confirmedLocation = {
+                    latitude: payloadLatitude,
+                    longitude: payloadLongitude,
+                };
+                renderBranchOptions(payloadLatitude, payloadLongitude);
+            } else {
+                confirmedLocation = {
+                    latitude: null,
+                    longitude: null,
+                };
+                renderBranchOptions();
+            }
+
+            updateBranchSelectorState();
+        }
+
+        function getAddressById(id) {
+            return addressBook.find((item) => item.id === id) || addressBook[0] || null;
         }
 
         function applyAddress(address) {
+            if (!address) {
+                return;
+            }
+
             selectedAddressId = address.id;
             selectedReceiver.textContent = address.name || 'Chưa cập nhật';
             selectedPhone.textContent = address.phone || 'Chưa cập nhật';
@@ -1734,8 +1830,24 @@
             selectedDefaultBadge.classList.toggle('d-none', !address.isDefault);
             shippingAddressInput.value = address.street || '';
             shippingAreaInput.value = address.area || '';
+            const addressLatitude = Number.parseFloat(address.latitude);
+            const addressLongitude = Number.parseFloat(address.longitude);
+            if (Number.isFinite(addressLatitude) && Number.isFinite(addressLongitude)) {
+                confirmedLocation = {
+                    latitude: addressLatitude,
+                    longitude: addressLongitude,
+                };
+                renderBranchOptions(addressLatitude, addressLongitude);
+            } else {
+                confirmedLocation = {
+                    latitude: null,
+                    longitude: null,
+                };
+                renderBranchOptions();
+            }
             renderAddressList();
             updateShippingSummary();
+            updateBranchSelectorState();
         }
 
         function renderAddressList() {
@@ -1787,8 +1899,28 @@
         }
 
         function openEditModal(id = selectedAddressId) {
-            fillEditModal(getAddressById(id));
+            const address = getAddressById(id);
+            fillEditModal(address);
             selectedAddressId = id;
+            const picker = document.querySelector('[data-location-picker="checkout-edit-location-picker"]');
+            const addressLatitude = Number.parseFloat(address?.latitude);
+            const addressLongitude = Number.parseFloat(address?.longitude);
+            if (Number.isFinite(addressLatitude) && Number.isFinite(addressLongitude)) {
+                confirmedLocation = {
+                    latitude: addressLatitude,
+                    longitude: addressLongitude,
+                };
+                renderBranchOptions(addressLatitude, addressLongitude);
+                window.ChillDrinkLocationPicker?.set(picker, addressLatitude, addressLongitude, 'Đã tải vị trí đã lưu.');
+            } else {
+                confirmedLocation = {
+                    latitude: null,
+                    longitude: null,
+                };
+                renderBranchOptions();
+                window.ChillDrinkLocationPicker?.clear(picker);
+            }
+            updateBranchSelectorState();
             addressListModal.hide();
             addressEditModal.show();
         }
@@ -1799,8 +1931,15 @@
             document.getElementById('newAddressArea').value = '';
             document.getElementById('newAddressStreet').value = '';
             document.getElementById('newAddressDefault').checked = false;
-            document.getElementById('newAddressStatus').textContent = 'Có thể bấm thêm vị trí để tự điền địa chỉ từ trình duyệt.';
             setTypeActive('new', 'Nhà Riêng');
+            const picker = document.querySelector('[data-location-picker="checkout-new-location-picker"]');
+            confirmedLocation = {
+                latitude: null,
+                longitude: null,
+            };
+            renderBranchOptions();
+            updateBranchSelectorState();
+            window.ChillDrinkLocationPicker?.clear(picker);
             addressListModal.hide();
             addressAddModal.show();
         }
@@ -1823,6 +1962,22 @@
             voucherCodeInput.value = pendingVouchers[type].code;
         }
 
+        function clearVoucherSelection() {
+            document.querySelectorAll('[data-voucher-card]').forEach((item) => {
+                item.classList.remove('active');
+                item.querySelector('.voucher-radio')?.classList.remove('active');
+                item.querySelector('.voucher-radio')?.setAttribute('aria-pressed', 'false');
+            });
+
+            pendingVoucher = {
+                code: '',
+                label: '',
+                discount: 0,
+            };
+            voucherCodeInput.value = '';
+            commitVoucherSelection();
+        }
+
         function commitVoucherSelection() {
             selectedVoucherCode.value = pendingVouchers.discount.code || '';
             selectedShippingVoucherCode.value = pendingVouchers.shipping.code || '';
@@ -1843,7 +1998,6 @@
             const openAddButton = event.target.closest('[data-open-address-add]');
             const returnButton = event.target.closest('[data-return-address-list]');
             const typeButton = event.target.closest('[data-address-type]');
-            const locateButton = event.target.closest('[data-locate-address]');
             const voucherCard = event.target.closest('[data-voucher-card]');
 
             if (selectButton) {
@@ -1873,68 +2027,139 @@
                 setTypeActive(typeButton.dataset.addressScope, typeButton.dataset.addressType);
             }
 
-            if (locateButton) {
-                locateAddress(locateButton.dataset.locateAddress);
-            }
-
             if (voucherCard && !event.target.closest('a')) {
                 setVoucherActive(voucherCard);
             }
         });
 
-        document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {
-            const button = this;
-            const address = getAddressById(selectedAddressId);
-            address.name = document.getElementById('editAddressName').value.trim();
-            address.phone = document.getElementById('editAddressPhone').value.trim();
-            address.area = document.getElementById('editAddressArea').value.trim();
-            address.street = document.getElementById('editAddressStreet').value.trim();
-            address.type = getTypeValue('edit');
-            address.isDefault = document.getElementById('editAddressDefault').checked;
+        document.addEventListener('location-picker:change', function (event) {
+            const picker = event.target;
+            if (!picker || !picker.matches || !picker.matches('[data-location-picker]')) {
+                return;
+            }
 
-            const status = document.getElementById('editAddressStatus');
+            const latitude = Number.parseFloat(event.detail?.latitude);
+            const longitude = Number.parseFloat(event.detail?.longitude);
+
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                return;
+            }
+
+            confirmedLocation = {
+                latitude,
+                longitude,
+            };
+
+            renderBranchOptions(latitude, longitude);
+            updateBranchSelectorState();
+        });
+
+        document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {
+            const address = getAddressById(selectedAddressId);
+            const name = document.getElementById('editAddressName').value.trim();
+            const phone = document.getElementById('editAddressPhone').value.trim();
+            const area = document.getElementById('editAddressArea').value.trim();
+            const street = document.getElementById('editAddressStreet').value.trim();
+            const resolvedLocation = getPickerCoordinates('edit');
+
+            const payload = {
+                name,
+                phone,
+                area,
+                street,
+                label: getTypeValue('edit'),
+                latitude: Number.isFinite(resolvedLocation?.latitude) ? resolvedLocation.latitude : null,
+                longitude: Number.isFinite(resolvedLocation?.longitude) ? resolvedLocation.longitude : null,
+                is_default: document.getElementById('editAddressDefault').checked ? 1 : 0,
+            };
+
             try {
-                button.disabled = true;
-                status.textContent = 'Đang lưu địa chỉ...';
-                const saved = await persistAddress(address, address.id === 'primary');
-                const index = addressBook.findIndex((item) => item.id === address.id);
-                if (saved.isDefault) addressBook.forEach((item) => item.isDefault = false);
-                if (index >= 0) addressBook[index] = saved; else addressBook.push(saved);
-                applyAddress(saved);
-                status.textContent = 'Đã lưu địa chỉ.';
-                addressEditModal.hide();
+                const response = await fetch(
+                    address.id === 'primary'
+                        ? addressSaveUrls.primary
+                        : `${addressSaveUrls.updateBase}/${encodeURIComponent(String(address.id).replace(/^address-/, ''))}`,
+                    {
+                        method: address.id === 'primary' ? 'PATCH' : 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify(payload),
+                    }
+                );
+
+                const data = await response.json().catch(() => ({}));
+
+                if (response.ok) {
+                    try {
+                        syncAddressBook(data);
+                    } catch (syncError) {
+                        console.error(syncError);
+                    }
+                } else {
+                    console.error(
+                        data?.message
+                            || Object.values(data?.errors || {})?.flat()?.[0]
+                            || 'Không thể lưu địa chỉ.'
+                    );
+                }
             } catch (error) {
-                status.textContent = error.message;
-                status.classList.add('text-danger');
-            } finally { button.disabled = false; }
+                console.error(error);
+            } finally {
+                addressEditModal.hide();
+            }
         });
 
         document.getElementById('saveNewAddress')?.addEventListener('click', async function () {
-            const button = this;
-            const address = {
-                name: document.getElementById('newAddressName').value.trim(),
-                phone: document.getElementById('newAddressPhone').value.trim(),
-                area: document.getElementById('newAddressArea').value.trim(),
-                street: document.getElementById('newAddressStreet').value.trim(),
-                type: getTypeValue('new'),
-                isDefault: document.getElementById('newAddressDefault').checked,
+            const name = document.getElementById('newAddressName').value.trim();
+            const phone = document.getElementById('newAddressPhone').value.trim();
+            const area = document.getElementById('newAddressArea').value.trim();
+            const street = document.getElementById('newAddressStreet').value.trim();
+            const resolvedLocation = getPickerCoordinates('new');
+
+            const payload = {
+                name,
+                phone,
+                area,
+                street,
+                label: getTypeValue('new'),
+                latitude: Number.isFinite(resolvedLocation?.latitude) ? resolvedLocation.latitude : null,
+                longitude: Number.isFinite(resolvedLocation?.longitude) ? resolvedLocation.longitude : null,
+                is_default: document.getElementById('newAddressDefault').checked ? 1 : 0,
             };
 
-            const status = document.getElementById('newAddressStatus');
             try {
-                button.disabled = true;
-                status.textContent = 'Đang lưu địa chỉ...';
-                status.classList.remove('text-danger');
-                const saved = await persistAddress(address, true);
-                if (saved.isDefault) addressBook.forEach((item) => item.isDefault = false);
-                addressBook.push(saved);
-                applyAddress(saved);
-                status.textContent = 'Đã lưu địa chỉ.';
-                addressAddModal.hide();
+                const response = await fetch(addressSaveUrls.store, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                const data = await response.json().catch(() => ({}));
+
+                if (response.ok) {
+                    try {
+                        syncAddressBook(data);
+                    } catch (syncError) {
+                        console.error(syncError);
+                    }
+                } else {
+                    console.error(
+                        data?.message
+                            || Object.values(data?.errors || {})?.flat()?.[0]
+                            || 'Không thể lưu địa chỉ mới.'
+                    );
+                }
             } catch (error) {
-                status.textContent = error.message;
-                status.classList.add('text-danger');
-            } finally { button.disabled = false; }
+                console.error(error);
+            } finally {
+                addressAddModal.hide();
+            }
         });
 
         document.getElementById('voucherManualApply')?.addEventListener('click', function () {
@@ -1977,11 +2202,13 @@
             commitVoucherSelection();
         });
 
+        document.getElementById('clearVoucherSelection')?.addEventListener('click', function () {
+            clearVoucherSelection();
+        });
+
         document.querySelectorAll('input[name="shipping_method_ui"]').forEach((input) => {
             input.addEventListener('change', updateShippingSummary);
         });
-
-        findNearestBranchButton?.addEventListener('click', findNearestBranch);
 
         document.querySelector('[data-toggle-checkout-items]')?.addEventListener('click', function () {
             const extraItems = document.querySelectorAll('[data-checkout-extra-item]');
@@ -1990,66 +2217,6 @@
             extraItems.forEach((item) => item.classList.toggle('d-none', !isOpening));
             this.textContent = isOpening ? 'Thu gọn' : `Xem tất cả ${this.dataset.totalItems} món`;
         });
-
-        async function reverseGeocode(lat, lng, scope) {
-            const status = document.getElementById(scope === 'edit' ? 'editAddressStatus' : 'newAddressStatus');
-            const streetInput = document.getElementById(scope === 'edit' ? 'editAddressStreet' : 'newAddressStreet');
-            const areaInput = document.getElementById(scope === 'edit' ? 'editAddressArea' : 'newAddressArea');
-            const mapShell = document.getElementById(scope === 'edit' ? 'editAddressMapShell' : 'newAddressMapShell');
-
-            status.textContent = 'Đã lấy vị trí, đang chuyển thành địa chỉ...';
-            mapShell.innerHTML = `
-                <div class="text-center">
-                    <div class="fs-2 text-primary mb-1"><i class="bi bi-geo-alt-fill"></i></div>
-                    <div class="fw-bold">Vị trí đã xác nhận</div>
-                    <a class="text-primary fw-semibold" href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener">Mở Google Maps</a>
-                </div>
-            `;
-
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`);
-                const data = await response.json();
-                const address = data.address || {};
-                const streetLine = compactAddress([
-                    address.house_number,
-                    address.road || address.pedestrian || address.footway,
-                    address.neighbourhood || address.suburb,
-                ]);
-                const areaLine = compactAddress([
-                    address.quarter || address.ward || address.suburb || address.village,
-                    address.city_district || address.district || address.town,
-                    address.city || address.state,
-                ]);
-
-                streetInput.value = streetLine || data.display_name || `${lat}, ${lng}`;
-                areaInput.value = areaLine || data.display_name || `${lat}, ${lng}`;
-                status.textContent = 'Đã tự điền địa chỉ. Bạn có thể chỉnh lại trước khi hoàn thành.';
-            } catch (error) {
-                streetInput.value = `Vị trí hiện tại: ${lat}, ${lng}`;
-                areaInput.value = `Vị trí hiện tại: ${lat}, ${lng}`;
-                status.textContent = 'Đã lấy vị trí nhưng chưa đổi được thành địa chỉ chữ. Bạn có thể chỉnh lại thủ công.';
-            }
-        }
-
-        function locateAddress(scope) {
-            const status = document.getElementById(scope === 'edit' ? 'editAddressStatus' : 'newAddressStatus');
-
-            if (!navigator.geolocation) {
-                status.textContent = 'Trình duyệt của bạn không hỗ trợ định vị.';
-                return;
-            }
-
-            status.textContent = 'Đang xin quyền vị trí...';
-            navigator.geolocation.getCurrentPosition(function (position) {
-                reverseGeocode(position.coords.latitude.toFixed(6), position.coords.longitude.toFixed(6), scope);
-            }, function () {
-                status.textContent = 'Bạn chưa cấp quyền vị trí hoặc trình duyệt không lấy được vị trí.';
-            }, {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-            });
-        }
 
         // Load received vouchers
         async function loadReceivedVouchers() {
@@ -2121,7 +2288,143 @@
 
         renderAddressList();
         applyAddress(getAddressById(selectedAddressId));
+        renderBranchOptions(confirmedLocation.latitude, confirmedLocation.longitude);
         updateShippingSummary();
+    });
+
+    // Delivery type toggle
+    document.addEventListener('DOMContentLoaded', function () {
+        const deliveryFields = document.querySelector('[data-delivery-fields]');
+        const pickupFields = document.querySelector('[data-pickup-fields]');
+        const deliveryTypeDelivery = document.getElementById('deliveryTypeDelivery');
+        const deliveryTypePickup = document.getElementById('deliveryTypePickup');
+        const branchIdSelect = document.getElementById('branch_id');
+        const shippingAddressInput = document.getElementById('shipping_address_ui');
+
+        function syncDeliveryMode() {
+            const isPickup = deliveryTypePickup?.checked;
+            
+            if (deliveryFields) {
+                deliveryFields.classList.toggle('d-none', isPickup);
+            }
+            if (pickupFields) {
+                pickupFields.classList.toggle('d-none', !isPickup);
+            }
+
+            // Update required attributes
+            if (shippingAddressInput) {
+                shippingAddressInput.required = !isPickup;
+            }
+            if (branchIdSelect) {
+                branchIdSelect.required = isPickup;
+            }
+
+            // Update shipping fee display
+            const shippingInlineFee = document.getElementById('shippingInlineFee');
+            if (shippingInlineFee) {
+                if (isPickup) {
+                    shippingInlineFee.textContent = '0đ';
+                } else {
+                    // Recalculate shipping fee
+                    const methodFee = parseInt(document.querySelector('input[name="shipping_method_ui"]')?.dataset.methodFee || '0');
+                    shippingInlineFee.textContent = (methodFee || 0).toLocaleString('vi-VN') + 'đ';
+                }
+            }
+
+            updateBranchSelectorState();
+        }
+
+        deliveryTypeDelivery?.addEventListener('change', syncDeliveryMode);
+        deliveryTypePickup?.addEventListener('change', syncDeliveryMode);
+
+        syncDeliveryMode();
+        updateBranchSelectorState();
+    });
+
+    // Haversine formula to calculate distance between two coordinates
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Earth's radius in kilometers
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+    
+    // Initialize branch labels based on user coordinates
+    function initializeBranchSorting() {
+        const branchSelect = document.getElementById('branch_id');
+
+        if (!branchSelect) {
+            return;
+        }
+
+        const userLat = Number.parseFloat(branchSelect.dataset.userLatitude || '');
+        const userLon = Number.parseFloat(branchSelect.dataset.userLongitude || '');
+
+        if (!Number.isFinite(userLat) || !Number.isFinite(userLon)) {
+            return;
+        }
+
+        const branchesData = JSON.parse(branchSelect.dataset.branches || '[]');
+        const currentValue = branchSelect.disabled ? '' : (branchSelect.value || @json(old('branch_id', '')));
+
+        const branchesWithDistance = branchesData.map((branch) => {
+            const branchLat = Number.parseFloat(branch.latitude);
+            const branchLon = Number.parseFloat(branch.longitude);
+
+            if (Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
+                return {
+                    ...branch,
+                    distance: calculateDistance(userLat, userLon, branchLat, branchLon),
+                };
+            }
+
+            return {
+                ...branch,
+                distance: null,
+            };
+        });
+
+        branchesWithDistance.sort((a, b) => {
+            if (a.distance === null && b.distance === null) return 0;
+            if (a.distance === null) return 1;
+            if (b.distance === null) return -1;
+            return a.distance - b.distance;
+        });
+
+        branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
+
+        branchesWithDistance.forEach((branch) => {
+            const option = document.createElement('option');
+            option.value = branch.id;
+            option.dataset.latitude = branch.latitude || '';
+            option.dataset.longitude = branch.longitude || '';
+            option.dataset.distance = branch.distance !== null ? branch.distance.toFixed(2) : '';
+
+            let label = branch.name;
+            if (branch.address) {
+                label += ' — ' + branch.address;
+            }
+            if (branch.distance !== null) {
+                label += ' — ' + branch.distance.toFixed(1) + ' km';
+            }
+
+            option.textContent = label;
+            branchSelect.appendChild(option);
+        });
+
+        if (currentValue) {
+            branchSelect.value = currentValue;
+        }
+    }
+    
+    // Run initialization when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeBranchSorting();
     });
 </script>
 @endsection

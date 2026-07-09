@@ -26,6 +26,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone',
         'address',
         'area',
+        'latitude',
+        'longitude',
         'branch_id',
         'reset_token',
         'reset_expire',

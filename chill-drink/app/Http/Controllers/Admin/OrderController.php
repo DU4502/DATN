@@ -13,6 +13,23 @@ use Illuminate\Support\Facades\Schema;
 class OrderController extends Controller
 {
     /**
+     * Apply branch scope to a query based on current user's role and branch
+     * Super Admin sees all orders, Admin sees only their branch's orders
+     */
+    private function applyBranchScope($query)
+    {
+        $user = auth()->user();
+        
+        // Super Admin (role_id = 3) can see all orders
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+        
+        // Regular Admin (role_id = 2) can only see their branch's orders
+        return $query->where('branch_id', $user->branch_id);
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -87,12 +104,18 @@ class OrderController extends Controller
             }
         }
 
+        // Apply branch scope based on user role
+        $orders = $this->applyBranchScope($orders);
+
         $orders = Schema::hasColumn('orders', 'created_at')
             ? $orders->latest()
             : $orders->orderByDesc('id');
 
         $orders = $orders->paginate(12)->withQueryString();
-        $latestOrderId = (int) (Order::query()->max('id') ?? 0);
+        
+        $latestOrderQuery = Order::query();
+        $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
+        $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
 
         return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId'));
     }
@@ -104,16 +127,25 @@ class OrderController extends Controller
         $orders = Order::query()
             ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
-            ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId))
+            ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId));
+        
+        // Apply branch scope
+        $orders = $this->applyBranchScope($orders);
+        
+        $orders = $orders
             ->orderByDesc('id')
             ->limit(20)
             ->get()
             ->map(fn (Order $order) => $this->orderBroadcastPayload($order))
             ->values();
 
+        $latestOrderQuery = Order::query();
+        $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
+        $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
+
         return response()->json([
             'orders' => $orders,
-            'latest_id' => (int) (Order::query()->max('id') ?? 0),
+            'latest_id' => $latestOrderId,
         ]);
     }
 
@@ -218,6 +250,13 @@ class OrderController extends Controller
         ]);
 
         $order = Order::findOrFail($id);
+        
+        // Check if current user (Admin) can access this order's branch
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && $order->branch_id !== $user->branch_id) {
+            abort(403, 'Không có quyền cập nhật đơn hàng của chi nhánh khác.');
+        }
+
         $newStatus = OrderStatus::normalize($request->status);
 
         if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus)) {

@@ -13,11 +13,6 @@
         'price_desc' => 'Giá cao đến thấp',
     ];
     $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
-    $showCatalogPromotions = !request()->filled('category')
-        && empty($searchQuery)
-        && !request()->filled('min_price')
-        && !request()->filled('max_price')
-        && $products->currentPage() === 1;
 @endphp
 <style>
     .shop-page {
@@ -101,12 +96,7 @@
 
     .shop-vouchers {
         display: grid;
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
-        padding: 1rem;
-        border: 1px solid rgba(47, 185, 160, 0.18);
-        border-radius: 20px;
-        background: rgba(47, 185, 160, 0.045);
+        gap: 1rem;
     }
 
     .shop-vouchers__header {
@@ -118,7 +108,6 @@
 
     .shop-vouchers__header h3 {
         margin: 0;
-        font-size: 1.1rem;
         font-weight: 700;
     }
 
@@ -129,35 +118,29 @@
     }
 
     .voucher-grid {
-        display: flex;
-        gap: 0.75rem;
-        overflow-x: auto;
-        padding: 0.15rem 0 0.45rem;
-        scroll-snap-type: x proximity;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(47, 185, 160, 0.45) transparent;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        align-items: stretch;
     }
 
     .voucher-card {
-        flex: 0 0 330px;
         position: relative;
-        background: linear-gradient(90deg, #2fb9a0 0 112px, #ffffff 112px 100%);
+        background: linear-gradient(90deg, #2fb9a0 0 156px, #ffffff 156px 100%);
         border: 1px solid rgba(47, 185, 160, 0.24);
         border-radius: 18px;
         padding: 1.05rem 1.05rem 1.05rem 1rem;
         box-shadow: 0 18px 40px rgba(15, 78, 62, 0.08);
-        min-height: 116px;
+        min-height: 132px;
         display: grid;
-        grid-template-columns: 112px minmax(0, 1fr);
+        grid-template-columns: 156px minmax(0, 1fr) auto;
         grid-template-areas:
-            "left code"
-            "left info"
-            "left action";
-        column-gap: 1rem;
-        row-gap: 0.25rem;
+            "left code action"
+            "left info action";
+        column-gap: 1.45rem;
+        row-gap: 0.35rem;
         align-items: center;
         overflow: hidden;
-        scroll-snap-align: start;
     }
 
     .voucher-card::before,
@@ -183,8 +166,8 @@
 
     .voucher-card__visual {
         grid-area: left;
-        width: 42px;
-        height: 42px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
@@ -230,8 +213,7 @@
         white-space: nowrap;
         grid-area: action;
         align-self: start;
-        justify-self: start;
-        margin-top: 0.15rem;
+        margin-top: 0.05rem;
     }
 
     .voucher-card__tag:hover {
@@ -253,7 +235,7 @@
         grid-area: left;
         align-self: end;
         justify-self: center;
-        width: 90px;
+        width: 112px;
         color: #ffffff;
         font-size: 0.86rem;
         font-weight: 900;
@@ -566,7 +548,7 @@
         position: relative;
         overflow: hidden;
         border-radius: var(--radius-sm);
-        aspect-ratio: 1 / 1;
+        aspect-ratio: 4 / 3;
         background: var(--drink-primary-soft);
     }
 
@@ -577,7 +559,7 @@
         min-height: 100%;
         object-fit: contain !important;
         object-position: center !important;
-        padding: 0.75rem;
+        padding: 0.55rem;
         display: block;
         background: var(--drink-primary-soft) !important;
         transition: transform 0.55s ease, filter 0.35s ease;
@@ -895,6 +877,9 @@
             max-height: 250px;
         }
 
+        .voucher-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
     }
 
     @media (max-width: 767.98px) {
@@ -908,9 +893,12 @@
             grid-template-columns: 1fr;
         }
 
+        .voucher-grid {
+            grid-template-columns: 1fr;
+        }
+
         .voucher-card {
-            flex-basis: min(320px, calc(100vw - 3rem));
-            min-height: 112px;
+            min-height: 108px;
             background: linear-gradient(90deg, #2fb9a0 0 128px, #ffffff 128px 100%);
             grid-template-columns: 128px minmax(0, 1fr);
             grid-template-areas:
@@ -1060,21 +1048,64 @@
             </aside>
 
             <div class="col-lg-9">
-                @if($showCatalogPromotions)
-                    <div class="shop-main-top">
-                        <div class="shop-hero">
-                            <div>
-                                <span class="shop-hero__badge">Món mới nhất</span>
-                                <h2 class="shop-hero__title">Matcha Dừa Mây</h2>
-                                <p class="shop-hero__text">Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.</p>
-                                <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
+                <div class="shop-main-top">
+                    <div class="shop-hero">
+                        <div>
+                            <span class="shop-hero__badge">Món mới nhất</span>
+                            <h2 class="shop-hero__title">Matcha Dừa Mây</h2>
+                            <p class="shop-hero__text">Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.</p>
+                            <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
+                        </div>
+                        <div class="shop-hero__visual">
+                            <img src="{{ asset('images/matcha.png') }}" alt="Matcha Dừa Mây" loading="lazy">
+                        </div>
+                    </div>
+
+                    <div class="shop-vouchers">
+                        <div class="shop-vouchers__header">
+                            <h3>Mã Giảm Giá Phổ Biến</h3>
+                            <a href="{{ route('products.index') }}">Xem tất cả</a>
+                        </div>
+                        <div class="voucher-grid">
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
+                                    <span class="voucher-card__label">TANGNANG20</span>
+                                    <div class="voucher-card__code">TANGNANG20</div>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="TANGNANG20">NHẬN</button>
+                                </div>
+                                <p class="voucher-card__info">Giảm 20k đơn 100k <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
                             </div>
-                            <div class="shop-hero__visual">
-                                <img src="{{ asset('images/matcha.png') }}" alt="Matcha Dừa Mây" loading="lazy">
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
+                                    <span class="voucher-card__label">TANGNANG15</span>
+                                    <div class="voucher-card__code">TANGNANG15</div>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="TANGNANG15">NHẬN</button>
+                                </div>
+                                <p class="voucher-card__info">Giảm 15% tổng bill <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
+                            </div>
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
+                                    <span class="voucher-card__label">CHOCHILL</span>
+                                    <div class="voucher-card__code">CHOCHILL</div>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="CHOCHILL">NHẬN</button>
+                                </div>
+                                <p class="voucher-card__info">Freeship đơn từ 50k <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
+                            </div>
+                            <div class="voucher-card">
+                                <div class="voucher-card__top">
+                                    <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
+                                    <span class="voucher-card__label">SUMMER24</span>
+                                    <div class="voucher-card__code">SUMMER24</div>
+                                    <button type="button" class="voucher-card__tag" data-receive-code="SUMMER24">NHẬN</button>
+                                </div>
+                                <p class="voucher-card__info">Giảm 10k mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
                             </div>
                         </div>
                     </div>
-                @endif
+                </div>
 
                 <div class="shop-grid-head">
                     <div>
@@ -1108,53 +1139,6 @@
                         </div>
                     </form>
                 </div>
-
-                @if($showCatalogPromotions)
-                    <div class="shop-vouchers">
-                        <div class="shop-vouchers__header">
-                            <h3>Mã giảm giá phổ biến</h3>
-                            <span class="text-secondary small">Sao chép mã để dùng khi thanh toán</span>
-                        </div>
-                        <div class="voucher-grid">
-                        <div class="voucher-card">
-                            <div class="voucher-card__top">
-                                <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
-                                <span class="voucher-card__label">TANGNANG20</span>
-                                <div class="voucher-card__code">TANGNANG20</div>
-                                <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG20">SAO CHÉP</button>
-                            </div>
-                            <p class="voucher-card__info">Giảm 20.000đ cho đơn từ 100.000đ <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
-                        </div>
-                        <div class="voucher-card">
-                            <div class="voucher-card__top">
-                                <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
-                                <span class="voucher-card__label">TANGNANG15</span>
-                                <div class="voucher-card__code">TANGNANG15</div>
-                                <button type="button" class="voucher-card__tag" data-copy-code="TANGNANG15">SAO CHÉP</button>
-                            </div>
-                            <p class="voucher-card__info">Giảm 15% tổng đơn <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
-                        </div>
-                        <div class="voucher-card">
-                            <div class="voucher-card__top">
-                                <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
-                                <span class="voucher-card__label">CHOCHILL</span>
-                                <div class="voucher-card__code">CHOCHILL</div>
-                                <button type="button" class="voucher-card__tag" data-copy-code="CHOCHILL">SAO CHÉP</button>
-                            </div>
-                            <p class="voucher-card__info">Miễn phí giao hàng cho đơn từ 50.000đ <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
-                        </div>
-                        <div class="voucher-card">
-                            <div class="voucher-card__top">
-                                <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
-                                <span class="voucher-card__label">SUMMER24</span>
-                                <div class="voucher-card__code">SUMMER24</div>
-                                <button type="button" class="voucher-card__tag" data-copy-code="SUMMER24">SAO CHÉP</button>
-                            </div>
-                            <p class="voucher-card__info">Giảm 10.000đ cho mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
-                        </div>
-                        </div>
-                    </div>
-                @endif
 
                 @if(!empty($searchQuery))
                     <div class="search-results-banner">

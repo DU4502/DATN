@@ -152,6 +152,14 @@ class ProductController extends Controller
      */
     public function show(Request $request, string $slug)
     {
+        $legacySlugAliases = [
+            'cam-vat-nguyen-chat' => 'nuoc-ep-cam',
+        ];
+
+        if (isset($legacySlugAliases[$slug])) {
+            return redirect()->route('products.show', $legacySlugAliases[$slug], 301);
+        }
+
         $hasReviewsTable = Schema::hasTable('reviews');
         $productQuery = Product::where('slug', $slug)
             ->where('status', true)
