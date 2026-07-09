@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
@@ -70,6 +72,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
+});
+
+// Chat routes (client)
+Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
+    Route::get('/', [ChatController::class, 'getOrCreateConversation'])->name('index');
+    Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
+    Route::post('/send', [ChatController::class, 'send'])->name('send');
+});
+
+// Chat routes (admin/cskh)
+Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->group(function () {
+    Route::get('/', [AdminChatController::class, 'index'])->name('index');
+    Route::get('/{conversation}/messages', [AdminChatController::class, 'messages'])->name('messages');
+    Route::get('/{conversation}', [AdminChatController::class, 'show'])->name('show');
+    Route::post('/{conversation}/reply', [AdminChatController::class, 'reply'])->name('reply');
+    Route::patch('/{conversation}/close', [AdminChatController::class, 'close'])->name('close');
 });
 
 /*
@@ -142,3 +160,4 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 });
 
 require __DIR__.'/auth.php';
+

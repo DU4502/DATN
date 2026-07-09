@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.31",
+        "laravel/reverb": "^1.10",
         "laravel/socialite": "^5.28",
         "laravel/tinker": "^2.9",
         "phpmailer/phpmailer": "^7.1",
@@ -68,6 +69,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "audit": {
+            "block-insecure": false
         }
     },
     "minimum-stability": "stable",

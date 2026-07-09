@@ -21,3 +21,14 @@ Broadcast::channel('admin-notifications', function ($user) {
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });
+
+Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
+    $conversation = \App\Models\Conversation::find($conversationId);
+    if (!$conversation) {
+        return false;
+    }
+
+    return (int) $user->id === (int) $conversation->user_id
+        || (int) $user->id === (int) $conversation->cskh_id
+        || $user->canMonitorChat();
+});

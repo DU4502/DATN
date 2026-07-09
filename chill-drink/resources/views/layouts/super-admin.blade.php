@@ -468,6 +468,7 @@
                 <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Dashboard</a>
                 <a href="#admins" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
                 <a href="#permissions" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
+                <a href="{{ route('admin.chat.index') }}" class="root-nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}"><i class="bi bi-chat-dots"></i> Chat khách hàng</a>
 
                 <p class="root-nav-label">Hệ thống</p>
                 <a href="#security" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
