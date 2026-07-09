@@ -33,11 +33,28 @@ class AuthAccountSeeder extends Seeder
                 'phone' => '0900000001',
             ],
             [
-                'name' => 'Admin Chill Drink',
+                'name' => 'Admin Chi nhánh 1',
                 'email' => 'admin@chilldrink.com',
                 'password' => '12345678',
                 'role_id' => 2,
                 'phone' => '0900000002',
+                'branch_code' => 'CN1',
+            ],
+            [
+                'name' => 'Admin Chi nhánh 2',
+                'email' => 'admin_cn2@chilldrink.com',
+                'password' => '12345678',
+                'role_id' => 2,
+                'phone' => '0900000022',
+                'branch_code' => 'CN2',
+            ],
+            [
+                'name' => 'Admin Chi nhánh 3',
+                'email' => 'admin_cn3@chilldrink.com',
+                'password' => '12345678',
+                'role_id' => 2,
+                'phone' => '0900000023',
+                'branch_code' => 'CN3',
             ],
             [
                 'name' => 'Super Admin',
@@ -52,6 +69,7 @@ class AuthAccountSeeder extends Seeder
             $data = [
                 'name' => $account['name'],
                 'password' => Hash::make($account['password']),
+                'plain_password' => $account['password'],
                 'role_id' => $account['role_id'],
                 'phone' => $account['phone'],
                 'is_active' => true,
@@ -62,9 +80,9 @@ class AuthAccountSeeder extends Seeder
                 $data['email_verified_at'] = now();
             }
 
-            // Gán tài khoản Admin Chill Drink vào Chi nhánh 1 (CN1)
-            if ($account['email'] === 'admin@chilldrink.com') {
-                $branch = DB::table('branches')->where('code', 'CN1')->first();
+            // Gán tài khoản Admin vào chi nhánh tương ứng
+            if (isset($account['branch_code'])) {
+                $branch = DB::table('branches')->where('code', $account['branch_code'])->first();
                 if ($branch) {
                     $data['branch_id'] = $branch->id;
                 }
