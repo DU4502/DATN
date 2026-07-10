@@ -41,6 +41,7 @@
                 @if(auth()->user()?->isSuperAdmin())
                     <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock-fill"></i> Super Admin</a>
                 @endif
+                <a href="{{ route('admin.chat.index') }}" class="nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}"><i class="bi bi-chat-dots"></i> Chat CSKH</a>
             </nav>
 
             <div class="admin-sidebar-footer">

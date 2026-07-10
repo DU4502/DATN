@@ -14,10 +14,12 @@ Hệ thống bao gồm 4 vai trò chính được định nghĩa trong bảng `r
 | **1** | **User** | Khách hàng thành viên | `auth` | Người dùng đã đăng ký tài khoản, được hưởng các tính năng nâng cao (Sổ địa chỉ, tích điểm, đặt hàng nhóm, vị giác...). |
 | **2** | **Admin** | Quản trị viên Chi nhánh | `auth`, `admin` | Người quản lý một chi nhánh cụ thể, có quyền quản lý đơn hàng, sản phẩm, voucher, đánh giá thuộc chi nhánh đó. |
 | **3** | **Super Admin** | Quản trị viên Hệ thống | `auth`, `superadmin` | Người quản lý tối cao của hệ thống, quản lý chi nhánh, tài khoản Admin và giám sát hoạt động toàn hệ thống. |
+| **4** | **CSKH** | Nhân viên Chăm sóc khách hàng | `auth`, `cskh` | Nhân viên hỗ trợ chat trực tuyến, phản hồi thắc mắc và CSKH thời gian thực. |
 
 ### Cơ chế Middleware bảo vệ:
 - [AdminMiddleware.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Middleware/AdminMiddleware.php) (`admin`): Kiểm tra người dùng đã đăng nhập và có `role_id` là `2` hoặc `3` (`isAdmin()`). Nếu không, chuyển hướng về trang chủ với thông báo lỗi.
 - [SuperAdminMiddleware.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Middleware/SuperAdminMiddleware.php) (`superadmin`): Kiểm tra người dùng đã đăng nhập và có `role_id` là `3` (`isSuperAdmin()`). Nếu không, chuyển hướng về trang Dashboard của Admin với thông báo lỗi.
+- [CskhMiddleware.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Middleware/CskhMiddleware.php) (`cskh`): Kiểm tra người dùng có quyền CSKH (role 4), Admin (role 2) hoặc Super Admin (role 3). Nếu không, chặn truy cập.
 - Đăng ký alias tại [app.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/bootstrap/app.php).
 
 ---
@@ -246,6 +248,21 @@ graph TD
   - Model: [Review.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Review.php)
   - Route: `products.reviews.store` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
 
+### 2.8 Luồng chat hỗ trợ trực tuyến (CSKH Chatbox)
+- **Mô tả**: Khách hàng thành viên có thể mở widget chatbox trực tiếp ở phía dưới góc màn hình giao diện Client để nhắn tin, gửi ảnh/file hỗ trợ tới nhân viên CSKH.
+- **Quy tắc nghiệp vụ**:
+  - Chỉ áp dụng đối với người dùng đăng nhập thuộc vai trò Khách hàng (`isCustomer()`).
+  - Hệ thống tự động tạo hoặc tìm một cuộc trò chuyện hỗ trợ ở trạng thái mở (`status = 'open'`).
+  - Hỗ trợ gửi tin nhắn văn bản và đính kèm file (file dung lượng tối đa 10MB, lưu trong thư mục `chat-attachments` trên disk public).
+  - Tải danh sách tin nhắn lịch sử và hiển thị theo thời gian thực (real-time) bằng Event Broadcast `MessageSent` qua Laravel Reverb.
+- **Files liên quan**:
+  - Controller: [ChatController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/ChatController.php) (các phương thức `getOrCreateConversation`, `messages`, `send`)
+  - Event: [MessageSent.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Events/MessageSent.php)
+  - Resource: [MessageResource.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Resources/MessageResource.php)
+  - View Component: [chatbox.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/components/chatbox.blade.php)
+  - Model: [Conversation.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Conversation.php), [Message.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Message.php)
+  - Routes: `chat.index`, `chat.messages`, `chat.send` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+
 ---
 
 ## 3. 🏪 Luồng Của Quản Trị Viên Chi Nhánh (Branch Admin - Admin)
@@ -367,6 +384,59 @@ graph TD
   - Model: [SystemLog.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/SystemLog.php)
   - View: [admin/super-admin.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/super-admin.blade.php)
   - Route: `admin.super-admin` (giao diện điều khiển chung) trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+
+---
+
+## 5. 💬 Luồng Của Nhân Viên Chăm Sóc Khách Hàng (CSKH)
+
+Nhân viên CSKH chịu trách nhiệm tiếp nhận và trả lời các thắc mắc của khách hàng thông qua giao diện chat thời gian thực.
+
+```mermaid
+graph TD
+    A[Khách hàng nhắn tin hỗ trợ] --> B[Nhân viên CSKH nhận thông tin thời gian thực]
+    B --> C{Tự động phân công cuộc trò chuyện}
+    C --> D[Nhắn tin trả lời & Đọc tin nhắn]
+    D --> E[Chủ động chốt / đóng cuộc trò chuyện]
+```
+
+### 5.1 Tiếp nhận & xem các cuộc trò chuyện
+- **Mô tả**: CSKH truy cập danh sách các phòng chat đang hoạt động.
+- **Quy tắc nghiệp vụ**:
+  - Được bảo vệ bởi middleware `cskh` (cho phép role 4 - CSKH, role 2 - Admin, và role 3 - Super Admin).
+  - Đối với nhân viên CSKH thông thường (role 4), hệ thống chỉ hiển thị những cuộc trò chuyện chưa có người phụ trách (`cskh_id = null`) hoặc những cuộc trò chuyện do chính nhân viên đó đang phụ trách.
+  - Tự động đánh dấu tất cả các tin nhắn từ khách hàng trong phòng chat này là đã đọc (`is_read = true`) khi CSKH mở phòng chat.
+- **Files liên quan**:
+  - Controller: [AdminChatController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/AdminChatController.php) (phương thức `index`, `show`, `messages`)
+  - View: [index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/chat/index.blade.php)
+  - Routes: `admin.chat.index`, `admin.chat.show`, `admin.chat.messages` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+
+### 5.2 Nhắn tin phản hồi khách hàng
+- **Mô tả**: Nhập nội dung văn bản và nhấn gửi để trả lời khách hàng.
+- **Quy tắc nghiệp vụ**:
+  - Khi gửi tin nhắn đầu tiên trong phòng chat chưa có người phụ trách, hệ thống tự động gán `cskh_id` của nhân viên đó vào cuộc hội thoại (`Conversation`).
+  - Giao dịch tin nhắn được phát đi thời gian thực thông qua Broadcast Event `MessageSent` tới thiết bị khách hàng.
+  - Hỗ trợ cơ chế đặc biệt cho Super Admin: Super Admin có quyền theo dõi cuộc trò chuyện (`canMonitorChat()`) và giả mạo/nhập vai (`canImpersonateInChat()`) gửi tin nhắn dưới danh nghĩa nhân viên khác (chi tiết lưu trong các trường `impersonated_by_id` và `display_as_sender_id`).
+- **Files liên quan**:
+  - Controller: [AdminChatController.php@reply](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/AdminChatController.php)
+  - Model: [Message.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Message.php), [ChatTakeoverSession.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/ChatTakeoverSession.php), [ChatAuditLog.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/ChatAuditLog.php)
+  - Route: `admin.chat.reply` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+
+### 5.3 Đóng cuộc trò chuyện
+- **Mô tả**: Đóng cuộc hội thoại sau khi hoàn tất hỗ trợ khách hàng.
+- **Quy tắc nghiệp vụ**:
+  - Cập nhật trạng thái `Conversation` thành `closed`. Khi đã đóng, không thành viên nào được phép gửi thêm tin nhắn trừ khi phòng chat được mở lại hoặc tạo phòng mới.
+- **Files liên quan**:
+  - Controller: [AdminChatController.php@close](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/AdminChatController.php)
+  - Route: `admin.chat.close` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+
+### 5.4 Điều hướng & Cổng truy cập của Nhân viên CSKH
+- **Mô tả**: Tự động định tuyến và cung cấp cổng chuyển đổi giao diện cho Nhân viên CSKH khi thao tác ở Client.
+- **Quy tắc nghiệp vụ**:
+  - **Tự động chuyển hướng**: Khi đăng nhập thành công từ trang chủ hoặc truy cập đường dẫn chung `/dashboard`, nếu người dùng là CSKH (`isCskh()`), hệ thống sẽ tự động chuyển hướng (Redirect 302) trực tiếp về trang quản trị chat `/admin/chat`.
+  - **Cổng chuyển đổi giao diện**: Hiển thị nút **"Quay lại trang quản lý"** trong dropdown tài khoản ở thanh menu chính (Header Client) cho toàn bộ nhân viên hệ thống (`isStaff()`, bao gồm Admin, Super Admin, và CSKH). Khi click, nhân viên CSKH sẽ được dẫn thẳng về giao diện chat CSKH `/admin/chat` mà không bị lẫn lộn với giao diện của khách hàng.
+- **Files liên quan**:
+  - Route: Route `/dashboard` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - View Layout: [client.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/layouts/client.blade.php)
 
 ---
 

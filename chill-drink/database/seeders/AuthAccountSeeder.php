@@ -63,6 +63,13 @@ class AuthAccountSeeder extends Seeder
                 'role_id' => 3,
                 'phone' => '0900000003',
             ],
+            [
+                'name' => 'Nhân viên CSKH',
+                'email' => 'cskh@chilldrink.com',
+                'password' => 'Cskh@123',
+                'role_id' => 4,
+                'phone' => '0900000004',
+            ],
         ];
 
         foreach ($accounts as $account) {
