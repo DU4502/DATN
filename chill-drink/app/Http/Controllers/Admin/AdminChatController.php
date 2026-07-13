@@ -74,6 +74,10 @@ class AdminChatController extends Controller
             $conversation->update(['cskh_id' => $user->id]);
         }
 
+        if ($conversation->status === 'closed') {
+            $conversation->update(['status' => 'open']);
+        }
+
         $message = $this->createMessage($conversation, [
             'sender_id' => $user->id,
             'content' => $request->content,
@@ -95,14 +99,26 @@ class AdminChatController extends Controller
     {
         $user = auth()->user();
 
-        $query = Conversation::with(['user', 'cskh', 'latestMessage'])
-            ->whereHas('user', fn ($customer) => $customer->customers());
+        $query = Conversation::with(['user', 'cskh', 'latestMessage', 'branch'])
+            ->whereHas('user', fn ($customer) => $customer->customers())
+            ->where('status', 'open'); // Chỉ hiện các chat đang mở trên sidebar
 
-        if ($user->isCskh() && !$user->isAdmin()) {
-            $query->where(function ($inner) use ($user) {
-                $inner->whereNull('cskh_id')
-                    ->orWhere('cskh_id', $user->id);
-            });
+        if ($user->isSuperAdmin()) {
+            if (request()->has('branch_id') && request('branch_id')) {
+                $query->where('branch_id', request('branch_id'));
+            }
+        } elseif ($user->isAdmin() || $user->isCskh()) {
+            if ($user->branch_id) {
+                $query->where('branch_id', $user->branch_id);
+            }
+            
+            // Also filter by assigned cskh if it's just CSKH (role 4)
+            if ($user->isCskh() && !$user->isAdmin()) {
+                $query->where(function ($inner) use ($user) {
+                    $inner->whereNull('cskh_id')
+                        ->orWhere('cskh_id', $user->id);
+                });
+            }
         }
 
         return $query;
@@ -130,18 +146,14 @@ class AdminChatController extends Controller
 
     protected function canReply(Conversation $conversation): bool
     {
-        $conversation->loadMissing('user');
-
-        if ($conversation->status !== 'open' || ! $conversation->user?->isCustomer()) {
-            return false;
-        }
-
         $user = auth()->user();
 
+        // Admin và Super Admin luôn có quyền trả lời
         if ($user->isAdmin()) {
             return true;
         }
 
+        // CSKH chỉ được trả lời nếu được assign hoặc chưa có ai assign
         return $conversation->cskh_id === $user->id || !$conversation->cskh_id;
     }
 
