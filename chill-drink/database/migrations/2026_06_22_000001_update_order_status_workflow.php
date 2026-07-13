@@ -12,9 +12,9 @@ return new class extends Migration
             return;
         }
 
-        $usesMySql = DB::getDriverName() === 'mysql';
+        $supportsModifyColumn = DB::connection()->getDriverName() !== 'sqlite';
 
-        if ($usesMySql) {
+        if ($supportsModifyColumn) {
             DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
         }
 
@@ -26,7 +26,7 @@ return new class extends Migration
             ->whereIn('status', ['shipped', 'delivering', 'shipping'])
             ->update(['status' => 'shipper_accepted']);
 
-        if ($usesMySql) {
+        if ($supportsModifyColumn) {
             DB::statement(
                 "ALTER TABLE orders MODIFY status ENUM(
                     'pending',
@@ -46,9 +46,9 @@ return new class extends Migration
             return;
         }
 
-        $usesMySql = DB::getDriverName() === 'mysql';
+        $supportsModifyColumn = DB::connection()->getDriverName() !== 'sqlite';
 
-        if ($usesMySql) {
+        if ($supportsModifyColumn) {
             DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
         }
 
@@ -64,7 +64,7 @@ return new class extends Migration
             ->where('status', 'arrived')
             ->update(['status' => 'delivering']);
 
-        if ($usesMySql) {
+        if ($supportsModifyColumn) {
             DB::statement(
                 "ALTER TABLE orders MODIFY status ENUM(
                     'pending',

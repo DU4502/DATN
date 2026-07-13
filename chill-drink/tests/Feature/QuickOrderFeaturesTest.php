@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\GroupOrder;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderItem;
+use App\Models\Branch;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -227,6 +228,7 @@ class QuickOrderFeaturesTest extends TestCase
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
         $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
@@ -236,6 +238,8 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'closed']);
         $response = $this->post(route('checkout.process'), [
             'payment_method' => 'vnpay', 'shipping_method_ui' => 'standard',
+            'fulfillment_type' => 'delivery',
+            'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
@@ -254,6 +258,7 @@ class QuickOrderFeaturesTest extends TestCase
     {
         $user = User::factory()->create();
         $product = Product::factory()->create(['status' => true, 'stock' => 5, 'price' => 40000]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
         $cart = [
             'scheduled-cart-item' => [
                 'product_id' => $product->id,
@@ -274,6 +279,8 @@ class QuickOrderFeaturesTest extends TestCase
         $this->actingAs($user)->withSession(['cart' => $cart])->post(route('checkout.process'), [
             'payment_method' => 'cod',
             'shipping_method_ui' => 'standard',
+            'fulfillment_type' => 'delivery',
+            'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ',
             'shipping_area_ui' => 'Quận 1',
             'delivery_type' => 'scheduled',
