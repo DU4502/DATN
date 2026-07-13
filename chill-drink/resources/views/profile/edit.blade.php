@@ -166,7 +166,7 @@
                                 </div>
                                 <div class="form-floating mb-3">
                                     <input id="area" name="area" type="text" class="form-control @error('area') is-invalid @enderror" value="{{ old('area', $user->area) }}" placeholder="Bấm định vị để lấy khu vực">
-                                    <label for="area">Khu vực (Quận/Huyện, Tỉnh/TP)</label>
+                                    <label for="area">Khu vực (Phường/Xã, Tỉnh/TP)</label>
                                     <button id="profileLocationBtn" class="btn btn-primary position-absolute top-50 translate-middle-y end-0 me-2 py-1 px-3 rounded-pill" type="button" style="z-index: 10;">
                                         <i class="bi bi-crosshair me-1"></i>Định vị
                                     </button>
@@ -301,6 +301,32 @@
         return parts.filter(Boolean).join(', ');
     }
 
+    function pickVietnamWardName(candidates) {
+        let fallback = '';
+        let prefixedWard = '';
+
+        for (const candidate of candidates) {
+            const value = String(candidate || '').trim();
+            if (!value) {
+                continue;
+            }
+
+            if (!fallback) {
+                fallback = value;
+            }
+
+            if (/^(Phường|Xã|Thị trấn)\b/ui.test(value)) {
+                return value;
+            }
+
+            if (!prefixedWard && /^(P\.|P:|X\.|X:|TT\.|TT:)\s*/ui.test(value)) {
+                prefixedWard = value;
+            }
+        }
+
+        return prefixedWard || fallback;
+    }
+
     if (profileLocationBtn && profileAddressInput && profileAreaInput && profileLocationStatus && profileMapPreviewWrap && profileMapText && profileMapLink) {
         profileLocationBtn.addEventListener('click', function () {
             if (!navigator.geolocation) {
@@ -327,12 +353,21 @@
                     const streetLine = compactProfileAddress([
                         address.house_number,
                         address.road || address.pedestrian || address.footway,
-                        address.neighbourhood || address.suburb
                     ]);
+                    const wardLine = pickVietnamWardName([
+                        address.city,
+                        address.suburb,
+                        address.village,
+                        address.neighbourhood,
+                        address.quarter,
+                        address.city_district,
+                        address.district,
+                        address.town,
+                    ]);
+                    const provinceLine = String(address.state || address.region || '').trim();
                     const areaLine = compactProfileAddress([
-                        address.quarter || address.ward || address.suburb || address.village,
-                        address.city_district || address.district || address.town,
-                        address.city || address.state
+                        wardLine,
+                        provinceLine,
                     ]);
 
                     profileAddressInput.value = streetLine || data.display_name || `${lat}, ${lng}`;
