@@ -123,7 +123,15 @@ class CheckoutController extends Controller
         }
 
         $request->validate([
-            'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
+            'payment_method' => [
+                'required',
+                Rule::in(array_keys($this->paymentOptions())),
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('delivery_type') === 'scheduled' && $value === 'cod') {
+                        $fail('Đơn đặt giao sau phải thanh toán trước. Vui lòng chọn VNPay để tiếp tục.');
+                    }
+                },
+            ],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
             'shipping_address_ui' => ['required', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],

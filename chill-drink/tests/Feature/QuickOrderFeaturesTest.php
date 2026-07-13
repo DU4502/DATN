@@ -235,7 +235,7 @@ class QuickOrderFeaturesTest extends TestCase
         $this->actingAs($owner)->withSession(['cart' => $personalCart])->post(route('group-orders.close', $group->code));
         $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'closed']);
         $response = $this->post(route('checkout.process'), [
-            'payment_method' => 'cod', 'shipping_method_ui' => 'standard',
+            'payment_method' => 'vnpay', 'shipping_method_ui' => 'standard',
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
@@ -247,7 +247,58 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame(5, (int) $product->fresh()->stock);
         $this->assertTrue($group->order->scheduled_at->equalTo($scheduledAt));
         $this->assertSame($personalCart, session('cart'));
-        $response->assertRedirect(route('checkout.success', $group->order_id));
+        $response->assertRedirect(route('vnpay.payment', $group->order));
+    }
+
+    public function test_scheduled_delivery_requires_prepaid_payment(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['status' => true, 'stock' => 5, 'price' => 40000]);
+        $cart = [
+            'scheduled-cart-item' => [
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'base_price' => 40000,
+                'price' => 40000,
+                'size' => 'S',
+                'size_label' => 'Size S',
+                'size_extra' => 0,
+                'sugar_level' => 100,
+                'ice_level' => 100,
+                'toppings' => [],
+                'topping_total' => 0,
+                'quantity' => 1,
+            ],
+        ];
+
+        $this->actingAs($user)->withSession(['cart' => $cart])->post(route('checkout.process'), [
+            'payment_method' => 'cod',
+            'shipping_method_ui' => 'standard',
+            'shipping_address_ui' => '123 Nguyễn Huệ',
+            'shipping_area_ui' => 'Quận 1',
+            'delivery_type' => 'scheduled',
+            'scheduled_delivery_time' => now()->addDay()->setTime(10, 0)->format('Y-m-d H:i:s'),
+        ])->assertSessionHasErrors('payment_method');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_customer_in_open_group_cannot_add_personal_cart_item(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $product = Product::factory()->create(['status' => true]);
+
+        $this->actingAs($owner)
+            ->postJson(route('cart.add', $product->id), [
+                'size' => 'S',
+                'sugar_level' => 50,
+                'ice_level' => 50,
+                'quantity' => 1,
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('redirect_url', route('group-orders.show', $group->code));
+
+        $this->assertSame([], session('cart', []));
     }
 
     public function test_customer_can_toggle_a_favorite_product(): void

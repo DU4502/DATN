@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Favorite;
+use App\Models\GroupOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -126,6 +127,22 @@ class CartController extends Controller
      */
     public function add(Request $request, $id)
     {
+        if ($activeGroup = $this->activeOpenGroupForCurrentUser()) {
+            $message = 'Bạn đang ở trong phòng nhóm "'.$activeGroup->name.'". Hãy quay lại phòng để chọn món cho đơn nhóm, hoặc rời/hủy phòng trước khi mua lẻ.';
+            $redirectUrl = route('group-orders.show', $activeGroup->code);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'redirect_url' => $redirectUrl,
+                    'redirect_label' => 'Quay lại phòng nhóm',
+                ], 409);
+            }
+
+            return redirect($redirectUrl)->with('error', $message);
+        }
+
         $demoProducts = $this->demoProducts();
         $product = isset($demoProducts[$id])
             ? $this->resolveOrCreatePayableProduct($demoProducts[$id], $id)
@@ -198,6 +215,23 @@ class CartController extends Controller
         }
         
         return redirect()->back();
+    }
+
+    private function activeOpenGroupForCurrentUser(): ?GroupOrder
+    {
+        if (! auth()->check() || session()->has('checkout_group_order_id')) {
+            return null;
+        }
+
+        return GroupOrder::query()
+            ->where(function ($query) {
+                $query->where('owner_id', auth()->id())
+                    ->orWhereHas('members', fn ($members) => $members->where('user_id', auth()->id()));
+            })
+            ->where('status', 'open')
+            ->where('closes_at', '>', now())
+            ->latest('id')
+            ->first();
     }
 
     private function resolveOrCreatePayableProduct(array $demoProduct, string $demoId): Product

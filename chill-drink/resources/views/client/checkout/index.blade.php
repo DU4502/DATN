@@ -1008,6 +1008,14 @@
                             </div>
                         </div>
 
+                        @php
+                            $deliveryType = old('delivery_type', 'now');
+                            $selectedPaymentMethod = old('payment_method', $deliveryType === 'scheduled' ? 'vnpay' : 'cod');
+                            if ($deliveryType === 'scheduled' && $selectedPaymentMethod === 'cod') {
+                                $selectedPaymentMethod = 'vnpay';
+                            }
+                        @endphp
+
                         <div class="row g-3">
                             @foreach($paymentOptions as $value => $option)
                                 <div class="col-md-6">
@@ -1016,7 +1024,8 @@
                                             type="radio"
                                             name="payment_method"
                                             value="{{ $value }}"
-                                            {{ old('payment_method', 'cod') === $value ? 'checked' : '' }}
+                                            {{ $selectedPaymentMethod === $value ? 'checked' : '' }}
+                                            data-payment-method="{{ $value }}"
                                             required
                                         >
                                         <div class="payment-card p-3 d-flex gap-3 h-100">
@@ -1034,6 +1043,10 @@
                         @error('payment_method')
                             <div class="text-danger small mt-2">{{ $message }}</div>
                         @enderror
+                        <div class="alert alert-info small mt-3 mb-0 {{ $deliveryType === 'scheduled' ? '' : 'd-none' }}" data-scheduled-payment-notice>
+                            <i class="bi bi-info-circle me-1"></i>
+                            Đơn đặt giao sau cần thanh toán trước, nên hệ thống sẽ dùng VNPay thay cho thanh toán khi nhận hàng.
+                        </div>
                     </div>
 
                     <div class="checkout-panel p-4 p-md-5">
@@ -1045,9 +1058,6 @@
                             </div>
                         </div>
 
-                        @php
-                            $deliveryType = old('delivery_type', 'now');
-                        @endphp
                         <div class="row g-3 mb-3">
                             <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="now" @checked($deliveryType === 'now')><strong>Giao ngay</strong><span class="d-block text-secondary small ms-4">Xử lý ngay sau khi đặt hàng.</span></label></div>
                             <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="scheduled" @checked($deliveryType === 'scheduled')><strong>Đặt giao sau</strong><span class="d-block text-secondary small ms-4">Chọn ngày giờ muốn nhận.</span></label></div>
@@ -1464,9 +1474,29 @@
         const addressUpdateEndpoint = @json(url('/checkout/addresses'));
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
         const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
-        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', () => {
-            scheduledDeliveryFields?.classList.toggle('is-visible', input.value === 'scheduled' && input.checked);
-        }));
+        const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
+        const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
+        const prepaidPaymentInput = document.querySelector('input[name="payment_method"][value="vnpay"]');
+
+        function syncScheduledPaymentRule() {
+            const scheduledInput = document.querySelector('input[name="delivery_type"][value="scheduled"]');
+            const isScheduled = Boolean(scheduledInput?.checked);
+
+            scheduledDeliveryFields?.classList.toggle('is-visible', isScheduled);
+            scheduledPaymentNotice?.classList.toggle('d-none', !isScheduled);
+
+            if (codPaymentInput) {
+                codPaymentInput.disabled = isScheduled;
+                codPaymentInput.closest('.payment-option')?.classList.toggle('opacity-50', isScheduled);
+            }
+
+            if (isScheduled && codPaymentInput?.checked && prepaidPaymentInput) {
+                prepaidPaymentInput.checked = true;
+            }
+        }
+
+        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', syncScheduledPaymentRule));
+        syncScheduledPaymentRule();
         document.addEventListener('click', async function (event) {
             const button = event.target.closest('[data-checkout-cart-action]');
             if (!button || button.disabled) return;

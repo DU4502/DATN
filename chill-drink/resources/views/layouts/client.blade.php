@@ -1575,7 +1575,17 @@
                 }, 760);
             }
 
-            function showCartFeedback(message) {
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                })[char]);
+            }
+
+            function showCartFeedback(message, options = {}) {
                 if (!isAddAction) {
                     return;
                 }
@@ -1591,16 +1601,22 @@
                     document.body.appendChild(feedback);
                 }
 
+                const icon = options.type === 'warning' ? 'bi-exclamation-triangle' : 'bi-bag-check';
+                const action = options.redirectUrl
+                    ? `<a class="btn btn-sm btn-light rounded-pill ms-2 fw-bold text-primary" href="${escapeHtml(options.redirectUrl)}">${escapeHtml(options.redirectLabel || 'Mở')}</a>`
+                    : '';
+
                 feedback.innerHTML = `
-                    <span class="cart-feedback-icon"><i class="bi bi-bag-check"></i></span>
-                    <span>${message || 'Đã thêm vào giỏ hàng'}</span>
+                    <span class="cart-feedback-icon"><i class="bi ${icon}"></i></span>
+                    <span>${escapeHtml(message || 'Đã thêm vào giỏ hàng')}</span>
+                    ${action}
                 `;
                 feedback.classList.add('show');
 
                 window.clearTimeout(feedback._hideTimer);
                 feedback._hideTimer = window.setTimeout(() => {
                     feedback.classList.remove('show');
-                }, 1800);
+                }, options.redirectUrl ? 5200 : 1800);
             }
 
             if (submitter && submitter.name) {
@@ -1624,6 +1640,20 @@
                 });
 
                 if (!response.ok) {
+                    let errorData = {};
+
+                    try {
+                        errorData = await response.json();
+                    } catch (error) {
+                        errorData = {};
+                    }
+
+                    showCartFeedback(errorData.message || 'Không thể thêm sản phẩm vào giỏ hàng.', {
+                        type: 'warning',
+                        redirectUrl: errorData.redirect_url,
+                        redirectLabel: errorData.redirect_label,
+                    });
+
                     return;
                 }
 
