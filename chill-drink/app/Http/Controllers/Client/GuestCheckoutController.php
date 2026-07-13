@@ -172,7 +172,15 @@ class GuestCheckoutController extends CheckoutController
         }
 
         $request->validate([
-            'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
+            'payment_method' => [
+                'required',
+                Rule::in(array_keys($this->paymentOptions())),
+                function ($attribute, $value, $fail) use ($guestInfo) {
+                    if (($guestInfo['delivery_type'] ?? 'now') === 'scheduled' && $value === 'cod') {
+                        $fail('Đơn đặt giao sau phải thanh toán trước. Vui lòng chọn VNPay để tiếp tục.');
+                    }
+                },
+            ],
         ], [
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
