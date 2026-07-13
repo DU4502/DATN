@@ -16,7 +16,7 @@ class ChatController extends Controller
         $this->middleware('auth');
     }
 
-    public function getOrCreateConversation()
+    public function getOrCreateConversation(Request $request)
     {
         $this->ensureCustomer();
 
@@ -26,9 +26,15 @@ class ChatController extends Controller
             ->first();
 
         if (!$conversation) {
+            $branchId = $request->branch_id 
+                ?? auth()->user()->branch_id 
+                ?? auth()->user()->orders()->latest()->value('branch_id')
+                ?? \App\Models\Branch::first()->id ?? 1;
+
             $conversation = auth()->user()->conversations()->create([
                 'subject' => 'Hỗ trợ khách hàng',
                 'status' => 'open',
+                'branch_id' => $branchId,
             ]);
         }
 
@@ -98,7 +104,14 @@ class ChatController extends Controller
             'attachment_name' => $attachmentName,
         ]);
 
-        $conversation->update(['last_message_at' => now()]);
+        if ($conversation->status === 'closed') {
+            $conversation->update([
+                'status' => 'open',
+                'last_message_at' => now(),
+            ]);
+        } else {
+            $conversation->update(['last_message_at' => now()]);
+        }
 
         $message->load(['sender', 'displayAsSender']);
 

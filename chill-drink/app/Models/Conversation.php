@@ -10,6 +10,7 @@ class Conversation extends Model
 {
     protected $fillable = [
         'user_id',
+        'branch_id',
         'cskh_id',
         'order_id',
         'subject',
@@ -37,6 +38,11 @@ class Conversation extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function messages(): HasMany

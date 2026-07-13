@@ -1884,16 +1884,15 @@
             const lat = Number.parseFloat(userLat);
             const lon = Number.parseFloat(userLon);
 
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+            const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lon);
+
+            if (hasValidCoords) {
+                branchSelect.dataset.userLatitude = String(lat);
+                branchSelect.dataset.userLongitude = String(lon);
+            } else {
                 branchSelect.dataset.userLatitude = '';
                 branchSelect.dataset.userLongitude = '';
-                branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
-                branchSelect.value = '';
-                return;
             }
-
-            branchSelect.dataset.userLatitude = String(lat);
-            branchSelect.dataset.userLongitude = String(lon);
 
             const currentValue = branchSelect.disabled ? '' : (branchSelect.value || @json(old('branch_id', '')));
             const branchesData = JSON.parse(branchSelect.dataset.branches || '[]');
@@ -1901,7 +1900,7 @@
                 const branchLat = Number.parseFloat(branch.latitude);
                 const branchLon = Number.parseFloat(branch.longitude);
 
-                if (Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
+                if (hasValidCoords && Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
                     return {
                         ...branch,
                         distance: calculateDistance(lat, lon, branchLat, branchLon),

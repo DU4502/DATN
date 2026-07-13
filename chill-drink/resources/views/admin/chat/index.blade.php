@@ -76,7 +76,19 @@
             <p class="text-secondary mb-0 small">Xem và phản hồi các cuộc trò chuyện từ khách hàng.</p>
         </div>
         @if($viewer->isSuperAdmin())
-            <span class="badge text-bg-success rounded-pill px-3 py-2">Super Admin</span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge text-bg-success rounded-pill px-3 py-2 border">Super Admin</span>
+                <form action="{{ route('admin.chat.index') }}" method="GET" class="d-inline-flex m-0">
+                    <select name="branch_id" class="form-select form-select-sm shadow-none" onchange="this.form.submit()" style="min-width: 150px;">
+                        <option value="">Tất cả chi nhánh</option>
+                        @foreach(\App\Models\Branch::all() as $branch)
+                            <option value="{{ $branch->id }}" {{ request('branch_id') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            </div>
         @endif
     </div>
 
@@ -152,13 +164,6 @@
                                     @endif
                                 </div>
                             </div>
-                            @if($conversation->status === 'open' && ($viewer->isAdmin() || $viewer->id === $conversation->cskh_id || !$conversation->cskh_id))
-                                <form action="{{ route('admin.chat.close', $conversation) }}" method="POST" onsubmit="return confirm('Đóng cuộc trò chuyện này?');">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Đóng</button>
-                                </form>
-                            @endif
                         </div>
                     </div>
 
@@ -242,8 +247,12 @@
                         </div>
                     </div>
 
-                    @if($conversation->status === 'open')
                         <div class="p-3 border-top bg-light admin-chat-fixed">
+                            @if($conversation->status === 'closed')
+                                <div class="alert alert-warning py-2 small text-center mb-3">
+                                    Cuộc trò chuyện này đã đóng. Nhắn tin để mở lại.
+                                </div>
+                            @endif
                             <template x-if="canReply">
                                 <div class="d-flex align-items-center gap-2">
                                     <input
@@ -269,9 +278,6 @@
                                 <p class="text-secondary text-center small mb-0 py-1">Bạn không có quyền trả lời cuộc trò chuyện này.</p>
                             </template>
                         </div>
-                    @else
-                        <div class="p-3 border-top bg-light text-center text-secondary small admin-chat-fixed">Cuộc trò chuyện đã đóng.</div>
-                    @endif
                 @else
                     <div class="flex-grow-1 d-flex align-items-center justify-content-center text-secondary" style="min-height: 520px;">
                         <div class="text-center">
