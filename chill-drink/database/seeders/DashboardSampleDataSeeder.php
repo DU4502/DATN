@@ -296,6 +296,10 @@ class DashboardSampleDataSeeder extends Seeder
             return;
         }
 
+        // Get first available branch for demo orders
+        $firstBranch = DB::table('branches')->where('status', 1)->first();
+        $branchId = $firstBranch?->id;
+
         $slots = $this->buildOrderSlots();
         $productIds = collect($products)->pluck('id')->all();
 
@@ -306,7 +310,7 @@ class DashboardSampleDataSeeder extends Seeder
         foreach ($slots as $index => $slot) {
             $customer = $customers[$index % count($customers)];
 
-            $order = Order::create([
+            $orderData = [
                 'user_id' => $customer->id,
                 'subtotal' => 0,
                 'shipping_fee' => 15000,
@@ -318,7 +322,14 @@ class DashboardSampleDataSeeder extends Seeder
                 'note' => self::NOTE_PREFIX.' Don hang mau #'.($index + 1),
                 'created_at' => $slot['at'],
                 'updated_at' => $slot['at'],
-            ]);
+            ];
+
+            // Add branch_id if branches table exists and branch found
+            if (Schema::hasColumn('orders', 'branch_id') && $branchId) {
+                $orderData['branch_id'] = $branchId;
+            }
+
+            $order = Order::create($orderData);
 
             $itemCount = random_int(1, 3);
             $subtotal = 0;

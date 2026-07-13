@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Models\Address;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
 use App\Models\Branch;
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -15,13 +16,14 @@ use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
 use App\Support\ShippingFee;
-use App\Support\ScheduledDelivery;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\ScheduledDelivery;
 use Throwable;
 
 class CheckoutController extends Controller
@@ -64,18 +66,69 @@ class CheckoutController extends Controller
         $shippingDistanceOptions = ShippingFee::distanceOptions();
         $shippingMethods = ShippingFee::methods();
         $paymentOptions = $this->paymentOptions();
-        $locationReadyBranchCount = Branch::query()->availableForLocation()->count();
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
-        $checkoutAddresses = auth()->user()->addresses()->orderByDesc('is_default')->orderBy('id')->get()->map(fn ($address) => [
-            'id' => (string) $address->id,
-            'name' => $address->receiver_name,
-            'phone' => $address->phone,
-            'street' => $address->detail,
-            'area' => collect([$address->ward, $address->district, $address->province])->filter()->implode(', '),
-            'type' => $address->label,
-            'isDefault' => (bool) $address->is_default,
-        ])->values();
+        $branches = Branch::where('status', true)
+            ->orderBy('name')
+            ->get();
+        
+        $user = auth()->user();
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user);
+        
+        // Get user coordinates for distance calculation
+        $userLatitude = $user->latitude;
+        $userLongitude = $user->longitude;
+        
+        if ($userLatitude !== null && $userLongitude !== null) {
+            $branches = $branches
+                ->map(function (Branch $branch) use ($userLatitude, $userLongitude) {
+                    $hasCoordinates = $branch->latitude !== null && $branch->longitude !== null;
+
+                    return [
+                        'branch' => $branch,
+                        'distance' => $hasCoordinates
+                            ? $branch->distanceTo((float) $userLatitude, (float) $userLongitude)
+                            : null,
+                        'hasCoordinates' => $hasCoordinates,
+                    ];
+                })
+                ->sort(function (array $a, array $b) {
+                    if ($a['hasCoordinates'] && ! $b['hasCoordinates']) {
+                        return -1;
+                    }
+
+                    if (! $a['hasCoordinates'] && $b['hasCoordinates']) {
+                        return 1;
+                    }
+
+                    if ($a['distance'] === null && $b['distance'] === null) {
+                        return strcmp($a['branch']->name, $b['branch']->name);
+                    }
+
+                    if ($a['distance'] === null) {
+                        return 1;
+                    }
+
+                    if ($b['distance'] === null) {
+                        return -1;
+                    }
+
+                    return $a['distance'] <=> $b['distance'];
+                })
+                ->pluck('branch')
+                ->values();
+        }
+
+        // Prepare branch data as JSON for location-based sorting in frontend
+        $branchesJson = $branches->map(function ($b) {
+            return [
+                'id' => $b->id,
+                'name' => $b->name,
+                'address' => $b->address,
+                'latitude' => $b->latitude,
+                'longitude' => $b->longitude,
+            ];
+        })->values();
         $now = now();
         $availableVouchers = Voucher::query()
             ->where('status', true)
@@ -103,10 +156,14 @@ class CheckoutController extends Controller
             'shippingMethods',
             'paymentOptions',
             'availableVouchers',
-            'locationReadyBranchCount',
             'loyaltyContext',
             'subtotal',
-            'checkoutAddresses'
+            'addressBook',
+            'selectedAddressId',
+            'branches',
+            'branchesJson',
+            'userLatitude',
+            'userLongitude'
         ));
     }
 
@@ -121,6 +178,10 @@ class CheckoutController extends Controller
                 'scheduled_delivery_time' => $request->input('scheduled_at'),
             ]);
         }
+        
+        if (! $request->filled('fulfillment_type') && in_array($request->input('delivery_type'), ['delivery', 'pickup'], true)) {
+            $request->merge(['fulfillment_type' => $request->input('delivery_type'), 'delivery_type' => 'now']);
+        }
 
         $request->validate([
             'payment_method' => [
@@ -133,13 +194,12 @@ class CheckoutController extends Controller
                 },
             ],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => ['required', 'string', 'max:255'],
+            'shipping_address_ui' => ['required_if:fulfillment_type,delivery', 'nullable', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
-            'branch_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
-            ],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
+            'branch_id' => ['required', 'integer', 'exists:branches,id'],
             'voucher_code' => 'nullable|string|max:50',
             'shipping_voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
@@ -153,13 +213,15 @@ class CheckoutController extends Controller
                 },
             ],
         ], [
-            'shipping_address_ui.required' => 'Vui lòng nhập địa chỉ nhận hàng.',
+            'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ nhận hàng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
-            'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
-            'branch_id.exists' => 'Chi nhánh đã chọn không còn hoạt động. Vui lòng tìm lại chi nhánh gần nhất.',
+            'fulfillment_type.required' => 'Vui lòng chọn phương thức nhận hàng.',
+            'fulfillment_type.in' => 'Phương thức nhận hàng không hợp lệ.',
+            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
         ]);
 
         $fullCart = session()->get('cart', []);
@@ -182,24 +244,46 @@ class CheckoutController extends Controller
 
             $orderItems = $this->prepareOrderItems($cart);
             $subtotal = collect($orderItems)->sum('total_price');
+            $fulfillmentType = $request->input('fulfillment_type', 'delivery');
 
-            $shippingQuote = ShippingFee::quoteForAddress(
-                $request->shipping_address_ui,
-                $request->shipping_area_ui,
-                $request->shipping_method_ui
-            );
-            [$voucher, $orderDiscount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal, false);
-            [$shippingVoucher, $rawShippingDiscount] = $this->resolveVoucher($request->input('shipping_voucher_code'), $subtotal, true);
-            $shippingDiscount = min((int) $shippingQuote['total_fee'], $rawShippingDiscount);
-            $discount = $orderDiscount + $shippingDiscount;
-            $grandTotal = max(0, $subtotal + $shippingQuote['total_fee'] - $discount);
+            // Branch_id is always required and comes from user selection
+            $branchId = $request->input('branch_id');
+
+            // Handle shipping fee based on delivery type
+            if ($fulfillmentType === 'pickup') {
+                $shippingFee = 0;
+            } else {
+                $lat = $request->input('latitude');
+                $lng = $request->input('longitude');
+                $branch = Branch::find($branchId);
+
+                if ($lat !== null && $lng !== null && $branch && $branch->latitude !== null && $branch->longitude !== null) {
+                    $distance = $branch->distanceTo((float) $lat, (float) $lng);
+                    $shippingQuote = ShippingFee::calculate($distance, $request->shipping_method_ui);
+                    $shippingFee = $shippingQuote['total_fee'];
+                } else {
+                    $shippingQuote = ShippingFee::quoteForAddress(
+                        $request->shipping_address_ui,
+                        $request->shipping_area_ui,
+                        $request->shipping_method_ui
+                    );
+                    $shippingFee = $shippingQuote['total_fee'];
+                }
+            }
+
+            [$voucher, $discount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal);
+            $shippingVoucher = null;
+            $shippingDiscount = 0;
+            $grandTotal = max(0, $subtotal + $shippingFee - $discount);
             $addressText = trim(collect([
                 $request->shipping_address_ui,
                 $request->shipping_area_ui,
             ])->filter()->implode(', '));
+            $distanceText = isset($distance) ? sprintf('khoảng cách %.1f km', $distance) : 'phí cố định';
             $shippingNote = sprintf(
-                'Giao hàng: phí cố định %s%s',
-                ShippingFee::formatCurrency($shippingQuote['total_fee']),
+                'Giao hàng: %s, phí %s%s',
+                $distanceText,
+                ShippingFee::formatCurrency($shippingFee),
                 $addressText ? ", địa chỉ: {$addressText}" : ''
             );
             $note = trim((string) $request->note);
@@ -210,18 +294,15 @@ class CheckoutController extends Controller
             $orderData = [
                 'user_id' => auth()->id(),
                 'payment_method' => $request->payment_method,
+                'fulfillment_type' => $fulfillmentType,
+                'branch_id' => $branchId,
                 'status' => 'pending',
                 'note' => $note,
                 'delivery_type' => $request->input('delivery_type', 'now'),
-                'fulfillment_type' => 'delivery',
                 'scheduled_delivery_time' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
                 'scheduled_at' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
                 'delivery_note' => $request->input('delivery_note'),
             ];
-
-            if (Schema::hasColumn('orders', 'branch_id') && $request->filled('branch_id')) {
-                $orderData['branch_id'] = (int) $request->input('branch_id');
-            }
 
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
@@ -232,7 +313,7 @@ class CheckoutController extends Controller
             }
 
             if (Schema::hasColumn('orders', 'shipping_fee')) {
-                $orderData['shipping_fee'] = $shippingQuote['total_fee'];
+                $orderData['shipping_fee'] = $shippingFee;
             }
 
             if (Schema::hasColumn('orders', 'discount')) {
@@ -343,7 +424,201 @@ class CheckoutController extends Controller
         return view('client.checkout.success', $payload);
     }
 
-    protected function resolveVoucher(?string $code, int $subtotal, ?bool $expectShipping = null): array
+    protected function checkoutAddressBook($user): array
+    {
+        $savedAddresses = Schema::hasTable('addresses')
+            ? $user->addresses()->orderByDesc('is_default')->orderBy('id')->get()
+            : collect();
+
+        $defaultSavedAddress = $savedAddresses->firstWhere('is_default', true);
+        $selectedAddressId = $defaultSavedAddress ? 'address-' . $defaultSavedAddress->id : 'primary';
+
+        $addressBook = collect([
+            $this->checkoutPrimaryAddressPayload($user, ! $defaultSavedAddress),
+        ])->merge(
+            $savedAddresses->map(fn (Address $address) => $this->checkoutAddressPayload($address))
+        )->values()->all();
+
+        return [$addressBook, $selectedAddressId];
+    }
+
+    protected function checkoutPrimaryAddressPayload($user, bool $isDefault = true): array
+    {
+        return [
+            'id' => 'primary',
+            'name' => trim((string) ($user->name ?? '')) ?: 'Chưa cập nhật',
+            'phone' => trim((string) ($user->phone ?? '')) ?: 'Chưa cập nhật',
+            'street' => trim((string) ($user->address ?? '')),
+            'area' => trim((string) ($user->area ?? '')),
+            'latitude' => $user->latitude,
+            'longitude' => $user->longitude,
+            'type' => 'Nhà Riêng',
+            'isDefault' => $isDefault,
+            'source' => 'primary',
+        ];
+    }
+
+    protected function checkoutAddressPayload(Address $address): array
+    {
+        $area = collect([
+            $address->ward,
+            $address->district,
+            $address->province,
+        ])->filter()->implode(', ');
+
+        return [
+            'id' => 'address-' . $address->id,
+            'name' => trim((string) ($address->receiver_name ?? '')) ?: 'Chưa cập nhật',
+            'phone' => trim((string) ($address->phone ?? '')) ?: 'Chưa cập nhật',
+            'street' => trim((string) ($address->detail ?? '')),
+            'area' => trim($area),
+            'latitude' => $address->latitude,
+            'longitude' => $address->longitude,
+            'type' => trim((string) ($address->label ?? 'Nhà')) ?: 'Nhà',
+            'isDefault' => (bool) $address->is_default,
+            'source' => 'saved',
+        ];
+    }
+
+    protected function normalizeNullableString(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    public function updatePrimaryAddress(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'is_default' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+        $user->forceFill([
+            'name' => trim((string) $validated['name']),
+            'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+            'address' => $this->normalizeNullableString($validated['street'] ?? null),
+            'area' => $this->normalizeNullableString($validated['area'] ?? null),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+        ])->save();
+
+        if ($request->boolean('is_default') && Schema::hasTable('addresses')) {
+            Address::query()
+                ->where('user_id', $user->id)
+                ->update(['is_default' => false]);
+        }
+
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user->fresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã lưu địa chỉ chính.',
+            'address' => $this->checkoutPrimaryAddressPayload($user->fresh()),
+            'address_book' => $addressBook,
+            'selected_address_id' => $selectedAddressId,
+        ]);
+    }
+
+    public function storeAddress(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'label' => ['nullable', 'string', 'max:100'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'is_default' => ['nullable', 'boolean'],
+        ]);
+
+        $user = $request->user();
+
+        if ($request->boolean('is_default')) {
+            Address::query()
+                ->where('user_id', $user->id)
+                ->update(['is_default' => false]);
+        }
+
+        $address = Address::create([
+            'user_id' => $user->id,
+            'label' => trim((string) ($validated['label'] ?? 'Nhà')) ?: 'Nhà',
+            'receiver_name' => trim((string) $validated['name']),
+            'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+            'province' => $this->normalizeNullableString($validated['area'] ?? null),
+            'district' => null,
+            'ward' => null,
+            'detail' => $this->normalizeNullableString($validated['street'] ?? null),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+            'is_default' => $request->boolean('is_default'),
+        ]);
+
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user->fresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã lưu địa chỉ mới.',
+            'address' => $this->checkoutAddressPayload($address),
+            'address_book' => $addressBook,
+            'selected_address_id' => $selectedAddressId,
+        ]);
+    }
+
+    public function updateAddress(Request $request, Address $address): JsonResponse
+    {
+        abort_unless($address->user_id === $request->user()->id, 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'area' => ['nullable', 'string', 'max:255'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'label' => ['nullable', 'string', 'max:100'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'is_default' => ['nullable', 'boolean'],
+        ]);
+
+        if ($request->boolean('is_default')) {
+            Address::query()
+                ->where('user_id', $request->user()->id)
+                ->where('id', '!=', $address->id)
+                ->update(['is_default' => false]);
+        }
+
+        $address->fill([
+            'label' => trim((string) ($validated['label'] ?? $address->label ?: 'Nhà')) ?: 'Nhà',
+            'receiver_name' => trim((string) $validated['name']),
+            'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+            'province' => $this->normalizeNullableString($validated['area'] ?? null),
+            'district' => null,
+            'ward' => null,
+            'detail' => $this->normalizeNullableString($validated['street'] ?? null),
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+            'is_default' => $request->boolean('is_default'),
+        ])->save();
+
+        [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($request->user()->fresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã cập nhật địa chỉ.',
+            'address' => $this->checkoutAddressPayload($address->fresh()),
+            'address_book' => $addressBook,
+            'selected_address_id' => $selectedAddressId,
+        ]);
+    }
+
+    protected function resolveVoucher(?string $code, int $subtotal): array
     {
         $code = strtoupper(trim((string) $code));
 

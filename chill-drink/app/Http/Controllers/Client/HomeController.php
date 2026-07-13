@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+
+use App\Models\Product;
 use App\Models\Category;
 use App\Models\Favorite;
-use App\Models\Product;
+use Illuminate\Http\Request;
 
 class HomeController extends Controller
 {

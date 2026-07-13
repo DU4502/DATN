@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\BranchController;
+use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GroupOrderController as AdminGroupOrderController;
@@ -10,6 +12,7 @@ use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
@@ -73,8 +76,9 @@ Broadcast::routes(['middleware' => ['web', 'auth']]);
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-    Route::post('/checkout/addresses', [AddressController::class, 'store'])->name('checkout.addresses.store');
-    Route::put('/checkout/addresses/{address}', [AddressController::class, 'update'])->name('checkout.addresses.update');
+    Route::post('/checkout/addresses', [CheckoutController::class, 'storeAddress'])->name('checkout.addresses.store');
+    Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->name('checkout.addresses.update');
+    Route::patch('/checkout/address/primary', [CheckoutController::class, 'updatePrimaryAddress'])->name('checkout.addresses.primary.update');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
     Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
@@ -95,6 +99,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/taste-profile', [QuickOrderController::class, 'saveTaste'])->name('taste-profiles.store');
 });
 
+// Chat routes (client)
+Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
+    Route::get('/', [ChatController::class, 'getOrCreateConversation'])->name('index');
+    Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
+    Route::post('/send', [ChatController::class, 'send'])->name('send');
+});
+
+// Chat routes (admin/cskh)
+Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->group(function () {
+    Route::get('/', [AdminChatController::class, 'index'])->name('index');
+    Route::get('/{conversation}/messages', [AdminChatController::class, 'messages'])->name('messages');
+    Route::get('/{conversation}', [AdminChatController::class, 'show'])->name('show');
+    Route::post('/{conversation}/reply', [AdminChatController::class, 'reply'])->name('reply');
+    Route::patch('/{conversation}/close', [AdminChatController::class, 'close'])->name('close');
+});
+
 /*
 |--------------------------------------------------------------------------
 | User Profile Routes
@@ -109,6 +129,10 @@ Route::middleware('auth')->group(function () {
 
         if (auth()->user()->isAdmin()) {
             return redirect()->route('admin.dashboard');
+        }
+
+        if (auth()->user()->isCskh()) {
+            return redirect()->route('admin.chat.index');
         }
 
         return view('dashboard');
@@ -131,6 +155,15 @@ Route::middleware('auth')->group(function () {
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->group(function () {
     Route::get('/super-admin', [SuperAdminController::class, 'index'])->name('super-admin');
     Route::post('/super-admin/admins', [SuperAdminController::class, 'storeAdmin'])->name('super-admin.admins.store');
+    Route::patch('/super-admin/admins/{user}/branch', [SuperAdminController::class, 'updateBranch'])->name('super-admin.update-branch');
+    Route::patch('/super-admin/admins/{user}/role', [SuperAdminController::class, 'updateRole'])->name('super-admin.update-role');
+    
+    // Branch Management
+    Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
+    Route::post('/branches', [BranchController::class, 'store'])->name('branches.store');
+    Route::put('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+    Route::delete('/branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+    Route::patch('/branches/{branch}/status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -168,3 +201,4 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 });
 
 require __DIR__.'/auth.php';
+

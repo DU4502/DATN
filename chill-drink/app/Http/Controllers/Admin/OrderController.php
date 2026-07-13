@@ -13,6 +13,23 @@ use Illuminate\Support\Facades\Schema;
 class OrderController extends Controller
 {
     /**
+     * Apply branch scope to a query based on current user's role and branch
+     * Super Admin sees all orders, Admin sees only their branch's orders
+     */
+    private function applyBranchScope($query)
+    {
+        $user = auth()->user();
+        
+        // Super Admin (role_id = 3) can see all orders
+        if ($user->isSuperAdmin()) {
+            return $query;
+        }
+        
+        // Regular Admin (role_id = 2) can only see their branch's orders
+        return $query->where('branch_id', $user->branch_id);
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
@@ -20,6 +37,8 @@ class OrderController extends Controller
         $filters = [
             'q' => trim((string) $request->query('q', '')),
             'status' => trim((string) $request->query('status', '')),
+            'payment_status' => trim((string) $request->query('payment_status', '')),
+            'payment_method' => trim((string) $request->query('payment_method', '')),
             'date_from' => trim((string) $request->query('date_from', '')),
             'date_to' => trim((string) $request->query('date_to', '')),
             'delivery' => trim((string) $request->query('delivery', '')),
@@ -28,15 +47,15 @@ class OrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'orderItems'])
+            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword = $filters['q'];
-                
+
                 // Remove # prefix if exists
                 $cleanKeyword = ltrim($keyword, '#');
-                
+
                 $query->where(function ($subQuery) use ($keyword, $cleanKeyword) {
                     // Search by order ID (with or without #)
                     if (is_numeric($cleanKeyword)) {
@@ -54,14 +73,22 @@ class OrderController extends Controller
             ->when(isset($statusOptions[$filters['status']]) && $filters['status'] !== '', function ($query) use ($filters) {
                 $query->where('status', $filters['status']);
             })
+            ->when($filters['payment_status'] !== '', function ($query) use ($filters) {
+                $query->where('payment_status', $filters['payment_status']);
+            })
+            ->when($filters['payment_method'] !== '', function ($query) use ($filters) {
+                $query->where('payment_method', $filters['payment_method']);
+            })
             ->when($filters['delivery'] !== '', function ($query) use ($filters) {
-                match ($filters['delivery']) {
-                    'now' => $query->where('delivery_type', 'now'),
-                    'scheduled' => $query->where('delivery_type', 'scheduled'),
-                    'today' => $query->where('delivery_type', 'scheduled')->whereDate('scheduled_delivery_time', today()),
-                    'upcoming' => $query->where('delivery_type', 'scheduled')->whereBetween('scheduled_delivery_time', [now(), now()->addHours(2)]),
-                    default => $query,
-                };
+                $query->where(function ($query) use ($filters) {
+                    match ($filters['delivery']) {
+                        'now' => $query->where('delivery_type', 'now'),
+                        'scheduled' => $query->where('delivery_type', 'scheduled'),
+                        'today' => $query->where('delivery_type', 'scheduled')->whereDate('scheduled_delivery_time', today()),
+                        'upcoming' => $query->where('delivery_type', 'scheduled')->whereBetween('scheduled_delivery_time', [now(), now()->addHours(2)]),
+                        default => $query,
+                    };
+                });
             });
 
         if (Schema::hasColumn('orders', 'created_at')) {
@@ -77,12 +104,18 @@ class OrderController extends Controller
             }
         }
 
+        // Apply branch scope based on user role
+        $orders = $this->applyBranchScope($orders);
+
         $orders = Schema::hasColumn('orders', 'created_at')
             ? $orders->latest()
             : $orders->orderByDesc('id');
 
         $orders = $orders->paginate(12)->withQueryString();
-        $latestOrderId = (int) (Order::query()->max('id') ?? 0);
+        
+        $latestOrderQuery = Order::query();
+        $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
+        $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
 
         return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId'));
     }
@@ -92,44 +125,99 @@ class OrderController extends Controller
         $afterId = max(0, (int) $request->query('after_id', 0));
 
         $orders = Order::query()
-            ->with('user')
+            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
-            ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId))
+            ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId));
+        
+        // Apply branch scope
+        $orders = $this->applyBranchScope($orders);
+        
+        $orders = $orders
             ->orderByDesc('id')
             ->limit(20)
             ->get()
             ->map(fn (Order $order) => $this->orderBroadcastPayload($order))
             ->values();
 
+        $latestOrderQuery = Order::query();
+        $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
+        $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
+
         return response()->json([
             'orders' => $orders,
-            'latest_id' => (int) (Order::query()->max('id') ?? 0),
+            'latest_id' => $latestOrderId,
         ]);
     }
 
     private function orderBroadcastPayload(Order $order): array
     {
-        $customerName = $order->user->name ?? 'Khách hàng';
+        $customerName = $order->customerName() ?: 'Khách hàng';
+        $customerEmail = $order->customerEmail() ?: '';
+        $customerPhone = $order->customerPhone() ?: '';
         $total = (int) ($order->total ?? $order->total_price ?? 0);
 
         return [
             'order_id' => $order->id,
+            'branch_name' => $order->branch?->name ?? 'Chưa gán',
             'customer_name' => $customerName,
-            'customer_email' => $order->user->email ?? '',
+            'customer_email' => $customerEmail,
+            'customer_phone' => $customerPhone,
+            'note' => $order->note ?? '',
             'total' => $total,
             'total_formatted' => number_format($total, 0, ',', '.').'đ',
+            'subtotal_formatted' => number_format((int) ($order->subtotal ?? 0), 0, ',', '.').'đ',
+            'shipping_fee_formatted' => number_format((int) ($order->shipping_fee ?? 0), 0, ',', '.').'đ',
+            'discount_formatted' => number_format((int) ($order->discount ?? 0), 0, ',', '.').'đ',
             'payment_method' => $order->payment_method,
             'payment_status' => $order->payment_status,
+            'payment_method_label' => $this->paymentMethodLabel($order->payment_method),
+            'payment_status_label' => $this->paymentStatusLabel($order->payment_status),
+            'shipping_address' => $order->getShippingAddress(),
             'status' => $order->status,
             'status_label' => OrderStatus::label((string) $order->status),
-            'status_options' => OrderStatus::selectableOptions((string) $order->status),
+            'next_status' => OrderStatus::nextStatus((string) $order->status),
+            'can_cancel' => ! in_array(OrderStatus::normalize((string) $order->status), [OrderStatus::COMPLETED, OrderStatus::CANCELLED], true),
+            'status_options' => OrderStatus::stepwiseOptions((string) $order->status),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
             'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'delivery_type' => $order->delivery_type,
             'delivery_note' => $order->delivery_note,
+            'scheduled_delivery_time' => $order->scheduled_delivery_time?->format('H:i · d/m/Y'),
             'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
             'status_update_url' => route('admin.orders.updateStatus', $order->id),
+            'items' => $order->orderItems->map(fn ($item) => [
+                'product_name' => $item->product?->name ?? 'Sản phẩm đã xóa',
+                'image_url' => $item->product?->image_url,
+                'size_name' => $item->productSize?->size?->name ?? 'Chưa chọn',
+                'ice_level' => (int) $item->ice_level,
+                'sugar_level' => (int) $item->sugar_level,
+                'quantity' => (int) $item->quantity,
+                'unit_price' => (int) $item->unit_price,
+                'unit_price_formatted' => number_format((int) $item->unit_price, 0, ',', '.') . 'đ',
+                'total_formatted' => number_format((int) $item->getSubtotal(), 0, ',', '.') . 'đ',
+            ])->toArray(),
         ];
+    }
+
+    private function paymentMethodLabel(?string $method): string
+    {
+        return [
+            'cod' => 'COD',
+            'bank_transfer' => 'Chuyển khoản',
+            'vnpay' => 'VNPay',
+            'momo' => 'MoMo',
+            'card' => 'Thẻ',
+            'wallet' => 'Ví điện tử',
+        ][$method ?? ''] ?? ucfirst((string) $method);
+    }
+
+    private function paymentStatusLabel(?string $status): string
+    {
+        return [
+            'pending' => 'Chưa thanh toán',
+            'paid' => 'Đã thanh toán',
+            'failed' => 'Thất bại',
+        ][$status ?? ''] ?? ucfirst((string) $status);
     }
 
     /**
@@ -162,10 +250,17 @@ class OrderController extends Controller
         ]);
 
         $order = Order::findOrFail($id);
+        
+        // Check if current user (Admin) can access this order's branch
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() && $order->branch_id !== $user->branch_id) {
+            abort(403, 'Không có quyền cập nhật đơn hàng của chi nhánh khác.');
+        }
+
         $newStatus = OrderStatus::normalize($request->status);
 
-        if (! OrderStatus::canTransition((string) $order->status, $newStatus)) {
-            return redirect()->back()->with('error', 'Không thể quay lại trạng thái trước.');
+        if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus)) {
+            return redirect()->back()->with('error', 'Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn.');
         }
 
         $order->status = $newStatus;

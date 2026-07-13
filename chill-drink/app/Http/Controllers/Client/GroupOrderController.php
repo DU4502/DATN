@@ -227,27 +227,52 @@ class GroupOrderController extends Controller
 
     public function close(string $code)
     {
-        abort_if(session()->has('checkout_group_order_id'), 422, 'Bạn đang có một đơn nhóm chờ thanh toán. Hãy hoàn tất hoặc hủy đơn đó trước.');
-        $group = DB::transaction(function () use ($code) {
-            $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
-            abort_unless($group->owner_id === auth()->id(), 403);
-            abort_if($group->status !== 'open', 422, 'Đơn nhóm đã được chốt hoặc hủy trước đó.');
-            $group->load(['items.product.category', 'items.member']);
-            abort_if($group->items->isEmpty(), 422, 'Chưa có món nào trong đơn nhóm.');
+        if (session()->has('checkout_group_order_id')) {
+            return back()->with('error', 'Bạn đang có một đơn nhóm chờ thanh toán. Hãy hoàn tất hoặc hủy đơn đó trước.');
+        }
 
-            foreach ($group->items->groupBy('product_id') as $productItems) {
-                $product = Product::whereKey($productItems->first()->product_id)->lockForUpdate()->first();
-                abort_unless($product && $product->status, 422, 'Có sản phẩm đã ngừng bán. Vui lòng xóa khỏi đơn.');
-                abort_if($productItems->sum('quantity') > (int) $product->stock, 422, "{$product->name} không đủ tồn kho.");
-                foreach ($productItems as $item) {
-                    $item->update(['unit_price' => $this->currentPrice($product, $item->size, $item->toppings ?? [])]);
+        $group = GroupOrder::where('code', $code)->firstOrFail();
+        if ($group->owner_id !== auth()->id()) {
+            abort(403);
+        }
+
+        if ($group->status !== 'open') {
+            return back()->with('error', 'Đơn nhóm đã được chốt hoặc hủy trước đó.');
+        }
+
+        if ($group->items()->count() === 0) {
+            return back()->with('error', 'Chưa có món nào trong đơn nhóm.');
+        }
+
+        try {
+            $group = DB::transaction(function () use ($group) {
+                $lockedGroup = GroupOrder::lockForUpdate()->findOrFail($group->id);
+                $lockedGroup->load(['items.product.category', 'items.member']);
+
+                if ($lockedGroup->items->isEmpty()) {
+                    throw new \Exception('Chưa có món nào trong đơn nhóm.');
                 }
-            }
 
-            $group->update(['status' => 'closed', 'locked_at' => now()]);
-            $group->refresh()->load(['items.product.category', 'items.member']);
-            return $group;
-        });
+                foreach ($lockedGroup->items->groupBy('product_id') as $productItems) {
+                    $product = Product::whereKey($productItems->first()->product_id)->lockForUpdate()->first();
+                    if (!$product || !$product->status) {
+                        throw new \Exception('Có sản phẩm đã ngừng bán. Vui lòng xóa khỏi đơn.');
+                    }
+                    if ($productItems->sum('quantity') > (int) $product->stock) {
+                        throw new \Exception("Sản phẩm {$product->name} không đủ tồn kho.");
+                    }
+                    foreach ($productItems as $item) {
+                        $item->update(['unit_price' => $this->currentPrice($product, $item->size, $item->toppings ?? [])]);
+                    }
+                }
+
+                $lockedGroup->update(['status' => 'closed', 'locked_at' => now()]);
+                $lockedGroup->refresh()->load(['items.product.category', 'items.member']);
+                return $lockedGroup;
+            });
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         $this->activateGroupCart($group);
 
@@ -275,10 +300,14 @@ class GroupOrderController extends Controller
 
     public function resume(string $code)
     {
-        abort_if(session()->has('checkout_group_order_id'), 422, 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
+        if (session()->has('checkout_group_order_id')) {
+            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
+        }
         $group = GroupOrder::with(['items.product.category', 'items.member'])->where('code', $code)->firstOrFail();
         abort_unless($group->owner_id === auth()->id() && $group->status === 'closed' && ! $group->order_id, 403);
-        abort_if($group->items->isEmpty(), 422, 'Đơn nhóm không có món để thanh toán.');
+        if ($group->items->isEmpty()) {
+            return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
+        }
         $this->activateGroupCart($group);
         return redirect()->route('cart.index')->with('success', 'Đã khôi phục giỏ hàng đơn nhóm.');
     }

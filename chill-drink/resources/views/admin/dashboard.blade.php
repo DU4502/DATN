@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
 
 @section('page-title', 'Tổng quát hệ thống')
 @section('search-placeholder', 'Tìm báo cáo, đơn hàng...')
@@ -326,18 +326,23 @@
 @php
 $initialPeriodLabel = $selectedPeriodStat['label'] ?? 'Hôm nay';
 $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
+$dashboardQueryBase = $dashboardBranch ? ['branch_id' => $dashboardBranch->id] : [];
+$dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name : 'cửa hàng';
 @endphp
 
 <div class="dashboard-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
     <div>
         <h2 class="h3 fw-bold mb-1">Hi, Admin 👋</h2>
-        <p id="dashboard-summary-text" class="text-secondary mb-0">Đây là hoạt động kinh doanh {{ $initialPeriodLabelLower }} của cửa hàng.</p>
+        <p id="dashboard-summary-text" class="text-secondary mb-0">Đây là hoạt động kinh doanh {{ $initialPeriodLabelLower }} của {{ $dashboardScopeLabel }}.</p>
+        @if($dashboardBranch)
+            <span class="badge text-bg-light border mt-2">Đang xem: {{ $dashboardBranch->name }} ({{ $dashboardBranch->code }})</span>
+        @endif
     </div>
     <div class="period-segmented-control">
-        <a href="{{ route('admin.dashboard', ['period' => 'today']) }}" data-period="today" class="period-segment text-decoration-none {{ $selectedPeriod === 'today' ? 'active' : '' }}">Hôm nay</a>
-        <a href="{{ route('admin.dashboard', ['period' => 'week']) }}" data-period="week" class="period-segment text-decoration-none {{ $selectedPeriod === 'week' ? 'active' : '' }}">Tuần này</a>
-        <a href="{{ route('admin.dashboard', ['period' => 'month']) }}" data-period="month" class="period-segment text-decoration-none {{ $selectedPeriod === 'month' ? 'active' : '' }}">Tháng này</a>
-        <a href="{{ route('admin.dashboard', ['period' => 'year']) }}" data-period="year" class="period-segment text-decoration-none {{ $selectedPeriod === 'year' ? 'active' : '' }}">Năm nay</a>
+        <a href="{{ route('admin.dashboard', array_merge($dashboardQueryBase, ['period' => 'today'])) }}" data-period="today" class="period-segment text-decoration-none {{ $selectedPeriod === 'today' ? 'active' : '' }}">Hôm nay</a>
+        <a href="{{ route('admin.dashboard', array_merge($dashboardQueryBase, ['period' => 'week'])) }}" data-period="week" class="period-segment text-decoration-none {{ $selectedPeriod === 'week' ? 'active' : '' }}">Tuần này</a>
+        <a href="{{ route('admin.dashboard', array_merge($dashboardQueryBase, ['period' => 'month'])) }}" data-period="month" class="period-segment text-decoration-none {{ $selectedPeriod === 'month' ? 'active' : '' }}">Tháng này</a>
+        <a href="{{ route('admin.dashboard', array_merge($dashboardQueryBase, ['period' => 'year'])) }}" data-period="year" class="period-segment text-decoration-none {{ $selectedPeriod === 'year' ? 'active' : '' }}">Năm nay</a>
     </div>
 </div>
 
@@ -568,6 +573,8 @@ $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         let chartDatasets = @json($chartDatasets ?? []);
+        const dashboardBranchId = @json($dashboardBranch?->id);
+        const dashboardScopeLabel = @json($dashboardScopeLabel);
         // Period links (AJAX)
         const periodLinks = Array.from(document.querySelectorAll('.period-segment'));
 
@@ -639,7 +646,7 @@ $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
             if (ordersLabel && data.selectedPeriodStat && data.selectedPeriodStat.label) ordersLabel.textContent = data.selectedPeriodStat.label;
             if (summaryText && data.selectedPeriodStat && data.selectedPeriodStat.label) {
                 const lowerLabel = data.selectedPeriodStat.label.toLowerCase();
-                summaryText.textContent = `Đây là hoạt động kinh doanh ${lowerLabel} của cửa hàng.`;
+                summaryText.textContent = `Đây là hoạt động kinh doanh ${lowerLabel} của ${dashboardScopeLabel}.`;
             }
             if (revComp && data.comparisonLabel) revComp.textContent = data.comparisonLabel;
 
@@ -678,6 +685,11 @@ $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
             try {
                 const url = new URL(window.location.href);
                 url.searchParams.set('period', periodKey);
+                if (dashboardBranchId) {
+                    url.searchParams.set('branch_id', dashboardBranchId);
+                } else {
+                    url.searchParams.delete('branch_id');
+                }
                 window.history.replaceState({}, '', url.toString());
             } catch (error) {
                 console.warn('Không thể cập nhật URL period', error);
@@ -687,6 +699,7 @@ $initialPeriodLabelLower = \Illuminate\Support\Str::lower($initialPeriodLabel);
         const fetchDashboardData = (period) => {
             const url = new URL('/admin/dashboard/data', window.location.origin);
             if (period) url.searchParams.set('period', period);
+            if (dashboardBranchId) url.searchParams.set('branch_id', dashboardBranchId);
             return fetch(url.toString(), {
                     credentials: 'same-origin'
                 })
