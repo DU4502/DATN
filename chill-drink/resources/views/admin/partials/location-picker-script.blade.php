@@ -105,7 +105,7 @@
             { draggable: true }
         ).addTo(map);
 
-        const setCoordinates = (lat, lng, message = '') => {
+        const setCoordinates = (lat, lng, message = '', source = 'manual') => {
             const nextLat = Number.parseFloat(lat);
             const nextLng = Number.parseFloat(lng);
 
@@ -131,8 +131,10 @@
                 detail: {
                     latitude: nextLat,
                     longitude: nextLng,
+                    source,
                 },
             }));
+
         };
 
         marker.on('dragend', () => {
@@ -157,7 +159,7 @@
             }
 
             navigator.geolocation.getCurrentPosition((position) => {
-                setCoordinates(position.coords.latitude, position.coords.longitude, 'Đã lấy vị trí hiện tại. Bạn có thể kéo pin để chỉnh lại.');
+                setCoordinates(position.coords.latitude, position.coords.longitude, 'Đã lấy vị trí hiện tại. Bạn có thể kéo pin để chỉnh lại.', 'geolocation');
             }, () => {
                 if (statusEl) {
                     statusEl.textContent = 'Không thể lấy vị trí hiện tại. Hãy chọn trực tiếp trên bản đồ.';

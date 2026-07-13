@@ -9,9 +9,11 @@
     $defaultLat = $defaultLat ?? 16.047079;
     $defaultLng = $defaultLng ?? 108.206230;
     $defaultZoom = $defaultZoom ?? 5;
+    $autoFillAreaTarget = $autoFillAreaTarget ?? null;
+    $autoFillStreetTarget = $autoFillStreetTarget ?? null;
 @endphp
 
-<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}" data-address-target="{{ $addressTarget ?? '' }}">
+<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}" data-address-target="{{ $addressTarget ?? '' }}" @if($autoFillAreaTarget) data-auto-fill-area-target="{{ $autoFillAreaTarget }}" @endif @if($autoFillStreetTarget) data-auto-fill-street-target="{{ $autoFillStreetTarget }}" @endif>
     <div class="location-picker-head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <div>
             <div class="location-picker-label">{{ $label }}</div>
