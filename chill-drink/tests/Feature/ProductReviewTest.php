@@ -10,13 +10,13 @@ use App\Models\ProductSize;
 use App\Models\Review;
 use App\Models\Size;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ProductReviewTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_customer_with_completed_order_can_create_review(): void
     {

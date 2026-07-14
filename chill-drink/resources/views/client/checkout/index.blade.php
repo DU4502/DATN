@@ -975,13 +975,18 @@
                         <div class="d-flex align-items-center gap-3 mb-4">
                             <span class="checkout-step"><i class="bi bi-shop"></i></span>
                             <div>
-                                <h2 class="h4 fw-bold mb-1">Chọn chi nhánh</h2>
-                                <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn.</p>
+                                <h2 class="h4 fw-bold mb-1">Chi nhánh phục vụ gần bạn</h2>
+                                <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn hoặc để hệ thống gợi ý chi nhánh gần nhất.</p>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="branch_id" class="form-label fw-semibold">Chi nhánh <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                <label for="branch_id" class="form-label fw-semibold mb-0">Chi nhánh <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" data-find-nearest-branch>
+                                    <i class="bi bi-crosshair me-1"></i>Tìm chi nhánh gần nhất
+                                </button>
+                            </div>
                             <div class="branch-select-shell">
                                 <select id="branch_id" name="branch_id" class="form-select checkout-input @error('branch_id') is-invalid @enderror"
                                     data-branches='{{ json_encode($branchesJson ?? []) }}'
@@ -1158,11 +1163,11 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="now" @checked($deliveryType === 'now')><strong>Giao ngay</strong><span class="d-block text-secondary small ms-4">Xử lý ngay sau khi đặt hàng.</span></label></div>
-                            <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="scheduled" @checked($deliveryType === 'scheduled')><strong>Đặt giao sau</strong><span class="d-block text-secondary small ms-4">Chọn ngày giờ muốn nhận.</span></label></div>
+                            <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="scheduled" @checked($deliveryType === 'scheduled')><strong>Đặt giao sau</strong><span class="d-block text-secondary small ms-4">Chọn giờ nhận trong hôm nay.</span></label></div>
                         </div>
                         <div class="scheduled-delivery-fields {{ $deliveryType === 'scheduled' ? 'is-visible' : '' }} mb-3" data-scheduled-delivery-fields>
                             <label for="scheduled_delivery_time" class="form-label fw-semibold">Ngày và giờ nhận hàng</label>
-                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
+                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ today()->setTime(22, 0)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
                             @error('scheduled_delivery_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <div class="form-text">Chuẩn bị tối thiểu 30 phút · Nhận trong giờ mở cửa 07:00–22:00 · Tối đa 7 ngày.</div>
                             <label for="delivery_note" class="form-label fw-semibold mt-3">Ghi chú giao hàng</label>
@@ -1583,6 +1588,7 @@
 
         const addressStoreEndpoint = @json(route('checkout.addresses.store'));
         const addressUpdateEndpoint = @json(url('/checkout/addresses'));
+        const nearestBranchEndpoint = @json(route('api.branches.nearest'));
         const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
         const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
         const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
@@ -1945,6 +1951,47 @@
                 branchSelect.value = currentValue;
             }
         }
+
+        document.querySelector('[data-find-nearest-branch]')?.addEventListener('click', function () {
+            const button = this;
+            const branchSelect = document.getElementById('branch_id');
+
+            if (!branchSelect || !navigator.geolocation) {
+                showAddressToast('Trình duyệt không hỗ trợ lấy vị trí hiện tại.', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tìm';
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                confirmedLocation = { latitude, longitude };
+                renderBranchOptions(latitude, longitude);
+
+                if (!branchSelect.value) {
+                    const firstBranch = Array.from(branchSelect.options).find((option) => option.value);
+                    if (firstBranch) {
+                        branchSelect.value = firstBranch.value;
+                    }
+                }
+
+                updateShippingSummary();
+                showAddressToast('Đã gợi ý chi nhánh gần nhất.');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }, () => {
+                showAddressToast('Không thể lấy vị trí hiện tại. Vui lòng cho phép quyền vị trí hoặc chọn chi nhánh thủ công.', 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000,
+            });
+        });
 
         function syncAddressBook(payload) {
             if (Array.isArray(payload?.address_book)) {
