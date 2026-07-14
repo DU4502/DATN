@@ -4,32 +4,33 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
-    /**
-     * Run the migrations.
-     */
+return new class extends Migration {
     public function up(): void
     {
+        // Bảng này đã được tạo ở migration 2026_05_17_121831.
+        // Giữ guard để migrate:fresh hoạt động với cả database cũ lẫn mới.
+        if (Schema::hasTable('user_vouchers')) {
+            return;
+        }
+
         Schema::create('user_vouchers', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-            $table->foreignId('voucher_id')->constrained('coupons')->onDelete('cascade');
-            $table->string('guest_identifier')->nullable();
-            $table->timestamp('received_at')->useCurrent();
-            $table->timestamp('used_at')->nullable();
+            $table->integer('id')->autoIncrement();
+            $table->integer('user_id');
+            $table->integer('coupon_id');
+            $table->string('code', 100)->nullable()->comment('Mã voucher cụ thể nếu có');
+            $table->tinyInteger('is_used')->default(0)->comment('0: Chưa dùng, 1: Đã dùng');
+            $table->datetime('expires_at')->nullable()->comment('Ngày hết hạn sử dụng');
+            $table->datetime('redeemed_at')->nullable()->useCurrent()->comment('Ngày nhận/đổi voucher');
             $table->timestamps();
-            
-            // Add unique constraint for user + voucher
-            $table->unique(['user_id', 'voucher_id']);
+
+            // Khóa ngoại liên kết tới bảng users và coupons đã tạo trước đó
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('coupon_id')->references('id')->on('coupons')->onDelete('cascade');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('user_vouchers');
+        // Không xóa bảng thuộc migration 2026_05_17_121831 khi rollback migration tương thích này.
     }
 };

@@ -358,6 +358,29 @@
             width: clamp(200px, 22vw, 280px);
         }
 
+        .active-group-return {
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: .55rem;
+            padding: .45rem .8rem;
+            border: 1px solid #9edbce;
+            border-radius: 999px;
+            color: var(--c-primary-dark);
+            background: #e9f9f5;
+            font-size: .78rem;
+            font-weight: 800;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+        }
+
+        .active-group-return:hover { color: var(--c-primary-dark); background: #d9f5ee; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(13,147,115,.14); }
+        .active-group-return__time { min-width: 3.15rem; font-variant-numeric: tabular-nums; }
+        .active-group-return__members { display: inline-flex; align-items: center; gap: .25rem; padding-left: .5rem; border-left: 1px solid #acdcd1; }
+        .active-group-return.is-checkout { color: #92400e; border-color: #f6c76d; background: #fff8e8; }
+        .active-group-return.is-checkout:hover { color: #78350f; background: #ffefc7; }
+
         @media (min-width: 768px) {
             #clientNavbar.navbar-collapse {
                 display: flex !important;
@@ -424,6 +447,15 @@
             flex: 0 0 auto;
             font-size: 1.05rem;
             line-height: 1;
+        }
+
+        .favorite-nav-button.active,
+        .favorite-nav-button.active:hover,
+        .favorite-nav-button.active:focus {
+            border-color: var(--c-border);
+            color: #e83e5b;
+            background: var(--c-surface);
+            box-shadow: none;
         }
 
         .cart-bump {
@@ -1167,6 +1199,19 @@
                 </ul>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
+                    @if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*'))
+                        <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                            <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                            <span>Tiếp tục thanh toán</span>
+                        </a>
+                    @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
+                        <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
+                            <i class="bi bi-people-fill" aria-hidden="true"></i>
+                            <span class="d-none d-xl-inline">{{ $activeOwnedGroup->owner_id === auth()->id() ? 'Phòng đang mở' : 'Phòng đang tham gia' }}</span>
+                            <span class="active-group-return__time" data-active-group-countdown data-closes-at="{{ $activeOwnedGroup->closes_at->toIso8601String() }}">--:--</span>
+                            <span class="active-group-return__members" title="{{ $activeOwnedGroup->members_count }} thành viên"><i class="bi bi-person-fill" aria-hidden="true"></i>{{ $activeOwnedGroup->members_count }}</span>
+                        </a>
+                    @endif
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
                         <div class="position-relative flex-grow-1">
                             <i class="bi bi-search position-absolute" style="left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--c-subtle); font-size: 0.85rem;"></i>
@@ -1174,6 +1219,10 @@
                         </div>
                         <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Tìm</button>
                     </form>
+
+                    <a href="{{ auth()->check() ? route('favorites.index') : route('login') }}" class="btn btn-outline-secondary cart-button favorite-nav-button {{ request()->routeIs('favorites.*') ? 'active' : '' }}" aria-label="Món yêu thích" title="Món yêu thích">
+                        <i class="bi {{ request()->routeIs('favorites.*') ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
+                    </a>
 
                     <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng" data-cart-button>
                         <i class="bi bi-cart-plus" aria-hidden="true"></i>
@@ -1268,8 +1317,8 @@
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
                             <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
-                            @if(auth()->user()->isAdmin() || auth()->user()->isSuperAdmin())
-                                <li><a class="dropdown-item" href="{{ auth()->user()->isSuperAdmin() ? route('admin.super-admin') : route('admin.dashboard') }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
+                            @if(auth()->user()->isStaff())
+                                <li><a class="dropdown-item" href="{{ auth()->user()->isSuperAdmin() ? route('admin.super-admin') : (auth()->user()->isCskh() ? route('admin.chat.index') : route('admin.dashboard')) }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
                             @endif
                             <li>
                                 <hr class="dropdown-divider" style="margin: 0.25rem 0;">
@@ -1355,6 +1404,12 @@
         </div>
     </footer>
     @endunless
+
+    @auth
+        @if(auth()->user()->isCustomer())
+            @include('components.chatbox')
+        @endif
+    @endauth
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -1457,7 +1512,7 @@
                 form.classList.toggle('is-added', state === 'success');
                 submitter.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
 
-                const isIconButton = submitter.classList.contains('add-round') || submitter.getAttribute('aria-label') === 'Thêm vào giỏ';
+                const isIconButton = submitter.classList.contains('add-round') || submitter.classList.contains('product-cart-btn') || submitter.getAttribute('aria-label') === 'Thêm vào giỏ';
                 const hasText = submitter.textContent.trim().length > 0 && !isIconButton;
 
                 if (state === 'loading' && isIconButton) {
@@ -1699,6 +1754,26 @@
                     clearTimeout(dismissTimer);
                 });
             });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const activeGroupTimer = document.querySelector('[data-active-group-countdown]');
+            if (!activeGroupTimer) return;
+
+            const link = activeGroupTimer.closest('.active-group-return');
+            const closesAt = new Date(activeGroupTimer.dataset.closesAt).getTime();
+            const tick = function () {
+                const seconds = Math.max(0, Math.ceil((closesAt - Date.now()) / 1000));
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+                activeGroupTimer.textContent = hours > 0
+                    ? String(hours).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0')
+                    : String(minutes).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+                if (seconds === 0) link?.remove();
+            };
+            tick();
+            window.setInterval(tick, 1000);
         });
     </script>
     @include('partials.realtime')

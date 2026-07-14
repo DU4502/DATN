@@ -169,6 +169,78 @@
             });
         });
 
+        const addressTargetSelector = container.dataset.addressTarget;
+        const getAddressBtn = container.querySelector('[data-location-get-address]');
+
+        getAddressBtn?.addEventListener('click', async () => {
+            const lat = latInput.value;
+            const lng = lngInput.value;
+
+            if (!lat || !lng) {
+                if (statusEl) {
+                    statusEl.textContent = 'Vui lòng chọn vị trí trên bản đồ trước.';
+                }
+                return;
+            }
+
+            const selectors = addressTargetSelector ? addressTargetSelector.split(',') : [];
+            const streetInput = selectors[0] ? document.querySelector(selectors[0].trim()) : null;
+            const areaInput = selectors[1] ? document.querySelector(selectors[1].trim()) : null;
+
+            const originalText = getAddressBtn.innerHTML;
+            getAddressBtn.disabled = true;
+            getAddressBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Đang lấy...';
+
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`);
+                const data = await response.json();
+                
+                if (data && data.display_name) {
+                    if (streetInput && areaInput) {
+                        const address = data.address || {};
+                        const compactHelper = (parts) => parts.filter(Boolean).join(', ');
+                        
+                        const streetLine = compactHelper([
+                            address.house_number,
+                            address.road || address.pedestrian || address.footway,
+                            address.neighbourhood || address.suburb
+                        ]) || data.display_name || `${lat}, ${lng}`;
+
+                        const areaLine = compactHelper([
+                            address.quarter || address.ward || address.suburb || address.village,
+                            address.city_district || address.district || address.town,
+                            address.city || address.state
+                        ]) || data.display_name || `${lat}, ${lng}`;
+
+                        streetInput.value = streetLine;
+                        areaInput.value = areaLine;
+
+                        streetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        areaInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    } else if (streetInput) {
+                        streetInput.value = data.display_name;
+                        streetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    if (statusEl) {
+                        statusEl.textContent = 'Đã tự động lấy và điền địa chỉ thành công.';
+                    }
+                } else {
+                    if (statusEl) {
+                        statusEl.textContent = 'Không tìm thấy địa chỉ cho tọa độ này.';
+                    }
+                }
+            } catch (error) {
+                console.error('Lỗi khi gọi Nominatim reverse geocode:', error);
+                if (statusEl) {
+                    statusEl.textContent = 'Có lỗi xảy ra khi lấy địa chỉ.';
+                }
+            } finally {
+                getAddressBtn.disabled = false;
+                getAddressBtn.innerHTML = originalText;
+            }
+        });
+
         if (Number.isFinite(initialLat) && Number.isFinite(initialLng)) {
             setCoordinates(initialLat, initialLng, 'Đã tải vị trí đã lưu.');
         } else if (statusEl) {

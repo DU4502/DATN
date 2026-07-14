@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Favorite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -50,7 +51,11 @@ class CartController extends Controller
             ->limit(4)
             ->get();
 
-        return view('client.cart.index', compact('cart', 'suggestions'));
+        $favoriteProductIds = auth()->check()
+            ? Favorite::where('user_id', auth()->id())->pluck('product_id')
+            : collect();
+
+        return view('client.cart.index', compact('cart', 'suggestions', 'favoriteProductIds'));
     }
 
     private function cartPayload(string $message): array
@@ -146,6 +151,7 @@ class CartController extends Controller
         $basePrice = (int) ($product->price ?? 0);
         $productId = $product instanceof Product ? (int) $product->id : $id;
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
+        $itemNote = mb_substr(trim((string) $request->input('note')), 0, 500);
         
         // If the same product and size already exist, increase quantity.
         if (isset($cart[$cartKey])) {
@@ -172,10 +178,15 @@ class CartController extends Controller
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
                 'quantity' => $quantity,
+                'note' => $itemNote !== '' ? $itemNote : null,
             ];
         }
         
         session()->put('cart', $cart);
+        if (session()->has('checkout_group_order_id')) {
+            session()->put('group_cart_keys', collect(session('group_cart_keys', []))->push($cartKey)->unique()->values()->all());
+            session()->put('checkout_cart_keys', collect(session('checkout_cart_keys', []))->push($cartKey)->unique()->values()->all());
+        }
 
         if ($request->expectsJson()) {
             return response()->json($this->cartPayload('Đã thêm sản phẩm vào giỏ hàng!'));
@@ -262,6 +273,8 @@ class CartController extends Controller
         if (isset($cart[$id])) {
             unset($cart[$id]);
             session()->put('cart', $cart);
+            session()->put('group_cart_keys', collect(session('group_cart_keys', []))->reject(fn ($key) => (string) $key === (string) $id)->values()->all());
+            session()->put('checkout_cart_keys', collect(session('checkout_cart_keys', []))->reject(fn ($key) => (string) $key === (string) $id)->values()->all());
         }
 
         if ($request->expectsJson()) {
@@ -276,6 +289,7 @@ class CartController extends Controller
      */
     public function clear(Request $request)
     {
+        abort_if(session()->has('checkout_group_order_id'), 422, 'Không thể xóa giỏ đơn nhóm. Hãy hủy đơn nhóm nếu không muốn tiếp tục.');
         session()->forget('cart');
 
         if ($request->expectsJson()) {

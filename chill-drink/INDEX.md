@@ -78,9 +78,13 @@
     - Timeline
     - Success criteria
 
+11. **[ROLE_FLOWS.md](ROLE_FLOWS.md)** 👥
+    - Mô tả chi tiết toàn bộ các luồng nghiệp vụ theo vai trò (Role-based Flows).
+    - Các file Controller, Model, View, Support liên quan đến từng luồng nghiệp vụ.
+
 ## 🔌 API & Technical
 
-11. **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** 🔌
+12. **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** 🔌
     - API endpoints (future)
     - Request/Response format
     - Authentication
@@ -89,7 +93,7 @@
 
 ## 🚀 Deployment
 
-12. **[DEPLOYMENT.md](DEPLOYMENT.md)** 🌐
+13. **[DEPLOYMENT.md](DEPLOYMENT.md)** 🌐
     - Shared hosting deployment
     - VPS deployment
     - Docker deployment
@@ -99,7 +103,7 @@
 
 ## 📄 Legal
 
-13. **[LICENSE](LICENSE)** ⚖️
+14. **[LICENSE](LICENSE)** ⚖️
     - MIT License
     - Usage rights
     - Disclaimer
@@ -116,9 +120,10 @@
 
 ### Cho Developer
 1. [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Hiểu cấu trúc
-2. [CONTRIBUTING.md](CONTRIBUTING.md) - Follow coding standards
-3. [TODO.md](TODO.md) - Xem tasks
-4. [API_DOCUMENTATION.md](API_DOCUMENTATION.md) - API reference
+2. [ROLE_FLOWS.md](ROLE_FLOWS.md) - Hiểu chi tiết các luồng nghiệp vụ theo vai trò
+3. [CONTRIBUTING.md](CONTRIBUTING.md) - Follow coding standards
+4. [TODO.md](TODO.md) - Xem tasks
+5. [API_DOCUMENTATION.md](API_DOCUMENTATION.md) - API reference
 
 ### Cho Team Lead
 1. [TEAM.md](TEAM.md) - Quản lý team
@@ -144,6 +149,7 @@
 - [Git Workflow](CONTRIBUTING.md#-git-branch-strategy)
 - [Code Style](CONTRIBUTING.md#-code-style-guide)
 - [Project Structure](PROJECT_STRUCTURE.md#-chi-tiết-cấu-trúc)
+- [Nghiệp vụ theo vai trò](ROLE_FLOWS.md)
 
 ### Tasks
 - [Sprint 1 Tasks](TODO.md#phase-1-core-features-sprint-1---2-tuần)
@@ -159,10 +165,11 @@
 
 ## 📊 Documentation Stats
 
-- **Total Files**: 13 documents
-- **Total Pages**: ~100+ pages
+- **Total Files**: 14 documents
+- **Total Pages**: ~110+ pages
 - **Languages**: Vietnamese, English
-- **Last Updated**: 2026-05-13
+- **Last Updated**: 2026-07-10
+
 
 ---
 
