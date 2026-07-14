@@ -13,8 +13,12 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('orders', function (Blueprint $table) {
-            if (Schema::hasColumn('orders', 'user_id')) {
+        if (DB::getDriverName() === 'mysql') {
+            Schema::table('orders', function (Blueprint $table) {
+                if (! Schema::hasColumn('orders', 'user_id')) {
+                    return;
+                }
+
                 $foreignKeys = collect(DB::select(
                     "SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
                      WHERE TABLE_SCHEMA = DATABASE()
@@ -26,8 +30,8 @@ return new class extends Migration
                 foreach ($foreignKeys as $foreignKey) {
                     DB::statement("ALTER TABLE orders DROP FOREIGN KEY `{$foreignKey}`");
                 }
-            }
-        });
+            });
+        }
 
         Schema::table('orders', function (Blueprint $table) {
             if (Schema::hasColumn('orders', 'user_id')) {
@@ -55,11 +59,13 @@ return new class extends Migration
             }
         });
 
-        Schema::table('orders', function (Blueprint $table) {
-            if (Schema::hasColumn('orders', 'user_id')) {
-                $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
-            }
-        });
+        if (DB::getDriverName() === 'mysql') {
+            Schema::table('orders', function (Blueprint $table) {
+                if (Schema::hasColumn('orders', 'user_id')) {
+                    $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+                }
+            });
+        }
     }
 
     public function down(): void
@@ -68,8 +74,9 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('orders', function (Blueprint $table) {
-            $foreignKeys = collect(DB::select(
+        if (DB::getDriverName() === 'mysql') {
+            Schema::table('orders', function (Blueprint $table) {
+                $foreignKeys = collect(DB::select(
                 "SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
                  WHERE TABLE_SCHEMA = DATABASE()
                  AND TABLE_NAME = 'orders'
@@ -77,10 +84,11 @@ return new class extends Migration
                  AND REFERENCED_TABLE_NAME IS NOT NULL"
             ))->pluck('CONSTRAINT_NAME');
 
-            foreach ($foreignKeys as $foreignKey) {
-                DB::statement("ALTER TABLE orders DROP FOREIGN KEY `{$foreignKey}`");
-            }
-        });
+                foreach ($foreignKeys as $foreignKey) {
+                    DB::statement("ALTER TABLE orders DROP FOREIGN KEY `{$foreignKey}`");
+                }
+            });
+        }
 
         Schema::table('orders', function (Blueprint $table) {
             foreach (['delivery_type', 'guest_token', 'guest_email', 'guest_phone', 'guest_name'] as $column) {
@@ -91,7 +99,9 @@ return new class extends Migration
 
             if (Schema::hasColumn('orders', 'user_id')) {
                 $table->integer('user_id')->nullable(false)->change();
-                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+                if (DB::getDriverName() === 'mysql') {
+                    $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+                }
             }
         });
     }

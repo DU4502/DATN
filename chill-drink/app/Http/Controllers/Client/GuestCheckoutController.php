@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\ScheduledDelivery;
 use Throwable;
 
 class GuestCheckoutController extends CheckoutController
@@ -74,14 +75,27 @@ class GuestCheckoutController extends CheckoutController
             return redirect()->route('checkout.index');
         }
 
+        if (! $request->filled('fulfillment_type') && in_array($request->input('delivery_type'), ['delivery', 'pickup'], true)) {
+            $request->merge(['fulfillment_type' => $request->input('delivery_type'), 'delivery_type' => 'now']);
+        }
+
         $validated = $request->validate([
             'guest_name' => ['required', 'string', 'max:255'],
             'guest_phone' => ['required', 'string', 'max:30', 'regex:/^0[0-9]{9,10}$/'],
             'guest_email' => ['required', 'string', 'email', 'max:255'],
-            'delivery_type' => ['required', Rule::in(['delivery', 'pickup'])],
-            'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:delivery_type,delivery'],
+            'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
+            'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
             'branch_id' => ['required', 'integer', 'exists:branches,id'],
+            'delivery_type' => ['required', Rule::in(['now', 'scheduled'])],
+            'scheduled_delivery_time' => [
+                'nullable', 'date', 'required_if:delivery_type,scheduled',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('delivery_type') !== 'scheduled') return;
+                    if ($message = ScheduledDelivery::validate($value)) $fail($message);
+                }
+            ],
             'note' => ['nullable', 'string', 'max:500'],
+            'delivery_note' => ['nullable', 'string', 'max:1000'],
         ], [
             'guest_name.required' => 'Vui lòng nhập họ tên.',
             'guest_phone.required' => 'Vui lòng nhập số điện thoại.',
@@ -91,6 +105,7 @@ class GuestCheckoutController extends CheckoutController
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
             'branch_id.required' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
+            'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
         ]);
 
         session(['guest_checkout' => $validated]);
@@ -121,7 +136,7 @@ class GuestCheckoutController extends CheckoutController
         $cart = $this->hydrateCheckoutCart($cart);
         $subtotal = $this->cartSubtotal($cart);
         $paymentOptions = $this->paymentOptions();
-        $deliveryType = $guestInfo['delivery_type'] ?? 'delivery';
+        $deliveryType = $guestInfo['fulfillment_type'] ?? 'delivery';
 
         if ($deliveryType === 'pickup') {
             $shippingFee = 0;
@@ -137,7 +152,7 @@ class GuestCheckoutController extends CheckoutController
         $grandTotal = max(0, $subtotal + $shippingFee);
         $branch = null;
 
-        if (($guestInfo['delivery_type'] ?? '') === 'pickup' && ! empty($guestInfo['branch_id'])) {
+        if (($guestInfo['fulfillment_type'] ?? '') === 'pickup' && ! empty($guestInfo['branch_id'])) {
             $branch = Branch::query()->find($guestInfo['branch_id']);
         }
 
@@ -191,7 +206,7 @@ class GuestCheckoutController extends CheckoutController
 
             $orderItems = $this->prepareOrderItems($cart);
             $subtotal = collect($orderItems)->sum('total_price');
-            $deliveryType = $guestInfo['delivery_type'] ?? 'delivery';
+            $deliveryType = $guestInfo['fulfillment_type'] ?? 'delivery';
 
             if ($deliveryType === 'pickup') {
                 $shippingFee = 0;
@@ -233,8 +248,12 @@ class GuestCheckoutController extends CheckoutController
                 'guest_phone'   => $guestInfo['guest_phone'],
                 'guest_email'   => strtolower($guestInfo['guest_email']),
                 'guest_token'   => $guestToken,
-                'delivery_type' => $deliveryType,
+                'fulfillment_type' => $deliveryType,
                 'branch_id'     => $branchId,
+                'delivery_type' => $guestInfo['delivery_type'] ?? 'now',
+                'scheduled_delivery_time' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
+                'scheduled_at' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
+                'delivery_note' => $guestInfo['delivery_note'] ?? null,
                 'payment_method' => $request->payment_method,
                 // Đơn hàng ẩn với admin cho đến khi guest xác nhận email
                 'status'                         => 'awaiting_email_confirmation',

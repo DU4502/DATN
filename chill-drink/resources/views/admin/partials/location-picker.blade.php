@@ -11,7 +11,7 @@
     $defaultZoom = $defaultZoom ?? 5;
 @endphp
 
-<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}">
+<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}" data-address-target="{{ $addressTarget ?? '' }}">
     <div class="location-picker-head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <div>
             <div class="location-picker-label">{{ $label }}</div>
@@ -23,9 +23,14 @@
                 @endif
             </div>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-primary location-picker-btn" data-location-use-geolocation>
-            <i class="bi bi-crosshair me-1"></i>Lấy vị trí hiện tại
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-primary location-picker-btn" style="border-radius: 999px; font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.8rem;" data-location-use-geolocation>
+                <i class="bi bi-crosshair me-1"></i>Lấy vị trí hiện tại
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-success location-picker-btn" style="border-radius: 999px; font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.8rem;" data-location-get-address>
+                <i class="bi bi-geo-alt me-1"></i>Lấy địa chỉ
+            </button>
+        </div>
     </div>
 
     <div class="location-picker-map" data-location-map></div>

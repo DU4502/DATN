@@ -13,11 +13,12 @@ return new class extends Migration
             return;
         }
 
-        // Mở rộng ENUM status để cho phép trạng thái chờ xác nhận email
-        DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
+        // SQLite dùng TEXT và không cần thay đổi ENUM.
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
 
-        DB::statement(
-            "ALTER TABLE orders MODIFY status ENUM(
+            DB::statement(
+                "ALTER TABLE orders MODIFY status ENUM(
                 'awaiting_email_confirmation',
                 'pending',
                 'in_progress',
@@ -25,8 +26,9 @@ return new class extends Migration
                 'arrived',
                 'completed',
                 'cancelled'
-            ) NOT NULL DEFAULT 'pending'"
-        );
+                ) NOT NULL DEFAULT 'pending'"
+            );
+        }
 
         Schema::table('orders', function (Blueprint $table) {
             if (! Schema::hasColumn('orders', 'confirmation_token')) {
@@ -60,17 +62,19 @@ return new class extends Migration
             ->where('status', 'awaiting_email_confirmation')
             ->update(['status' => 'pending']);
 
-        DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE orders MODIFY status VARCHAR(50) NOT NULL DEFAULT 'pending'");
 
-        DB::statement(
-            "ALTER TABLE orders MODIFY status ENUM(
+            DB::statement(
+                "ALTER TABLE orders MODIFY status ENUM(
                 'pending',
                 'in_progress',
                 'shipper_accepted',
                 'arrived',
                 'completed',
                 'cancelled'
-            ) NOT NULL DEFAULT 'pending'"
-        );
+                ) NOT NULL DEFAULT 'pending'"
+            );
+        }
     }
 };

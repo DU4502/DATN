@@ -414,6 +414,7 @@
     .filter-panel,
     .promo-panel,
     .shop-product-card {
+        position: relative;
         border: 1px solid var(--drink-border);
         border-radius: var(--radius-md);
         background: rgba(255, 255, 255, 0.84);
@@ -568,6 +569,12 @@
         filter: saturate(1.12) contrast(1.03);
         transform: scale(1.07);
     }
+
+    .product-favorite-btn { position: absolute; top: 1.3rem; right: 1.3rem; z-index: 5; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; color: #687875; background: rgba(255,255,255,.94); box-shadow: 0 8px 22px rgba(16,63,55,.15); backdrop-filter: blur(8px); transition: transform .18s ease, color .18s ease, background .18s ease; }
+    .product-favorite-btn:hover { color: #e83e5b; transform: scale(1.08); }
+    .product-favorite-btn.is-active { color: #fff; border-color: #e83e5b; background: #e83e5b; }
+    .product-favorite-btn i { font-size: 1.12rem; line-height: 1; }
+    .product-favorite-btn.is-loading { opacity: .6; pointer-events: none; }
 
     .product-tag {
         position: absolute;
@@ -1145,6 +1152,12 @@
                     @forelse($products as $product)
                         <div class="col-sm-6 col-xl-4">
                             <article class="shop-product-card">
+                                @auth
+                                    @php($isFavorite = $favoriteProductIds->contains($product->id))
+                                    <form method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>@csrf<button type="submit" class="product-favorite-btn {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button><i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i></button></form>
+                                @else
+                                    <a href="{{ route('login') }}" class="product-favorite-btn" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích"><i class="bi bi-heart"></i></a>
+                                @endauth
                                 <a href="{{ route('products.show', $product->slug) }}" class="shop-product-image d-block mb-3">
                                     <x-product-image
                                         :src="$product->image_url"
@@ -1329,6 +1342,19 @@
                         <div class="fw-bold mb-2">Topping</div>
                         <div class="d-flex flex-wrap gap-2" data-quick-topping-group></div>
                     </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between">
+                        <div class="fw-bold">Số lượng</div>
+                        <div class="d-flex align-items-center gap-3">
+                            <button type="button" class="btn btn-outline-secondary rounded-circle p-0 d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 36px; height: 36px;" data-quick-qty-minus>
+                                -
+                            </button>
+                            <span class="fw-bold fs-5" data-quick-qty-display>1</span>
+                            <button type="button" class="btn btn-outline-secondary rounded-circle p-0 d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 36px; height: 36px;" data-quick-qty-plus>
+                                +
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="modal-footer border-0 pt-0">
@@ -1350,6 +1376,34 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-favorite-form]').forEach((favoriteForm) => {
+            favoriteForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const favoriteButton = favoriteForm.querySelector('[data-favorite-button]');
+                if (!favoriteButton || favoriteButton.classList.contains('is-loading')) return;
+                favoriteButton.classList.add('is-loading');
+
+                try {
+                    const response = await fetch(favoriteForm.action, {
+                        method: 'POST', body: new FormData(favoriteForm),
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                    });
+                    if (!response.ok) throw new Error('favorite_failed');
+                    const result = await response.json();
+                    favoriteButton.classList.toggle('is-active', result.favorited);
+                    favoriteButton.setAttribute('aria-pressed', result.favorited ? 'true' : 'false');
+                    favoriteButton.setAttribute('aria-label', result.favorited ? 'Bỏ yêu thích' : 'Thêm vào yêu thích');
+                    favoriteButton.title = result.favorited ? 'Bỏ yêu thích' : 'Yêu thích';
+                    favoriteButton.querySelector('i').className = 'bi ' + (result.favorited ? 'bi-heart-fill' : 'bi-heart');
+                } catch (error) {
+                    favoriteForm.submit();
+                } finally {
+                    favoriteButton.classList.remove('is-loading');
+                }
+            });
+        });
+
         document.querySelectorAll('[data-sort-dropdown]').forEach((dropdown) => {
             const form = dropdown.closest('form');
             const input = form?.querySelector('[data-sort-input]');
@@ -1415,6 +1469,10 @@
             ice: modalElement.querySelector('[data-quick-ice-input]'),
             toppings: modalElement.querySelector('[data-quick-toppings-input]'),
             toppingGroup: modalElement.querySelector('[data-quick-topping-group]'),
+            qtyInput: modalElement.querySelector('input[name="quantity"]'),
+            qtyDisplay: modalElement.querySelector('[data-quick-qty-display]'),
+            qtyMinus: modalElement.querySelector('[data-quick-qty-minus]'),
+            qtyPlus: modalElement.querySelector('[data-quick-qty-plus]'),
         };
 
         function setGroupValue(group, value) {
@@ -1498,6 +1556,8 @@
                 fields.sugar.value = '50';
                 fields.ice.value = '100';
                 fields.toppings.value = '[]';
+                if (fields.qtyInput) fields.qtyInput.value = '1';
+                if (fields.qtyDisplay) fields.qtyDisplay.textContent = '1';
                 setGroupValue('size', 'M');
                 setGroupValue('sugar', '50');
                 setGroupValue('ice', '100');
@@ -1530,6 +1590,33 @@
                 }
             });
         });
+
+        if (fields.toppingGroup) {
+            fields.toppingGroup.addEventListener('click', (event) => {
+                const button = event.target.closest('.quick-topping-choice');
+                if (!button) return;
+                
+                button.classList.toggle('active');
+                syncQuickToppings();
+            });
+        }
+
+        if (fields.qtyMinus && fields.qtyPlus && fields.qtyInput && fields.qtyDisplay) {
+            fields.qtyMinus.addEventListener('click', () => {
+                let val = parseInt(fields.qtyInput.value) || 1;
+                if (val > 1) {
+                    val--;
+                    fields.qtyInput.value = val;
+                    fields.qtyDisplay.textContent = val;
+                }
+            });
+            fields.qtyPlus.addEventListener('click', () => {
+                let val = parseInt(fields.qtyInput.value) || 1;
+                val++;
+                fields.qtyInput.value = val;
+                fields.qtyDisplay.textContent = val;
+            });
+        }
 
         document.querySelectorAll('[data-receive-code]').forEach((button) => {
             button.addEventListener('click', async () => {

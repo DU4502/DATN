@@ -113,7 +113,7 @@
                         <div><strong>{{ $guestInfo['guest_name'] ?? '' }}</strong></div>
                         <div>{{ $guestInfo['guest_phone'] ?? '' }}</div>
                         <div>{{ $guestInfo['guest_email'] ?? '' }}</div>
-                        @if(($guestInfo['delivery_type'] ?? '') === 'pickup' && $branch)
+                        @if(($guestInfo['fulfillment_type'] ?? '') === 'pickup' && $branch)
                             <div class="mt-2"><i class="bi bi-shop me-1"></i>Lấy tại: {{ $branch->name }}</div>
                         @else
                             <div class="mt-2"><i class="bi bi-geo-alt me-1"></i>{{ $guestInfo['shipping_address_ui'] ?? '' }}, {{ $guestInfo['shipping_area_ui'] ?? '' }}</div>

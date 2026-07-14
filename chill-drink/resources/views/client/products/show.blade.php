@@ -35,7 +35,8 @@
         box-shadow: 0 18px 42px rgba(7, 52, 58, 0.08);
         aspect-ratio: 4 / 3;
         min-height: 420px;
-        max-height: 560px;
+        max-height: none;
+        flex: 1 1 auto;
     }
 
     .detail-photo-card img {
@@ -83,6 +84,9 @@
         top: 104px;
         width: 100%;
         max-width: 680px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
         z-index: 1;
     }
 
@@ -137,7 +141,7 @@
         display: grid;
         grid-template-columns: minmax(420px, 0.92fr) minmax(0, 1.08fr);
         gap: clamp(2rem, 3.5vw, 3.75rem);
-        align-items: start;
+        align-items: stretch;
         overflow: visible;
     }
 
@@ -146,9 +150,15 @@
         min-width: 0;
     }
 
+    .detail-media-panel {
+        height: 100%;
+    }
+
     .detail-summary {
         max-width: 760px;
         width: 100%;
+        height: 100%;
+        min-height: 0;
     }
 
     .detail-summary h1 {
@@ -172,6 +182,8 @@
 
     .option-card {
         max-width: 760px;
+        order: 4;
+        min-height: 0;
     }
 
     .option-block {
@@ -253,9 +265,36 @@
         gap: 0.8rem;
     }
 
+    .detail-action-content {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 50px;
+        gap: 0.8rem;
+        align-items: stretch;
+    }
+
+    .detail-action-content form {
+        min-width: 0;
+        margin: 0;
+    }
+
+    .detail-favorite-btn {
+        width: 50px;
+        height: 50px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50% !important;
+        font-size: 1.15rem;
+    }
+
     .product-detail-actions {
-        border-top: 0;
-        padding-top: 0.35rem;
+        order: 5;
+        margin-top: auto;
+        border-top: 1px solid var(--c-border, #e5e7eb);
+        padding-top: 0.85rem;
+        background: #fff;
     }
 
     .product-detail-actions .btn-primary {
@@ -266,6 +305,50 @@
         min-height: 50px;
         border-radius: var(--radius-full, 999px);
         font-weight: 800;
+    }
+
+    .detail-quick-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.7rem;
+        margin-top: 0.2rem;
+    }
+
+    .detail-quick-action {
+        width: 100%;
+        height: 48px;
+        min-width: 0;
+        padding: 0.7rem 1.15rem;
+        box-sizing: border-box;
+        border: 1px solid var(--c-border, #e5e7eb);
+        border-radius: var(--radius-full, 999px);
+        background: #fff;
+        color: var(--c-ink, #17211f);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        font-weight: 800;
+        text-decoration: none;
+        box-shadow: 0 8px 22px rgba(22, 45, 39, 0.07);
+        transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .detail-quick-action i {
+        font-size: 1.2rem;
+    }
+
+    .detail-quick-action:hover {
+        color: var(--c-primary-dark, #067a5f);
+        border-color: var(--c-primary, #0a9b80);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(10, 155, 128, 0.12);
+    }
+
+    .detail-quick-action.is-featured {
+        border: 2px solid var(--c-primary, #0a9b80);
+        padding: calc(0.7rem - 1px) calc(1.15rem - 1px);
     }
 
     .detail-info-card {
@@ -425,6 +508,13 @@
         padding: 0.75rem;
     }
 
+    .related-card { position: relative; }
+    .related-card .card-body { min-height: 112px; padding-right: 5rem; }
+    .related-add-form { position: absolute; right: 1rem; bottom: 1rem; z-index: 4; margin: 0; }
+    .related-add-btn { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: #079b7d; box-shadow: 0 12px 26px rgba(7, 139, 112, .28); transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
+    .related-add-btn:hover { color: #fff; background: #06735f; transform: scale(1.08); box-shadow: 0 15px 30px rgba(7, 115, 95, .34); }
+    .related-add-btn i { font-size: 1.35rem; line-height: 1; }
+
     .review-shell {
         border: 1px solid var(--c-border, #e5e7eb);
         border-radius: 24px;
@@ -508,6 +598,105 @@
         transform: translateY(-1px);
     }
 
+    @media (min-width: 992px) {
+        .product-detail-wrap {
+            padding-top: 0.5rem;
+        }
+
+        .product-detail-wrap .breadcrumb-soft {
+            margin-bottom: 0.85rem !important;
+        }
+
+        .detail-layout {
+            height: clamp(500px, calc(100vh - 190px), 690px);
+            min-height: 0;
+        }
+
+        .detail-summary {
+            gap: 0.6rem !important;
+        }
+
+        .detail-summary > div:first-child .detail-pill {
+            margin-bottom: 0.45rem !important;
+            padding: 0.32rem 0.72rem;
+        }
+
+        .detail-summary h1 {
+            margin-bottom: 0.3rem !important;
+        }
+
+        .detail-summary > div:first-child .font-monospace {
+            margin-bottom: 0.3rem !important;
+        }
+
+        .detail-summary .detail-desc {
+            line-height: 1.4;
+        }
+
+        .detail-quick-actions {
+            gap: 0.55rem;
+            margin-top: 0;
+        }
+
+        .detail-quick-action {
+            height: 42px;
+            padding: 0.5rem 0.8rem;
+        }
+
+        .detail-quick-action.is-featured {
+            padding: calc(0.5rem - 1px) calc(0.8rem - 1px);
+        }
+
+        .option-card {
+            overflow: visible;
+        }
+
+        .option-block {
+            margin-bottom: 0.45rem;
+        }
+
+        .option-label.mb-3 {
+            margin-bottom: 0.4rem !important;
+        }
+
+        .choice-btn,
+        .compact-select-toggle {
+            min-height: 42px;
+            padding: 0.4rem 0.75rem;
+        }
+
+        .topping-choice {
+            min-height: 44px;
+        }
+
+        .product-detail-actions {
+            padding-top: 0.55rem;
+        }
+
+        .detail-buy-btn,
+        .product-detail-actions .btn-primary {
+            min-height: 46px;
+        }
+
+        .detail-favorite-btn {
+            width: 46px;
+            height: 46px;
+        }
+
+        .detail-action-content {
+            grid-template-columns: minmax(0, 1fr) 46px;
+        }
+
+        .detail-thumb {
+            width: 76px;
+            height: 62px;
+        }
+
+        .detail-thumbs {
+            margin-top: 0.6rem;
+        }
+    }
+
     @media (max-width: 991.98px) {
         .detail-layout {
             grid-template-columns: 1fr;
@@ -518,15 +707,21 @@
             height: auto;
             min-height: 0;
             aspect-ratio: 4 / 3;
+            flex: none;
         }
 
         .detail-gallery {
             position: static;
+            height: auto;
         }
 
         .detail-summary,
         .option-card {
             max-width: none;
+        }
+
+        .detail-summary {
+            height: auto;
         }
     }
 
@@ -557,6 +752,10 @@
         .qty-control {
             width: 100%;
         }
+
+        .detail-quick-actions {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -578,14 +777,22 @@
                 ? $product->gallery_images
                 : ($product->gallery_images ?? []);
 
-                if (empty($detailGalleryImages)) {
-                $detailGalleryImages = $uiGetProductGallery(
-                $product->sku ?? null,
-                $detailCategory,
-                $product->name,
-                6,
-                $product->image_url ?? $product->image ?? null
-                );
+                if (count($detailGalleryImages) < 4) {
+                    $generatedGallery = $uiGetProductGallery(
+                        $product->sku ?? null,
+                        $detailCategory,
+                        $product->name,
+                        4,
+                        $detailGalleryImages[0] ?? $product->image_url ?? $product->image ?? null
+                    );
+
+                    $detailGalleryImages = collect($detailGalleryImages)
+                        ->merge($generatedGallery)
+                        ->filter()
+                        ->unique()
+                        ->take(4)
+                        ->values()
+                        ->all();
                 }
 
                     $detailMainImage = $detailGalleryImages[0]
@@ -681,15 +888,69 @@
                         </p>
                     </div>
 
+                    @if(($product->stock ?? 1) > 0)
+                    <div class="detail-quick-actions" aria-label="Tiện ích đặt hàng">
+                        <a href="{{ route('group-orders.create') }}" class="detail-quick-action">
+                            <i class="bi bi-people"></i>
+                            <span>Đặt đơn nhóm</span>
+                        </a>
+                        <button type="submit" name="buy_now" value="1" form="productOrderForm" class="detail-quick-action" title="Chọn thời gian nhận ở bước thanh toán">
+                            <i class="bi bi-calendar2-check"></i>
+                            <span>Đặt giao sau</span>
+                        </button>
+                        <button type="button" class="detail-quick-action" data-share-product data-share-title="{{ $product->name }}" data-share-url="{{ route('products.show', $product->slug) }}">
+                            <i class="bi bi-share"></i>
+                            <span data-share-label>Chia sẻ</span>
+                        </button>
+                    </div>
+                    @endif
+
+                    <div class="product-detail-actions detail-action-row">
+                        <div class="qty-control d-flex align-items-center justify-content-between">
+                            <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
+                            <span class="h5 fw-bold mb-0" data-qty-value>1</span>
+                            <button type="button" data-qty-plus aria-label="Tăng số lượng">+</button>
+                        </div>
+
+                        @if(($product->stock ?? 1) > 0)
+                        <div class="detail-action-content">
+                            <form id="productOrderForm" action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
+                                @csrf
+                                <input type="hidden" name="size" value="S" data-size-input>
+                                <input type="hidden" name="sugar_level" value="100" data-choice-input="sugar">
+                                <input type="hidden" name="ice_level" value="100" data-choice-input="ice">
+                                <input type="hidden" name="toppings" value="" data-topping-input>
+                                <input type="hidden" name="quantity" value="1" data-qty-input>
+                                <div class="detail-button-row">
+                                    <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill">
+                                        <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
+                                    </button>
+                                    <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill">Mua ngay</button>
+                                </div>
+                            </form>
+                            @auth
+                            <form action="{{ route('favorites.toggle', $product) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-danger detail-favorite-btn" aria-label="Lưu món yêu thích" title="Lưu món yêu thích">
+                                    <i class="bi bi-heart"></i>
+                                </button>
+                            </form>
+                            @endauth
+                        </div>
+                        @else
+                        <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
+                        @endif
+                    </div>
+
                     <div class="option-card p-4">
                         <div class="option-block">
                             <label class="option-label d-block mb-3">Size</label>
                             <div class="d-flex flex-wrap gap-2" data-size-group>
-                                <button type="button" class="choice-btn size-choice" data-size-option="S" data-size-extra="0">
+                                <button type="button" class="choice-btn size-choice active" data-size-option="S" data-size-extra="0">
                                     S
                                     <small>Giá gốc</small>
                                 </button>
-                                <button type="button" class="choice-btn size-choice active" data-size-option="M" data-size-extra="5000">
+                                <button type="button" class="choice-btn size-choice" data-size-option="M" data-size-extra="5000">
                                     M
                                     <small>+5.000đ</small>
                                 </button>
@@ -751,33 +1012,6 @@
                                     </button>
                                 @endforeach
                             </div>
-                        </div>
-
-                        <div class="product-detail-actions detail-action-row">
-                            <div class="qty-control d-flex align-items-center justify-content-between">
-                                <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
-                                <span class="h5 fw-bold mb-0" data-qty-value>1</span>
-                                <button type="button" data-qty-plus aria-label="Tăng số lượng">+</button>
-                            </div>
-
-                            @if(($product->stock ?? 1) > 0)
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
-                                    @csrf
-                                    <input type="hidden" name="size" value="M" data-size-input>
-                                    <input type="hidden" name="sugar_level" value="100" data-choice-input="sugar">
-                                    <input type="hidden" name="ice_level" value="100" data-choice-input="ice">
-                                    <input type="hidden" name="toppings" value="" data-topping-input>
-                                    <input type="hidden" name="quantity" value="1" data-qty-input>
-                                    <div class="detail-button-row">
-                                        <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill">
-                                            <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
-                                        </button>
-                                        <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill">Mua ngay</button>
-                                    </div>
-                                </form>
-                            @else
-                            <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
-                            @endif
                         </div>
 
                     </div>
@@ -953,6 +1187,9 @@
                 @forelse($relatedProducts as $item)
                 <div class="col-sm-6 col-lg-3">
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
+                        @if(($item->stock ?? 1) > 0)
+                        <form action="{{ route('cart.add', $item->id) }}" method="POST" class="related-add-form" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="related-add-btn" aria-label="Thêm {{ $item->name }} vào giỏ" title="Thêm vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
+                        @endif
                         <a href="{{ route('products.show', $item->slug) }}">
                             <x-product-image
                                 :src="$item->image_url ?? null"
@@ -980,6 +1217,7 @@
                 ] as $item)
                 <div class="col-sm-6 col-lg-3">
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
+                        <form action="{{ route('cart.add', 'demo-'.$item[3]) }}" method="POST" class="related-add-form" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="related-add-btn" aria-label="Thêm {{ $item[0] }} vào giỏ" title="Thêm vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
                         <a href="{{ route('products.show', $item[3]) }}">
                             <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
                         </a>
@@ -1118,8 +1356,38 @@
                         item.classList.remove('active');
                     });
                     button.classList.add('active');
-                    sizeInput.value = button.dataset.sizeOption || 'M';
+                    sizeInput.value = button.dataset.sizeOption || 'S';
                 });
+            });
+        }
+
+        const shareButton = document.querySelector('[data-share-product]');
+
+        if (shareButton) {
+            shareButton.addEventListener('click', async function () {
+                const label = shareButton.querySelector('[data-share-label]');
+                const shareData = {
+                    title: shareButton.dataset.shareTitle || document.title,
+                    text: `Xem ${shareButton.dataset.shareTitle || 'sản phẩm này'} tại Chill Drink`,
+                    url: shareButton.dataset.shareUrl || window.location.href,
+                };
+
+                try {
+                    if (navigator.share) {
+                        await navigator.share(shareData);
+                        return;
+                    }
+
+                    await navigator.clipboard.writeText(shareData.url);
+                    if (label) label.textContent = 'Đã sao chép';
+                    setTimeout(function () {
+                        if (label) label.textContent = 'Chia sẻ';
+                    }, 1800);
+                } catch (error) {
+                    if (error?.name !== 'AbortError') {
+                        window.prompt('Sao chép liên kết sản phẩm:', shareData.url);
+                    }
+                }
             });
         }
 

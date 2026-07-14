@@ -40,29 +40,29 @@ class DemoBranchStatisticsSeeder extends Seeder
     private function createDemoBranches(): array
     {
         $branchConfigs = [
-            'hanoi' => [
-                'display_name' => 'Admin Hà Nội',
-                'branch_name' => 'Chi nhánh - Admin Hà Nội',
-                'code' => 'DEMO-HN',
-                'email' => 'demo_hanoi@chilldrink.test',
+            'cn1' => [
+                'display_name' => 'Admin Chi nhánh 1',
+                'branch_name' => 'Chi nhánh 1',
+                'code' => 'CN1',
+                'email' => 'admin@chilldrink.com',
                 'phone' => '0243.3333.123',
-                'address' => '123 Đường Nguyễn Huệ, Hoàn Kiếm, Hà Nội',
+                'address' => 'QQFJ+MX Quảng Phú, Thanh Hóa, Việt Nam',
             ],
-            'thanhhoa' => [
-                'display_name' => 'Admin Thanh Hóa',
-                'branch_name' => 'Chi nhánh - Admin Thanh Hóa',
-                'code' => 'DEMO-TH',
-                'email' => 'demo_thanhhoa@chilldrink.test',
+            'cn2' => [
+                'display_name' => 'Admin Chi nhánh 2',
+                'branch_name' => 'Chi nhánh 2',
+                'code' => 'CN2',
+                'email' => 'admin_cn2@chilldrink.com',
                 'phone' => '0237.3333.456',
-                'address' => '456 Đường Lê Lợi, Thanh Hóa',
+                'address' => 'QQVV+9W Hạc Thành, Thanh Hóa, Việt Nam',
             ],
-            'danang' => [
-                'display_name' => 'Admin Đà Nẵng',
-                'branch_name' => 'Chi nhánh - Admin Đà Nẵng',
-                'code' => 'DEMO-DN',
-                'email' => 'demo_danang@chilldrink.test',
+            'cn3' => [
+                'display_name' => 'Admin Chi nhánh 3',
+                'branch_name' => 'Chi nhánh 3',
+                'code' => 'CN3',
+                'email' => 'admin_cn3@chilldrink.com',
                 'phone' => '0236.3333.789',
-                'address' => '789 Đường Bạch Đằng, Hải Châu, Đà Nẵng',
+                'address' => 'RQ4G+W9 Hạc Thành, Thanh Hóa, Việt Nam',
             ],
         ];
 
@@ -85,7 +85,8 @@ class DemoBranchStatisticsSeeder extends Seeder
                 $admin = User::create([
                     'name' => $config['display_name'],
                     'email' => $adminEmail,
-                    'password' => Hash::make('demo12345678'),
+                    'password' => Hash::make('12345678'),
+                    'plain_password' => '12345678',
                     'role_id' => 2,
                     'is_active' => true,
                     'phone' => $config['phone'],
@@ -184,11 +185,11 @@ class DemoBranchStatisticsSeeder extends Seeder
             $defaultProductSize = DB::table('product_sizes')->first();
         }
 
-        // Order distribution: Hà Nội: 5, Thanh Hóa: 3, Đà Nẵng: 2
+        // Order distribution: CN1: 5, CN2: 3, CN3: 2
         $orderDistribution = [
-            'hanoi' => 5,
-            'thanhhoa' => 3,
-            'danang' => 2,
+            'cn1' => 5,
+            'cn2' => 3,
+            'cn3' => 2,
         ];
 
         $orderCounter = 0;

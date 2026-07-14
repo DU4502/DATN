@@ -132,6 +132,48 @@ final class OrderStatus
         return $options;
     }
 
+    public static function nextStatus(string $current): ?string
+    {
+        $current = self::normalize($current);
+        $index = array_search($current, self::SEQUENCE, true);
+
+        if ($index === false || $index >= count(self::SEQUENCE) - 1) {
+            return null;
+        }
+
+        return self::SEQUENCE[$index + 1];
+    }
+
+    public static function stepwiseOptions(string $current): array
+    {
+        $current = self::normalize($current);
+        $labels = self::labels();
+        $options = [$current => $labels[$current] ?? ucfirst(str_replace('_', ' ', $current))];
+        $next = self::nextStatus($current);
+
+        if ($next !== null) {
+            $options[$next] = $labels[$next] ?? ucfirst(str_replace('_', ' ', $next));
+        }
+
+        return $options;
+    }
+
+    public static function canAdvanceTo(string $from, string $to): bool
+    {
+        $from = self::normalize($from);
+        $to = self::normalize($to);
+
+        if (in_array($from, [self::COMPLETED, self::CANCELLED], true)) {
+            return $to === $from;
+        }
+
+        if ($to === $from) {
+            return true;
+        }
+
+        return $to === self::nextStatus($from) || $to === self::CANCELLED;
+    }
+
     public static function userBadgeStyles(): array
     {
         return [

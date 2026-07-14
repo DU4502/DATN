@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
 
 @section('page-title', 'Tổng quát hệ thống')
 @section('search-placeholder', 'Tìm báo cáo, đơn hàng...')
