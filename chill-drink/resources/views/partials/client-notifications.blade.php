@@ -208,6 +208,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            pollNotifications(); // Poll immediately on page load
             window.setInterval(pollNotifications, 5000);
         });
     })();
