@@ -17,6 +17,7 @@ class AuthAccountSeeder extends Seeder
                 ['id' => 1, 'name' => 'user', 'description' => 'Người dùng'],
                 ['id' => 2, 'name' => 'admin', 'description' => 'Quản trị viên'],
                 ['id' => 3, 'name' => 'super_admin', 'description' => 'Quản trị toàn hệ thống'],
+                ['id' => 4, 'name' => 'cskh', 'description' => 'Nhân viên CSKH'],
             ];
 
             foreach ($roles as $role) {

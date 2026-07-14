@@ -10,13 +10,13 @@ use App\Models\Size;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Support\ShippingFee;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CheckoutVoucherTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_checkout_page_only_offers_cod_and_vnpay(): void
     {

@@ -82,6 +82,10 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
     Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
+    Route::post('/group-orders/join/{code}/leave', [GroupOrderController::class, 'leave'])->name('group-orders.leave');
+    Route::get('/group-orders/join/{code}/messages', [GroupOrderController::class, 'messages'])->name('group-orders.messages');
+    Route::post('/group-orders/join/{code}/messages', [GroupOrderController::class, 'sendMessage'])->name('group-orders.messages.send');
+    Route::post('/group-orders/join/{code}/messages/read', [GroupOrderController::class, 'readMessages'])->name('group-orders.messages.read');
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
@@ -164,7 +168,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::put('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
     Route::delete('/branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
     Route::patch('/branches/{branch}/status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
-    Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -189,6 +192,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('orders', OrderController::class)->only(['index']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
+    Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
 
     // Review Management
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');

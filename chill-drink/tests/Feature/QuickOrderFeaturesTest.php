@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\GroupOrder;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderItem;
+use App\Models\GroupOrderMessage;
 use App\Models\Branch;
 use App\Models\Product;
 use App\Models\User;
@@ -106,6 +107,14 @@ class QuickOrderFeaturesTest extends TestCase
             ->post(route('group-orders.presence', $group->code))
             ->assertOk()
             ->assertJsonPath('owner_present', true);
+
+        $this->post(route('group-orders.leave', $group->code))->assertOk();
+        $this->actingAs($member)
+            ->post(route('group-orders.presence', $group->code))
+            ->assertOk()
+            ->assertJsonPath('owner_present', false);
+
+        $this->actingAs($owner)->post(route('group-orders.presence', $group->code))->assertJsonPath('owner_present', true);
 
         $this->travel(GroupOrder::OWNER_PRESENCE_SECONDS + 1)->seconds();
 
@@ -318,6 +327,29 @@ class QuickOrderFeaturesTest extends TestCase
 
         $this->post(route('favorites.toggle', $product))->assertRedirect();
         $this->assertDatabaseMissing('favorites', ['user_id' => $user->id, 'product_id' => $product->id]);
+    }
+
+    public function test_group_members_can_use_group_and_private_chat(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $otherUser = User::factory()->create();
+        $ownerMember = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'chat-owner']);
+        $otherMember = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $otherUser->id, 'name' => 'Bạn A', 'member_token' => 'chat-other']);
+
+        $this->actingAs($owner)->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Xin chào cả nhóm'])
+            ->assertCreated()->assertJsonPath('message.recipient_id', null);
+        $this->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Tin riêng', 'recipient_id' => $otherMember->id])
+            ->assertCreated()->assertJsonPath('message.recipient_id', $otherMember->id);
+
+        $this->actingAs($otherUser)->getJson(route('group-orders.messages', $group->code))->assertOk()->assertJsonCount(1, 'messages');
+        $this->getJson(route('group-orders.messages', [$group->code, 'recipient_id' => $ownerMember->id]))
+            ->assertOk()->assertJsonCount(1, 'messages')->assertJsonPath('messages.0.content', 'Tin riêng');
+        $this->assertSame(2, GroupOrderMessage::count());
+
+        $newGroup = GroupOrder::create(['owner_id' => $otherUser->id, 'name' => 'Phòng mới', 'code' => 'NEWCHAT1', 'status' => 'open', 'closes_at' => now()->addHour()]);
+        GroupOrderMember::create(['group_order_id' => $newGroup->id, 'user_id' => $otherUser->id, 'name' => 'Bạn A', 'member_token' => 'new-room-member']);
+        $this->getJson(route('group-orders.messages', $newGroup->code))
+            ->assertOk()->assertJsonPath('group_id', $newGroup->id)->assertJsonCount(0, 'messages');
     }
 
     private function openGroup(): array

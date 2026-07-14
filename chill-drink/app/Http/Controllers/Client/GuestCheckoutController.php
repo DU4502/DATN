@@ -85,7 +85,12 @@ class GuestCheckoutController extends CheckoutController
             'guest_email' => ['required', 'string', 'email', 'max:255'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
-            'branch_id' => ['required', 'integer', 'exists:branches,id'],
+            'branch_id' => [
+                'nullable',
+                'required_if:fulfillment_type,pickup',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
             'delivery_type' => ['required', Rule::in(['now', 'scheduled'])],
             'scheduled_delivery_time' => [
                 'nullable', 'date', 'required_if:delivery_type,scheduled',
@@ -103,7 +108,7 @@ class GuestCheckoutController extends CheckoutController
             'guest_email.required' => 'Vui lòng nhập email.',
             'guest_email.email' => 'Email không đúng định dạng.',
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
-            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.required_if' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
             'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
         ]);
@@ -244,9 +249,11 @@ class GuestCheckoutController extends CheckoutController
             $note = mb_substr($note, 0, 500);
             $guestToken = Str::random(48);
 
-            // Branch_id is always required and comes from guest_checkout session
             $branchId = $guestInfo['branch_id'] ?? null;
-            if (!$branchId) {
+            if (! $branchId && $deliveryType === 'delivery') {
+                $branchId = Branch::query()->where('status', true)->orderBy('id')->value('id');
+            }
+            if (! $branchId && $deliveryType === 'pickup') {
                 throw new \RuntimeException('Vui lòng chọn chi nhánh trước khi đặt hàng.');
             }
 

@@ -9,7 +9,6 @@ class ScheduledDelivery
     public const PREPARATION_MINUTES = 30;
     public const OPEN_TIME = '07:00';
     public const CLOSE_TIME = '22:00';
-    public const MAX_DAYS_AHEAD = 7;
 
     public static function validate(?string $value): ?string
     {
@@ -21,8 +20,8 @@ class ScheduledDelivery
         if ($time->lt(now()->addMinutes(self::PREPARATION_MINUTES))) {
             return 'Thời gian nhận hàng phải cách hiện tại ít nhất 30 phút.';
         }
-        if ($time->gt(now()->addDays(self::MAX_DAYS_AHEAD))) {
-            return 'Chỉ có thể đặt giao sau trong vòng 7 ngày.';
+        if (! $time->isSameDay(now())) {
+            return 'Đặt giao sau chỉ áp dụng trong ngày hôm nay.';
         }
 
         $clock = $time->format('H:i');
