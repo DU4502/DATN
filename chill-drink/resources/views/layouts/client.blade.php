@@ -1236,7 +1236,7 @@
                     $avatar = Auth::user()->avatar;
                     $avatarIsPreset = is_string($avatar) && str_starts_with($avatar, 'preset-');
                     $avatarClass = $avatarIsPreset ? 'avatar-' . $avatar : 'avatar-preset-mint';
-                    $avatarUrl = $avatar && ! $avatarIsPreset ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null;
+                    $avatarUrl = $avatar && ! $avatarIsPreset ? asset('storage/' . $avatar) : null;
                     @endphp
                     <div class="dropdown">
                         <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng" id="clientNotificationButton">
@@ -1774,6 +1774,38 @@
             };
             tick();
             window.setInterval(tick, 1000);
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    fetch('{{ route('select-nearest-branch') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            latitude: lat,
+                            longitude: lng
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.changed) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
+                }, function (error) {
+                    console.warn("Không thể lấy tọa độ GPS:", error);
+                });
+            }
         });
     </script>
     @include('partials.realtime')
