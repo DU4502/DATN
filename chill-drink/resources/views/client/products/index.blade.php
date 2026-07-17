@@ -661,39 +661,6 @@
         transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
     }
 
-    .floating-cart-button {
-        right: 1.5rem !important;
-        bottom: 1.5rem !important;
-        margin: 0 !important;
-    }
-
-    .floating-cart-button svg {
-        width: 23px;
-        height: 23px;
-    }
-
-    .floating-cart-button i {
-        font-size: 1.35rem !important;
-        line-height: 1;
-    }
-
-    .floating-cart-button [data-cart-badge] {
-        min-width: 22px;
-        height: 22px;
-        padding: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        top: -2px !important;
-        left: auto !important;
-        right: -3px !important;
-        transform: none !important;
-        border: 2px solid #fff;
-        font-size: 0.75rem;
-        line-height: 1;
-        box-shadow: 0 8px 18px rgba(239, 68, 68, 0.25);
-    }
-
     .shop-product-card button.add-round,
     .shop-product-card a.add-round {
         background: #008b7a !important;
@@ -1366,13 +1333,6 @@
         </div>
     </div>
 </div>
-
-<a href="{{ route('cart.index') }}" class="position-fixed bottom-0 end-0 m-4 add-round floating-cart-button shadow-lg" style="z-index: 30;" aria-label="Giỏ hàng" data-cart-button>
-    <i class="bi bi-cart-plus" aria-hidden="true"></i>
-    <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {{ session('cart') ? '' : 'd-none' }}">
-        {{ session('cart') ? count(session('cart')) : 0 }}
-    </span>
-</a>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
