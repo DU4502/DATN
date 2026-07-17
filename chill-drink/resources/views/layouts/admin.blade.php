@@ -675,10 +675,23 @@
                 <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
                 <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
+                <a href="{{ route('admin.slides.index') }}" class="nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Slideshow</a>
                 <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
                 <a href="{{ route('admin.group-orders.index') }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
+                @if(auth()->user()?->isSuperAdmin())
+                    <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock-fill"></i> Super Admin</a>
+                @endif
+                <a href="{{ route('admin.chat.index') }}" class="nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}">
+                    <i class="bi bi-chat-dots"></i> Chat CSKH
+                    @php
+                        $unreadChatMessages = auth()->user()?->unreadConversationMessagesCount() ?? 0;
+                    @endphp
+                    @if($unreadChatMessages > 0)
+                        <span class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
+                    @endif
+                </a>
             </nav>
 
             <div class="admin-sidebar-footer">
@@ -720,7 +733,7 @@
                     @php
                         $adminAvatar = Auth::user()->avatar;
                         $adminAvatarIsImage = $adminAvatar && ! str_starts_with($adminAvatar, 'preset-');
-                        $adminAvatarUrl = $adminAvatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($adminAvatar) : null;
+                        $adminAvatarUrl = $adminAvatarIsImage ? asset('storage/' . $adminAvatar) : null;
                     @endphp
                     <div class="admin-avatar" aria-label="Tài khoản">
                         @if($adminAvatarUrl)

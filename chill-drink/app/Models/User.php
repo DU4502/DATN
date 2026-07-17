@@ -205,4 +205,38 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(Conversation::class, 'cskh_id');
     }
+
+    public function unreadConversationMessagesCount(): int
+    {
+        if ($this->isCustomer()) {
+            $conversationIds = $this->conversations()->where('status', 'open')->pluck('id');
+            return \App\Models\Message::whereIn('conversation_id', $conversationIds)
+                ->where('sender_id', '!=', $this->id)
+                ->where('is_read', false)
+                ->count();
+        }
+
+        // For staff
+        $query = Conversation::whereHas('user', fn ($c) => $c->customers())
+            ->where('status', 'open');
+
+        if (!$this->isSuperAdmin()) {
+            if ($this->branch_id) {
+                $query->where('branch_id', $this->branch_id);
+            }
+            if ($this->isCskh() && !$this->isAdmin()) {
+                $query->where(function ($inner) {
+                    $inner->whereNull('cskh_id')
+                        ->orWhere('cskh_id', $this->id);
+                });
+            }
+        }
+
+        $conversationIds = $query->pluck('id');
+
+        return \App\Models\Message::whereIn('conversation_id', $conversationIds)
+            ->where('sender_id', '!=', $this->id)
+            ->where('is_read', false)
+            ->count();
+    }
 }
