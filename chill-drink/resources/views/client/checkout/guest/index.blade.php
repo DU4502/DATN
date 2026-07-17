@@ -105,6 +105,7 @@
                                 <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypePickup"><i class="bi bi-shop me-1"></i>Lấy tại chi nhánh</label>
                             </div>
+                            <input type="hidden" name="delivery_type" value="now">
                         </div>
 
                         <div class="mb-4">
