@@ -392,9 +392,9 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            RealtimeOrderNotifier::orderStatusUpdated($order);
-
+            // Chỉ notify admin khi không phải VNPay (VNPay sẽ notify sau khi thanh toán thành công)
             if ($order->payment_method !== 'vnpay') {
+                RealtimeOrderNotifier::orderStatusUpdated($order);
                 RealtimeOrderNotifier::orderCreated($order);
             }
 
