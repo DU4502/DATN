@@ -9,7 +9,7 @@
     $memberCount = $group->members->count();
     $isFull = $memberCount >= \App\Models\GroupOrder::MAX_MEMBERS;
 @endphp
-<section class="group-page">
+<section class="group-page" data-vue-group-order-room data-presence-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code) : '' }}" data-leave-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.leave', $group->code) : '' }}">
     <div class="container group-shell">
         @if(session('success'))<div class="alert alert-success rounded-4 border-0 shadow-sm"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}</div>@endif
         @if(session('error'))<div class="alert alert-danger rounded-4 border-0 shadow-sm"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}</div>@endif
@@ -42,8 +42,9 @@
             </div>
         @endif
 
+        <div data-group-participation>
         @if(!$currentMember && $isOpen && !$isFull)
-            <form method="POST" action="{{ route('group-orders.join', $group->code) }}" class="group-card p-4 mb-4">@csrf
+            <form method="POST" action="{{ route('group-orders.join', $group->code) }}" class="group-card p-4 mb-4" data-group-async-action data-group-join>@csrf
                 <div class="row g-3 align-items-end"><div class="col-md"><div class="group-eyebrow mb-1">Bước đầu tiên</div><h2 class="group-section-title mb-2">Bạn muốn hiển thị tên gì?</h2><input name="name" value="{{ old('name', auth()->user()->name) }}" class="form-control group-input" required maxlength="100" placeholder="Tên của bạn"></div><div class="col-md-auto"><button class="btn btn-primary group-btn w-100"><i class="bi bi-box-arrow-in-right me-2"></i>Tham gia phòng</button></div></div>
             </form>
         @elseif(!$currentMember && $isOpen && $isFull)
@@ -88,6 +89,16 @@
                 </div>
             </form>
         @endif
+        @if($currentMember)
+            <div class="mb-4" data-vue-group-chat
+                 data-group-id="{{ $group->id }}"
+                 data-messages-url="{{ route('group-orders.messages', $group->code) }}"
+                 data-send-url="{{ route('group-orders.messages.send', $group->code) }}"
+                 data-read-url="{{ route('group-orders.messages.read', $group->code) }}"
+                 data-current-member-id="{{ $currentMember->id }}"
+                 data-members='@json($group->members->map(fn($member) => ["id" => $member->id, "name" => $member->name])->values())'></div>
+        @endif
+        </div>
 
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3" data-group-order-heading><div><div class="group-eyebrow mb-1">Đơn hiện tại</div><h2 class="group-section-title mb-0">Mọi người đã chọn gì?</h2></div><span class="text-secondary">{{ $memberCount }}/{{ \App\Models\GroupOrder::MAX_MEMBERS }} thành viên · {{ $group->items->sum('quantity') }} món</span></div>
         <div class="row g-4 mb-4" data-group-members>
@@ -122,6 +133,7 @@
         </div>
     </div>
 </section>
+@if(false)
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const showLiveMessage = function (message, isError = false) {
@@ -300,4 +312,5 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
+@endif
 @endsection

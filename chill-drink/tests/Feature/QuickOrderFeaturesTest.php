@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\GroupOrder;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderItem;
+use App\Models\GroupOrderMessage;
+use App\Models\Branch;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -105,6 +107,14 @@ class QuickOrderFeaturesTest extends TestCase
             ->post(route('group-orders.presence', $group->code))
             ->assertOk()
             ->assertJsonPath('owner_present', true);
+
+        $this->post(route('group-orders.leave', $group->code))->assertOk();
+        $this->actingAs($member)
+            ->post(route('group-orders.presence', $group->code))
+            ->assertOk()
+            ->assertJsonPath('owner_present', false);
+
+        $this->actingAs($owner)->post(route('group-orders.presence', $group->code))->assertJsonPath('owner_present', true);
 
         $this->travel(GroupOrder::OWNER_PRESENCE_SECONDS + 1)->seconds();
 
@@ -227,6 +237,7 @@ class QuickOrderFeaturesTest extends TestCase
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
         $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
@@ -235,7 +246,9 @@ class QuickOrderFeaturesTest extends TestCase
         $this->actingAs($owner)->withSession(['cart' => $personalCart])->post(route('group-orders.close', $group->code));
         $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'closed']);
         $response = $this->post(route('checkout.process'), [
-            'payment_method' => 'cod', 'shipping_method_ui' => 'standard',
+            'payment_method' => 'vnpay', 'shipping_method_ui' => 'standard',
+            'fulfillment_type' => 'delivery',
+            'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
@@ -247,7 +260,61 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame(5, (int) $product->fresh()->stock);
         $this->assertTrue($group->order->scheduled_at->equalTo($scheduledAt));
         $this->assertSame($personalCart, session('cart'));
-        $response->assertRedirect(route('checkout.success', $group->order_id));
+        $response->assertRedirect(route('vnpay.payment', $group->order));
+    }
+
+    public function test_scheduled_delivery_requires_prepaid_payment(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['status' => true, 'stock' => 5, 'price' => 40000]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
+        $cart = [
+            'scheduled-cart-item' => [
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'base_price' => 40000,
+                'price' => 40000,
+                'size' => 'S',
+                'size_label' => 'Size S',
+                'size_extra' => 0,
+                'sugar_level' => 100,
+                'ice_level' => 100,
+                'toppings' => [],
+                'topping_total' => 0,
+                'quantity' => 1,
+            ],
+        ];
+
+        $this->actingAs($user)->withSession(['cart' => $cart])->post(route('checkout.process'), [
+            'payment_method' => 'cod',
+            'shipping_method_ui' => 'standard',
+            'fulfillment_type' => 'delivery',
+            'branch_id' => $branch->id,
+            'shipping_address_ui' => '123 Nguyễn Huệ',
+            'shipping_area_ui' => 'Quận 1',
+            'delivery_type' => 'scheduled',
+            'scheduled_delivery_time' => now()->addDay()->setTime(10, 0)->format('Y-m-d H:i:s'),
+        ])->assertSessionHasErrors('payment_method');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_customer_in_open_group_cannot_add_personal_cart_item(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $product = Product::factory()->create(['status' => true]);
+
+        $this->actingAs($owner)
+            ->postJson(route('cart.add', $product->id), [
+                'size' => 'S',
+                'sugar_level' => 50,
+                'ice_level' => 50,
+                'quantity' => 1,
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('redirect_url', route('group-orders.show', $group->code));
+
+        $this->assertSame([], session('cart', []));
     }
 
     public function test_customer_can_toggle_a_favorite_product(): void
@@ -260,6 +327,29 @@ class QuickOrderFeaturesTest extends TestCase
 
         $this->post(route('favorites.toggle', $product))->assertRedirect();
         $this->assertDatabaseMissing('favorites', ['user_id' => $user->id, 'product_id' => $product->id]);
+    }
+
+    public function test_group_members_can_use_group_and_private_chat(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $otherUser = User::factory()->create();
+        $ownerMember = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'chat-owner']);
+        $otherMember = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $otherUser->id, 'name' => 'Bạn A', 'member_token' => 'chat-other']);
+
+        $this->actingAs($owner)->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Xin chào cả nhóm'])
+            ->assertCreated()->assertJsonPath('message.recipient_id', null);
+        $this->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Tin riêng', 'recipient_id' => $otherMember->id])
+            ->assertCreated()->assertJsonPath('message.recipient_id', $otherMember->id);
+
+        $this->actingAs($otherUser)->getJson(route('group-orders.messages', $group->code))->assertOk()->assertJsonCount(1, 'messages');
+        $this->getJson(route('group-orders.messages', [$group->code, 'recipient_id' => $ownerMember->id]))
+            ->assertOk()->assertJsonCount(1, 'messages')->assertJsonPath('messages.0.content', 'Tin riêng');
+        $this->assertSame(2, GroupOrderMessage::count());
+
+        $newGroup = GroupOrder::create(['owner_id' => $otherUser->id, 'name' => 'Phòng mới', 'code' => 'NEWCHAT1', 'status' => 'open', 'closes_at' => now()->addHour()]);
+        GroupOrderMember::create(['group_order_id' => $newGroup->id, 'user_id' => $otherUser->id, 'name' => 'Bạn A', 'member_token' => 'new-room-member']);
+        $this->getJson(route('group-orders.messages', $newGroup->code))
+            ->assertOk()->assertJsonPath('group_id', $newGroup->id)->assertJsonCount(0, 'messages');
     }
 
     private function openGroup(): array
