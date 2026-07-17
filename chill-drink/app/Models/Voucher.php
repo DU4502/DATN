@@ -44,6 +44,7 @@ class Voucher extends Model
         'required_rank',
         'point_cost',
         'is_redeemable',
+        'show_on_products',
         'created_at',
     ];
 
@@ -58,6 +59,7 @@ class Voucher extends Model
         'created_at' => 'datetime',
         'status' => 'boolean',
         'is_redeemable' => 'boolean',
+        'show_on_products' => 'boolean',
         'max_discount' => 'integer',
     ];
 
