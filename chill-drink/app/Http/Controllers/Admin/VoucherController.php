@@ -191,6 +191,7 @@ class VoucherController extends Controller
             'required_rank' => $data['required_rank'] ?? null,
             'point_cost' => (int) ($data['point_cost'] ?? 0),
             'is_redeemable' => $request->boolean('is_redeemable'),
+            'show_on_products' => $request->boolean('show_on_products'),
         ];
     }
 

@@ -1419,12 +1419,16 @@
         const prevButton = document.querySelector('[data-gallery-prev]');
         const nextButton = document.querySelector('[data-gallery-next]');
         let activeImageIndex = 0;
+        let autoSlideInterval = null;
+        let isUserInteracting = false;
+        let isTransitioning = false;
 
-        const setActiveImage = function(index) {
-            if (!mainImage || !thumbs.length) {
+        const setActiveImage = function(index, direction = 'next') {
+            if (!mainImage || !thumbs.length || isTransitioning) {
                 return;
             }
 
+            isTransitioning = true;
             activeImageIndex = (index + thumbs.length) % thumbs.length;
 
             thumbs.forEach(function(item) {
@@ -1433,32 +1437,156 @@
 
             const activeThumb = thumbs[activeImageIndex];
             activeThumb.classList.add('active');
-            mainImage.style.opacity = '0';
+
+            // Create new image for swipe effect
+            const newImage = document.createElement('img');
+            newImage.src = activeThumb.dataset.detailThumb;
+            newImage.alt = mainImage.alt;
+            newImage.style.cssText = `
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transform: translateX(${direction === 'next' ? '100%' : '-100%'});
+                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 2;
+            `;
+
+            newImage.onerror = function() {
+                newImage.onerror = null;
+                newImage.src = mainImage.dataset.detailFallback || '';
+            };
+
+            mainImage.parentElement.style.position = 'relative';
+            mainImage.parentElement.style.overflow = 'hidden';
+            mainImage.parentElement.appendChild(newImage);
+
+            // Swipe animation
+            requestAnimationFrame(function() {
+                // New image: slide in from right/left
+                newImage.style.transform = 'translateX(0)';
+
+                // Old image: slide out to left/right
+                mainImage.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+                mainImage.style.transform = `translateX(${direction === 'next' ? '-100%' : '100%'})`;
+            });
 
             setTimeout(function() {
-                mainImage.onerror = function() {
-                    mainImage.onerror = null;
-                    mainImage.src = mainImage.dataset.detailFallback || '';
-                };
-                mainImage.src = activeThumb.dataset.detailThumb;
-                mainImage.style.opacity = '1';
-            }, 120);
+                mainImage.src = newImage.src;
+                mainImage.style.transform = 'translateX(0)';
+                mainImage.style.transition = '';
+                
+                if (newImage.parentElement) {
+                    newImage.parentElement.removeChild(newImage);
+                }
+                
+                isTransitioning = false;
+            }, 450);
+        };
+
+        // Auto-slide function
+        const startAutoSlide = function() {
+            if (thumbs.length <= 1) return;
+            
+            autoSlideInterval = setInterval(function() {
+                if (!isUserInteracting && !isTransitioning) {
+                    setActiveImage(activeImageIndex + 1, 'next');
+                }
+            }, 4000);
+        };
+
+        const stopAutoSlide = function() {
+            if (autoSlideInterval) {
+                clearInterval(autoSlideInterval);
+                autoSlideInterval = null;
+            }
+        };
+
+        const resetAutoSlide = function() {
+            stopAutoSlide();
+            isUserInteracting = true;
+            
+            setTimeout(function() {
+                isUserInteracting = false;
+                startAutoSlide();
+            }, 5000);
         };
 
         if (mainImage && thumbs.length) {
+            mainImage.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+
             thumbs.forEach(function(thumb, index) {
                 thumb.addEventListener('click', function() {
-                    setActiveImage(index);
+                    const direction = index > activeImageIndex ? 'next' : 'prev';
+                    setActiveImage(index, direction);
+                    resetAutoSlide();
                 });
             });
 
             prevButton?.addEventListener('click', function() {
-                setActiveImage(activeImageIndex - 1);
+                setActiveImage(activeImageIndex - 1, 'prev');
+                resetAutoSlide();
             });
 
             nextButton?.addEventListener('click', function() {
-                setActiveImage(activeImageIndex + 1);
+                setActiveImage(activeImageIndex + 1, 'next');
+                resetAutoSlide();
             });
+
+            // Pause on hover
+            const galleryContainer = document.querySelector('.detail-gallery');
+            if (galleryContainer) {
+                galleryContainer.addEventListener('mouseenter', function() {
+                    isUserInteracting = true;
+                });
+                
+                galleryContainer.addEventListener('mouseleave', function() {
+                    isUserInteracting = false;
+                });
+            }
+
+            // Keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (!mainImage || !thumbs.length) return;
+                
+                if (e.key === 'ArrowLeft') {
+                    setActiveImage(activeImageIndex - 1, 'prev');
+                    resetAutoSlide();
+                } else if (e.key === 'ArrowRight') {
+                    setActiveImage(activeImageIndex + 1, 'next');
+                    resetAutoSlide();
+                }
+            });
+
+            // Start auto-slide
+            startAutoSlide();
+
+            // Stop auto-slide when page is hidden
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    stopAutoSlide();
+                } else {
+                    if (!isUserInteracting) {
+                        startAutoSlide();
+                    }
+                }
+            });
+
+            // Preload next image
+            const preloadImage = function(index) {
+                const nextIndex = (index + 1) % thumbs.length;
+                const nextThumb = thumbs[nextIndex];
+                if (nextThumb) {
+                    const img = new Image();
+                    img.src = nextThumb.dataset.detailThumb;
+                }
+            };
+            
+            preloadImage(activeImageIndex);
+            setInterval(function() {
+                preloadImage(activeImageIndex);
+            }, 3500);
         }
 
         const reviewForm = document.querySelector('[data-review-form]');

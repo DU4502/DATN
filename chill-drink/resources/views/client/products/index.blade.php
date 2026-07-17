@@ -1034,42 +1034,50 @@
                             <a href="{{ route('products.index') }}">Xem tất cả</a>
                         </div>
                         <div class="voucher-grid">
+                            @forelse($featuredVouchers ?? [] as $voucher)
                             <div class="voucher-card">
                                 <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-ticket-perforated"></i></span>
-                                    <span class="voucher-card__label">TANGNANG20</span>
-                                    <div class="voucher-card__code">TANGNANG20</div>
-                                    <button type="button" class="voucher-card__tag" data-receive-code="TANGNANG20">NHẬN</button>
+                                    <span class="voucher-card__visual">
+                                        @if($voucher->type === 'percent')
+                                            <i class="bi bi-percent"></i>
+                                        @elseif(str_contains(strtolower($voucher->code), 'ship') || str_contains(strtolower($voucher->description ?? ''), 'ship'))
+                                            <i class="bi bi-truck"></i>
+                                        @else
+                                            <i class="bi bi-ticket-perforated"></i>
+                                        @endif
+                                    </span>
+                                    <span class="voucher-card__label">{{ $voucher->code }}</span>
+                                    <div class="voucher-card__code">{{ $voucher->code }}</div>
+                                    <button type="button" 
+                                            class="voucher-card__tag" 
+                                            data-receive-code="{{ $voucher->code }}"
+                                            data-voucher-id="{{ $voucher->id }}">
+                                        NHẬN
+                                    </button>
                                 </div>
-                                <p class="voucher-card__info">Giảm 20k đơn 100k <span class="voucher-card__highlight">Giảm trực tiếp 20.000đ</span></p>
+                                <p class="voucher-card__info">
+                                    {{ $voucher->description ?? 'Voucher giảm giá' }}
+                                    <span class="voucher-card__highlight">
+                                        @if($voucher->type === 'percent')
+                                            Giảm {{ $voucher->value }}%
+                                            @if($voucher->max_discount > 0)
+                                                (Tối đa {{ number_format($voucher->max_discount, 0, ',', '.') }}đ)
+                                            @endif
+                                        @else
+                                            Giảm {{ number_format($voucher->value, 0, ',', '.') }}đ
+                                        @endif
+                                        @if($voucher->min_order > 0)
+                                            - Đơn từ {{ number_format($voucher->min_order, 0, ',', '.') }}đ
+                                        @endif
+                                    </span>
+                                </p>
                             </div>
-                            <div class="voucher-card">
-                                <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-percent"></i></span>
-                                    <span class="voucher-card__label">TANGNANG15</span>
-                                    <div class="voucher-card__code">TANGNANG15</div>
-                                    <button type="button" class="voucher-card__tag" data-receive-code="TANGNANG15">NHẬN</button>
-                                </div>
-                                <p class="voucher-card__info">Giảm 15% tổng bill <span class="voucher-card__highlight">Tối đa 25.000đ</span></p>
+                            @empty
+                            <div class="col-span-2 text-center py-4 text-secondary">
+                                <i class="bi bi-ticket-perforated fs-2 d-block mb-2"></i>
+                                <div style="font-size: 0.85rem;">Chưa có mã giảm giá nào</div>
                             </div>
-                            <div class="voucher-card">
-                                <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-truck"></i></span>
-                                    <span class="voucher-card__label">CHOCHILL</span>
-                                    <div class="voucher-card__code">CHOCHILL</div>
-                                    <button type="button" class="voucher-card__tag" data-receive-code="CHOCHILL">NHẬN</button>
-                                </div>
-                                <p class="voucher-card__info">Freeship đơn từ 50k <span class="voucher-card__highlight">Miễn phí vận chuyển</span></p>
-                            </div>
-                            <div class="voucher-card">
-                                <div class="voucher-card__top">
-                                    <span class="voucher-card__visual"><i class="bi bi-gift"></i></span>
-                                    <span class="voucher-card__label">SUMMER24</span>
-                                    <div class="voucher-card__code">SUMMER24</div>
-                                    <button type="button" class="voucher-card__tag" data-receive-code="SUMMER24">NHẬN</button>
-                                </div>
-                                <p class="voucher-card__info">Giảm 10k mọi đơn <span class="voucher-card__highlight">Áp dụng hôm nay</span></p>
-                            </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>
@@ -1599,30 +1607,29 @@
                     const data = await response.json();
 
                     if (!response.ok) {
-                        // Show error message
-                        alert(data.message || 'Lỗi khi nhận voucher');
+                        // Show error message with details
+                        showToast(data.message || 'Lỗi khi nhận voucher', 'error');
+                        console.error('Voucher error:', data);
                         return;
                     }
 
-                    // Save guest identifier if not already saved
-                    if (!guestIdentifier) {
-                        sessionStorage.setItem('guest_identifier', sessionStorage.getItem('guest_identifier') || Date.now().toString());
+                    // Save guest identifier if this is first voucher claim
+                    if (!guestIdentifier && data.guest_identifier) {
+                        sessionStorage.setItem('guest_identifier', data.guest_identifier);
                     }
 
                     // Show success message
                     button.textContent = 'ĐÃ NHẬN';
                     button.setAttribute('disabled', 'true');
+                    button.classList.add('btn-success');
+                    button.classList.remove('btn-primary');
                     
                     // Show toast notification
                     showToast(`Nhận voucher thành công: ${data.voucher.code}`, 'success');
 
-                    setTimeout(() => {
-                        button.textContent = 'NHẬN';
-                        button.removeAttribute('disabled');
-                    }, 2000);
                 } catch (err) {
-                    console.error(err);
-                    alert('Lỗi khi nhận voucher. Vui lòng thử lại.');
+                    console.error('Exception when receiving voucher:', err);
+                    showToast('Lỗi khi nhận voucher. Vui lòng thử lại.', 'error');
                 }
             });
         });

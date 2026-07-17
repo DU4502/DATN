@@ -144,7 +144,27 @@ class ProductController extends Controller
             $demoProducts = collect();
         }
 
-        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds'));
+        // Get active vouchers for display on products page (admin controlled)
+        $featuredVouchers = \App\Models\Voucher::query()
+            ->where('status', true)
+            ->where('show_on_products', true) // Admin can control which vouchers to show
+            ->where(function ($query) {
+                $query->whereNull('starts_at')
+                    ->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', now());
+            })
+            ->where(function ($query) {
+                $query->where('usage_limit', '<=', 0)
+                    ->orWhereRaw('used_count < usage_limit');
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit(4)
+            ->get();
+
+        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers'));
     }
 
     /**

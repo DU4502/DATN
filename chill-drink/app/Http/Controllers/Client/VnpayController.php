@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Http\Controllers\Controller;
@@ -10,6 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class VnpayController extends Controller
@@ -128,20 +131,34 @@ class VnpayController extends Controller
         }
 
         if ($this->isSuccessful($request)) {
+            // For guest orders, keep awaiting_email_confirmation status until email is confirmed
+            // For regular orders, change to in_progress
+            $newStatus = $order->isGuest() ? $order->status : 'in_progress';
+            
             $order->update([
                 'payment_status' => 'paid',
-                'status' => 'in_progress',
+                'status' => $newStatus,
                 'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
             ]);
 
-            RealtimeOrderNotifier::orderStatusUpdated($order);
-            RealtimeOrderNotifier::orderCreated($order);
+            // Send email confirmation for guest orders after successful payment
+            if ($order->isGuest()) {
+                $this->sendGuestEmailConfirmation($order);
+            }
+
+            // Only notify admin for non-guest orders or guest orders that have confirmed email
+            if (!$order->isGuest() || !$order->isAwaitingEmailConfirmation()) {
+                RealtimeOrderNotifier::orderStatusUpdated($order);
+                RealtimeOrderNotifier::orderCreated($order);
+            }
 
             return $this->resultView(
                 $order->fresh(),
                 'success',
                 'Cảm ơn bạn đã thanh toán',
-                'Thanh toán VNPay thành công. Đơn hàng đang được xử lý.'
+                $order->isGuest() && $order->isAwaitingEmailConfirmation()
+                    ? 'Thanh toán VNPay thành công. Vui lòng kiểm tra email để xác nhận đơn hàng.'
+                    : 'Thanh toán VNPay thành công. Đơn hàng đang được xử lý.'
             );
         }
 
@@ -183,14 +200,26 @@ class VnpayController extends Controller
             }
 
             if ($this->isSuccessful($request)) {
+                // For guest orders, keep awaiting_email_confirmation status until email is confirmed
+                // For regular orders, change to in_progress
+                $newStatus = $order->isGuest() ? $order->status : 'in_progress';
+                
                 $order->update([
                     'payment_status' => 'paid',
-                    'status' => 'in_progress',
+                    'status' => $newStatus,
                     'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
                 ]);
 
-                RealtimeOrderNotifier::orderStatusUpdated($order);
-                RealtimeOrderNotifier::orderCreated($order);
+                // Send email confirmation for guest orders after successful payment
+                if ($order->isGuest()) {
+                    $this->sendGuestEmailConfirmation($order);
+                }
+
+                // Only notify admin for non-guest orders or guest orders that have confirmed email
+                if (!$order->isGuest() || !$order->isAwaitingEmailConfirmation()) {
+                    RealtimeOrderNotifier::orderStatusUpdated($order);
+                    RealtimeOrderNotifier::orderCreated($order);
+                }
             } else {
                 $order->update(['payment_status' => 'failed']);
             }
@@ -273,5 +302,37 @@ class VnpayController extends Controller
         }
 
         return view('client.checkout.success', $payload);
+    }
+
+    private function sendGuestEmailConfirmation(Order $order): void
+    {
+        if (blank($order->guest_email)) {
+            Log::warning('Guest order email skipped: no email address.', ['order_id' => $order->id]);
+            return;
+        }
+
+        try {
+            Mail::to($order->guest_email)
+                ->send(new GuestOrderEmailConfirmationMail($order));
+
+            Log::info('Guest order confirmation email sent after VNPay payment.', [
+                'order_id' => $order->id,
+                'to'       => $order->guest_email,
+                'mailer'   => config('mail.default'),
+                'host'     => config('mail.mailers.smtp.host'),
+            ]);
+
+        } catch (Throwable $e) {
+            Log::error('Guest order confirmation email FAILED after VNPay payment.', [
+                'order_id'     => $order->id,
+                'to'           => $order->guest_email,
+                'mailer'       => config('mail.default'),
+                'smtp_host'    => config('mail.mailers.smtp.host'),
+                'smtp_port'    => config('mail.mailers.smtp.port'),
+                'smtp_user'    => config('mail.mailers.smtp.username'),
+                'error_class'  => get_class($e),
+                'message'      => $e->getMessage(),
+            ]);
+        }
     }
 }
