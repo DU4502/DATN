@@ -104,6 +104,15 @@
         </label>
     </div>
 
+    <div class="col-12">
+        <label class="d-inline-flex align-items-center gap-2 fw-semibold">
+            <input type="hidden" name="show_on_products" value="0">
+            <input type="checkbox" name="show_on_products" value="1" @checked(old('show_on_products', $voucher->show_on_products ?? false))>
+            Hiển thị trên trang sản phẩm
+        </label>
+        <small class="text-secondary d-block ms-4">Tối đa 4 voucher sẽ hiển thị. Voucher mới nhất sẽ được ưu tiên.</small>
+    </div>
+
     @if($isEdit)
         <div class="col-12">
             <div class="text-secondary small">
