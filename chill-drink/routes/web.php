@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
@@ -34,6 +35,7 @@ use Illuminate\Support\Facades\Route;
 
 // Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBranch'])->name('select-nearest-branch');
 
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');
@@ -201,6 +203,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // User Management
     Route::patch('/users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'update']);
+
+    // Slideshow Management
+    Route::get('/slides', [BranchSlideController::class, 'index'])->name('slides.index');
+    Route::post('/slides', [BranchSlideController::class, 'store'])->name('slides.store');
+    Route::put('/slides/{slide}', [BranchSlideController::class, 'update'])->name('slides.update');
+    Route::delete('/slides/{slide}', [BranchSlideController::class, 'destroy'])->name('slides.destroy');
 });
 
 require __DIR__.'/auth.php';

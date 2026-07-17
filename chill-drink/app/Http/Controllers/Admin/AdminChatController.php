@@ -48,6 +48,8 @@ class AdminChatController extends Controller
     {
         $this->authorizeView($conversation);
 
+        $this->markMessagesAsRead($conversation);
+
         $messages = $conversation->messages()
             ->with(['sender', 'displayAsSender'])
             ->get();

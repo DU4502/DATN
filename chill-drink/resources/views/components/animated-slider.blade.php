@@ -1,39 +1,57 @@
 @props([
-    'beverages' => [
-        [
-            'name' => 'TRÀ MATCHA',
-            'title' => 'TRÀ MATCHA THANH MÁT, TINH KHIẾT',
-            'price' => '85.000₫',
-            'image' => '/images/matcha.png',
-            'bg' => '#5d9c59',
-            'desc' => 'Hương vị trà xanh Nhật Bản thượng hạng hòa quyện cùng sữa tươi béo ngậy. Một lựa chọn hoàn hảo cho những ai yêu thích sự thanh khiết và tươi mới.'
-        ],
-        [
-            'name' => 'TRÀ SỮA',
-            'title' => 'TRÀ SỮA CHÂN TRÂU ĐƯỜNG ĐEN',
-            'price' => '75.000₫',
-            'image' => '/images/trasua.png', 
-            'bg' => '#ffffff',
-            'desc' => 'Trà sữa đậm đà hòa quyện với sữa tươi, nổi bật trên nền trắng tinh khôi và chữ đỏ rực.'
-        ],
-        [
-            'name' => 'CÀ PHÊ Ủ LẠNH',
-            'title' => 'CÀ PHÊ Ủ LẠNH ĐẬM ĐÀ, SANG CHẢNH',
-            'price' => '65.000₫',
-            'image' => '/images/cafe.png',
-            'bg' => '#322c2b',
-            'desc' => 'Cà phê ủ lạnh 12 giờ cho vị thanh khiết, ít đắng và đượm hương trái cây tự nhiên từ những hạt cà phê Arabica đặc sản.'
-        ],
-        [
-            'name' => 'XOÀI NHIỆT ĐỚI',
-            'title' => 'HƯƠNG VỊ NHIỆT ĐỚI MÁT LẠNH',
-            'price' => '90.000₫',
-            'image' => '/images/sinhtoxoai.png',
-            'bg' => '#ffb100',
-            'desc' => 'Hương vị xoài chín mọng hòa quyện cùng cốt dừa tươi, mang cả mùa hè nhiệt đới vào từng ngụm nước mát lạnh và thơm nồng nàn.'
-        ]
-    ]
+    'slides' => null
 ])
+
+@php
+    $beverages = [];
+    if (isset($slides) && $slides->isNotEmpty()) {
+        foreach ($slides as $slide) {
+            $beverages[] = [
+                'name' => $slide->product_name,
+                'title' => $slide->title,
+                'price' => $slide->price,
+                'image' => str_starts_with($slide->image, '/') ? $slide->image : asset('storage/' . $slide->image),
+                'bg' => $slide->bg_color,
+                'desc' => $slide->description,
+            ];
+        }
+    } else {
+        $beverages = [
+            [
+                'name' => 'TRÀ MATCHA',
+                'title' => 'TRÀ MATCHA THANH MÁT, TINH KHIẾT',
+                'price' => '85.000₫',
+                'image' => '/images/matcha.png',
+                'bg' => '#5d9c59',
+                'desc' => 'Hương vị trà xanh Nhật Bản thượng hạng hòa quyện cùng sữa tươi béo ngậy. Một lựa chọn hoàn hảo cho những ai yêu thích sự thanh khiết và tươi mới.'
+            ],
+            [
+                'name' => 'TRÀ SỮA',
+                'title' => 'TRÀ SỮA CHÂN TRÂU ĐƯỜNG ĐEN',
+                'price' => '75.000₫',
+                'image' => '/images/trasua.png', 
+                'bg' => '#ffffff',
+                'desc' => 'Trà sữa đậm đà hòa quyện với sữa tươi, nổi bật trên nền trắng tinh khôi và chữ đỏ rực.'
+            ],
+            [
+                'name' => 'CÀ PHÊ Ủ LẠNH',
+                'title' => 'CÀ PHÊ Ủ LẠNH ĐẬM ĐÀ, SANG CHẢNH',
+                'price' => '65.000₫',
+                'image' => '/images/cafe.png',
+                'bg' => '#322c2b',
+                'desc' => 'Cà phê ủ lạnh 12 giờ cho vị thanh khiết, ít đắng và đượm hương trái cây tự nhiên từ những hạt cà phê Arabica đặc sản.'
+            ],
+            [
+                'name' => 'XOÀI NHIỆT ĐỚI',
+                'title' => 'HƯƠNG VỊ NHIỆT ĐỚI MÁT LẠNH',
+                'price' => '90.000₫',
+                'image' => '/images/sinhtoxoai.png',
+                'bg' => '#ffb100',
+                'desc' => 'Hương vị xoài chín mọng hòa quyện cùng cốt dừa tươi, mang cả mùa hè nhiệt đới vào từng ngụm nước mát lạnh và thơm nồng nàn.'
+            ]
+        ];
+    }
+@endphp
 
 <div class="slider" id="mainSlider">
     <style>
