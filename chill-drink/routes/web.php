@@ -180,10 +180,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Voucher Management
     Route::resource('vouchers', VoucherController::class)->except(['show']);
 
+    // Product Trash Management
+    Route::get('/products/trash', [AdminProductController::class, 'trash'])->name('products.trash');
+    Route::post('/products/{id}/restore', [AdminProductController::class, 'restore'])->name('products.restore');
+    Route::delete('/products/{id}/force-delete', [AdminProductController::class, 'forceDelete'])->name('products.force-delete');
+
     // Product Management
     Route::resource('products', AdminProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
 
     // Category Management
+    Route::get('/categories/trash', [CategoryController::class, 'trash'])->name('categories.trash');
+    Route::post('/categories/{id}/restore', [CategoryController::class, 'restore'])->name('categories.restore');
+    Route::delete('/categories/{id}/force-delete', [CategoryController::class, 'forceDelete'])->name('categories.force-delete');
     Route::resource('categories', CategoryController::class)->except(['show']);
 
     // Order Management
@@ -207,6 +215,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('/slides', [BranchSlideController::class, 'store'])->name('slides.store');
     Route::put('/slides/{slide}', [BranchSlideController::class, 'update'])->name('slides.update');
     Route::delete('/slides/{slide}', [BranchSlideController::class, 'destroy'])->name('slides.destroy');
+    
+    // Slide Trash Management
+    Route::get('/slides/trash', [BranchSlideController::class, 'trash'])->name('slides.trash');
+    Route::post('/slides/{id}/restore', [BranchSlideController::class, 'restore'])->name('slides.restore');
+    Route::delete('/slides/{id}/force-delete', [BranchSlideController::class, 'forceDelete'])->name('slides.force-delete');
 });
 
 require __DIR__.'/auth.php';
