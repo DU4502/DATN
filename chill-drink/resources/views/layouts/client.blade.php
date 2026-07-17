@@ -1249,7 +1249,7 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end notification-menu">
                             <div class="notification-head">
-                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
                                     <div>
                                         <div class="fw-bold" style="font-size: 0.9rem;">Thông báo</div>
                                         <div class="text-secondary" style="font-size: 0.8rem;">Cập nhật đơn hàng của bạn</div>
@@ -1258,6 +1258,14 @@
                                         {{ Auth::user()->unreadNotifications->count() }} mới
                                     </span>
                                 </div>
+                                @if(Auth::user()->unreadNotifications->count() > 0)
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary w-100" 
+                                        id="markAllReadBtn"
+                                        style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                    <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
+                                </button>
+                                @endif
                             </div>
                             <div class="notification-list" id="clientNotificationList">
                                 @forelse(Auth::user()->notifications->take(10) as $notification)

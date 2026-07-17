@@ -1411,12 +1411,105 @@
                 </div>
 
                 <!-- Received Vouchers Section -->
-                <div class="mb-3" id="receivedVouchersSection" style="display: none;">
-                    <div class="voucher-group-title">Voucher đã nhận</div>
-                    <div class="text-secondary small mb-2">Những voucher bạn đã nhận và có thể sử dụng</div>
-                    <div class="vstack gap-3" id="receivedVouchersList"></div>
-                    <hr class="my-3">
+                @if($receivedVouchers->isNotEmpty())
+                <div class="mb-4" id="receivedVouchersSection">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="voucher-kind" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fbbf24;">
+                            <i class="bi bi-star-fill me-1"></i>Voucher đã nhận
+                        </span>
+                        <span class="small text-secondary">{{ $receivedVouchers->count() }} mã</span>
+                    </div>
+                    <div class="text-secondary small mb-3">Những voucher bạn đã nhận và có thể sử dụng ngay</div>
+                    <div class="vstack gap-3 mb-3">
+                        @foreach($receivedVouchers as $userVoucher)
+                            @php
+                                $voucher = $userVoucher->voucher;
+                                if (!$voucher) continue;
+                                
+                                $voucherIsShipping = $isShippingVoucher($voucher);
+                                $voucherDiscount = $voucher->discountFor((int) $total);
+                                $usageLimit = (int) ($voucher->usage_limit ?? 0);
+                                $usagePercent = $usageLimit > 0 ? min(100, (int) round(($voucher->used_count / max(1, $usageLimit)) * 100)) : 22;
+                                $voucherValueText = $voucherIsShipping
+                                    ? 'Freeship tối đa ' . $voucher->formattedValue()
+                                    : 'Giảm ' . $voucher->formattedValue();
+                                $voucherLabel = $voucher->code . ' - ' . $voucherValueText;
+                                $voucherIcon = $voucherIsShipping
+                                    ? 'bi-truck'
+                                    : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
+                                $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
+                                $hasRank = ! $voucher->required_rank || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
+                                $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
+                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
+                                $disabledReason = ! $hasMinimumOrder
+                                    ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
+                                    : (! $hasRank
+                                        ? 'Cần rank ' . $voucher->rankLabel()
+                                        : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null));
+                            @endphp
+                            <div
+                                class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
+                                @if($voucherUsable) data-voucher-card @endif
+                                data-voucher-code="{{ $voucher->code }}"
+                                data-voucher-label="{{ $voucherLabel }}"
+                                data-voucher-discount="{{ $voucherDiscount }}"
+                                data-voucher-type="{{ $voucherIsShipping ? 'shipping' : 'discount' }}"
+                                data-voucher-disabled="{{ $voucherUsable ? '0' : '1' }}"
+                                data-is-received="1"
+                                style="position: relative;"
+                            >
+                                <div class="voucher-ticket-brand" style="position: relative;">
+                                    <span class="brand-circle"><i class="bi {{ $voucherIcon }}"></i></span>
+                                    <strong>{{ $voucher->code }}</strong>
+                                    <!-- Badge "Đã nhận" -->
+                                    <span style="position: absolute; top: 0.5rem; right: -0.25rem; background: #fbbf24; color: #78350f; font-size: 0.65rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: 800; transform: rotate(8deg); box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);">
+                                        ĐÃ NHẬN
+                                    </span>
+                                </div>
+                                <div class="voucher-ticket-body">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <span class="voucher-limit">{{ $voucher->usage_limit > 0 ? 'Số lượng có hạn' : 'Không giới hạn' }}</span>
+                                        <span class="voucher-kind">{{ $voucherIsShipping ? 'Freeship' : 'Giảm giá' }}</span>
+                                        <span class="fw-semibold text-secondary">{{ $voucherValueText }}</span>
+                                        @if($voucher->max_discount)
+                                            <span class="fw-semibold text-secondary">tối đa {{ number_format($voucher->max_discount, 0, ',', '.') }}đ</span>
+                                        @endif
+                                    </div>
+                                    <div class="text-secondary mb-2">
+                                        Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
+                                        @if($voucher->required_rank)
+                                            · Rank {{ $voucher->rankLabel() }}
+                                        @endif
+                                        @if($voucher->is_redeemable && $voucher->point_cost > 0)
+                                            · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
+                                        @endif
+                                    </div>
+                                    @if($voucherUsable)
+                                        <span class="voucher-only mb-2">
+                                            {{ $voucherIsShipping ? 'Giảm phí vận chuyển' : 'Giảm đơn hàng' }}
+                                            {{ number_format($voucherDiscount, 0, ',', '.') }}đ
+                                        </span>
+                                    @else
+                                        <span class="voucher-only mb-2">{{ $disabledReason }}</span>
+                                    @endif
+                                    <div class="voucher-progress mt-2 mb-1"><span style="width: {{ $usagePercent }}%"></span></div>
+                                    <div class="small text-secondary">
+                                        HSD: {{ optional($voucher->expires_at)->format('d/m/Y H:i') ?: 'Không giới hạn' }}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="voucher-radio {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }}"
+                                    aria-label="Chọn voucher {{ $voucher->code }}"
+                                    aria-pressed="{{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'true' : 'false' }}"
+                                    @disabled(! $voucherUsable)
+                                ></button>
+                            </div>
+                        @endforeach
+                    </div>
+                    <hr class="my-4">
                 </div>
+                @endif
 
                 <div class="mb-3">
                     <div class="voucher-group-title">Mã có thể áp dụng</div>
