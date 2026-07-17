@@ -132,9 +132,14 @@
         function updateUnreadUi(unreadCount) {
             const dot = document.getElementById('clientNotificationDot');
             const badge = document.getElementById('clientNotificationBadge');
+            const markAllBtn = document.getElementById('markAllReadBtn');
 
             if (dot) {
-                dot.classList.toggle('d-none', unreadCount <= 0);
+                if (unreadCount > 0) {
+                    dot.classList.remove('d-none');
+                } else {
+                    dot.classList.add('d-none');
+                }
             }
 
             if (badge) {
@@ -143,6 +148,15 @@
                     badge.classList.remove('d-none');
                 } else {
                     badge.classList.add('d-none');
+                }
+            }
+
+            // Show/hide mark all read button
+            if (markAllBtn) {
+                if (unreadCount > 0) {
+                    markAllBtn.classList.remove('d-none');
+                } else {
+                    markAllBtn.classList.add('d-none');
                 }
             }
         }
@@ -210,6 +224,35 @@
         document.addEventListener('DOMContentLoaded', function () {
             pollNotifications(); // Poll immediately on page load
             window.setInterval(pollNotifications, 5000);
+
+            // Mark all as read handler
+            const markAllReadBtn = document.getElementById('markAllReadBtn');
+            if (markAllReadBtn) {
+                markAllReadBtn.addEventListener('click', async function() {
+                    try {
+                        const response = await fetch(@json(route('notifications.mark-all-read')), {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            },
+                            credentials: 'same-origin',
+                        });
+
+                        if (response.ok) {
+                            // Reload notifications to reflect changes
+                            await pollNotifications();
+                            
+                            if (typeof window.showRealtimeToast === 'function') {
+                                window.showRealtimeToast('Đã đánh dấu tất cả thông báo là đã đọc', 'success');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Không thể đánh dấu thông báo:', error);
+                    }
+                });
+            }
         });
     })();
 </script>

@@ -71,6 +71,20 @@ class ProfileController extends Controller
     }
 
     /**
+     * Mark all notifications as read
+     */
+    public function markAllNotificationsRead(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->unreadNotifications->markAsRead();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã đánh dấu tất cả thông báo là đã đọc',
+        ]);
+    }
+
+    /**
      * Update the user's profile information.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
