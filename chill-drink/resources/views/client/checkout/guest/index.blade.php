@@ -5,8 +5,7 @@
 @section('content')
 @php
     $guestInfo = $guestInfo ?? [];
-    $deliveryType = old('fulfillment_type', $guestInfo['fulfillment_type'] ?? 'delivery');
-    $orderTiming = old('delivery_type', $guestInfo['delivery_type'] ?? 'now');
+    $deliveryType = old('delivery_type', $guestInfo['delivery_type'] ?? 'delivery');
 @endphp
 
 <style>
@@ -100,9 +99,9 @@
                         <div class="mb-3">
                             <label class="form-label fw-semibold d-block">Nhận hàng *</label>
                             <div class="btn-group delivery-toggle w-100" role="group">
-                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
+                                <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
                                 <label class="btn btn-outline-primary" for="deliveryTypeDelivery"><i class="bi bi-truck me-1"></i>Giao đến địa chỉ</label>
-                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
+                                <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypePickup"><i class="bi bi-shop me-1"></i>Lấy tại chi nhánh</label>
                             </div>
                             <input type="hidden" name="delivery_type" value="now">
@@ -172,8 +171,6 @@
         const pickupFields = document.querySelector('[data-pickup-fields]');
         const deliveryInput = document.getElementById('deliveryTypeDelivery');
         const pickupInput = document.getElementById('deliveryTypePickup');
-        const guestSchedule = document.querySelector('[data-guest-schedule]');
-        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', () => guestSchedule?.classList.toggle('is-hidden', input.value !== 'scheduled')));
 
         function syncDeliveryMode() {
             const isPickup = pickupInput?.checked;

@@ -9,14 +9,14 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class GuestCheckoutTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_guest_can_complete_cod_checkout(): void
     {
@@ -62,12 +62,13 @@ class GuestCheckoutTest extends TestCase
         $this->assertNull($order->user_id);
         $this->assertSame('guest@example.com', $order->guest_email);
 
-        $response->assertRedirect(route('checkout.success', $order));
+        $response->assertRedirect(route('checkout.guest.pending-confirmation', $order));
 
-        $this->get(route('checkout.success', $order))
+        $this->withSession(["guest_order_tokens.{$order->id}" => $order->guest_token])
+            ->get(route('checkout.guest.pending-confirmation', $order))
             ->assertOk()
-            ->assertSee('Một email xác nhận kèm chi tiết đơn hàng')
-            ->assertSee('Tạo tài khoản với thông tin này');
+            ->assertSee('Chúng tôi đã gửi email xác nhận đến:')
+            ->assertSee('guest@example.com');
     }
 
     public function test_guest_can_convert_to_member_after_checkout(): void
@@ -181,7 +182,7 @@ class GuestCheckoutTest extends TestCase
         $this->assertNotNull($order);
         $this->assertNotNull($createdProduct);
         $this->assertSame($createdProduct->id, $order->orderItems()->first()->product_id);
-        $response->assertRedirect(route('checkout.success', $order));
+        $response->assertRedirect(route('checkout.guest.pending-confirmation', $order));
     }
 
     private function sellableProduct(): array

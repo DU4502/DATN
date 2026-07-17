@@ -3,8 +3,8 @@
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GroupOrderController as AdminGroupOrderController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReviewController;
@@ -16,13 +16,12 @@ use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
+use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
-use App\Http\Controllers\Client\VnpayController;
-use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\QuickOrderController;
-use App\Http\Controllers\Client\AddressController;
+use App\Http\Controllers\Client\VnpayController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -80,8 +79,13 @@ Route::middleware('auth')->group(function () {
     Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->name('checkout.addresses.update');
     Route::patch('/checkout/address/primary', [CheckoutController::class, 'updatePrimaryAddress'])->name('checkout.addresses.primary.update');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
+
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
     Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
+    Route::post('/group-orders/join/{code}/leave', [GroupOrderController::class, 'leave'])->name('group-orders.leave');
+    Route::get('/group-orders/join/{code}/messages', [GroupOrderController::class, 'messages'])->name('group-orders.messages');
+    Route::post('/group-orders/join/{code}/messages', [GroupOrderController::class, 'sendMessage'])->name('group-orders.messages.send');
+    Route::post('/group-orders/join/{code}/messages/read', [GroupOrderController::class, 'readMessages'])->name('group-orders.messages.read');
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
@@ -189,8 +193,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('orders', OrderController::class)->only(['index']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
-
-    // Group Order Monitoring
     Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
 
     // Review Management
@@ -202,4 +204,3 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 });
 
 require __DIR__.'/auth.php';
-

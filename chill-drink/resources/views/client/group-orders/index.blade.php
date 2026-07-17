@@ -2,7 +2,7 @@
 @section('title', 'Đơn nhóm của tôi')
 @section('content')
 @include('client.group-orders._styles')
-<section class="group-page">
+<section class="group-page" data-vue-group-orders-index>
     <div class="container group-shell">
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-5">
             <div>
@@ -46,6 +46,7 @@
         </div>
     </div>
 </section>
+@if(false)
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('[data-group-countdown]').forEach(function (countdown) {
@@ -79,4 +80,5 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+@endif
 @endsection

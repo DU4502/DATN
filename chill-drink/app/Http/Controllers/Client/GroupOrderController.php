@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\GroupOrder;
 use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMember;
+use App\Models\GroupOrderMessage;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class GroupOrderController extends Controller
@@ -103,6 +105,144 @@ class GroupOrderController extends Controller
             'is_open' => $group->isOpen(),
             'closes_at' => $group->closes_at->toIso8601String(),
         ]);
+    }
+
+    public function leave(string $code): JsonResponse
+    {
+        $group = GroupOrder::where('code', $code)->firstOrFail();
+        if ($group->owner_id === auth()->id() && $group->isOpen()) {
+            $group->update(['owner_last_seen_at' => null]);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function messages(Request $request, string $code): JsonResponse
+    {
+        $group = GroupOrder::where('code', $code)->firstOrFail();
+        $member = $this->currentMember($group);
+        $recipientId = $request->integer('recipient_id') ?: null;
+
+        $query = $group->messages()->with(['sender:id,name', 'recipient:id,name'])->latest('id')->limit(100);
+        if ($recipientId) {
+            abort_unless($group->members()->whereKey($recipientId)->exists(), 422, 'Thành viên nhận không hợp lệ.');
+            $query->where(function ($query) use ($member, $recipientId) {
+                $query->where(fn ($q) => $q->where('sender_member_id', $member->id)->where('recipient_member_id', $recipientId))
+                    ->orWhere(fn ($q) => $q->where('sender_member_id', $recipientId)->where('recipient_member_id', $member->id));
+            });
+        } else {
+            $query->whereNull('recipient_member_id');
+        }
+
+        $latestIncoming = $group->messages()
+            ->with('sender:id,name')
+            ->where('recipient_member_id', $member->id)
+            ->latest('id')
+            ->first();
+        $latestGroupMessage = $group->messages()
+            ->with('sender:id,name')
+            ->whereNull('recipient_member_id')
+            ->latest('id')
+            ->first();
+        $recentGroupMessages = $group->messages()
+            ->with('sender:id,name')
+            ->whereNull('recipient_member_id')
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->reverse()
+            ->values()
+            ->map(fn ($message) => $this->messagePayload($message));
+        $privateUnreadCounts = $group->messages()
+            ->where('recipient_member_id', $member->id)
+            ->whereNull('read_at')
+            ->selectRaw('sender_member_id, COUNT(*) as unread_count')
+            ->groupBy('sender_member_id')
+            ->pluck('unread_count', 'sender_member_id');
+        $latestUnreadBySender = $group->messages()
+            ->with('sender:id,name')
+            ->where('recipient_member_id', $member->id)
+            ->whereNull('read_at')
+            ->latest('id')
+            ->get()
+            ->unique('sender_member_id')
+            ->values()
+            ->map(fn ($message) => $this->messagePayload($message));
+
+        return response()->json([
+            'group_id' => $group->id,
+            'group_code' => $group->code,
+            'messages' => $query->get()->reverse()->values()->map(fn ($message) => $this->messagePayload($message)),
+            'members' => $group->members()->orderBy('id')->get(['id', 'name']),
+            'latest_incoming_private' => $latestIncoming ? $this->messagePayload($latestIncoming) : null,
+            'latest_group_message' => $latestGroupMessage ? $this->messagePayload($latestGroupMessage) : null,
+            'recent_group_messages' => $recentGroupMessages,
+            'private_unread_counts' => $privateUnreadCounts,
+            'latest_unread_private_by_sender' => $latestUnreadBySender,
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
+    public function sendMessage(Request $request, string $code): JsonResponse
+    {
+        $group = GroupOrder::where('code', $code)->firstOrFail();
+        abort_if($group->status === 'cancelled', 422, 'Phòng đã hủy nên không thể gửi tin nhắn.');
+        $sender = $this->currentMember($group);
+        $data = $request->validate([
+            'content' => ['nullable', 'string', 'max:1000', 'required_without:attachment'],
+            'recipient_id' => ['nullable', 'integer'],
+            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip'],
+        ]);
+        $recipientId = isset($data['recipient_id']) ? (int) $data['recipient_id'] : null;
+        if ($recipientId) {
+            abort_if($recipientId === $sender->id, 422, 'Bạn không thể tự nhắn cho chính mình.');
+            abort_unless($group->members()->whereKey($recipientId)->exists(), 422, 'Thành viên nhận không hợp lệ.');
+        }
+        $attachment = $request->file('attachment');
+        $message = GroupOrderMessage::create([
+            'group_order_id' => $group->id,
+            'sender_member_id' => $sender->id,
+            'recipient_member_id' => $recipientId,
+            'content' => trim($data['content'] ?? ''),
+            'attachment_path' => $attachment?->store("group-orders/{$group->id}", 'public'),
+            'attachment_name' => $attachment?->getClientOriginalName(),
+            'attachment_mime' => $attachment?->getMimeType(),
+            'attachment_size' => $attachment?->getSize(),
+        ])->load(['sender:id,name', 'recipient:id,name']);
+
+        return response()->json(['message' => $this->messagePayload($message)], 201);
+    }
+
+    public function readMessages(Request $request, string $code): JsonResponse
+    {
+        $group = GroupOrder::where('code', $code)->firstOrFail();
+        $member = $this->currentMember($group);
+        $data = $request->validate(['sender_id' => ['required', 'integer']]);
+        abort_unless($group->members()->whereKey($data['sender_id'])->exists(), 422, 'Thành viên gửi không hợp lệ.');
+
+        $group->messages()
+            ->where('sender_member_id', $data['sender_id'])
+            ->where('recipient_member_id', $member->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function messagePayload(GroupOrderMessage $message): array
+    {
+        return [
+            'id' => $message->id,
+            'sender_id' => $message->sender_member_id,
+            'sender_name' => $message->sender->name,
+            'recipient_id' => $message->recipient_member_id,
+            'content' => $message->content,
+            'attachment_name' => $message->attachment_name,
+            'attachment_mime' => $message->attachment_mime,
+            'attachment_size' => $message->attachment_size,
+            'attachment_url' => $message->attachment_path ? Storage::disk('public')->url($message->attachment_path) : null,
+            'read_at' => $message->read_at?->toIso8601String(),
+            'created_at' => $message->created_at->toIso8601String(),
+        ];
     }
 
     public function join(Request $request, string $code)
@@ -228,7 +368,7 @@ class GroupOrderController extends Controller
     public function close(string $code)
     {
         if (session()->has('checkout_group_order_id')) {
-            return back()->with('error', 'Bạn đang có một đơn nhóm chờ thanh toán. Hãy hoàn tất hoặc hủy đơn đó trước.');
+            abort(422, 'Bạn đang có một đơn nhóm chờ thanh toán. Hãy hoàn tất hoặc hủy đơn đó trước.');
         }
 
         $group = GroupOrder::where('code', $code)->firstOrFail();
@@ -237,7 +377,7 @@ class GroupOrderController extends Controller
         }
 
         if ($group->status !== 'open') {
-            return back()->with('error', 'Đơn nhóm đã được chốt hoặc hủy trước đó.');
+            abort(422, 'Đơn nhóm đã được chốt hoặc hủy trước đó.');
         }
 
         if ($group->items()->count() === 0) {

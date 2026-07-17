@@ -25,4 +25,15 @@ class ScheduledDeliveryTest extends TestCase
         $this->assertNotNull(ScheduledDelivery::validate('2026-07-08 22:01:00'));
         Carbon::setTestNow();
     }
+
+    public function test_schedule_must_be_on_the_same_day(): void
+    {
+        Carbon::setTestNow('2026-07-08 09:00:00');
+        $this->assertNull(ScheduledDelivery::validate('2026-07-08 10:00:00'));
+        $this->assertSame(
+            'Đặt giao sau chỉ áp dụng trong ngày hôm nay.',
+            ScheduledDelivery::validate('2026-07-09 10:00:00')
+        );
+        Carbon::setTestNow();
+    }
 }

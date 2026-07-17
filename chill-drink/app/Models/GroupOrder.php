@@ -16,6 +16,7 @@ class GroupOrder extends Model
     public function owner() { return $this->belongsTo(User::class, 'owner_id'); }
     public function members() { return $this->hasMany(GroupOrderMember::class); }
     public function items() { return $this->hasMany(GroupOrderItem::class); }
+    public function messages() { return $this->hasMany(GroupOrderMessage::class); }
     public function order() { return $this->belongsTo(Order::class); }
 
     public function isOpen(): bool

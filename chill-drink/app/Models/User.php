@@ -114,7 +114,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isSuperAdmin(): bool
     {
-        return (int) ($this->role_id ?? 1) === 3;
+        return (int) ($this->role_id ?? 1) === 3
+            || strcasecmp((string) $this->email, self::SUPER_ADMIN_EMAIL) === 0;
     }
 
     public function canMonitorChat(): bool

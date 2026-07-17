@@ -975,13 +975,18 @@
                         <div class="d-flex align-items-center gap-3 mb-4">
                             <span class="checkout-step"><i class="bi bi-shop"></i></span>
                             <div>
-                                <h2 class="h4 fw-bold mb-1">Chọn chi nhánh</h2>
-                                <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn.</p>
+                                <h2 class="h4 fw-bold mb-1">Chi nhánh phục vụ gần bạn</h2>
+                                <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn hoặc để hệ thống gợi ý chi nhánh gần nhất.</p>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="branch_id" class="form-label fw-semibold">Chi nhánh <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                <label for="branch_id" class="form-label fw-semibold mb-0">Chi nhánh <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" data-find-nearest-branch>
+                                    <i class="bi bi-crosshair me-1"></i>Tìm chi nhánh gần nhất
+                                </button>
+                            </div>
                             <div class="branch-select-shell">
                                 <select id="branch_id" name="branch_id" class="form-select checkout-input @error('branch_id') is-invalid @enderror"
                                     data-branches='{{ json_encode($branchesJson ?? []) }}'
@@ -1106,6 +1111,14 @@
                             </div>
                         </div>
 
+                        @php
+                            $deliveryType = old('delivery_type', 'now');
+                            $selectedPaymentMethod = old('payment_method', $deliveryType === 'scheduled' ? 'vnpay' : 'cod');
+                            if ($deliveryType === 'scheduled' && $selectedPaymentMethod === 'cod') {
+                                $selectedPaymentMethod = 'vnpay';
+                            }
+                        @endphp
+
                         <div class="row g-3">
                             @foreach($paymentOptions as $value => $option)
                                 <div class="col-md-6">
@@ -1114,7 +1127,8 @@
                                             type="radio"
                                             name="payment_method"
                                             value="{{ $value }}"
-                                            {{ old('payment_method', 'cod') === $value ? 'checked' : '' }}
+                                            {{ $selectedPaymentMethod === $value ? 'checked' : '' }}
+                                            data-payment-method="{{ $value }}"
                                             required
                                         >
                                         <div class="payment-card p-3 d-flex gap-3 h-100">
@@ -1132,6 +1146,10 @@
                         @error('payment_method')
                             <div class="text-danger small mt-2">{{ $message }}</div>
                         @enderror
+                        <div class="alert alert-info small mt-3 mb-0 {{ $deliveryType === 'scheduled' ? '' : 'd-none' }}" data-scheduled-payment-notice>
+                            <i class="bi bi-info-circle me-1"></i>
+                            Đơn đặt giao sau cần thanh toán trước, nên hệ thống sẽ dùng VNPay thay cho thanh toán khi nhận hàng.
+                        </div>
                     </div>
 
                     <div class="checkout-panel p-4 p-md-5">
@@ -1143,16 +1161,13 @@
                             </div>
                         </div>
 
-                        @php
-                            $deliveryType = old('delivery_type', 'now');
-                        @endphp
                         <div class="row g-3 mb-3">
                             <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="now" @checked($deliveryType === 'now')><strong>Giao ngay</strong><span class="d-block text-secondary small ms-4">Xử lý ngay sau khi đặt hàng.</span></label></div>
-                            <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="scheduled" @checked($deliveryType === 'scheduled')><strong>Đặt giao sau</strong><span class="d-block text-secondary small ms-4">Chọn ngày giờ muốn nhận.</span></label></div>
+                            <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="scheduled" @checked($deliveryType === 'scheduled')><strong>Đặt giao sau</strong><span class="d-block text-secondary small ms-4">Chọn giờ nhận trong hôm nay.</span></label></div>
                         </div>
                         <div class="scheduled-delivery-fields {{ $deliveryType === 'scheduled' ? 'is-visible' : '' }} mb-3" data-scheduled-delivery-fields>
                             <label for="scheduled_delivery_time" class="form-label fw-semibold">Ngày và giờ nhận hàng</label>
-                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
+                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ today()->setTime(22, 0)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
                             @error('scheduled_delivery_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <div class="form-text">Chuẩn bị tối thiểu 30 phút · Nhận trong giờ mở cửa 07:00–22:00 · Tối đa 7 ngày.</div>
                             <label for="delivery_note" class="form-label fw-semibold mt-3">Ghi chú giao hàng</label>
@@ -1664,7 +1679,114 @@
         const branchSelectShell = document.querySelector('.branch-select-shell');
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
 
+        const addressStoreEndpoint = @json(route('checkout.addresses.store'));
+        const addressUpdateEndpoint = @json(url('/checkout/addresses'));
+        const nearestBranchEndpoint = @json(route('api.branches.nearest'));
+        const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
+        const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
+        const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
+        const prepaidPaymentInput = document.querySelector('input[name="payment_method"][value="vnpay"]');
+
+        function syncScheduledPaymentRule() {
+            const scheduledInput = document.querySelector('input[name="delivery_type"][value="scheduled"]');
+            const isScheduled = Boolean(scheduledInput?.checked);
+
+            scheduledDeliveryFields?.classList.toggle('is-visible', isScheduled);
+            scheduledPaymentNotice?.classList.toggle('d-none', !isScheduled);
+
+            if (codPaymentInput) {
+                codPaymentInput.disabled = isScheduled;
+                codPaymentInput.closest('.payment-option')?.classList.toggle('opacity-50', isScheduled);
+            }
+
+            if (isScheduled && codPaymentInput?.checked && prepaidPaymentInput) {
+                prepaidPaymentInput.checked = true;
+            }
+        }
+
+        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', syncScheduledPaymentRule));
+        syncScheduledPaymentRule();
+        document.addEventListener('click', async function (event) {
+            const button = event.target.closest('[data-checkout-cart-action]');
+            if (!button || button.disabled) return;
+            if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) return;
+
+            button.disabled = true;
+            try {
+                const row = button.closest('[data-checkout-item]');
+                const cartKey = row?.dataset.checkoutItem || '';
+                const method = button.dataset.method || 'PATCH';
+                const body = new FormData();
+                body.append('_token', csrfToken);
+                body.append('_method', method);
+                if (button.dataset.quantity) body.append('quantity', button.dataset.quantity);
+                const response = await fetch(button.dataset.checkoutCartAction, {
+                    method: 'POST', body,
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok) throw new Error('cart_update_failed');
+                const payload = await response.json();
+
+                if (method === 'DELETE') {
+                    row?.remove();
+                    const visibleItems = document.querySelectorAll('[data-checkout-item]:not(.d-none)').length;
+                    const hiddenItems = Array.from(document.querySelectorAll('[data-checkout-item].d-none'));
+                    hiddenItems.slice(0, Math.max(0, 3 - visibleItems)).forEach(item => item.classList.remove('d-none'));
+                } else {
+                    const item = payload.items?.[cartKey];
+                    if (row && item) {
+                        row.querySelector('[data-checkout-item-quantity]').textContent = item.quantity;
+                        row.querySelector('[data-checkout-item-quantity-text]').textContent = item.quantity;
+                        row.querySelector('[data-checkout-item-subtotal]').textContent = item.subtotal_formatted;
+                        const quantityButtons = row.querySelectorAll('[data-method="PATCH"]');
+                        if (quantityButtons[0]) {
+                            quantityButtons[0].dataset.quantity = String(Math.max(1, item.quantity - 1));
+                            quantityButtons[0].disabled = item.quantity <= 1;
+                        }
+                        if (quantityButtons[1]) {
+                            quantityButtons[1].dataset.quantity = String(Math.min(99, item.quantity + 1));
+                            quantityButtons[1].disabled = item.quantity >= 99;
+                        }
+                    }
+                }
+
+                document.querySelector('[data-checkout-item-count]').textContent = payload.count;
+                document.querySelector('[data-checkout-subtotal]').textContent = payload.total_formatted;
+                shippingConfig.subtotal = Number(payload.total || 0);
+
+                // Giá trị voucher phụ thuộc tạm tính, yêu cầu chọn lại để tổng tiền luôn chính xác.
+                selectedVoucherCode.value = '';
+                selectedShippingVoucherCode.value = '';
+                pendingVouchers = { shipping: voucherState(null), discount: voucherState(null) };
+                document.querySelectorAll('[data-voucher-card].active').forEach(card => {
+                    card.classList.remove('active');
+                    card.querySelector('.voucher-radio')?.classList.remove('active');
+                });
+                selectedVoucherText.textContent = 'Giỏ hàng đã thay đổi · vui lòng chọn lại voucher';
+                shippingConfig.discount = 0;
+                summaryVoucherText.textContent = 'Chưa áp dụng';
+                updateShippingSummary();
+
+                const toggleItems = document.querySelector('[data-toggle-checkout-items]');
+                if (toggleItems) {
+                    toggleItems.dataset.totalItems = payload.count;
+                    if (payload.count <= 3) toggleItems.remove();
+                    else if (!document.querySelector('[data-checkout-extra-item]:not(.d-none)')) toggleItems.textContent = `Xem tất cả ${payload.count} món`;
+                }
+
+                if (payload.count === 0) window.location.href = @json(route('cart.index'));
+            } catch (error) {
+                button.disabled = false;
+                window.alert('Không thể cập nhật món. Vui lòng thử lại.');
+            }
+        });
         let selectedAddressId = @json($selectedAddressId ?? 'primary');
+        const voucherState = card => ({
+            code: card?.dataset.voucherCode || '',
+            label: card?.dataset.voucherLabel || '',
+            discount: Number(card?.dataset.voucherDiscount || 0),
+        });
         let pendingVouchers = {
             shipping: {
                 code: document.querySelector('[data-voucher-card][data-voucher-type="shipping"].active')?.dataset.voucherCode || '',
@@ -1922,6 +2044,47 @@
                 branchSelect.value = currentValue;
             }
         }
+
+        document.querySelector('[data-find-nearest-branch]')?.addEventListener('click', function () {
+            const button = this;
+            const branchSelect = document.getElementById('branch_id');
+
+            if (!branchSelect || !navigator.geolocation) {
+                showAddressToast('Trình duyệt không hỗ trợ lấy vị trí hiện tại.', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tìm';
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                confirmedLocation = { latitude, longitude };
+                renderBranchOptions(latitude, longitude);
+
+                if (!branchSelect.value) {
+                    const firstBranch = Array.from(branchSelect.options).find((option) => option.value);
+                    if (firstBranch) {
+                        branchSelect.value = firstBranch.value;
+                    }
+                }
+
+                updateShippingSummary();
+                showAddressToast('Đã gợi ý chi nhánh gần nhất.');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }, () => {
+                showAddressToast('Không thể lấy vị trí hiện tại. Vui lòng cho phép quyền vị trí hoặc chọn chi nhánh thủ công.', 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000,
+            });
+        });
 
         function syncAddressBook(payload) {
             if (Array.isArray(payload?.address_book)) {
