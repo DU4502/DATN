@@ -435,6 +435,11 @@ class CheckoutController extends Controller
                 RealtimeOrderNotifier::orderCreated($order);
             }
 
+            // Tạo/cập nhật conversation chat với chi nhánh nhận đơn hàng (chỉ user đã đăng nhập)
+            if (auth()->check() && $order->branch_id) {
+                \App\Support\ChatHelper::ensureChatWithOrderBranch($order);
+            }
+
             if ($order->payment_method === 'vnpay') {
                 return redirect()
                     ->route('vnpay.payment', $order)
