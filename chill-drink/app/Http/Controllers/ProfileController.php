@@ -85,6 +85,72 @@ class ProfileController extends Controller
     }
 
     /**
+     * Customer cancels their own order (only in pending status)
+     */
+    public function cancelOrder(Request $request, Order $order): RedirectResponse
+    {
+        $user = $request->user();
+
+        // Verify ownership
+        if ($order->user_id !== $user->id) {
+            abort(403, 'Bạn không có quyền hủy đơn hàng này.');
+        }
+
+        // Only allow cancellation in PENDING status
+        if (OrderStatus::normalize((string) $order->status) !== OrderStatus::PENDING) {
+            return redirect()->back()->with('error', 'Chỉ được hủy đơn hàng khi đang ở trạng thái "Chờ xác nhận".');
+        }
+
+        // Validate cancellation reason
+        $request->validate([
+            'cancellation_reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        // Update order status and reason
+        $order->status = OrderStatus::CANCELLED;
+        $order->cancellation_reason = $request->cancellation_reason;
+        $order->save();
+
+        // Send notification (through RealtimeOrderNotifier)
+        \App\Support\RealtimeOrderNotifier::orderStatusUpdated($order);
+
+        return redirect()->back()->with('success', 'Đơn hàng đã được hủy thành công.');
+    }
+
+    /**
+     * Customer confirms order has been received (delivered → completed)
+     */
+    public function confirmReceived(Request $request, Order $order): RedirectResponse
+    {
+        $user = $request->user();
+
+        // Verify ownership
+        if ($order->user_id !== $user->id) {
+            abort(403, 'Bạn không có quyền xác nhận đơn hàng này.');
+        }
+
+        // Only allow confirmation in DELIVERED status
+        if (OrderStatus::normalize((string) $order->status) !== OrderStatus::DELIVERED) {
+            return redirect()->back()->with('error', 'Chỉ có thể xác nhận đơn hàng khi đang ở trạng thái "Đã giao".');
+        }
+
+        // Update order status to completed
+        $order->status = OrderStatus::COMPLETED;
+        
+        // Update payment status for COD orders
+        if ($order->payment_method === 'cod' && $order->payment_status !== 'paid') {
+            $order->payment_status = 'paid';
+        }
+        
+        $order->save();
+
+        // Send notification (through RealtimeOrderNotifier)
+        \App\Support\RealtimeOrderNotifier::orderStatusUpdated($order);
+
+        return redirect()->back()->with('success', 'Cảm ơn bạn đã xác nhận! Đơn hàng đã hoàn thành.');
+    }
+
+    /**
      * Update the user's profile information.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse

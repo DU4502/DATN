@@ -12,34 +12,252 @@
 {{-- ===== STYLES ===== --}}
 <style>
     .admin-chat-page {
-        height: calc(100vh - 190px);
-        max-height: calc(100vh - 190px);
-        min-height: 520px;
+        padding: 1.5rem;
+        padding-bottom: 0;
+    }
+    .admin-chat-heading { 
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Conversation list */
+    .admin-chat-list-panel { 
+        height: calc(100vh - 200px);
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
-    .admin-chat-heading { flex: 0 0 auto; }
-    .admin-chat-grid { flex: 1 1 auto; min-height: 0; }
-    .admin-chat-grid > [class*="col-"] { min-height: 0; display: flex; }
-    .admin-chat-panel { flex: 1 1 auto; min-height: 0; max-height: 100%; }
-    .admin-chat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-    .admin-chat-fixed { flex: 0 0 auto; }
-    .admin-chat-bubble { max-width: 72%; overflow-wrap: anywhere; word-break: break-word; }
+    .admin-chat-scroll { 
+        flex: 1 1 auto; 
+        min-height: 0; 
+        overflow-y: auto; 
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+    }
+    
+    /* Chat Boxes Container - Fixed at bottom right */
+    .chat-boxes-container {
+        position: fixed;
+        bottom: 0;
+        right: 20px;
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+        z-index: 1050;
+        pointer-events: none;
+    }
+    
+    /* Individual Chat Box */
+    .chat-box {
+        width: 330px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px 10px 0 0;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        pointer-events: auto;
+        transition: height 0.2s ease;
+    }
+    
+    .chat-box.minimized {
+        height: 48px !important;
+    }
+    
+    .chat-box:not(.minimized) {
+        height: 450px;
+    }
+    
+    /* Chat Box Header */
+    .chat-box-header {
+        background: #0084ff;
+        color: white;
+        padding: 0.6rem 0.8rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-radius: 10px 10px 0 0;
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .chat-box-header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-width: 0;
+        flex: 1;
+    }
+    
+    .chat-box-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+    
+    .chat-box-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .chat-box-actions {
+        display: flex;
+        gap: 0.3rem;
+        flex-shrink: 0;
+    }
+    
+    .chat-box-btn {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+        padding: 0;
+    }
+    
+    .chat-box-btn:hover {
+        background: rgba(255,255,255,0.35);
+    }
+    
+    /* Chat Box Body */
+    .chat-box-body {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .chat-box.minimized .chat-box-body {
+        display: none;
+    }
+    
+    /* Chat Box Footer */
+    .chat-box-footer {
+        padding: 0.6rem 0.8rem;
+        background: white;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .chat-box.minimized .chat-box-footer {
+        display: none;
+    }
+    
+    .chat-box-input {
+        flex: 1;
+        border: 1px solid #dee2e6;
+        border-radius: 20px;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.875rem;
+        outline: none;
+    }
+    
+    .chat-box-input:focus {
+        border-color: #0084ff;
+    }
+    
+    .chat-box-send-btn {
+        background: #0084ff;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    
+    .chat-box-send-btn:hover:not(:disabled) {
+        background: #0073e6;
+    }
+    
+    .chat-box-send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    /* Chat Messages */
+    .chat-msg {
+        display: flex;
+        margin-bottom: 0.5rem;
+    }
+    
+    .chat-msg.from-customer {
+        justify-content: flex-start;
+    }
+    
+    .chat-msg.from-admin {
+        justify-content: flex-end;
+    }
+    
+    .chat-msg-bubble {
+        max-width: 75%;
+        padding: 0.5rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        word-wrap: break-word;
+    }
+    
+    .chat-msg.from-customer .chat-msg-bubble {
+        background: white;
+        color: #212529;
+        border: 1px solid #e9ecef;
+    }
+    
+    .chat-msg.from-admin .chat-msg-bubble {
+        background: #0084ff;
+        color: white;
+    }
+    
+    .chat-msg-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        margin-top: 0.2rem;
+    }
+    
     @media (max-width: 991.98px) {
-        .admin-chat-page { height: auto; max-height: none; min-height: 0; overflow: visible; }
-        .admin-chat-panel { height: min(620px, calc(100vh - 140px)); }
+        .chat-box {
+            width: 280px;
+        }
+        .chat-boxes-container {
+            right: 10px;
+            gap: 8px;
+        }
     }
 </style>
 
 {{-- ===== PAGE ===== --}}
-<div class="p-6 admin-chat-page">
+<div class="admin-chat-page" x-data="chatManager()">
 
     {{-- Heading --}}
-    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 admin-chat-heading">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 admin-chat-heading">
         <div>
             <h1 class="h4 fw-bold mb-1 text-dark">Trò chuyện với khách hàng</h1>
-            <p class="text-secondary mb-0 small">Xem và phản hồi các cuộc trò chuyện từ khách hàng.</p>
+            <p class="text-secondary mb-0 small">Nhấn vào cuộc trò chuyện để mở cửa sổ chat</p>
         </div>
         @if($viewer->isSuperAdmin())
             <div class="d-flex align-items-center gap-2">
@@ -56,14 +274,11 @@
         @endif
     </div>
 
-    <div class="row g-4 admin-chat-grid">
-
-        {{-- ===== LEFT: Conversation list ===== --}}
-        <div class="col-12 col-lg-4 col-xl-3">
-            <div class="bg-white border rounded-3 shadow-sm overflow-hidden h-100 d-flex flex-column admin-chat-panel">
-
-                {{-- Panel header with total unread badge --}}
-                <div class="p-3 border-bottom bg-light admin-chat-fixed d-flex align-items-center justify-content-between">
+    <div class="row g-4">
+        {{-- ===== Conversation List ===== --}}
+        <div class="col-12 col-lg-5 col-xl-4">
+            <div class="bg-white border rounded-3 shadow-sm overflow-hidden admin-chat-list-panel">
+                <div class="p-3 border-bottom bg-light d-flex align-items-center justify-content-between">
                     <h2 class="h6 fw-bold mb-0 text-dark">Danh sách trò chuyện</h2>
                     @php
                         $totalUnread = $conversations->sum(fn($c) =>
@@ -77,7 +292,6 @@
                     @endif
                 </div>
 
-                {{-- List --}}
                 <div class="admin-chat-scroll">
                     @forelse($conversations as $conv)
                         @php
@@ -85,10 +299,15 @@
                                 ->where('is_read', false)
                                 ->where('sender_id', $conv->user_id)
                                 ->count();
-                            $isActive = isset($conversation) && $conversation->id === $conv->id;
                         @endphp
-                        <a href="{{ route('admin.chat.show', ['conversation' => $conv, 'branch_id' => request('branch_id')]) }}"
-                           class="d-block p-3 border-bottom text-decoration-none {{ $isActive ? 'bg-primary-subtle' : 'bg-white' }}">
+                        <button
+                            type="button"
+                            @click="openChat({{ $conv->id }}, '{{ addslashes($conv->user->name) }}', '{{ addslashes($conv->user->email) }}', {{ $conv->user_id }}, {{ $canReply ? 'true' : 'false' }})"
+                            class="d-block w-100 p-3 border-bottom text-start bg-white"
+                            style="border: none; cursor: pointer; transition: background 0.2s;"
+                            onmouseover="this.style.background='#f8f9fa'"
+                            onmouseout="this.style.background='white'"
+                        >
                             <div class="d-flex align-items-start gap-2">
                                 <div class="position-relative flex-shrink-0">
                                     <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;">
@@ -119,233 +338,229 @@
                                     </div>
                                 </div>
                             </div>
-                        </a>
+                        </button>
                     @empty
                         <p class="p-4 text-secondary text-center small mb-0">Chưa có cuộc trò chuyện nào.</p>
                     @endforelse
                 </div>
-
             </div>
         </div>
 
-        {{-- ===== RIGHT: Chat panel ===== --}}
-        <div class="col-12 col-lg-8 col-xl-9">
-            <div class="bg-white border rounded-3 shadow-sm overflow-hidden h-100 d-flex flex-column admin-chat-panel"
-                @if(isset($conversation))
-                    x-data="adminChat({
-                        conversationId: {{ $conversation->id }},
-                        canReply: {{ $canReply ? 'true' : 'false' }},
-                        userId: {{ $conversation->user_id }},
-                        viewerId: {{ $viewer->id }},
-                        messagesUrl: '{{ route('admin.chat.messages', $conversation) }}',
-                        replyUrl: '{{ route('admin.chat.reply', $conversation) }}',
-                        csrfToken: '{{ csrf_token() }}'
-                    })"
-                    x-init="init()"
-                @endif
-            >
-                @if(isset($conversation))
-
-                    {{-- Chat header --}}
-                    <div class="p-3 border-bottom bg-light admin-chat-fixed">
-                        <div class="d-flex align-items-center gap-2 min-w-0">
-                            <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold flex-shrink-0" style="width:38px;height:38px;">
-                                {{ mb_strtoupper(mb_substr($conversation->user->name, 0, 1)) }}
-                            </div>
-                            <div class="min-w-0">
-                                <h3 class="h6 fw-bold mb-0 text-dark text-truncate">{{ $conversation->user->name }}</h3>
-                                <p class="text-secondary small mb-0 text-truncate">{{ $conversation->user->email }}</p>
-                                @if($conversation->cskh)
-                                    <p class="text-secondary small mb-0">Phụ trách: {{ $conversation->cskh->name }}</p>
-                                @endif
-                            </div>
+        {{-- ===== Instructions ===== --}}
+        <div class="col-12 col-lg-7 col-xl-8">
+            <div class="bg-white border rounded-3 shadow-sm p-5" style="height: calc(100vh - 200px);">
+                <div class="h-100 d-flex align-items-center justify-content-center">
+                    <div class="text-center">
+                        <i class="bi bi-chat-dots display-3 text-primary mb-3"></i>
+                        <h3 class="h5 fw-bold text-dark mb-2">Chọn cuộc trò chuyện để bắt đầu</h3>
+                        <p class="text-secondary mb-3">Nhấn vào khách hàng bên trái để mở cửa sổ chat</p>
+                        <div class="alert alert-info d-inline-block">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <small>Bạn có thể mở tối đa 3 cửa sổ chat cùng lúc</small>
                         </div>
                     </div>
-
-                    {{-- Message list --}}
-                    <div x-ref="messageList" class="admin-chat-scroll p-3">
-                        <div class="d-flex flex-column gap-3">
-                            @foreach($conversation->messages as $message)
-                                @php
-                                    $displaySender     = $message->display_sender;
-                                    $isCustomerMessage = $displaySender->id === $conversation->user_id;
-                                @endphp
-                                <div class="d-flex {{ $isCustomerMessage ? 'justify-content-start' : 'justify-content-end' }}" data-message-id="{{ $message->id }}">
-                                    <div class="px-3 py-2 rounded-3 admin-chat-bubble {{ $isCustomerMessage ? 'bg-light text-dark' : 'bg-primary text-white' }}">
-                                        @if($message->content)
-                                            <p class="small mb-1">{{ $message->content }}</p>
-                                        @endif
-                                        <p class="mb-0 {{ $isCustomerMessage ? 'text-secondary' : 'text-white-50' }}" style="font-size:.72rem;">
-                                            {{ $message->created_at->format('H:i') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    {{-- *** INPUT AREA *** --}}
-                    <div class="p-3 border-top bg-light admin-chat-fixed">
-                        @if($conversation->status === 'closed')
-                            <div class="alert alert-warning py-2 small text-center mb-2">
-                                Cuộc trò chuyện đã đóng. Nhắn tin để mở lại tự động.
-                            </div>
-                        @endif
-
-                        @if($canReply)
-                            <div class="d-flex align-items-center gap-2">
-                                <input
-                                    type="text"
-                                    x-model="newMessage"
-                                    @keydown.enter.prevent="sendMessage()"
-                                    placeholder="Nhập tin nhắn..."
-                                    class="form-control form-control-sm"
-                                    :disabled="loading"
-                                >
-                                <button
-                                    type="button"
-                                    @click="sendMessage()"
-                                    :disabled="loading || !newMessage.trim()"
-                                    class="btn btn-sm btn-primary px-3 flex-shrink-0"
-                                >
-                                    <span x-show="!loading">Gửi</span>
-                                    <span x-show="loading">Đang gửi...</span>
-                                </button>
-                            </div>
-                        @else
-                            <p class="text-secondary text-center small mb-0 py-1">Bạn không có quyền trả lời cuộc trò chuyện này.</p>
-                        @endif
-                    </div>
-
-                @else
-                    {{-- Empty state --}}
-                    <div class="flex-grow-1 d-flex align-items-center justify-content-center text-secondary" style="min-height:520px;">
-                        <div class="text-center">
-                            <i class="bi bi-chat-dots display-5 d-block mb-3 text-secondary"></i>
-                            <p class="mb-0">Chọn một cuộc trò chuyện để xem và phản hồi.</p>
-                        </div>
-                    </div>
-                @endif
+                </div>
             </div>
         </div>
-
     </div>
+
+    {{-- ===== Chat Boxes (Fixed at bottom) ===== --}}
+    <div class="chat-boxes-container">
+        <template x-for="(chatBox, index) in openChats" :key="chatBox.id">
+            <div class="chat-box" :class="{ 'minimized': chatBox.minimized }">
+                {{-- Header --}}
+                <div class="chat-box-header" @click="toggleMinimize(chatBox.id)">
+                    <div class="chat-box-header-left">
+                        <div class="chat-box-avatar" x-text="chatBox.userName.charAt(0).toUpperCase()"></div>
+                        <div class="chat-box-title" x-text="chatBox.userName"></div>
+                    </div>
+                    <div class="chat-box-actions" @click.stop>
+                        <button class="chat-box-btn" @click="toggleMinimize(chatBox.id)" :title="chatBox.minimized ? 'Mở rộng' : 'Thu nhỏ'">
+                            <i class="bi" :class="chatBox.minimized ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                        </button>
+                        <button class="chat-box-btn" @click="closeChat(chatBox.id)" title="Đóng">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Body (Messages) --}}
+                <div class="chat-box-body" :id="'chatBody_' + chatBox.id">
+                    <template x-for="msg in chatBox.messages" :key="msg.id">
+                        <div class="chat-msg" :class="msg.isCustomer ? 'from-customer' : 'from-admin'">
+                            <div class="chat-msg-bubble">
+                                <div x-text="msg.content"></div>
+                                <div class="chat-msg-time" x-text="msg.time"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Footer (Input) --}}
+                <div class="chat-box-footer" x-show="chatBox.canReply">
+                    <input 
+                        type="text" 
+                        class="chat-box-input" 
+                        placeholder="Nhập tin nhắn..."
+                        x-model="chatBox.newMessage"
+                        @keydown.enter="sendMessage(chatBox.id)"
+                        :disabled="chatBox.sending"
+                    >
+                    <button 
+                        class="chat-box-send-btn" 
+                        @click="sendMessage(chatBox.id)"
+                        :disabled="chatBox.sending || !chatBox.newMessage.trim()"
+                    >
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+            </div>
+        </template>
+    </div>
+
 </div>
 
-@if(isset($conversation))
 <script>
-function adminChat(config) {
+function chatManager() {
     return {
-        ...config,
-        newMessage: '',
-        loading: false,
-        pollInterval: null,
-        visibilityHandler: null,
+        openChats: [],
+        pollIntervals: {},
+        viewerId: {{ $viewer->id }},
+        csrfToken: '{{ csrf_token() }}',
+        maxChats: 3,
 
-        init() {
-            this.scrollToBottom();
-            this.visibilityHandler = () => document.hidden ? this.stopPolling() : this.startPolling();
-            document.addEventListener('visibilitychange', this.visibilityHandler);
-            this.startPolling();
+        openChat(conversationId, userName, userEmail, userId, canReply) {
+            // Check if already open
+            if (this.openChats.find(c => c.id === conversationId)) {
+                const chat = this.openChats.find(c => c.id === conversationId);
+                chat.minimized = false;
+                return;
+            }
+
+            // Check max limit
+            if (this.openChats.length >= this.maxChats) {
+                alert(`Bạn chỉ có thể mở tối đa ${this.maxChats} cửa sổ chat cùng lúc.`);
+                return;
+            }
+
+            // Create new chat box
+            const newChat = {
+                id: conversationId,
+                userName: userName,
+                userEmail: userEmail,
+                userId: userId,
+                canReply: canReply,
+                messages: [],
+                newMessage: '',
+                sending: false,
+                minimized: false
+            };
+
+            this.openChats.push(newChat);
+            
+            // Fetch messages and start polling
+            this.fetchMessages(conversationId);
+            this.startPolling(conversationId);
         },
 
-        destroy() {
-            this.stopPolling();
-            document.removeEventListener('visibilitychange', this.visibilityHandler);
+        closeChat(conversationId) {
+            this.stopPolling(conversationId);
+            this.openChats = this.openChats.filter(c => c.id !== conversationId);
         },
 
-        startPolling() {
-            if (document.hidden || this.pollInterval) return;
-            this.fetchMessages();
-            this.pollInterval = window.setInterval(() => this.fetchMessages(), 1000);
-        },
-
-        stopPolling() {
-            if (!this.pollInterval) return;
-            window.clearInterval(this.pollInterval);
-            this.pollInterval = null;
-        },
-
-        async fetchMessages() {
-            try {
-                const res  = await fetch(this.messagesUrl, { headers: { 'Accept': 'application/json' } });
-                const data = await res.json();
-                if (!data.success) return;
-
-                const prevCount = this.$refs.messageList?.querySelectorAll('[data-message-id]').length ?? 0;
-                if (data.messages.length !== prevCount) {
-                    this.renderMessages(data.messages);
+        toggleMinimize(conversationId) {
+            const chat = this.openChats.find(c => c.id === conversationId);
+            if (chat) {
+                chat.minimized = !chat.minimized;
+                if (!chat.minimized) {
+                    this.$nextTick(() => this.scrollToBottom(conversationId));
                 }
-            } catch (e) {
-                console.error('Poll error', e);
             }
         },
 
-        renderMessages(messages) {
-            const container = this.$refs.messageList;
-            if (!container) return;
-
-            container.innerHTML = `<div class="d-flex flex-column gap-3">${messages.map(msg => {
-                const isCustomer = msg.sender_id === this.userId;
-                const align   = isCustomer ? 'justify-content-start' : 'justify-content-end';
-                const bubble  = isCustomer ? 'bg-light text-dark'     : 'bg-primary text-white';
-                const tClass  = isCustomer ? 'text-secondary'          : 'text-white-50';
-                const time    = new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour:'2-digit', minute:'2-digit', hour12:false });
-                return `<div class="d-flex ${align}" data-message-id="${msg.id}">
-                    <div class="px-3 py-2 rounded-3 admin-chat-bubble ${bubble}">
-                        <p class="small mb-1">${this.escapeHtml(msg.content || '')}</p>
-                        <p class="mb-0 ${tClass}" style="font-size:.72rem;">${time}</p>
-                    </div>
-                </div>`;
-            }).join('')}</div>`;
-
-            this.scrollToBottom();
-        },
-
-        escapeHtml(text) {
-            const d = document.createElement('div');
-            d.textContent = text;
-            return d.innerHTML;
-        },
-
-        scrollToBottom() {
-            this.$nextTick(() => {
-                const el = this.$refs.messageList;
-                if (el) el.scrollTop = el.scrollHeight;
-            });
-        },
-
-        async sendMessage() {
-            if (!this.newMessage.trim() || this.loading) return;
-
-            this.loading = true;
-            const fd = new FormData();
-            fd.append('content',  this.newMessage);
-            fd.append('_token',   this.csrfToken);
-
+        async fetchMessages(conversationId) {
             try {
-                const res  = await fetch(this.replyUrl, {
-                    method: 'POST',
-                    headers: { 'Accept': 'application/json' },
-                    body: fd,
+                const res = await fetch(`/admin/chat/${conversationId}/messages`, {
+                    headers: { 'Accept': 'application/json' }
                 });
                 const data = await res.json();
+                
                 if (data.success) {
-                    this.newMessage = '';
-                    await this.fetchMessages();
+                    const chat = this.openChats.find(c => c.id === conversationId);
+                    if (chat) {
+                        chat.messages = data.messages.map(msg => ({
+                            id: msg.id,
+                            content: msg.content,
+                            isCustomer: msg.sender_id === chat.userId,
+                            time: new Date(msg.created_at).toLocaleTimeString('vi-VN', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            })
+                        }));
+                        this.$nextTick(() => this.scrollToBottom(conversationId));
+                    }
+                }
+            } catch (e) {
+                console.error('Error fetching messages:', e);
+            }
+        },
+
+        startPolling(conversationId) {
+            if (this.pollIntervals[conversationId]) return;
+            
+            this.pollIntervals[conversationId] = setInterval(() => {
+                if (!document.hidden) {
+                    this.fetchMessages(conversationId);
+                }
+            }, 2000);
+        },
+
+        stopPolling(conversationId) {
+            if (this.pollIntervals[conversationId]) {
+                clearInterval(this.pollIntervals[conversationId]);
+                delete this.pollIntervals[conversationId];
+            }
+        },
+
+        async sendMessage(conversationId) {
+            const chat = this.openChats.find(c => c.id === conversationId);
+            if (!chat || !chat.newMessage.trim() || chat.sending) return;
+
+            chat.sending = true;
+            const fd = new FormData();
+            fd.append('content', chat.newMessage);
+            fd.append('_token', this.csrfToken);
+
+            try {
+                const res = await fetch(`/admin/chat/${conversationId}/reply`, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: fd
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    chat.newMessage = '';
+                    await this.fetchMessages(conversationId);
                 } else {
                     alert(data.message || 'Không thể gửi tin nhắn.');
                 }
             } catch (e) {
                 alert('Lỗi kết nối.');
             } finally {
-                this.loading = false;
+                chat.sending = false;
             }
         },
+
+        scrollToBottom(conversationId) {
+            const el = document.getElementById('chatBody_' + conversationId);
+            if (el) {
+                el.scrollTop = el.scrollHeight;
+            }
+        }
     };
 }
 </script>
-@endif
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -367,23 +582,15 @@ function adminChat(config) {
                         }
                     }
                     
-                    const newHeaderBadge = doc.querySelector('.admin-chat-fixed .badge');
-                    const currentHeaderBadge = document.querySelector('.admin-chat-fixed .badge');
+                    const newHeaderBadge = doc.querySelector('.admin-chat-list-panel .badge');
+                    const currentHeaderBadge = document.querySelector('.admin-chat-list-panel .badge');
                     if (newHeaderBadge && currentHeaderBadge) {
                         if (currentHeaderBadge.textContent !== newHeaderBadge.textContent) {
                             currentHeaderBadge.textContent = newHeaderBadge.textContent;
                         }
                         currentHeaderBadge.style.display = '';
-                    } else if (currentHeaderBadge) {
-                        if (!newHeaderBadge) {
-                            currentHeaderBadge.style.display = 'none';
-                        }
-                    } else if (newHeaderBadge) {
-                        const newHeader = doc.querySelector('.admin-chat-fixed');
-                        const currentHeader = document.querySelector('.admin-chat-fixed');
-                        if (newHeader && currentHeader) {
-                            currentHeader.innerHTML = newHeader.innerHTML;
-                        }
+                    } else if (currentHeaderBadge && !newHeaderBadge) {
+                        currentHeaderBadge.style.display = 'none';
                     }
                 }
             } catch (err) {

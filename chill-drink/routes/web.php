@@ -147,6 +147,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
+    Route::post('/orders/{order}/cancel', [ProfileController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/orders/{order}/confirm-received', [ProfileController::class, 'confirmReceived'])->name('orders.confirm-received');
     Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
     Route::post('/notifications/mark-all-read', [ProfileController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');

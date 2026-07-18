@@ -21,9 +21,15 @@ class OrderStatusUpdated implements ShouldBroadcast
 
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('user.'.$this->order->user_id),
+        $channels = [
+            new PrivateChannel('admin-notifications'),
         ];
+
+        if ($this->order->user_id) {
+            $channels[] = new PrivateChannel('user.'.$this->order->user_id);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string
@@ -41,6 +47,7 @@ class OrderStatusUpdated implements ShouldBroadcast
             'status_label' => $payload['status_label'],
             'message' => $payload['message'],
             'title' => $payload['title'],
+            'cancellation_reason' => $this->order->cancellation_reason ?? null,
             'url' => route('orders.index', ['order' => $this->order->id]),
         ];
     }
