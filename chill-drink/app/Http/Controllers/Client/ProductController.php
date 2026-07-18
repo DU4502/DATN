@@ -20,7 +20,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::query()->with('category');
+        $query = Product::query()->with(['category', 'sizes', 'toppings']);
         $this->onlyVisibleProducts($query);
 
         $hasSkuColumn = Schema::hasColumn('products', 'sku');
@@ -183,7 +183,7 @@ class ProductController extends Controller
         $hasReviewsTable = Schema::hasTable('reviews');
         $productQuery = Product::where('slug', $slug)
             ->where('status', true)
-            ->with('category');
+            ->with(['category', 'sizes', 'toppings']);
 
         if ($hasReviewsTable) {
             $productQuery->with([

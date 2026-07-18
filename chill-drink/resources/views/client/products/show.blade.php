@@ -1088,18 +1088,29 @@
                         <div class="option-block mb-0">
                             <label class="option-label d-block mb-3">Chọn kích cỡ</label>
                             <div class="d-flex flex-wrap gap-2" data-size-group>
+                                @php
+                                    $productSizesMap = isset($product) && $product->relationLoaded('sizes')
+                                        ? $product->sizes->keyBy(fn($s) => strtoupper(trim($s->name)))
+                                        : collect();
+                                @endphp
+
                                 <button type="button" class="choice-btn size-choice active" data-size-option="S" data-size-extra="0">
                                     S
                                     <small>Giá gốc</small>
                                 </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="M" data-size-extra="5000">
-                                    M
-                                    <small>+5.000đ</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
-                                    L
-                                    <small>+10.000đ</small>
-                                </button>
+
+                                @foreach(['M', 'L'] as $szName)
+                                    @php
+                                        $sizeObj = $productSizesMap->get($szName);
+                                        $extraPrice = $sizeObj ? (int) $sizeObj->pivot->price : 0;
+                                    @endphp
+                                    @if($sizeObj)
+                                        <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
+                                            {{ $szName }}
+                                            <small>+{{ number_format($extraPrice, 0, ',', '.') }}đ</small>
+                                        </button>
+                                    @endif
+                                @endforeach
                             </div>
                         </div>
                     </div>

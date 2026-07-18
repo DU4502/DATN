@@ -1344,6 +1344,7 @@
                                     data-name="{{ $product->name }}"
                                     data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
                                     data-base-price="{{ (float) $product->price }}"
+                                    data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
                                     data-image="{{ $product->image_url }}"
                                 >
                                     <i class="bi bi-cart-plus" aria-hidden="true"></i>
@@ -1666,8 +1667,23 @@
             const image = element.querySelector('[data-home-quick-image]');
             image.src = button.dataset.image || '';
             image.alt = button.dataset.name || 'Đồ uống';
-            input('quantity').value = '1';
-            element.querySelector('[data-home-qty-label]').textContent = '1';
+            let sizesMap = {};
+            try {
+                sizesMap = JSON.parse(button.dataset.sizes || '{}');
+            } catch(e) {}
+
+            element.querySelectorAll('[data-home-quick-group="size"] .home-quick-size').forEach((sizeBtn) => {
+                const sz = sizeBtn.dataset.value;
+                if (sz === 'S') {
+                    sizeBtn.dataset.extra = '0';
+                } else if (sizesMap[sz] !== undefined) {
+                    const extraPrice = Number(sizesMap[sz]);
+                    sizeBtn.dataset.extra = extraPrice;
+                    const small = sizeBtn.querySelector('small');
+                    if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
+                }
+            });
+
             resetGroup('size', 'S'); resetGroup('sugar', '50'); resetGroup('ice', '100');
             element.querySelectorAll('[data-home-toppings] .home-quick-choice').forEach((item) => item.classList.remove('active'));
             input('toppings').value = '[]';

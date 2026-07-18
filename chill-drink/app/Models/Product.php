@@ -108,6 +108,22 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function toppings()
+    {
+        return $this->belongsToMany(Topping::class, 'product_toppings', 'product_id', 'topping_id');
+    }
+
+    public function sizes()
+    {
+        return $this->belongsToMany(Size::class, 'product_sizes', 'product_id', 'size_id')
+                    ->withPivot('price');
+    }
+
+    public function productSizes()
+    {
+        return $this->hasMany(ProductSize::class, 'product_id');
+    }
+
     /**
      * Get average rating for the product
      */
