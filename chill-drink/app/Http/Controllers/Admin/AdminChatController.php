@@ -8,6 +8,7 @@ use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdminChatController extends Controller
 {
@@ -163,7 +164,11 @@ class AdminChatController extends Controller
     protected function createMessage(Conversation $conversation, array $data): Message
     {
         $message = $conversation->messages()->create($data);
-        $conversation->update(['last_message_at' => now()]);
+
+        // Cập nhật last_message_at nhanh nhất bằng raw SQL (bỏ qua Eloquent overhead)
+        DB::table('conversations')
+            ->where('id', $conversation->id)
+            ->update(['last_message_at' => now()]);
 
         $message->load(['sender', 'displayAsSender']);
 

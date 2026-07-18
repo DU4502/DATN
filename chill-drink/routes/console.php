@@ -17,7 +17,7 @@ Schedule::command(CancelExpiredGuestOrders::class)
     ->withoutOverlapping()
     ->runInBackground();
 
-// Tự động xoá chat cũ
+// Tự động xoá conversation chat hết hạn (tính từ tin nhắn cuối, ngưỡng = CHAT_EXPIRY_MONTHS)
 Schedule::command(CleanupOldChats::class)
     ->daily()
     ->withoutOverlapping()

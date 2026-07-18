@@ -8,6 +8,7 @@ use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
@@ -97,7 +98,6 @@ class ChatController extends Controller
 
         $conversation->update([
             'branch_id' => $branch->id,
-            'last_message_at' => now(),
         ]);
 
         session(['nearest_branch_id' => $branch->id]);
@@ -115,6 +115,11 @@ class ChatController extends Controller
             'sender_id' => $staffUser->id,
             'content' => $systemContent,
         ]);
+
+        // Cập nhật last_message_at nhanh nhất bằng raw SQL ngay sau khi tạo message
+        DB::table('conversations')
+            ->where('id', $conversation->id)
+            ->update(['last_message_at' => now()]);
 
         $message->load(['sender', 'displayAsSender']);
 
@@ -200,13 +205,14 @@ class ChatController extends Controller
         ]);
 
         if ($conversation->status === 'closed') {
-            $conversation->update([
-                'status' => 'open',
-                'last_message_at' => now(),
-            ]);
-        } else {
-            $conversation->update(['last_message_at' => now()]);
+            // Mở lại conversation bằng Eloquent (cần update status)
+            $conversation->update(['status' => 'open']);
         }
+
+        // Cập nhật last_message_at nhanh nhất bằng raw SQL ngay sau khi tạo message
+        DB::table('conversations')
+            ->where('id', $conversation->id)
+            ->update(['last_message_at' => now()]);
 
         $message->load(['sender', 'displayAsSender']);
 
