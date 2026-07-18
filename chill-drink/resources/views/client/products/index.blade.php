@@ -1246,6 +1246,7 @@
                                             data-name="{{ $product->name }}"
                                             data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
                                             data-base-price="{{ (int) ($product->price ?? 0) }}"
+                                            data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
                                             data-image="{{ $product->image_url }}"
                                             data-category="{{ $product->category?->name }}"
                                         >
@@ -1596,9 +1597,26 @@
                 fields.size.value = 'S';
                 fields.sugar.value = '50';
                 fields.ice.value = '100';
-                fields.toppings.value = '[]';
                 if (fields.qtyInput) fields.qtyInput.value = '1';
                 if (fields.qtyDisplay) fields.qtyDisplay.textContent = '1';
+
+                let sizesMap = {};
+                try {
+                    sizesMap = JSON.parse(button.dataset.sizes || '{}');
+                } catch(e) {}
+
+                modalElement.querySelectorAll('.quick-size-grid .quick-choice').forEach((sizeBtn) => {
+                    const sz = sizeBtn.dataset.value;
+                    if (sz === 'S') {
+                        sizeBtn.dataset.extraPrice = '0';
+                    } else if (sizesMap[sz] !== undefined) {
+                        const extraPrice = Number(sizesMap[sz]);
+                        sizeBtn.dataset.extraPrice = extraPrice;
+                        const small = sizeBtn.querySelector('small');
+                        if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
+                    }
+                });
+
                 setGroupValue('size', 'S');
                 setGroupValue('sugar', '50');
                 setGroupValue('ice', '100');

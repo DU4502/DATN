@@ -16,6 +16,41 @@ class ChatController extends Controller
         $this->middleware('auth');
     }
 
+    public function nearestBranches(Request $request)
+    {
+        $this->ensureCustomer();
+
+        $request->validate([
+            'lat' => 'required|numeric',
+            'lng' => 'required|numeric',
+        ]);
+
+        $lat = (float) $request->input('lat');
+        $lng = (float) $request->input('lng');
+
+        $branches = \App\Models\Branch::availableForLocation()
+            ->get()
+            ->map(function (\App\Models\Branch $branch) use ($lat, $lng) {
+                $distanceKm = $branch->distanceTo($lat, $lng);
+                return [
+                    'id' => $branch->id,
+                    'name' => $branch->name,
+                    'address' => $branch->address,
+                    'phone' => $branch->phone,
+                    'distance' => round($distanceKm, 2),
+                    'distance_text' => round($distanceKm, 1) . ' km',
+                ];
+            })
+            ->sortBy('distance')
+            ->values()
+            ->take(3);
+
+        return response()->json([
+            'success' => true,
+            'branches' => $branches,
+        ]);
+    }
+
     public function getOrCreateConversation(Request $request)
     {
         $this->ensureCustomer();
@@ -26,22 +61,74 @@ class ChatController extends Controller
             ->first();
 
         if (!$conversation) {
-            $branchId = $request->branch_id 
-                ?? session('nearest_branch_id')
-                ?? auth()->user()->branch_id 
-                ?? auth()->user()->orders()->latest()->value('branch_id')
-                ?? \App\Models\Branch::first()->id ?? 1;
-
             $conversation = auth()->user()->conversations()->create([
                 'subject' => 'Hỗ trợ khách hàng',
                 'status' => 'open',
-                'branch_id' => $branchId,
+                'branch_id' => null,
             ]);
         }
 
+        $conversation->load('branch');
+
         return response()->json([
             'conversation_id' => $conversation->id,
+            'branch_id' => $conversation->branch_id,
+            'branch_name' => $conversation->branch?->name,
             'success' => true,
+        ]);
+    }
+
+    public function selectBranch(Request $request)
+    {
+        $this->ensureCustomer();
+
+        $request->validate([
+            'conversation_id' => 'required|exists:conversations,id',
+            'branch_id' => 'required|exists:branches,id',
+        ]);
+
+        $conversation = Conversation::findOrFail($request->conversation_id);
+
+        if ($conversation->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $branch = \App\Models\Branch::findOrFail($request->branch_id);
+
+        $conversation->update([
+            'branch_id' => $branch->id,
+            'last_message_at' => now(),
+        ]);
+
+        session(['nearest_branch_id' => $branch->id]);
+
+        $systemContent = "Bạn đã được kết nối với Chi nhánh " . $branch->name . ".\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
+
+        // Find staff/admin assigned to this branch, or any staff user
+        $staffUser = \App\Models\User::whereIn('role_id', [2, 3, 4])
+            ->where('branch_id', $branch->id)
+            ->first()
+            ?? \App\Models\User::whereIn('role_id', [2, 3, 4])->first()
+            ?? auth()->user();
+
+        $message = $conversation->messages()->create([
+            'sender_id' => $staffUser->id,
+            'content' => $systemContent,
+        ]);
+
+        $message->load(['sender', 'displayAsSender']);
+
+        try {
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Throwable) {
+            // Broadcasting optional when Reverb/queue is not configured
+        }
+
+        return response()->json([
+            'success' => true,
+            'branch_id' => $branch->id,
+            'branch_name' => $branch->name,
+            'message' => MessageResource::toPublicArray($message),
         ]);
     }
 
