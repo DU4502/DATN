@@ -16,6 +16,7 @@
         newMessage: '',
         loading: false,
         pollInterval: null,
+        echoChannel: null,
         visibilityHandler: null,
 
         async init() {
@@ -36,18 +37,26 @@
                 this.menuOpen = false;
             });
             this.visibilityHandler = () => {
-                if (document.hidden) this.stopPolling();
-                else if (this.isOpen) this.activateSupportChat();
+                if (document.hidden) {
+                    this.stopPolling();
+                    this.leaveEchoChannel();
+                } else if (this.isOpen) {
+                    this.activateSupportChat();
+                }
             };
             document.addEventListener('visibilitychange', this.visibilityHandler);
             this.$watch('isOpen', (isOpen) => {
                 if (isOpen) this.activateSupportChat();
-                else this.stopPolling();
+                else {
+                    this.stopPolling();
+                    this.leaveEchoChannel();
+                }
             });
         },
 
         destroy() {
             this.stopPolling();
+            this.leaveEchoChannel();
             document.removeEventListener('visibilitychange', this.visibilityHandler);
         },
 
@@ -137,15 +146,54 @@
             if (!this.conversationId) await this.getOrCreateConversation();
             if (!this.conversationId || !this.isOpen) return;
             await this.fetchMessages();
-            this.startPolling();
+            this.subscribeEchoChannel();
+            this.startPolling(); // fallback polling mỗi 15s nếu Reverb không hoạt động
+        },
+
+        subscribeEchoChannel() {
+            if (!window.Echo || !this.conversationId) return;
+            // Tránh subscribe trùng
+            if (this.echoChannel) return;
+
+            this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
+                .listen('.message-sent', (payload) => {
+                    // Bỏ qua tin nhắn do chính user này gửi (đã append ở sendMessage)
+                    const alreadyExists = this.messages.some(m => m.id === payload.message_id);
+                    if (alreadyExists) return;
+
+                    this.messages.push({
+                        id: payload.message_id,
+                        conversation_id: payload.conversation_id,
+                        sender_id: payload.sender_id,
+                        content: payload.content,
+                        attachment_path: payload.attachment_path,
+                        attachment_name: payload.attachment_name,
+                        attachment_url: payload.attachment_url,
+                        is_read: payload.is_read,
+                        created_at: payload.created_at,
+                        sender: {
+                            id: payload.sender_id,
+                            name: payload.sender_name,
+                        },
+                    });
+
+                    this.$nextTick(() => { this.scrollToBottom(); });
+                });
+        },
+
+        leaveEchoChannel() {
+            if (!window.Echo || !this.conversationId || !this.echoChannel) return;
+            window.Echo.leave('conversation.' + this.conversationId);
+            this.echoChannel = null;
         },
 
         startPolling() {
             this.stopPolling();
             if (!this.isOpen || document.hidden || !this.conversationId) return;
+            // Polling 15s chỉ là fallback khi Reverb không hoạt động
             this.pollInterval = window.setInterval(() => {
                 if (this.isOpen && !document.hidden) this.fetchMessages();
-            }, 3000);
+            }, 15000);
         },
 
         stopPolling() {
