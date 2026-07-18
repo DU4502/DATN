@@ -311,7 +311,7 @@ const groupOrderChat = {
         initialMembers: { type: Array, required: true },
     },
     data() {
-        return { messages: [], members: this.initialMembers, recipientId: null, content: '', attachment: null, loading: false, syncing: false, sending: false, error: '', timer: null, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '' };
+        return { messages: [], members: this.initialMembers, recipientId: null, content: '', attachment: null, loading: false, syncing: false, sending: false, error: '', timer: null, unifiedToggleHandler: null, unifiedCloseHandler: null, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '' };
     },
     computed: {
         currentMemberId() { return this.memberId; },
@@ -324,12 +324,48 @@ const groupOrderChat = {
             return `Chat riêng với ${this.members.find((member) => Number(member.id) === Number(this.recipientId))?.name || 'thành viên'}`;
         },
     },
-    mounted() {
-        this.loadMessages(true);
-        this.timer = window.setInterval(() => this.loadMessages(false), 800);
+    watch: {
+        totalUnread(value) {
+            window.dispatchEvent(new CustomEvent('group-chat-unread', { detail: { count: Number(value || 0) } }));
+        },
+        isOpen() {
+            this.scheduleSync(true);
+        },
     },
-    beforeUnmount() { window.clearInterval(this.timer); },
+    mounted() {
+        this.unifiedToggleHandler = () => {
+            this.isOpen = !this.isOpen;
+            if (this.isOpen) window.dispatchEvent(new CustomEvent('group-chat-opened'));
+            else window.dispatchEvent(new CustomEvent('group-chat-closed'));
+        };
+        this.unifiedCloseHandler = () => {
+            this.isOpen = false;
+            window.dispatchEvent(new CustomEvent('group-chat-closed'));
+        };
+        window.addEventListener('group-chat-toggle', this.unifiedToggleHandler);
+        window.addEventListener('group-chat-close', this.unifiedCloseHandler);
+        window.dispatchEvent(new CustomEvent('group-chat-unread', { detail: { count: this.totalUnread } }));
+        this.loadMessages(true);
+        this.scheduleSync();
+    },
+    beforeUnmount() {
+        window.clearInterval(this.timer);
+        window.removeEventListener('group-chat-toggle', this.unifiedToggleHandler);
+        window.removeEventListener('group-chat-close', this.unifiedCloseHandler);
+    },
     methods: {
+        scheduleSync(immediate = false) {
+            window.clearTimeout(this.timer);
+            const delay = immediate ? 0 : (this.isOpen ? 1500 : 8000);
+            this.timer = window.setTimeout(async () => {
+                await this.loadMessages(false);
+                this.scheduleSync();
+            }, delay);
+        },
+        closeChat() {
+            this.isOpen = false;
+            window.dispatchEvent(new CustomEvent('group-chat-closed'));
+        },
         selectRecipient(id) {
             this.recipientId = id;
             this.messages = [];
@@ -434,6 +470,7 @@ const groupOrderChat = {
         dismissNotification(id) { this.notifications = this.notifications.filter((item) => item.id !== id); },
         openNotification(notification) {
             this.isOpen = true;
+            window.dispatchEvent(new CustomEvent('group-chat-opened'));
             this.selectRecipient(notification.isPrivate ? notification.senderId : null);
             this.dismissNotification(notification.id);
         },
@@ -476,14 +513,10 @@ const groupOrderChat = {
                 <i class="bi" :class="notification.isPrivate ? 'bi-person-lock' : 'bi-people'"></i><span>{{ notification.text }}</span><i class="bi bi-chevron-right"></i>
             </button>
         </div>
-        <button type="button" class="group-chat-launcher" @click="isOpen = !isOpen" :aria-label="isOpen ? 'Đóng chat đơn nhóm' : 'Mở chat đơn nhóm'" title="Chat đơn nhóm">
-            <i class="bi" :class="isOpen ? 'bi-x-lg' : 'bi-people-fill'"></i>
-            <span v-if="totalUnread" class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-danger">{{ totalUnread }}</span>
-        </button>
         <section v-show="isOpen" class="group-card group-chat-panel">
             <header class="group-chat-head">
                 <div><div class="group-eyebrow">Trò chuyện trong phòng</div><strong>{{ title }}</strong></div>
-                <button type="button" class="btn btn-sm btn-light rounded-circle" @click="isOpen = false" aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="btn btn-sm btn-light rounded-circle" @click="closeChat" aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
             </header>
             <div class="group-chat-tools">
                     <button type="button" class="group-chat-tab" :class="{ 'is-active': !recipientId }" @click="selectRecipient(null)"><i class="bi bi-people me-1"></i>Cả nhóm</button>

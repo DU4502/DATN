@@ -1,6 +1,10 @@
 <div
     x-data="{
         isOpen: false,
+        menuOpen: false,
+        groupChatAvailable: false,
+        groupChatOpen: false,
+        groupUnread: 0,
         conversationId: null,
         messages: [],
         newMessage: '',
@@ -8,6 +12,22 @@
         pollInterval: null,
 
         async init() {
+            this.groupChatAvailable = Boolean(document.querySelector('[data-vue-group-chat]'));
+            window.addEventListener('group-chat-unread', (event) => {
+                this.groupUnread = Number(event.detail?.count || 0);
+            });
+            window.addEventListener('group-chat-opened', () => {
+                this.isOpen = false;
+                this.menuOpen = false;
+                this.groupChatOpen = true;
+            });
+            window.addEventListener('group-chat-closed', () => {
+                this.groupChatOpen = false;
+            });
+            window.addEventListener('support-chat-close', () => {
+                this.isOpen = false;
+                this.menuOpen = false;
+            });
             await this.getOrCreateConversation();
             if (this.conversationId) {
                 await this.fetchMessages();
@@ -18,6 +38,35 @@
                     }
                 }, 3000);
             }
+        },
+
+        openSupportChat() {
+            this.menuOpen = false;
+            this.isOpen = true;
+            window.dispatchEvent(new CustomEvent('group-chat-close'));
+        },
+
+        openGroupChat() {
+            this.menuOpen = false;
+            this.isOpen = false;
+            window.dispatchEvent(new CustomEvent('group-chat-toggle'));
+        },
+
+        toggleUnifiedChat() {
+            if (this.isOpen) {
+                this.isOpen = false;
+                return;
+            }
+            if (this.groupChatOpen) {
+                this.groupChatOpen = false;
+                window.dispatchEvent(new CustomEvent('group-chat-close'));
+                return;
+            }
+            if (this.groupChatAvailable) {
+                this.menuOpen = !this.menuOpen;
+                return;
+            }
+            this.isOpen = true;
         },
 
         async getOrCreateConversation() {
@@ -97,17 +146,30 @@
 >
     <!-- Toggle button -->
     <button
-        @click="isOpen = !isOpen"
+        @click="toggleUnifiedChat()"
         class="flex items-center justify-center w-16 h-16 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
-        style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent));"
+        style="position:relative;background: linear-gradient(135deg, var(--c-primary), var(--c-accent));"
     >
-        <svg x-show="!isOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg x-show="!isOpen && !groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
-        <svg x-show="isOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg x-show="isOpen || groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
+        <span x-show="groupUnread > 0" x-text="groupUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
     </button>
+
+    <div x-show="menuOpen && groupChatAvailable" x-transition style="position:absolute;right:0;bottom:5rem;width:230px;padding:.55rem;border-radius:16px;background:#fff;border:1px solid #e1ebe8;box-shadow:0 18px 48px rgba(7,52,58,.2);display:grid;gap:.4rem;">
+        <button type="button" @click="openGroupChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#f1f0ff;color:#4f46c8;font-weight:800;text-align:left;">
+            <span style="width:36px;height:36px;border-radius:50%;background:#5b50d6;color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-people-fill"></i></span>
+            <span style="flex:1;">Chat đơn nhóm</span>
+            <span x-show="groupUnread > 0" x-text="groupUnread" class="badge rounded-pill bg-danger"></span>
+        </button>
+        <button type="button" @click="openSupportChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#ecfaf6;color:#087c63;font-weight:800;text-align:left;">
+            <span style="width:36px;height:36px;border-radius:50%;background:var(--c-primary);color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-headset"></i></span>
+            <span>Hỗ trợ khách hàng</span>
+        </button>
+    </div>
 
     <!-- Chat window -->
     <div
