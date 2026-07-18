@@ -8,10 +8,6 @@
         conversationId: null,
         branchId: null,
         branchName: '',
-        nearestBranches: [],
-        loadingLocation: false,
-        locationDenied: false,
-        selectingBranch: false,
         messages: [],
         newMessage: '',
         loading: false,
@@ -67,16 +63,11 @@
                 return;
             }
             window.dispatchEvent(new CustomEvent('group-chat-close'));
-            
-            // Open window IMMEDIATELY without delay
             this.isOpen = true;
 
+            // Luôn gọi getOrCreateConversation — backend tự xác định branch
             if (!this.conversationId) {
-                this.getOrCreateConversation();
-            }
-
-            if (!this.branchId && this.nearestBranches.length === 0) {
-                this.requestLocationAndFetchBranches();
+                await this.getOrCreateConversation();
             }
         },
 
@@ -101,44 +92,6 @@
                 return;
             }
             await this.openSupportChat();
-        },
-
-        async requestLocationAndFetchBranches() {
-            this.locationDenied = false;
-            this.loadingLocation = true;
-
-            if (!navigator.geolocation) {
-                this.loadingLocation = false;
-                this.locationDenied = true;
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    await this.fetchNearestBranches(lat, lng);
-                },
-                (error) => {
-                    this.loadingLocation = false;
-                    this.locationDenied = true;
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        },
-
-        async fetchNearestBranches(lat, lng) {
-            try {
-                const res = await fetch(`{{ route('chat.nearest-branches') }}?lat=${lat}&lng=${lng}`);
-                const data = await res.json();
-                if (data.success) {
-                    this.nearestBranches = data.branches || [];
-                }
-            } catch (e) {
-                console.error('Error fetching nearest branches', e);
-            } finally {
-                this.loadingLocation = false;
-            }
         },
 
         async activateSupportChat() {
@@ -217,43 +170,7 @@
         },
 
         async selectBranch(branch) {
-            if (!this.conversationId || !branch?.id) return;
-            this.selectingBranch = true;
-            try {
-                const formData = new FormData();
-                formData.append('conversation_id', this.conversationId);
-                formData.append('branch_id', branch.id);
-
-                const res = await fetch('{{ route('chat.select-branch') }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: formData,
-                });
-                const data = await res.json();
-                if (data.success) {
-                    this.branchId = data.branch_id;
-                    this.branchName = data.branch_name;
-                    if (data.message) {
-                        const exists = this.messages.some(m => m.id === data.message.id);
-                        if (!exists) {
-                            this.messages.push(data.message);
-                        }
-                    }
-                    this.$nextTick(() => {
-                        this.scrollToBottom();
-                    });
-                } else {
-                    alert(data.message || 'Không thể chọn chi nhánh.');
-                }
-            } catch (e) {
-                console.error('Error selecting branch', e);
-                alert('Lỗi kết nối. Vui lòng thử lại.');
-            } finally {
-                this.selectingBranch = false;
-            }
+            // Không còn dùng - branch được tự động xác định từ server
         },
 
         async fetchMessages() {
@@ -281,7 +198,7 @@
         },
 
         async sendMessage() {
-            if (!this.newMessage || !this.branchId) return;
+            if (!this.newMessage.trim() || !this.conversationId) return;
 
             this.loading = true;
             const formData = new FormData();
@@ -382,87 +299,40 @@
             class="flex-1 p-3 overflow-y-auto space-y-3"
             style="min-height: 0; background: var(--c-background);"
         >
-            <!-- Automatic system greeting & nearest branches selection cards when branch is not chosen yet -->
-            <template x-if="!branchId">
-                <div class="space-y-3 mb-3">
-                    <div class="p-3 rounded-2xl bg-white shadow-sm border text-sm" style="background: var(--c-surface); border: 1px solid var(--c-border); color: var(--c-text);">
-                        <p class="font-bold mb-1" style="color: var(--c-primary); font-size: 0.95rem;">Xin chào! 👋</p>
-                        <p class="mb-0" style="font-size: 0.85rem; line-height: 1.5; color: var(--c-text);">
-                            Chào mừng bạn đến với Chill Drink.<br>
-                            Để hỗ trợ bạn nhanh nhất, vui lòng chọn một trong 03 chi nhánh gần vị trí của bạn.
-                        </p>
-                    </div>
-
-                    <!-- Location loading indicator inside chat body -->
-                    <div x-show="loadingLocation" class="p-4 rounded-xl text-center" style="background: var(--c-surface); border: 1px dashed var(--c-border);">
-                        <div class="spinner-border spinner-border-sm text-emerald-600 mb-2" role="status" style="color: var(--c-primary);"></div>
-                        <p class="text-xs mb-0 opacity-80" style="color: var(--c-text);">Đang xác định vị trí của bạn để tìm chi nhánh gần nhất...</p>
-                    </div>
-
-                    <!-- Location denied or error prompt inside chat body -->
-                    <div x-show="!loadingLocation && locationDenied" class="p-3 rounded-xl shadow-sm text-sm" style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e;">
-                        <p class="font-semibold mb-1" style="font-size: 0.85rem;">Chưa có vị trí của bạn</p>
-                        <p class="mb-2 opacity-90" style="font-size: 0.8rem; line-height: 1.4;">
-                            Vui lòng chia sẻ vị trí để hệ thống kết nối bạn với chi nhánh gần nhất.
-                        </p>
-                        <button
-                            type="button"
-                            @click="requestLocationAndFetchBranches()"
-                            class="w-full py-1.5 px-3 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90"
-                            style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); border: 0;"
-                        >
-                            Cấp quyền vị trí & Thử lại
-                        </button>
-                    </div>
-
-                    <!-- Branch selection list -->
-                    <div x-show="!loadingLocation && !locationDenied && nearestBranches.length > 0" class="space-y-2">
-                        <template x-for="b in nearestBranches" :key="b.id">
-                            <div class="p-3 rounded-xl bg-white shadow-sm border flex flex-col gap-1.5" style="background: var(--c-surface); border-color: var(--c-border);">
-                                <div class="font-bold text-sm flex items-center gap-1" style="color: var(--c-text);">
-                                    <span>📍</span>
-                                    <span x-text="b.name"></span>
-                                </div>
-                                <div class="text-xs font-semibold" style="color: #059669; font-size: 12px;" x-text="'Cách bạn khoảng ' + b.distance_text"></div>
-                                <div class="text-xs opacity-75" x-text="b.address" style="color: var(--c-text); font-size: 12px;"></div>
-                                <button
-                                    type="button"
-                                    @click="selectBranch(b)"
-                                    :disabled="selectingBranch"
-                                    class="mt-1 w-full py-1.5 px-3 rounded-lg text-xs font-semibold text-white transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1"
-                                    style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent));"
-                                >
-                                    <span x-show="!selectingBranch">Chọn chi nhánh</span>
-                                    <span x-show="selectingBranch">Đang kết nối...</span>
-                                </button>
-                            </div>
-                        </template>
-                    </div>
+            <!-- Loading state khi đang kết nối -->
+            <template x-if="!conversationId">
+                <div class="flex flex-col items-center justify-center h-full gap-3 py-8">
+                    <div class="spinner-border spinner-border-sm" role="status" style="color: var(--c-primary); width: 28px; height: 28px;"></div>
+                    <p class="text-xs opacity-60 mb-0" style="color: var(--c-text);">Đang kết nối tới nhân viên hỗ trợ...</p>
                 </div>
             </template>
 
             <!-- Messages stream -->
-            <template x-for="message in messages" :key="message.id">
-                <div
-                    :class="[
-                        'flex w-full mb-2',
-                        message.sender_id == {{ auth()->id() }} ? 'justify-end' : 'justify-start'
-                    ]"
-                >
-                    <div
-                        :class="[
-                            'max-w-[85%] rounded-xl px-3 py-2 shadow-sm text-sm break-words',
-                            message.sender_id == {{ auth()->id() }} ? 'rounded-tr-none' : 'rounded-tl-none'
-                        ]"
-                        :style="message.sender_id == {{ auth()->id() }} ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : 'background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border);'"
-                    >
-                        <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
+            <template x-if="conversationId">
+                <div>
+                    <template x-for="message in messages" :key="message.id">
                         <div
-                            x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
-                            class="text-xs opacity-70"
-                            :title="new Date(message.created_at).toLocaleString('vi-VN')"
-                        ></div>
-                    </div>
+                            :class="[
+                                'flex w-full mb-2',
+                                message.sender_id == {{ auth()->id() }} ? 'justify-end' : 'justify-start'
+                            ]"
+                        >
+                            <div
+                                :class="[
+                                    'max-w-[85%] rounded-xl px-3 py-2 shadow-sm text-sm break-words',
+                                    message.sender_id == {{ auth()->id() }} ? 'rounded-tr-none' : 'rounded-tl-none'
+                                ]"
+                                :style="message.sender_id == {{ auth()->id() }} ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : 'background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border);'"
+                            >
+                                <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
+                                <div
+                                    x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
+                                    class="text-xs opacity-70"
+                                    :title="new Date(message.created_at).toLocaleString('vi-VN')"
+                                ></div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </template>
         </div>
@@ -474,14 +344,14 @@
                     type="text"
                     x-model="newMessage"
                     @keydown.enter.prevent="sendMessage()"
-                    :disabled="!branchId || loading"
-                    :placeholder="!branchId ? 'Vui lòng chọn chi nhánh ở trên...' : 'Nhập tin nhắn...'"
+                    :disabled="!conversationId || loading"
+                    placeholder="Nhập tin nhắn..."
                     class="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none transition-all disabled:opacity-60"
                     style="background: var(--c-background); border: 1px solid var(--c-border); color: var(--c-text);"
                 >
                 <button
                     @click="sendMessage()"
-                    :disabled="!branchId || loading || !newMessage.trim()"
+                    :disabled="!conversationId || loading || !newMessage.trim()"
                     class="p-2 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
                     style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;"
                 >
