@@ -42,8 +42,8 @@
     $shippingVouchers = $availableVouchers->filter($isShippingVoucher)->values();
     $discountVouchers = $availableVouchers->reject($isShippingVoucher)->values();
     $voucherDisplayGroups = collect([
-        'Voucher freeship' => $shippingVouchers,
-        'Voucher giảm giá' => $discountVouchers,
+        'Phiếu miễn phí vận chuyển' => $shippingVouchers,
+        'Phiếu giảm giá' => $discountVouchers,
     ]);
     $selectedVoucherCode = strtoupper(trim((string) old('voucher_code', '')));
     $selectedShippingVoucherCode = strtoupper(trim((string) old('shipping_voucher_code', '')));
@@ -1013,7 +1013,7 @@
                                             }
                                         @endphp
                                         <option value="{{ $branch->id }}"
-                                            @selected((string) old('branch_id') === (string) $branch->id)
+                                            @selected((string) old('branch_id', session('group_branch_id')) === (string) $branch->id)
                                             data-latitude="{{ $branch->latitude ?? '' }}"
                                             data-longitude="{{ $branch->longitude ?? '' }}"
                                             data-distance="{{ $branchDistance ?? '' }}">
@@ -1087,9 +1087,9 @@
                             <div class="d-flex align-items-center gap-3">
                                 <span class="voucher-icon"><i class="bi bi-ticket-perforated"></i></span>
                                 <div>
-                                    <h2 class="h5 fw-bold mb-1">Chill Drink Voucher</h2>
+                                    <h2 class="h5 fw-bold mb-1">Phiếu ưu đãi Chill Drink</h2>
                                     <div class="voucher-selected-text" id="selectedVoucherText">
-                                        {{ $selectedVoucherLabels ? 'Đã chọn: ' . $selectedVoucherLabels : 'Chưa chọn voucher' }}
+                                        {{ $selectedVoucherLabels ? 'Đã chọn: ' . $selectedVoucherLabels : 'Chưa chọn phiếu ưu đãi' }}
                                     </div>
                                 </div>
                             </div>
@@ -1232,7 +1232,7 @@
                                 <span id="summaryShippingDistance">Phí giao hàng cố định</span>
                             </div>
                             <div class="d-flex justify-content-between mb-3">
-                                <span class="text-secondary">Voucher</span>
+                                <span class="text-secondary">Phiếu ưu đãi</span>
                                 <span id="summaryVoucherText">{{ $discount > 0 ? '-' . number_format($discount, 0, ',', '.') . 'đ' : 'Chưa áp dụng' }}</span>
                             </div>
                             <div class="d-flex justify-content-between h4 fw-bold mb-4">
@@ -1411,7 +1411,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header border-bottom">
-                <h2 class="address-modal-title mb-0" id="voucherModalTitle">Chọn Chill Drink Voucher</h2>
+                <h2 class="address-modal-title mb-0" id="voucherModalTitle">Chọn phiếu ưu đãi Chill Drink</h2>
                 <div class="ms-auto d-flex align-items-center gap-2 text-secondary">
                     <span>Hỗ trợ</span>
                     <i class="bi bi-question-circle"></i>
@@ -1420,8 +1420,8 @@
             </div>
             <div class="modal-body">
                 <div class="voucher-search-box d-flex flex-column flex-md-row align-items-md-center gap-3 mb-3">
-                    <label for="voucherCodeInput" class="fw-semibold text-secondary flex-shrink-0">Mã Voucher</label>
-                    <input id="voucherCodeInput" type="text" class="form-control" placeholder="Mã Chill Drink Voucher" value="{{ $selectedVoucherCode }}">
+                    <label for="voucherCodeInput" class="fw-semibold text-secondary flex-shrink-0">Mã ưu đãi</label>
+                    <input id="voucherCodeInput" type="text" class="form-control" placeholder="Nhập mã ưu đãi Chill Drink" value="{{ $selectedVoucherCode }}">
                     <button type="button" class="btn voucher-apply-btn" id="voucherManualApply">Áp dụng</button>
                 </div>
 
@@ -1430,7 +1430,7 @@
                 <div class="mb-4" id="receivedVouchersSection">
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <span class="voucher-kind" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fbbf24;">
-                            <i class="bi bi-star-fill me-1"></i>Voucher đã nhận
+                            <i class="bi bi-star-fill me-1"></i>Phiếu ưu đãi đã nhận
                         </span>
                         <span class="small text-secondary">{{ $receivedVouchers->count() }} mã</span>
                     </div>
@@ -1528,7 +1528,7 @@
 
                 <div class="mb-3">
                     <div class="voucher-group-title">Mã có thể áp dụng</div>
-                    <div class="text-secondary">Có thể chọn 1 voucher freeship và 1 voucher giảm giá</div>
+                    <div class="text-secondary">Có thể chọn 1 phiếu miễn phí vận chuyển và 1 phiếu giảm giá</div>
                 </div>
 
                 <div class="vstack gap-4">
@@ -1763,7 +1763,7 @@
                     card.classList.remove('active');
                     card.querySelector('.voucher-radio')?.classList.remove('active');
                 });
-                selectedVoucherText.textContent = 'Giỏ hàng đã thay đổi · vui lòng chọn lại voucher';
+                selectedVoucherText.textContent = 'Giỏ hàng đã thay đổi · vui lòng chọn lại phiếu ưu đãi';
                 shippingConfig.discount = 0;
                 summaryVoucherText.textContent = 'Chưa áp dụng';
                 updateShippingSummary();
@@ -2310,7 +2310,7 @@
             selectedVoucherCode.value = pendingVouchers.discount.code || '';
             selectedShippingVoucherCode.value = pendingVouchers.shipping.code || '';
             const labels = [pendingVouchers.shipping.label, pendingVouchers.discount.label].filter(Boolean);
-            selectedVoucherText.textContent = labels.length ? `Đã chọn: ${labels.join(' + ')}` : 'Chưa chọn voucher';
+            selectedVoucherText.textContent = labels.length ? `Đã chọn: ${labels.join(' + ')}` : 'Chưa chọn phiếu ưu đãi';
             shippingConfig.discount = Number(pendingVouchers.discount.discount || 0) + Math.min(shippingConfig.fixedShippingFee, Number(pendingVouchers.shipping.discount || 0));
             summaryVoucherText.textContent = shippingConfig.discount > 0
                 ? `-${formatVnd(shippingConfig.discount)}`
@@ -2631,7 +2631,7 @@
                                         <span class="fw-semibold text-secondary">${escapeHtml(voucher.value)}</span>
                                     </div>
                                     <div class="text-secondary small">
-                                        ${escapeHtml(voucher.description || 'Voucher')}
+                                        ${escapeHtml(voucher.description || 'Phiếu ưu đãi')}
                                     </div>
                                     <span class="voucher-only mt-2 mb-2">
                                         Bạn đã nhận voucher này

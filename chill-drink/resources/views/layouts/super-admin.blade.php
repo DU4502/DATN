@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Super Admin - {{ config('app.name', 'Chill Drink') }}</title>
+    <title>Quản trị cấp cao - {{ config('app.name', 'Chill Drink') }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -471,7 +471,7 @@
         <aside class="root-sidebar" data-root-sidebar>
             <a href="{{ route('admin.super-admin') }}" class="root-brand">
                 <img src="{{ asset('images/logo.png') }}" alt="Chill Drink" class="root-brand-mark">
-                <span><span class="root-brand-name">Chill Control</span><span class="root-brand-mode">Super Admin Workspace</span></span>
+                <span><span class="root-brand-name">Trung tâm Chill Drink</span><span class="root-brand-mode">Không gian quản trị cấp cao</span></span>
             </a>
 
             <div class="root-access">
@@ -481,7 +481,7 @@
 
             <nav class="root-nav">
                 <p class="root-nav-label">Điều hành</p>
-                <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+                <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
                 <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
                 <a href="{{ route('admin.super-admin') . '#branch-ranking' }}" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh <span class="root-nav-badge">{{ \App\Models\Branch::count() }}</span></a>
                 <a href="{{ route('admin.super-admin') . '#permissions' }}" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
@@ -496,10 +496,10 @@
                 </a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>
-                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
+                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
                 <a href="{{ route('admin.products.index') }}" class="root-nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Slideshow</a>
+                <a href="{{ route('admin.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
                 <a href="{{ route('admin.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
                 <a href="{{ route('admin.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.reviews.index') }}" class="root-nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
@@ -522,7 +522,7 @@
             <header class="root-topbar">
                 <div class="root-topbar-left">
                     <button type="button" class="root-mobile-toggle" data-root-toggle aria-label="Mở menu"><i class="bi bi-list"></i></button>
-                    <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Super Admin')</strong></div>
+                    <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Quản trị cấp cao')</strong></div>
                 </div>
                 <div class="root-topbar-right">
                     <form class="root-topbar-search" method="GET" action="{{ route('admin.super-admin') }}" role="search">
@@ -549,7 +549,7 @@
                         </div>
                     </div>
                     <div class="dropdown">
-                        <button type="button" class="root-user-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản Super Admin">
+                        <button type="button" class="root-user-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản quản trị cấp cao">
                             <span class="root-user-avatar">
                                 @if(Auth::user()->avatar)
                                     <img src="{{ str_starts_with(Auth::user()->avatar, 'http') ? Auth::user()->avatar : asset('storage/'.ltrim(Auth::user()->avatar, '/')) }}" alt="{{ Auth::user()->name }}">
@@ -557,7 +557,7 @@
                                     {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
                                 @endif
                             </span>
-                            <span class="root-user-copy"><strong>{{ Auth::user()->name }}</strong><span>Super Admin</span></span>
+                            <span class="root-user-copy"><strong>{{ Auth::user()->name }}</strong><span>Quản trị cấp cao</span></span>
                             <i class="bi bi-chevron-down small"></i>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end root-dropdown">
@@ -577,7 +577,7 @@
             </main>
 
             <footer class="root-footer">
-                <span>© 2026 Chill Drink · Super Admin</span>
+                <span>© 2026 Chill Drink · Quản trị cấp cao</span>
                 <span>Phiên bản 1.0.0 · Cập nhật {{ now()->format('d/m/Y') }}</span>
             </footer>
         </div>

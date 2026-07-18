@@ -85,7 +85,7 @@
                         </div>
                         <div class="stat-item">
                             <div class="stat-value text-primary">0</div>
-                            <div class="stat-label">Voucher khả dụng</div>
+                            <div class="stat-label">Phiếu ưu đãi khả dụng</div>
                         </div>
                     </div>
                     

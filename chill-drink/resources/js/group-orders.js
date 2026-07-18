@@ -8,13 +8,283 @@ const formatRemaining = (closesAt) => {
     };
 };
 
+const createVisibleInterval = (callback, delay, runImmediately = true) => {
+    let intervalId = null;
+    let stopped = false;
+
+    const run = () => {
+        if (!stopped && !document.hidden) callback();
+    };
+    const start = (immediate = runImmediately) => {
+        if (stopped || document.hidden || intervalId !== null) return;
+        if (immediate) run();
+        intervalId = window.setInterval(run, delay);
+    };
+    const pause = () => {
+        if (intervalId === null) return;
+        window.clearInterval(intervalId);
+        intervalId = null;
+    };
+    const handleVisibility = () => {
+        if (document.hidden) pause();
+        else start(true);
+    };
+    const stop = () => {
+        if (stopped) return;
+        stopped = true;
+        pause();
+        document.removeEventListener('visibilitychange', handleVisibility);
+        window.removeEventListener('pagehide', stop);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('pagehide', stop);
+    start();
+
+    return stop;
+};
+
+const groupBranchPicker = {
+    props: {
+        branches: { type: Array, default: () => [] },
+        initialSelected: { type: String, default: '' },
+    },
+    data() {
+        return {
+            isOpen: false,
+            selectedId: String(this.initialSelected || ''),
+        };
+    },
+    computed: {
+        selectedBranch() {
+            return this.branches.find((branch) => String(branch.id) === this.selectedId) || null;
+        },
+    },
+    mounted() {
+        this.closeFromOutside = (event) => {
+            if (!this.$el.contains(event.target)) this.isOpen = false;
+        };
+        document.addEventListener('click', this.closeFromOutside);
+    },
+    beforeUnmount() {
+        document.removeEventListener('click', this.closeFromOutside);
+    },
+    methods: {
+        selectBranch(branch) {
+            this.selectedId = String(branch.id);
+            this.isOpen = false;
+        },
+    },
+    template: `
+        <div class="group-branch-picker">
+            <input type="hidden" name="branch_id" :value="selectedId">
+            <button id="groupBranch" type="button" class="group-branch-trigger" :class="{ 'is-open': isOpen, 'has-value': selectedBranch }" data-group-branch-trigger @click.stop="isOpen = !isOpen">
+                <span class="group-branch-trigger-content">
+                    <span class="group-branch-trigger-icon"><i class="bi bi-geo-alt-fill"></i></span>
+                    <span><strong>{{ selectedBranch ? selectedBranch.name : 'Chọn chi nhánh' }}</strong><small v-if="selectedBranch">{{ selectedBranch.address }}</small><small v-else>Chọn nơi chuẩn bị món</small></span>
+                </span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+            <div v-if="isOpen" class="group-branch-menu" @click.stop>
+                <div class="group-branch-menu-head"><span><strong>Chi nhánh phục vụ</strong><small>{{ branches.length }} chi nhánh đang hoạt động</small></span><i class="bi bi-shop"></i></div>
+                <div class="group-branch-list">
+                    <button v-for="branch in branches" :key="branch.id" type="button" class="group-branch-option" :class="{ 'is-selected': String(branch.id) === selectedId }" @click="selectBranch(branch)">
+                        <span class="group-branch-option-icon"><i class="bi bi-geo-alt"></i></span>
+                        <span class="group-branch-option-copy"><strong>{{ branch.name }}</strong><small>{{ branch.address || 'Chưa cập nhật địa chỉ' }}</small></span>
+                        <span class="group-branch-check"><i class="bi" :class="String(branch.id) === selectedId ? 'bi-check-circle-fill' : 'bi-circle'"></i></span>
+                    </button>
+                    <div v-if="!branches.length" class="group-branch-empty"><i class="bi bi-shop-window"></i><span>Chưa có chi nhánh đang hoạt động.</span></div>
+                </div>
+            </div>
+        </div>`,
+};
+
+const groupDateTimePicker = {
+    props: {
+        initialValue: { type: String, required: true },
+        minValue: { type: String, required: true },
+        maxValue: { type: String, required: true },
+    },
+    data() {
+        const [datePart, timePart = '00:00'] = this.initialValue.split('T');
+        const [year, month] = datePart.split('-').map(Number);
+        const [hour, minute] = timePart.slice(0, 5).split(':');
+        return {
+            isOpen: false,
+            selectedDate: datePart,
+            selectedHour: hour || '00',
+            selectedMinute: minute || '00',
+            viewYear: year,
+            viewMonth: month - 1,
+        };
+    },
+    computed: {
+        minDate() { return this.minValue.slice(0, 10); },
+        maxDate() { return this.maxValue.slice(0, 10); },
+        serialized() { return `${this.selectedDate}T${this.selectedHour}:${this.selectedMinute}`; },
+        displayValue() {
+            const value = new Date(`${this.serialized}:00`);
+            return new Intl.DateTimeFormat('vi-VN', {
+                weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: false,
+            }).format(value);
+        },
+        monthLabel() {
+            return new Intl.DateTimeFormat('vi-VN', { month: 'long', year: 'numeric' })
+                .format(new Date(this.viewYear, this.viewMonth, 1));
+        },
+        calendarDays() {
+            const firstWeekday = (new Date(this.viewYear, this.viewMonth, 1).getDay() + 6) % 7;
+            const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+            const result = Array.from({ length: firstWeekday }, (_, index) => ({ key: `blank-${index}`, blank: true }));
+            for (let day = 1; day <= daysInMonth; day += 1) {
+                const key = `${this.viewYear}-${String(this.viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                result.push({ key, day, disabled: key < this.minDate || key > this.maxDate });
+            }
+            while (result.length % 7 !== 0) result.push({ key: `blank-end-${result.length}`, blank: true });
+            return result;
+        },
+        hours() { return Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0')); },
+        minutes() { return Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0')); },
+    },
+    mounted() {
+        this.closeFromOutside = (event) => {
+            if (!this.$el.contains(event.target)) this.isOpen = false;
+        };
+        document.addEventListener('click', this.closeFromOutside);
+    },
+    beforeUnmount() {
+        document.removeEventListener('click', this.closeFromOutside);
+    },
+    methods: {
+        selectDay(day) {
+            if (day.blank || day.disabled) return;
+            this.selectedDate = day.key;
+        },
+        changeMonth(offset) {
+            const next = new Date(this.viewYear, this.viewMonth + offset, 1);
+            const nextKey = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+            if (nextKey < this.minDate.slice(0, 7) || nextKey > this.maxDate.slice(0, 7)) return;
+            this.viewYear = next.getFullYear();
+            this.viewMonth = next.getMonth();
+        },
+        chooseToday() {
+            const today = new Date();
+            const key = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            this.selectedDate = key < this.minDate ? this.minDate : (key > this.maxDate ? this.maxDate : key);
+            const [year, month] = this.selectedDate.split('-').map(Number);
+            this.viewYear = year;
+            this.viewMonth = month - 1;
+        },
+    },
+    template: `
+        <div class="group-datetime">
+            <input type="hidden" name="closes_at" :value="serialized">
+            <button id="groupClosesAt" type="button" class="group-datetime-trigger" :class="{ 'is-open': isOpen }" @click.stop="isOpen = !isOpen">
+                <span><i class="bi bi-clock"></i>{{ displayValue }}</span><i class="bi bi-chevron-down"></i>
+            </button>
+            <div v-if="isOpen" class="group-datetime-popover" @click.stop>
+                <div class="group-datetime-calendar-head">
+                    <button type="button" @click="changeMonth(-1)" aria-label="Tháng trước"><i class="bi bi-chevron-left"></i></button>
+                    <strong>{{ monthLabel }}</strong>
+                    <button type="button" @click="changeMonth(1)" aria-label="Tháng sau"><i class="bi bi-chevron-right"></i></button>
+                </div>
+                <div class="group-datetime-weekdays"><span v-for="label in ['T2','T3','T4','T5','T6','T7','CN']" :key="label">{{ label }}</span></div>
+                <div class="group-datetime-days">
+                    <template v-for="day in calendarDays" :key="day.key">
+                        <span v-if="day.blank"></span>
+                        <button v-else type="button" :disabled="day.disabled" :class="{ 'is-selected': selectedDate === day.key }" @click="selectDay(day)">{{ day.day }}</button>
+                    </template>
+                </div>
+                <div class="group-datetime-time">
+                    <div><label>Giờ</label><select v-model="selectedHour"><option v-for="hour in hours" :key="hour" :value="hour">{{ hour }}</option></select></div>
+                    <span>:</span>
+                    <div><label>Phút</label><select v-model="selectedMinute"><option v-for="minute in minutes" :key="minute" :value="minute">{{ minute }}</option></select></div>
+                </div>
+                <div class="group-datetime-footer"><button type="button" class="group-datetime-today" @click="chooseToday">Hôm nay</button><button type="button" class="group-datetime-done" @click="isOpen = false"><i class="bi bi-check2 me-1"></i>Xong</button></div>
+            </div>
+        </div>`,
+};
+
+const groupOrderCreate = {
+    props: {
+        rootElement: { type: Object, required: true },
+    },
+    mounted() {
+        this.form = this.rootElement.querySelector('[data-group-create-form]');
+        this.errorBox = this.rootElement.querySelector('[data-group-create-errors]');
+        this.submitButton = this.rootElement.querySelector('[data-group-create-submit]');
+        this.submitLabel = this.rootElement.querySelector('[data-group-create-submit-label]');
+        this.handleSubmit = this.submit.bind(this);
+        this.form?.addEventListener('submit', this.handleSubmit);
+    },
+    beforeUnmount() {
+        this.form?.removeEventListener('submit', this.handleSubmit);
+    },
+    methods: {
+        showErrors(messages) {
+            if (!this.errorBox) return;
+            const safeMessages = messages.filter(Boolean);
+            this.errorBox.textContent = safeMessages.join(' ');
+            this.errorBox.classList.toggle('d-none', safeMessages.length === 0);
+            if (safeMessages.length) this.errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        },
+        async submit(event) {
+            event.preventDefault();
+            if (!this.form || !this.form.reportValidity()) return;
+
+            const branchInput = this.form.querySelector('input[name="branch_id"]');
+            if (!branchInput?.value) {
+                this.showErrors(['Vui lòng chọn chi nhánh phục vụ đơn nhóm.']);
+                this.form.querySelector('[data-group-branch-trigger]')?.focus();
+                return;
+            }
+
+            this.showErrors([]);
+            if (this.submitButton) this.submitButton.disabled = true;
+            if (this.submitLabel) this.submitLabel.textContent = 'Đang tạo phòng...';
+
+            try {
+                const response = await fetch(this.form.action, {
+                    method: 'POST',
+                    body: new FormData(this.form),
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok) {
+                    const validationErrors = Object.values(data.errors || {}).flat();
+                    this.showErrors(validationErrors.length ? validationErrors : [data.message || 'Không thể tạo phòng. Vui lòng thử lại.']);
+                    return;
+                }
+
+                if (!data.redirect_url) {
+                    this.showErrors(['Đã tạo phòng nhưng không tìm thấy đường dẫn phòng.']);
+                    return;
+                }
+
+                window.location.assign(data.redirect_url);
+            } catch (error) {
+                this.showErrors(['Kết nối bị gián đoạn. Vui lòng thử lại.']);
+            } finally {
+                if (this.submitButton) this.submitButton.disabled = false;
+                if (this.submitLabel) this.submitLabel.textContent = 'Tạo phòng đặt hàng';
+            }
+        },
+    },
+};
+
 const groupOrderIndex = {
     props: {
         rootElement: { type: Object, required: true },
     },
     mounted() {
         this.root = this.rootElement;
-        this.timers = [];
+        this.stopTimers = [];
         this.root.querySelectorAll('[data-group-countdown]').forEach((countdown) => {
             const closesAt = new Date(countdown.dataset.closesAt).getTime();
             const time = countdown.querySelector('[data-countdown-time]');
@@ -41,12 +311,11 @@ const groupOrderIndex = {
                 }
             };
 
-            tick();
-            this.timers.push(window.setInterval(tick, 1000));
+            this.stopTimers.push(createVisibleInterval(tick, 1000));
         });
     },
     beforeUnmount() {
-        this.timers?.forEach(window.clearInterval);
+        this.stopTimers?.forEach((stop) => stop());
     },
 };
 
@@ -56,7 +325,7 @@ const groupOrderRoom = {
     },
     mounted() {
         this.root = this.rootElement;
-        this.timers = [];
+        this.stopTimers = [];
         this.abortController = new AbortController();
         this.isRefreshing = false;
         const signal = this.abortController.signal;
@@ -73,7 +342,7 @@ const groupOrderRoom = {
     },
     beforeUnmount() {
         this.abortController?.abort();
-        this.timers?.forEach(window.clearInterval);
+        this.stopTimers?.forEach((stop) => stop());
     },
     methods: {
         showMessage(message, isError = false) {
@@ -149,10 +418,7 @@ const groupOrderRoom = {
                 }
             };
 
-            this.timers.push(window.setInterval(refresh, 3000));
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) refresh();
-            }, { signal });
+            this.stopTimers.push(createVisibleInterval(refresh, 3000, false));
         },
         async copyLink(button) {
             const input = this.root.querySelector('#groupShareUrl');
@@ -182,7 +448,7 @@ const groupOrderRoom = {
             const showToppings = (option) => {
                 const ids = new Set((option?.dataset.toppings || '').split(',').filter(Boolean).map(Number));
                 chooseProduct?.classList.toggle('d-none', Boolean(option));
-                if (help) help.textContent = option ? 'Chỉ hiển thị topping dùng được với món đã chọn.' : 'Hãy chọn đồ uống trước để xem topping phù hợp.';
+                if (help) help.textContent = option ? 'Chỉ hiển thị món thêm dùng được với đồ uống đã chọn.' : 'Hãy chọn đồ uống trước để xem món thêm phù hợp.';
                 labels.forEach((label) => {
                     const allowed = ids.has(Number(label.dataset.toppingId));
                     label.classList.toggle('d-none', !allowed);
@@ -235,28 +501,16 @@ const groupOrderRoom = {
                     countdown.textContent = remaining.text;
                     if (remaining.seconds === 0) window.location.reload();
                 };
-                tick();
-                this.timers.push(window.setInterval(tick, 1000));
-            }
-
-            const away = this.root.querySelector('[data-owner-away-notice]');
-            const awayCountdown = this.root.querySelector('[data-owner-away-countdown]');
-            if (away && awayCountdown) {
-                const closesAt = new Date(away.dataset.closesAt).getTime();
-                const tick = () => { awayCountdown.textContent = formatRemaining(closesAt).text; };
-                tick();
-                this.timers.push(window.setInterval(tick, 1000));
+                this.stopTimers.push(createVisibleInterval(tick, 1000));
             }
         },
         setupPresence(signal) {
-            const away = this.root.querySelector('[data-owner-away-notice]');
-            const presenceUrl = away?.dataset.presenceUrl || this.root.dataset.presenceUrl;
+            const presenceUrl = this.root.dataset.presenceUrl;
             const leaveUrl = this.root.dataset.leaveUrl;
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
             if (!presenceUrl || !csrf) return;
 
             let reloading = false;
-            let previousOwnerPresence = null;
             const sync = async () => {
                 if (document.hidden) return;
                 try {
@@ -268,14 +522,6 @@ const groupOrderRoom = {
                     });
                     if (!response.ok) return;
                     const state = await response.json();
-                    away?.classList.toggle('is-visible', state.is_open && !state.owner_present);
-                    if (previousOwnerPresence === true && state.is_open && !state.owner_present) {
-                        this.showMessage('Chủ nhóm đã rời khỏi phòng. Bạn vẫn có thể tiếp tục chọn món.', true);
-                    }
-                    if (previousOwnerPresence === false && state.owner_present) {
-                        this.showMessage('Chủ nhóm đã quay lại phòng.');
-                    }
-                    previousOwnerPresence = state.owner_present;
                     if (!state.is_open && !reloading) {
                         reloading = true;
                         window.location.reload();
@@ -284,18 +530,13 @@ const groupOrderRoom = {
                     if (error.name !== 'AbortError') return;
                 }
             };
-            sync();
-            this.timers.push(window.setInterval(sync, 3000));
+            this.stopTimers.push(createVisibleInterval(sync, 3000));
             const reportOwnerLeft = () => {
                 if (!leaveUrl) return;
                 const data = new FormData();
                 data.append('_token', csrf);
                 navigator.sendBeacon(leaveUrl, data);
             };
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) reportOwnerLeft();
-                else sync();
-            }, { signal });
             window.addEventListener('pagehide', reportOwnerLeft, { signal });
         },
     },
@@ -311,7 +552,7 @@ const groupOrderChat = {
         initialMembers: { type: Array, required: true },
     },
     data() {
-        return { messages: [], members: this.initialMembers, recipientId: null, content: '', attachment: null, loading: false, syncing: false, sending: false, error: '', timer: null, unifiedToggleHandler: null, unifiedCloseHandler: null, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '' };
+        return { messages: [], members: this.initialMembers, recipientId: null, content: '', loading: false, syncing: false, sending: false, error: '', timer: null, visibilityHandler: null, unifiedToggleHandler: null, unifiedCloseHandler: null, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '' };
     },
     computed: {
         currentMemberId() { return this.memberId; },
@@ -320,8 +561,8 @@ const groupOrderChat = {
         totalPrivateUnread() { return Object.values(this.unreadCounts).reduce((total, count) => total + Number(count || 0), 0); },
         totalUnread() { return this.totalPrivateUnread + this.groupUnread; },
         title() {
-            if (!this.recipientId) return 'Chat chung';
-            return `Chat riêng với ${this.members.find((member) => Number(member.id) === Number(this.recipientId))?.name || 'thành viên'}`;
+            if (!this.recipientId) return 'Trò chuyện chung';
+            return `Trò chuyện riêng với ${this.members.find((member) => Number(member.id) === Number(this.recipientId))?.name || 'thành viên'}`;
         },
     },
     watch: {
@@ -344,6 +585,11 @@ const groupOrderChat = {
         };
         window.addEventListener('group-chat-toggle', this.unifiedToggleHandler);
         window.addEventListener('group-chat-close', this.unifiedCloseHandler);
+        this.visibilityHandler = () => {
+            window.clearTimeout(this.timer);
+            if (!document.hidden) this.scheduleSync(true);
+        };
+        document.addEventListener('visibilitychange', this.visibilityHandler);
         window.dispatchEvent(new CustomEvent('group-chat-unread', { detail: { count: this.totalUnread } }));
         this.loadMessages(true);
         this.scheduleSync();
@@ -352,10 +598,12 @@ const groupOrderChat = {
         window.clearInterval(this.timer);
         window.removeEventListener('group-chat-toggle', this.unifiedToggleHandler);
         window.removeEventListener('group-chat-close', this.unifiedCloseHandler);
+        document.removeEventListener('visibilitychange', this.visibilityHandler);
     },
     methods: {
         scheduleSync(immediate = false) {
             window.clearTimeout(this.timer);
+            if (document.hidden) return;
             const delay = immediate ? 0 : (this.isOpen ? 1500 : 8000);
             this.timer = window.setTimeout(async () => {
                 await this.loadMessages(false);
@@ -461,7 +709,7 @@ const groupOrderChat = {
             }).catch(() => {});
         },
         notifyIncoming(message, type, isPrivate) {
-            const preview = message.content || message.attachment_name || 'Đã gửi một tệp';
+            const preview = message.content || 'Tin nhắn mới';
             const text = `${type} từ ${message.sender_name}: ${preview}`;
             const notification = { id: `${isPrivate ? 'p' : 'g'}-${message.id}`, text, senderId: Number(message.sender_id), isPrivate };
             if (!this.notifications.some((item) => item.id === notification.id)) this.notifications.push(notification);
@@ -476,34 +724,22 @@ const groupOrderChat = {
         },
         async send() {
             const content = this.content.trim();
-            if ((!content && !this.attachment) || this.sending) return;
+            if (!content || this.sending) return;
             this.sending = true;
             this.error = '';
             try {
                 const form = new FormData();
                 form.append('content', content);
                 if (this.recipientId) form.append('recipient_id', this.recipientId);
-                if (this.attachment) form.append('attachment', this.attachment);
                 const response = await fetch(this.sendUrl, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body: form });
                 const data = await response.json();
                 if (!response.ok) { this.error = data.message || 'Không thể gửi tin nhắn.'; return; }
                 this.messages.push(data.message);
                 this.content = '';
-                this.attachment = null;
-                if (this.$refs.imageFile) this.$refs.imageFile.value = '';
-                if (this.$refs.documentFile) this.$refs.documentFile.value = '';
                 this.$nextTick(() => { this.$refs.messages.scrollTop = this.$refs.messages.scrollHeight; });
             } catch { this.error = 'Kết nối bị gián đoạn.'; }
             finally { this.sending = false; }
         },
-        chooseFile(event) {
-            const file = event.target.files?.[0] || null;
-            if (file && file.size > 10 * 1024 * 1024) { this.error = 'Tệp không được vượt quá 10 MB.'; event.target.value = ''; return; }
-            this.attachment = file;
-            this.error = '';
-        },
-        isImage(message) { return Boolean(message.attachment_mime?.startsWith('image/')); },
-        fileSize(bytes) { return bytes ? `${(bytes / 1024 / 1024).toFixed(bytes > 1048576 ? 1 : 2)} MB` : ''; },
         time(value) { return new Date(value).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }); },
     },
     template: `
@@ -520,7 +756,7 @@ const groupOrderChat = {
             </header>
             <div class="group-chat-tools">
                     <button type="button" class="group-chat-tab" :class="{ 'is-active': !recipientId }" @click="selectRecipient(null)"><i class="bi bi-people me-1"></i>Cả nhóm</button>
-                    <button type="button" class="group-chat-private-button" :class="{ 'is-active': recipientId }" @click="showContacts = !showContacts"><i class="bi bi-person-lock me-1"></i>Chat riêng <span v-if="totalPrivateUnread" class="badge bg-danger ms-1">{{ totalPrivateUnread }}</span><i class="bi bi-chevron-down ms-auto"></i></button>
+                    <button type="button" class="group-chat-private-button" :class="{ 'is-active': recipientId }" @click="showContacts = !showContacts"><i class="bi bi-person-lock me-1"></i>Trò chuyện riêng <span v-if="totalPrivateUnread" class="badge bg-danger ms-1">{{ totalPrivateUnread }}</span><i class="bi bi-chevron-down ms-auto"></i></button>
             </div>
             <div v-show="showContacts" class="group-chat-contacts">
                 <div class="group-chat-contact-search"><i class="bi bi-search"></i><input v-model="memberSearch" placeholder="Tìm thành viên..."></div>
@@ -533,16 +769,12 @@ const groupOrderChat = {
                 <div v-if="loading && !messages.length" class="text-center text-secondary">Đang tải tin nhắn...</div>
                 <div v-else-if="!messages.length" class="text-center text-secondary">Chưa có tin nhắn. Hãy bắt đầu trò chuyện!</div>
                 <div v-for="message in messages" :key="message.id" class="group-chat-message" :class="{ 'is-mine': Number(message.sender_id) === currentMemberId }">
-                    <div class="group-chat-bubble"><small class="d-block fw-bold mb-1">{{ message.sender_name }} · {{ time(message.created_at) }}</small><span v-if="message.content">{{ message.content }}</span><a v-if="message.attachment_url && isImage(message)" :href="message.attachment_url" target="_blank" class="d-block mt-2"><img :src="message.attachment_url" :alt="message.attachment_name" class="group-chat-image"></a><a v-else-if="message.attachment_url" :href="message.attachment_url" target="_blank" class="group-chat-file"><i class="bi bi-file-earmark-arrow-down"></i><span><strong>{{ message.attachment_name }}</strong><small>{{ fileSize(message.attachment_size) }}</small></span></a><small v-if="recipientId && Number(message.sender_id) === currentMemberId && message.read_at" class="group-chat-read"><i class="bi bi-check2-all"></i> Đã xem</small></div>
+                    <div class="group-chat-bubble"><small class="d-block fw-bold mb-1">{{ message.sender_name }} · {{ time(message.created_at) }}</small><span>{{ message.content || 'Tin nhắn không có nội dung.' }}</span><small v-if="recipientId && Number(message.sender_id) === currentMemberId && message.read_at" class="group-chat-read"><i class="bi bi-check2-all"></i> Đã xem</small></div>
                 </div>
             </div>
             <form class="group-chat-compose" @submit.prevent="send">
-                <input ref="imageFile" type="file" class="d-none" accept="image/jpeg,image/png,image/webp,image/gif" @change="chooseFile">
-                <input ref="documentFile" type="file" class="d-none" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" @change="chooseFile">
-                <button type="button" class="group-chat-attach is-image" @click="$refs.imageFile.click()" title="Gửi ảnh"><i class="bi bi-image"></i></button>
-                <button type="button" class="group-chat-attach is-file" @click="$refs.documentFile.click()" title="Gửi tệp"><i class="bi bi-file-earmark-plus"></i></button>
-                <div class="flex-grow-1"><input :value="content" @input="content = $event.target.value" maxlength="1000" class="form-control group-input" :placeholder="recipientId ? 'Nhắn riêng...' : 'Nhắn cho cả nhóm...'"><small v-if="attachment" class="group-chat-selected-file"><i class="bi" :class="attachment.type.startsWith('image/') ? 'bi-image' : 'bi-file-earmark'"></i>{{ attachment.name }} <button type="button" @click="attachment = null; $refs.imageFile.value = ''; $refs.documentFile.value = ''">×</button></small></div>
-                <button class="btn btn-primary group-chat-send" :disabled="sending || (!content.trim() && !attachment)" aria-label="Gửi tin nhắn"><i class="bi bi-send"></i></button>
+                <div class="flex-grow-1"><input :value="content" @input="content = $event.target.value" maxlength="1000" class="form-control group-input" :placeholder="recipientId ? 'Nhắn riêng...' : 'Nhắn cho cả nhóm...'"></div>
+                <button class="btn btn-primary group-chat-send" :disabled="sending || !content.trim()" aria-label="Gửi tin nhắn"><i class="bi bi-send"></i></button>
             </form>
             <div v-if="error" class="text-danger small px-3 pb-3">{{ error }}</div>
         </section>
@@ -561,6 +793,29 @@ const mountGroupChats = (scope = document) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-vue-group-branch]:not([data-v-app])').forEach((root) => {
+        createApp(groupBranchPicker, {
+            branches: JSON.parse(root.dataset.branches || '[]'),
+            initialSelected: root.dataset.selected || '',
+        }).mount(root);
+    });
+
+    document.querySelectorAll('[data-vue-group-datetime]:not([data-v-app])').forEach((root) => {
+        createApp(groupDateTimePicker, {
+            initialValue: root.dataset.value,
+            minValue: root.dataset.min,
+            maxValue: root.dataset.max,
+        }).mount(root);
+    });
+
+    const createRoot = document.querySelector('[data-vue-group-order-create]');
+    if (createRoot) {
+        const mountPoint = document.createElement('span');
+        mountPoint.hidden = true;
+        createRoot.appendChild(mountPoint);
+        createApp(groupOrderCreate, { rootElement: createRoot }).mount(mountPoint);
+    }
+
     const indexRoot = document.querySelector('[data-vue-group-orders-index]');
     if (indexRoot) {
         const mountPoint = document.createElement('span');

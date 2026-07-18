@@ -492,17 +492,17 @@
             right: 1.25rem;
             top: 5rem;
             z-index: 1081;
-            display: inline-flex;
+            display: grid;
+            grid-template-columns: 38px minmax(0, 1fr) auto;
             align-items: center;
-            gap: 0.6rem;
-            max-width: min(340px, calc(100vw - 2rem));
-            padding: 0.7rem 1rem;
+            gap: 0.85rem;
+            width: min(440px, calc(100vw - 2rem));
+            padding: 1rem;
             border: 1px solid var(--c-border);
-            border-radius: var(--radius-lg);
+            border-radius: 20px;
             background: var(--c-surface);
             color: var(--c-ink);
-            box-shadow: var(--shadow-xl);
-            font-weight: 600;
+            box-shadow: 0 22px 55px rgba(7, 42, 38, .2);
             font-size: 0.875rem;
             opacity: 0;
             transform: translateY(-10px);
@@ -510,21 +510,79 @@
             pointer-events: none;
         }
 
+        body.cart-warning-open { overflow: hidden; }
+        body.cart-warning-open::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 1089;
+            background: rgba(10, 28, 25, .48);
+            backdrop-filter: blur(4px);
+        }
+        .cart-feedback.is-warning {
+            left: 50%;
+            right: auto;
+            top: 50%;
+            z-index: 1090;
+            grid-template-columns: 1fr;
+            justify-items: center;
+            width: min(470px, calc(100vw - 2rem));
+            padding: 1.75rem;
+            border: 0;
+            border-radius: 28px;
+            background: linear-gradient(160deg, #ffffff 0%, #fffdf8 100%);
+            text-align: center;
+            box-shadow: 0 30px 90px rgba(5, 28, 24, .32);
+            transform: translate(-50%, calc(-50% - 12px)) scale(.97);
+        }
+        .cart-feedback-copy { min-width: 0; line-height: 1.5; }
+        .cart-feedback-copy strong { display: block; margin-bottom: .15rem; font-size: .95rem; }
+        .cart-feedback-copy span { display: block; color: var(--c-muted); font-weight: 500; }
+        .cart-feedback-actions { display: flex; align-items: center; gap: .45rem; }
+        .cart-feedback-action { min-height: 40px; padding-inline: 1rem !important; white-space: nowrap; }
+        .cart-feedback-close { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f3f5f4; color: #66736f; }
+
         .cart-feedback.show {
             opacity: 1;
             transform: translateY(0);
+            pointer-events: auto;
         }
 
         .cart-feedback-icon {
-            width: 28px;
-            height: 28px;
+            width: 38px;
+            height: 38px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: var(--radius-sm);
+            border-radius: 12px;
             background: var(--c-primary-light);
             color: var(--c-primary);
             flex: 0 0 auto;
+        }
+
+        .cart-feedback.is-warning.show { transform: translate(-50%, -50%) scale(1); }
+        .cart-feedback.is-warning .cart-feedback-icon {
+            width: 58px;
+            height: 58px;
+            margin-bottom: .15rem;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #fff0c7, #ffe1a1);
+            color: #b85c00;
+            font-size: 1.45rem;
+            box-shadow: 0 10px 24px rgba(205, 119, 20, .18);
+        }
+        .cart-feedback.is-warning .cart-feedback-copy strong { margin-bottom: .45rem; font-size: 1.25rem; color: #17231f; }
+        .cart-feedback.is-warning .cart-feedback-copy span { max-width: 370px; font-size: .95rem; line-height: 1.65; }
+        .cart-feedback.is-warning .cart-feedback-actions { width: 100%; justify-content: center; margin-top: .35rem; }
+        .cart-feedback.is-warning .cart-feedback-action { min-height: 46px; padding-inline: 1.35rem !important; }
+        .cart-feedback.is-warning .cart-feedback-close { width: auto; min-height: 46px; padding: 0 1.2rem; border-radius: 999px; font-weight: 700; }
+
+        @media (max-width: 575.98px) {
+            .cart-feedback { right: 1rem; top: 4.75rem; grid-template-columns: 38px minmax(0, 1fr); width: calc(100vw - 2rem); }
+            .cart-feedback-actions { grid-column: 1 / -1; justify-content: flex-end; }
+            .cart-feedback.is-warning { left: 50%; right: auto; top: 50%; padding: 1.4rem 1.1rem; }
+            .cart-feedback.is-warning .cart-feedback-actions { grid-column: auto; flex-direction: column; }
+            .cart-feedback.is-warning .cart-feedback-actions > * { width: 100%; }
         }
 
         [data-ajax-cart].is-adding button[type="submit"],
@@ -1120,7 +1178,7 @@
                         <strong class="d-block mb-1">Thành công!</strong>
                         {{ session('success') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1133,7 +1191,7 @@
                         <strong class="d-block mb-1">Lỗi!</strong>
                         {{ session('error') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1146,7 +1204,7 @@
                         <strong class="d-block mb-1">Cảnh báo!</strong>
                         {{ session('warning') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1159,7 +1217,7 @@
                         <strong class="d-block mb-1">Thông tin</strong>
                         {{ session('info') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1171,7 +1229,7 @@
                     <div class="flex-grow-1">
                         {{ session('status') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1615,22 +1673,38 @@
                     document.body.appendChild(feedback);
                 }
 
-                const icon = options.type === 'warning' ? 'bi-exclamation-triangle' : 'bi-bag-check';
+                const isWarning = options.type === 'warning';
+                const icon = isWarning ? 'bi-exclamation-triangle' : 'bi-bag-check';
                 const action = options.redirectUrl
-                    ? `<a class="btn btn-sm btn-light rounded-pill ms-2 fw-bold text-primary" href="${escapeHtml(options.redirectUrl)}">${escapeHtml(options.redirectLabel || 'Mở')}</a>`
+                    ? `<a class="btn btn-primary rounded-pill fw-bold cart-feedback-action" href="${escapeHtml(options.redirectUrl)}">${escapeHtml(options.redirectLabel || 'Mở')}</a>`
                     : '';
 
+                const hideCartFeedback = () => {
+                    feedback.classList.remove('show');
+                    document.body.classList.remove('cart-warning-open');
+                };
+
+                feedback.classList.toggle('is-warning', isWarning);
+                feedback.setAttribute('role', isWarning ? 'alertdialog' : 'status');
                 feedback.innerHTML = `
                     <span class="cart-feedback-icon"><i class="bi ${icon}"></i></span>
-                    <span>${escapeHtml(message || 'Đã thêm vào giỏ hàng')}</span>
-                    ${action}
+                    <span class="cart-feedback-copy">
+                        <strong>${isWarning ? 'Bạn đang có đơn nhóm' : 'Thêm món thành công'}</strong>
+                        <span>${escapeHtml(message || 'Đã thêm vào giỏ hàng')}</span>
+                    </span>
+                    <span class="cart-feedback-actions">
+                        ${action}
+                        <button type="button" class="cart-feedback-close" aria-label="Đóng">${isWarning ? 'Để sau' : '<i class="bi bi-x-lg"></i>'}</button>
+                    </span>
                 `;
+                feedback.querySelector('.cart-feedback-close')?.addEventListener('click', hideCartFeedback);
+                document.body.classList.toggle('cart-warning-open', isWarning);
                 feedback.classList.add('show');
 
                 window.clearTimeout(feedback._hideTimer);
-                feedback._hideTimer = window.setTimeout(() => {
-                    feedback.classList.remove('show');
-                }, options.redirectUrl ? 5200 : 1800);
+                if (!isWarning) {
+                    feedback._hideTimer = window.setTimeout(hideCartFeedback, 1800);
+                }
             }
 
             if (submitter && submitter.name) {
@@ -1801,6 +1875,7 @@
 
             const link = activeGroupTimer.closest('.active-group-return');
             const closesAt = new Date(activeGroupTimer.dataset.closesAt).getTime();
+            let timerId = null;
             const tick = function () {
                 const seconds = Math.max(0, Math.ceil((closesAt - Date.now()) / 1000));
                 const minutes = Math.floor(seconds / 60);
@@ -1808,10 +1883,27 @@
                 activeGroupTimer.textContent = hours > 0
                     ? String(hours).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0')
                     : String(minutes).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
-                if (seconds === 0) link?.remove();
+                if (seconds === 0) {
+                    link?.remove();
+                    stopTimer();
+                }
             };
-            tick();
-            window.setInterval(tick, 1000);
+            const startTimer = function () {
+                if (document.hidden || timerId !== null || !link?.isConnected) return;
+                tick();
+                timerId = window.setInterval(tick, 1000);
+            };
+            const stopTimer = function () {
+                if (timerId === null) return;
+                window.clearInterval(timerId);
+                timerId = null;
+            };
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) stopTimer();
+                else startTimer();
+            });
+            window.addEventListener('pagehide', stopTimer, { once: true });
+            startTimer();
         });
     </script>
     <script>

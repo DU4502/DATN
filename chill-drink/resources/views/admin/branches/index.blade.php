@@ -10,7 +10,7 @@
         <h2 class="h2 fw-bold mb-1">Quản lý chi nhánh</h2>
         <p class="text-secondary mb-0">Quản lý danh sách chi nhánh của hệ thống.</p>
     </div>
-    <button class="btn btn-primary align-self-start align-self-lg-auto" data-bs-toggle="modal" data-bs-target="#createBranchModal">
+    <button class="btn btn-primary align-self-start align-self-lg-auto" type="button" data-bs-toggle="modal" data-bs-target="#createBranchModal">
         <i class="bi bi-plus-circle me-1"></i>Thêm chi nhánh
     </button>
 </section>
@@ -18,14 +18,14 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 @endif
 
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 @endif
 
@@ -231,7 +231,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold" id="createBranchModalLabel">Thêm chi nhánh mới</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <form method="POST" action="{{ route('admin.branches.store') }}">
                 @csrf

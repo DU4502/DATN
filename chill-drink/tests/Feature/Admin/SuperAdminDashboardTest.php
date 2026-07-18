@@ -27,7 +27,7 @@ class SuperAdminDashboardTest extends TestCase
         $response = $this->actingAs($superAdmin)->get('/admin/super-admin?q=search-admin');
 
         $response->assertOk()
-            ->assertSee('Super Admin Dashboard')
+            ->assertSee('Tổng quan quản trị cấp cao')
             ->assertSee('search-admin@chilldrink.com')
             ->assertDontSee('Không có quản trị viên phù hợp');
     }

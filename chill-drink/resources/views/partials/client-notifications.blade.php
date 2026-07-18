@@ -167,6 +167,7 @@
                 .filter(Boolean)
         );
         let isFirstPoll = true;
+        let notificationPollTimer = null;
 
         async function pollNotifications() {
             try {
@@ -222,8 +223,22 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            pollNotifications(); // Poll immediately on page load
-            window.setInterval(pollNotifications, 5000);
+            const startNotificationPolling = function () {
+                if (document.hidden || notificationPollTimer !== null) return;
+                pollNotifications();
+                notificationPollTimer = window.setInterval(pollNotifications, 5000);
+            };
+            const stopNotificationPolling = function () {
+                if (notificationPollTimer === null) return;
+                window.clearInterval(notificationPollTimer);
+                notificationPollTimer = null;
+            };
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) stopNotificationPolling();
+                else startNotificationPolling();
+            });
+            window.addEventListener('pagehide', stopNotificationPolling, { once: true });
+            startNotificationPolling();
 
             // Mark all as read handler
             const markAllReadBtn = document.getElementById('markAllReadBtn');

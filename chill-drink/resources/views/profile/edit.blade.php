@@ -154,7 +154,7 @@
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input id="email" name="email" type="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $user->email) }}" required autocomplete="username" placeholder="Email">
-                                    <label for="email">Email</label>
+                                    <label for="email">Địa chỉ email</label>
                                     @error('email') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
                             </div>

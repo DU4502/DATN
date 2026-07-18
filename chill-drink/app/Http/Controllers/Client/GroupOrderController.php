@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\GroupOrder;
 use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMember;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class GroupOrderController extends Controller
 {
@@ -29,7 +31,14 @@ class GroupOrderController extends Controller
 
     public function create()
     {
-        return view('client.group-orders.create');
+        $branches = Branch::query()
+            ->where('status', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'address']);
+
+        $selectedBranchId = old('branch_id', session('nearest_branch_id'));
+
+        return view('client.group-orders.create', compact('branches', 'selectedBranchId'));
     }
 
     public function store(Request $request)
@@ -37,9 +46,16 @@ class GroupOrderController extends Controller
         $minimumClosingTime = now()->addMinutes(5)->format('Y-m-d H:i:s');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
+            'branch_id' => [
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
             'note' => ['nullable', 'string', 'max:500'],
             'closes_at' => ['nullable', 'date', 'after_or_equal:'.$minimumClosingTime, 'before_or_equal:+7 days'],
         ], [
+            'branch_id.required' => 'Vui lòng chọn chi nhánh phục vụ đơn nhóm.',
+            'branch_id.exists' => 'Chi nhánh đã chọn không còn hoạt động.',
             'closes_at.after_or_equal' => 'Thời gian kết thúc phải cách thời điểm hiện tại ít nhất 5 phút.',
             'closes_at.before_or_equal' => 'Thời gian kết thúc không được vượt quá 7 ngày.',
         ]);
@@ -67,7 +83,16 @@ class GroupOrderController extends Controller
             ]);
         });
 
-        return redirect()->route('group-orders.show', $group->code)
+        $redirectUrl = route('group-orders.show', $group->code);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => 'Đã tạo đơn nhóm.',
+                'redirect_url' => $redirectUrl,
+            ], 201);
+        }
+
+        return redirect()->to($redirectUrl)
             ->with('success', 'Đã tạo đơn nhóm. Hãy gửi đường link cho mọi người!');
     }
 
@@ -78,7 +103,7 @@ class GroupOrderController extends Controller
         if ($group->owner_id === auth()->id() && $group->isOpen()) {
             $group->update(['owner_last_seen_at' => now()]);
         }
-        $group->load(['owner', 'members.items.product', 'items']);
+        $group->load(['owner', 'branch', 'members.items.product', 'items']);
         $products = Product::with('category')->where('status', true)->orderBy('name')->get();
         $toppings = Schema::hasTable('toppings')
             ? DB::table('toppings')->where('status', 1)->orderBy('name')->get(['id', 'name', 'price'])
@@ -455,7 +480,7 @@ class GroupOrderController extends Controller
     private function restorePersonalCart(): void
     {
         if (session()->has('personal_cart_backup')) session()->put('cart', session()->pull('personal_cart_backup'));
-        session()->forget(['group_cart_keys', 'checkout_group_order_id']);
+        session()->forget(['group_cart_keys', 'checkout_group_order_id', 'group_branch_id']);
     }
 
     private function currentPrice(Product $product, string $size, array $toppings): int
@@ -505,6 +530,7 @@ class GroupOrderController extends Controller
         session()->put('cart', $cart);
         session()->put('group_cart_keys', array_keys($cart));
         session()->put('checkout_group_order_id', $group->id);
+        session()->put('group_branch_id', $group->branch_id);
     }
 
     private function uniqueCode(): string

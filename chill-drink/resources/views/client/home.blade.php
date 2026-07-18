@@ -1166,10 +1166,10 @@
 
             @php
                 $homeDiscoverCategories = [
-                    ['title' => 'Juices', 'category_name' => 'Nước Ép', 'icon' => 'bi-droplet', 'description' => 'Trái cây tươi, thanh ngọt, giàu vitamin.'],
-                    ['title' => 'Smoothies', 'category_name' => 'Sinh Tố', 'icon' => 'bi-cup-straw', 'description' => 'Mịn màng, lạ miệng, bổ dưỡng mỗi ngày.'],
-                    ['title' => 'Teas', 'category_name' => 'Trà Trái Cây', 'icon' => 'bi-cup-hot', 'description' => 'Hương trà thanh nhẹ, thư thái cho mọi khoảnh khắc.'],
-                    ['title' => 'Coffee', 'category_name' => 'Cà Phê', 'icon' => 'bi-cup-fill', 'description' => 'Đậm đà, sảng khoái, đánh thức mọi cảm xúc.'],
+                    ['title' => 'Nước ép', 'category_name' => 'Nước Ép', 'icon' => 'bi-droplet', 'description' => 'Trái cây tươi, thanh ngọt, giàu vitamin.'],
+                    ['title' => 'Sinh tố', 'category_name' => 'Sinh Tố', 'icon' => 'bi-cup-straw', 'description' => 'Mịn màng, lạ miệng, bổ dưỡng mỗi ngày.'],
+                    ['title' => 'Trà', 'category_name' => 'Trà Trái Cây', 'icon' => 'bi-cup-hot', 'description' => 'Hương trà thanh nhẹ, thư thái cho mọi khoảnh khắc.'],
+                    ['title' => 'Cà phê', 'category_name' => 'Cà Phê', 'icon' => 'bi-cup-fill', 'description' => 'Đậm đà, sảng khoái, đánh thức mọi cảm xúc.'],
                 ];
             @endphp
 
@@ -1535,7 +1535,7 @@
                     <div class="home-review__stars">
                         <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
                     </div>
-                    <p class="home-review__text">"Matcha latte rất chuẩn vị Nhật, foam mịn. Đặt online tiện lắm, giao đúng giờ hẹn mỗi lần."</p>
+                    <p class="home-review__text">"Trà sữa matcha rất chuẩn vị Nhật, lớp bọt sữa mịn. Đặt trực tuyến tiện lắm, giao đúng giờ hẹn mỗi lần."</p>
                     <div class="home-review__author">
                         <div class="home-review__avatar">TK</div>
                         <div>
@@ -1568,9 +1568,9 @@
                 <div class="home-cta__content">
                     <p class="section-kicker mb-2">Ưu đãi thành viên</p>
                     <h2>Tham gia cộng đồng Chill Drink</h2>
-                    <p>Đăng ký ngay để nhận voucher giảm 20% cho đơn đầu tiên và tích điểm đổi quà hấp dẫn.</p>
+                    <p>Đăng ký ngay để nhận phiếu giảm 20% cho đơn đầu tiên và tích điểm đổi quà hấp dẫn.</p>
                     <div class="home-cta__perks">
-                        <span class="home-cta__perk"><i class="bi bi-gift"></i> Voucher 20%</span>
+                        <span class="home-cta__perk"><i class="bi bi-gift"></i> Ưu đãi 20%</span>
                         <span class="home-cta__perk"><i class="bi bi-coin"></i> Tích điểm</span>
                         <span class="home-cta__perk"><i class="bi bi-bell"></i> Ưu đãi riêng</span>
                     </div>
@@ -1612,7 +1612,7 @@
                         <img class="home-quick-thumb" src="" alt="" data-home-quick-image>
                         <div><div class="fw-bold fs-5" data-home-quick-name></div><div class="text-primary fw-bold" data-home-quick-price></div></div>
                     </div>
-                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-cup-straw"></i>Chọn size</div><div class="d-flex gap-2" data-home-quick-group="size">
+                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-cup-straw"></i>Chọn kích cỡ</div><div class="d-flex gap-2" data-home-quick-group="size">
                         <button type="button" class="home-quick-choice home-quick-size active" data-value="S" data-extra="0">S<small>Giá gốc</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="M" data-extra="5000">M<small>+5.000đ</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="L" data-extra="10000">L<small>+10.000đ</small></button>
                     </div></div>
                     <div class="home-quick-section row g-3"><div class="col-md-6"><div class="home-quick-label"><i class="bi bi-droplet"></i>Mức đường</div><div class="d-flex flex-wrap gap-2" data-home-quick-group="sugar">
@@ -1621,7 +1621,7 @@
                     <div class="col-md-6"><div class="home-quick-label"><i class="bi bi-snow"></i>Mức đá</div><div class="d-flex flex-wrap gap-2" data-home-quick-group="ice">
                         <button type="button" class="home-quick-choice" data-value="0">Không đá</button><button type="button" class="home-quick-choice" data-value="50">Ít đá</button><button type="button" class="home-quick-choice active" data-value="100">Thường</button>
                     </div></div></div>
-                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-plus-circle"></i>Thêm topping <span class="text-secondary fw-normal">(có thể chọn nhiều)</span></div><div class="d-flex flex-wrap gap-2" data-home-toppings>
+                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-plus-circle"></i>Thêm món kèm <span class="text-secondary fw-normal">(có thể chọn nhiều)</span></div><div class="d-flex flex-wrap gap-2" data-home-toppings>
                         <button type="button" class="home-quick-choice home-quick-topping" data-name="Trân châu đen" data-price="5000">Trân châu đen<small>+5.000đ</small></button>
                         <button type="button" class="home-quick-choice home-quick-topping" data-name="Kem cheese" data-price="7000">Kem cheese<small>+7.000đ</small></button>
                         <button type="button" class="home-quick-choice home-quick-topping" data-name="Thạch nha đam" data-price="6000">Thạch nha đam<small>+6.000đ</small></button>

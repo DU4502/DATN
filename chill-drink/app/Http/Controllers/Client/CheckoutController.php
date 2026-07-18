@@ -69,9 +69,6 @@ class CheckoutController extends Controller
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $branches = Branch::where('status', true)
-            ->whereHas('users', function ($query) {
-                $query->where('role_id', 2);
-            })
             ->orderBy('name')
             ->get();
         
@@ -418,7 +415,7 @@ class CheckoutController extends Controller
 
             if ($groupOrderId) {
                 session()->put('cart', session()->pull('personal_cart_backup', []));
-                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys']);
+                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys', 'group_branch_id']);
             } else {
                 $this->removeCheckedOutItems($fullCart, $selectedKeys);
             }

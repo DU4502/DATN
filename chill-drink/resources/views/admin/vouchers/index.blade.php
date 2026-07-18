@@ -1,13 +1,13 @@
 @extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
 
-@section('page-title', 'Voucher')
+@section('page-title', 'Phiếu ưu đãi')
 @section('hide-topbar-search', true)
 
 @section('content')
 <section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
     <div>
         <p class="admin-kicker mb-1">Quản lý khuyến mãi</p>
-        <h2 class="h2 fw-bold mb-1">Voucher</h2>
+        <h2 class="h2 fw-bold mb-1">Phiếu ưu đãi</h2>
         <p class="text-secondary mb-0">Quản lý mã giảm giá, mã theo rank và mã đổi điểm.</p>
     </div>
     <a href="{{ route('admin.vouchers.create') }}" class="btn btn-primary align-self-start align-self-lg-auto">

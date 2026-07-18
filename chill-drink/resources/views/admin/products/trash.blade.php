@@ -79,7 +79,7 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 @endif
 
@@ -105,10 +105,10 @@
                         </td>
                         <td>
                             <strong class="d-block text-dark">{{ $product->name }}</strong>
-                            <small class="text-secondary">{{ $product->sku ?? 'N/A' }}</small>
+                            <small class="text-secondary">{{ $product->sku ?? 'Chưa có' }}</small>
                         </td>
                         <td>
-                            <span class="badge badge-soft-secondary">{{ $product->category?->name ?? 'N/A' }}</span>
+                            <span class="badge badge-soft-secondary">{{ $product->category?->name ?? 'Chưa có' }}</span>
                         </td>
                         <td class="text-primary fw-bold">{{ number_format($product->price, 0, ',', '.') }}₫</td>
                         <td>
