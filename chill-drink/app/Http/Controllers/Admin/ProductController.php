@@ -247,6 +247,88 @@ class ProductController extends Controller
     {
         $product = $this->findProduct($id);
 
+        // Soft delete instead of permanent delete
+        $product->delete();
+
+        return redirect()
+            ->route('admin.products.index', $this->returnPageParameters(request()))
+            ->with('success', 'Sản phẩm đã được chuyển vào thùng rác!');
+    }
+
+    public function trash(Request $request)
+    {
+        $filters = [
+            'q' => trim((string) $request->query('q', '')),
+            'category' => trim((string) $request->query('category', '')),
+            'sort' => trim((string) $request->query('sort', 'latest')),
+        ];
+
+        $categories = Category::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+        $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
+
+        $productsQuery = Product::onlyTrashed()
+            ->with(['category' => function($query) {
+                $query->withTrashed();
+            }])
+            ->when($filters['q'] !== '', function ($query) use ($filters) {
+                $keyword = $filters['q'];
+
+                $query->where(function ($builder) use ($keyword) {
+                    $builder
+                        ->where('name', 'like', '%'.$keyword.'%')
+                        ->orWhere('slug', 'like', '%'.$keyword.'%')
+                        ->orWhere('description', 'like', '%'.$keyword.'%')
+                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
+                            $categoryQuery->where('name', 'like', '%'.$keyword.'%');
+                        });
+
+                    if (Schema::hasColumn('products', 'sku')) {
+                        $builder->orWhere('sku', 'like', '%'.$keyword.'%');
+                    }
+                });
+            })
+            ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
+                $query->where('category_id', (int) $filters['category']);
+            });
+
+        match ($filters['sort']) {
+            'name' => $productsQuery->orderBy('name'),
+            'price_asc' => $productsQuery->orderBy('price'),
+            'price_desc' => $productsQuery->orderByDesc('price'),
+            default => $productsQuery->latest('deleted_at'),
+        };
+
+        $products = $productsQuery->paginate(12)->withQueryString();
+        $totalProducts = Product::onlyTrashed()->count();
+        $activeFiltersCount = collect($filters)
+            ->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
+            ->count();
+
+        return view('admin.products.trash', compact(
+            'products',
+            'categories',
+            'filters',
+            'totalProducts',
+            'activeFiltersCount'
+        ));
+    }
+
+    public function restore(string $id)
+    {
+        $product = Product::withTrashed()->whereKey($id)->orWhere('slug', $id)->firstOrFail();
+        $product->restore();
+
+        return redirect()
+            ->route('admin.products.trash')
+            ->with('success', 'Đã khôi phục sản phẩm thành công!');
+    }
+
+    public function forceDelete(string $id)
+    {
+        $product = Product::withTrashed()->whereKey($id)->orWhere('slug', $id)->firstOrFail();
+
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
         }
@@ -257,11 +339,11 @@ class ProductController extends Controller
             }
         }
 
-        $product->delete();
+        $product->forceDelete();
 
         return redirect()
-            ->route('admin.products.index', $this->returnPageParameters(request()))
-            ->with('success', 'Xóa sản phẩm thành công!');
+            ->route('admin.products.trash')
+            ->with('success', 'Đã xóa vĩnh viễn sản phẩm!');
     }
 
     private function storeGalleryImages(Request $request): array
