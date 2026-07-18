@@ -93,7 +93,23 @@ class ProductController extends Controller
     {
         $categories = Category::orderBy('name')->get();
 
-        return view('admin.products.create', compact('categories'));
+        if (\App\Models\Size::count() === 0) {
+            foreach (['L', 'M', 'S'] as $s) {
+                \App\Models\Size::firstOrCreate(['name' => $s]);
+            }
+        }
+
+        $allSizes = \App\Models\Size::all()->sortBy(function($size) {
+            return match(strtoupper(trim($size->name))) {
+                'S' => 1,
+                'M' => 2,
+                'L' => 3,
+                default => 4
+            };
+        })->values();
+        $allToppings = \App\Models\Topping::where('status', true)->get();
+
+        return view('admin.products.create', compact('categories', 'allSizes', 'allToppings'));
     }
 
     /**
@@ -104,14 +120,18 @@ class ProductController extends Controller
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
-            'gallery_images' => 'nullable|array|max:6',
-            'gallery_images.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'image' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
+            'gallery_images' => 'nullable|array',
+            'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'stock' => 'required|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
         ]);
+
+        if ($sizeError = $this->validateSizePrices($request)) {
+            return back()->withInput()->withErrors(['sizes' => $sizeError]);
+        }
 
         $data = [
             'category_id' => $validated['category_id'],
@@ -119,7 +139,7 @@ class ProductController extends Controller
             'slug' => Str::slug($validated['name']),
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
-            'stock' => $validated['stock'],
+            'stock' => $validated['stock'] ?? 999,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -137,8 +157,21 @@ class ProductController extends Controller
 
         $product = Product::create($data);
 
+        if ($request->has('sizes')) {
+            $sizeData = [];
+            foreach ($request->input('sizes') as $sizeId) {
+                $sizePrice = $request->input("size_prices.{$sizeId}", 0);
+                $sizeData[$sizeId] = ['price' => $sizePrice ?: 0];
+            }
+            $product->sizes()->sync($sizeData);
+        }
+
+        if ($request->has('toppings')) {
+            $product->toppings()->sync($request->input('toppings'));
+        }
+
         return redirect()
-            ->route('admin.products.show', $product->id)
+            ->route('admin.products.index')
             ->with('success', 'Thêm sản phẩm thành công!');
     }
 
@@ -170,7 +203,25 @@ class ProductController extends Controller
         $product = $this->findProduct($id);
         $categories = Category::orderBy('name')->get();
 
-        return view('admin.products.edit', compact('product', 'categories'));
+        if (\App\Models\Size::count() === 0) {
+            foreach (['L', 'M', 'S'] as $s) {
+                \App\Models\Size::firstOrCreate(['name' => $s]);
+            }
+        }
+
+        $allSizes = \App\Models\Size::all()->sortBy(function($size) {
+            return match(strtoupper(trim($size->name))) {
+                'S' => 1,
+                'M' => 2,
+                'L' => 3,
+                default => 4
+            };
+        })->values();
+        $allToppings = \App\Models\Topping::all();
+        $selectedSizes = $product->sizes()->pluck('product_sizes.price', 'sizes.id')->toArray();
+        $selectedToppings = $product->toppings()->pluck('toppings.id')->toArray();
+
+        return view('admin.products.edit', compact('product', 'categories', 'allSizes', 'allToppings', 'selectedSizes', 'selectedToppings'));
     }
 
     /**
@@ -183,16 +234,20 @@ class ProductController extends Controller
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
-            'image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
-            'gallery_images' => 'nullable|array|max:6',
-            'gallery_images.*' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'image' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
+            'gallery_images' => 'nullable|array',
+            'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'remove_gallery_images' => 'nullable|array',
             'remove_gallery_images.*' => 'string',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'stock' => 'required|integer|min:0',
+            'stock' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
         ]);
+
+        if ($sizeError = $this->validateSizePrices($request)) {
+            return back()->withInput()->withErrors(['sizes' => $sizeError]);
+        }
 
         $data = [
             'category_id' => $validated['category_id'],
@@ -200,7 +255,7 @@ class ProductController extends Controller
             'slug' => Str::slug($validated['name']),
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
-            'stock' => $validated['stock'],
+            'stock' => $validated['stock'] ?? 999,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -235,8 +290,25 @@ class ProductController extends Controller
 
         $product->update($data);
 
+        if ($request->has('sizes')) {
+            $sizeData = [];
+            foreach ($request->input('sizes') as $sizeId) {
+                $sizePrice = $request->input("size_prices.{$sizeId}", 0);
+                $sizeData[$sizeId] = ['price' => $sizePrice ?: 0];
+            }
+            $product->sizes()->sync($sizeData);
+        } else {
+            $product->sizes()->detach();
+        }
+
+        if ($request->has('toppings')) {
+            $product->toppings()->sync($request->input('toppings'));
+        } else {
+            $product->toppings()->detach();
+        }
+
         return redirect()
-            ->route('admin.products.show', $product->id)
+            ->route('admin.products.index')
             ->with('success', 'Cập nhật sản phẩm thành công!');
     }
 
@@ -383,5 +455,26 @@ class ProductController extends Controller
             ->whereKey($id)
             ->orWhere('slug', $id)
             ->firstOrFail();
+    }
+
+    private function validateSizePrices(Request $request): ?string
+    {
+        $sizeM = \App\Models\Size::where('name', 'M')->first();
+        $sizeL = \App\Models\Size::where('name', 'L')->first();
+
+        $sizesInput = $request->input('sizes', []);
+        $sizePricesInput = $request->input('size_prices', []);
+
+        if ($sizeM && $sizeL && in_array($sizeM->id, $sizesInput) && in_array($sizeL->id, $sizesInput)) {
+            $priceM = (int) ($sizePricesInput[$sizeM->id] ?? 0);
+            $priceL = (int) ($sizePricesInput[$sizeL->id] ?? 0);
+
+            if ($priceL <= $priceM) {
+                $minL = $priceM + 1000;
+                return 'Giá cộng thêm của Size L (' . number_format($priceL, 0, ',', '.') . 'đ) phải lớn hơn giá cộng thêm của Size M (' . number_format($priceM, 0, ',', '.') . 'đ) tối thiểu 1.000đ (tối thiểu ' . number_format($minL, 0, ',', '.') . 'đ).';
+            }
+        }
+
+        return null;
     }
 }
