@@ -10,6 +10,7 @@
         newMessage: '',
         loading: false,
         pollInterval: null,
+        visibilityHandler: null,
 
         async init() {
             this.groupChatAvailable = Boolean(document.querySelector('[data-vue-group-chat]'));
@@ -28,16 +29,42 @@
                 this.isOpen = false;
                 this.menuOpen = false;
             });
-            await this.getOrCreateConversation();
-            if (this.conversationId) {
-                await this.fetchMessages();
-                // Poll for new messages every 3 seconds since broadcasting is disabled
-                this.pollInterval = setInterval(() => {
-                    if (this.isOpen && this.conversationId) {
-                        this.fetchMessages();
-                    }
-                }, 3000);
-            }
+            this.visibilityHandler = () => {
+                if (document.hidden) this.stopPolling();
+                else if (this.isOpen) this.activateSupportChat();
+            };
+            document.addEventListener('visibilitychange', this.visibilityHandler);
+            this.$watch('isOpen', (isOpen) => {
+                if (isOpen) this.activateSupportChat();
+                else this.stopPolling();
+            });
+        },
+
+        destroy() {
+            this.stopPolling();
+            document.removeEventListener('visibilitychange', this.visibilityHandler);
+        },
+
+        async activateSupportChat() {
+            if (document.hidden || !this.isOpen) return;
+            if (!this.conversationId) await this.getOrCreateConversation();
+            if (!this.conversationId || !this.isOpen) return;
+            await this.fetchMessages();
+            this.startPolling();
+        },
+
+        startPolling() {
+            this.stopPolling();
+            if (!this.isOpen || document.hidden || !this.conversationId) return;
+            this.pollInterval = window.setInterval(() => {
+                if (this.isOpen && !document.hidden) this.fetchMessages();
+            }, 3000);
+        },
+
+        stopPolling() {
+            if (!this.pollInterval) return;
+            window.clearInterval(this.pollInterval);
+            this.pollInterval = null;
         },
 
         openSupportChat() {
@@ -162,7 +189,7 @@
     <div x-show="menuOpen && groupChatAvailable" x-transition style="position:absolute;right:0;bottom:5rem;width:230px;padding:.55rem;border-radius:16px;background:#fff;border:1px solid #e1ebe8;box-shadow:0 18px 48px rgba(7,52,58,.2);display:grid;gap:.4rem;">
         <button type="button" @click="openGroupChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#f1f0ff;color:#4f46c8;font-weight:800;text-align:left;">
             <span style="width:36px;height:36px;border-radius:50%;background:#5b50d6;color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-people-fill"></i></span>
-            <span style="flex:1;">Chat đơn nhóm</span>
+            <span style="flex:1;">Trò chuyện trong đơn nhóm</span>
             <span x-show="groupUnread > 0" x-text="groupUnread" class="badge rounded-pill bg-danger"></span>
         </button>
         <button type="button" @click="openSupportChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#ecfaf6;color:#087c63;font-weight:800;text-align:left;">

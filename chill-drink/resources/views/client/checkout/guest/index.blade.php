@@ -90,7 +90,7 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="guest_email" class="form-label fw-semibold">Email *</label>
+                            <label for="guest_email" class="form-label fw-semibold">Địa chỉ email *</label>
                             <input type="email" id="guest_email" name="guest_email" class="form-control guest-input @error('guest_email') is-invalid @enderror" value="{{ old('guest_email', $guestInfo['guest_email'] ?? '') }}" required autocomplete="email">
                             <div class="form-text"><i class="bi bi-envelope-check me-1"></i>Nhận hóa đơn & cập nhật trạng thái đơn hàng qua email.</div>
                             @error('guest_email')<div class="invalid-feedback">{{ $message }}</div>@enderror

@@ -128,7 +128,7 @@ class CartController extends Controller
     public function add(Request $request, $id)
     {
         if ($activeGroup = $this->activeOpenGroupForCurrentUser()) {
-            $message = 'Bạn đang ở trong phòng nhóm "'.$activeGroup->name.'". Hãy quay lại phòng để chọn món cho đơn nhóm, hoặc rời/hủy phòng trước khi mua lẻ.';
+            $message = 'Bạn đang tham gia phòng "'.$activeGroup->name.'". Hãy quay lại để chọn món, hoặc rời/hủy phòng trước khi mua riêng.';
             $redirectUrl = route('group-orders.show', $activeGroup->code);
 
             if ($request->expectsJson()) {
@@ -136,7 +136,7 @@ class CartController extends Controller
                     'success' => false,
                     'message' => $message,
                     'redirect_url' => $redirectUrl,
-                    'redirect_label' => 'Quay lại phòng nhóm',
+                    'redirect_label' => 'Về phòng nhóm',
                 ], 409);
             }
 

@@ -1123,7 +1123,7 @@
                                     </button>
                                 </div>
                                 <p class="voucher-card__info">
-                                    {{ $voucher->description ?? 'Voucher giảm giá' }}
+                                    {{ $voucher->description ?? 'Phiếu giảm giá' }}
                                     <span class="voucher-card__highlight">
                                         @if($voucher->type === 'percent')
                                             Giảm {{ $voucher->value }}%
@@ -1354,7 +1354,7 @@
                     </div>
 
                     <div class="quick-section">
-                        <div class="quick-section-label"><i class="bi bi-cup-straw"></i> Chọn size</div>
+                        <div class="quick-section-label"><i class="bi bi-cup-straw"></i> Chọn kích cỡ</div>
                         <div class="quick-size-grid" data-quick-group="size">
                             <button type="button" class="quick-choice active" data-value="S" data-extra-price="0">S<small class="d-block text-secondary">Giá gốc</small></button>
                             <button type="button" class="quick-choice" data-value="M" data-extra-price="5000">M<small class="d-block text-secondary">+5.000đ</small></button>
@@ -1382,7 +1382,7 @@
                     </div>
 
                     <div class="quick-section">
-                        <div class="quick-section-label"><i class="bi bi-plus-circle"></i> Thêm topping <small>(có thể chọn nhiều)</small></div>
+                        <div class="quick-section-label"><i class="bi bi-plus-circle"></i> Thêm món kèm <small>(có thể chọn nhiều)</small></div>
                         <div class="quick-topping-grid" data-quick-topping-group></div>
                     </div>
 

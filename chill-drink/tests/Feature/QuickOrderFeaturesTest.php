@@ -22,6 +22,7 @@ class QuickOrderFeaturesTest extends TestCase
 
         $response = $this->actingAs($user)->post(route('group-orders.store'), [
             'name' => 'Team Marketing',
+            'branch_id' => $this->activeBranch()->id,
             'note' => 'Giao tại văn phòng',
         ]);
 
@@ -40,6 +41,7 @@ class QuickOrderFeaturesTest extends TestCase
 
         $this->actingAs($owner)->post(route('group-orders.store'), [
             'name' => 'Nhóm hẹn giờ',
+            'branch_id' => $this->activeBranch()->id,
             'closes_at' => $closesAt->format('Y-m-d H:i:s'),
         ])->assertRedirect();
 
@@ -52,6 +54,7 @@ class QuickOrderFeaturesTest extends TestCase
 
         $this->actingAs($owner)->post(route('group-orders.store'), [
             'name' => 'Phòng mới',
+            'branch_id' => $this->activeBranch()->id,
             'closes_at' => now()->addHour()->format('Y-m-d H:i:s'),
         ])->assertRedirect();
 
@@ -65,10 +68,27 @@ class QuickOrderFeaturesTest extends TestCase
 
         $this->actingAs($owner)->from(route('group-orders.create'))->post(route('group-orders.store'), [
             'name' => 'Phòng quá ngắn',
+            'branch_id' => $this->activeBranch()->id,
             'closes_at' => now()->addSeconds(10)->format('Y-m-d H:i:s'),
         ])->assertRedirect(route('group-orders.create'))->assertSessionHasErrors('closes_at');
 
         $this->assertDatabaseMissing('group_orders', ['name' => 'Phòng quá ngắn']);
+    }
+
+    public function test_group_order_json_creation_returns_room_redirect_and_branch(): void
+    {
+        $owner = User::factory()->create();
+        $branch = $this->activeBranch();
+
+        $response = $this->actingAs($owner)->postJson(route('group-orders.store'), [
+            'name' => 'Phòng chuyển trang ngay',
+            'branch_id' => $branch->id,
+            'closes_at' => now()->addMinutes(30)->format('Y-m-d H:i:s'),
+        ]);
+
+        $group = GroupOrder::latest('id')->firstOrFail();
+        $response->assertCreated()->assertJsonPath('redirect_url', route('group-orders.show', $group->code));
+        $this->assertSame($branch->id, $group->branch_id);
     }
 
     public function test_guest_must_login_before_opening_group_order_link(): void
@@ -234,6 +254,7 @@ class QuickOrderFeaturesTest extends TestCase
 
     public function test_group_checkout_links_order_deducts_stock_and_restores_personal_cart(): void
     {
+        $this->travelTo(now()->startOfDay()->addHours(9));
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
         $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
@@ -241,7 +262,7 @@ class QuickOrderFeaturesTest extends TestCase
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
-        $scheduledAt = now()->addDay()->setTime(10, 0)->startOfMinute();
+        $scheduledAt = now()->addHour()->startOfMinute();
 
         $this->actingAs($owner)->withSession(['cart' => $personalCart])->post(route('group-orders.close', $group->code));
         $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'closed']);
@@ -360,5 +381,13 @@ class QuickOrderFeaturesTest extends TestCase
             'status' => 'open', 'closes_at' => now()->addHour(),
         ]);
         return [$group, $owner];
+    }
+
+    private function activeBranch(): Branch
+    {
+        return Branch::firstOrCreate(
+            ['code' => 'GROUP-TEST'],
+            ['name' => 'Chi nhánh kiểm thử', 'address' => '123 Đường kiểm thử', 'status' => true]
+        );
     }
 }

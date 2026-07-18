@@ -38,12 +38,12 @@
     {{-- Heading --}}
     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 admin-chat-heading">
         <div>
-            <h1 class="h4 fw-bold mb-1 text-dark">Chat khách hàng</h1>
+            <h1 class="h4 fw-bold mb-1 text-dark">Trò chuyện với khách hàng</h1>
             <p class="text-secondary mb-0 small">Xem và phản hồi các cuộc trò chuyện từ khách hàng.</p>
         </div>
         @if($viewer->isSuperAdmin())
             <div class="d-flex align-items-center gap-2">
-                <span class="badge text-bg-success rounded-pill px-3 py-2">Super Admin</span>
+                <span class="badge text-bg-success rounded-pill px-3 py-2">Quản trị cấp cao</span>
                 <form action="{{ route('admin.chat.index') }}" method="GET" class="d-inline-flex m-0">
                     <select name="branch_id" class="form-select form-select-sm shadow-none" onchange="this.form.submit()" style="min-width:160px;">
                         <option value="">Tất cả chi nhánh</option>
@@ -240,10 +240,30 @@ function adminChat(config) {
         newMessage: '',
         loading: false,
         pollInterval: null,
+        visibilityHandler: null,
 
         init() {
             this.scrollToBottom();
-            this.pollInterval = setInterval(() => this.fetchMessages(), 1000);
+            this.visibilityHandler = () => document.hidden ? this.stopPolling() : this.startPolling();
+            document.addEventListener('visibilitychange', this.visibilityHandler);
+            this.startPolling();
+        },
+
+        destroy() {
+            this.stopPolling();
+            document.removeEventListener('visibilitychange', this.visibilityHandler);
+        },
+
+        startPolling() {
+            if (document.hidden || this.pollInterval) return;
+            this.fetchMessages();
+            this.pollInterval = window.setInterval(() => this.fetchMessages(), 1000);
+        },
+
+        stopPolling() {
+            if (!this.pollInterval) return;
+            window.clearInterval(this.pollInterval);
+            this.pollInterval = null;
         },
 
         async fetchMessages() {
@@ -329,7 +349,8 @@ function adminChat(config) {
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        setInterval(async () => {
+        let listPollTimer = null;
+        const refreshConversationList = async () => {
             try {
                 const url = new URL(window.location.href);
                 const res = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -368,7 +389,20 @@ function adminChat(config) {
             } catch (err) {
                 console.warn("Lỗi cập nhật danh sách cuộc trò chuyện:", err);
             }
-        }, 3000);
+        };
+        const startListPolling = () => {
+            if (document.hidden || listPollTimer !== null) return;
+            refreshConversationList();
+            listPollTimer = window.setInterval(refreshConversationList, 3000);
+        };
+        const stopListPolling = () => {
+            if (listPollTimer === null) return;
+            window.clearInterval(listPollTimer);
+            listPollTimer = null;
+        };
+        document.addEventListener('visibilitychange', () => document.hidden ? stopListPolling() : startListPolling());
+        window.addEventListener('pagehide', stopListPolling, { once: true });
+        startListPolling();
     });
 </script>
 @endsection

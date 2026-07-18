@@ -1,6 +1,6 @@
 @extends('layouts.super-admin')
 
-@section('page-title', 'Dashboard')
+@section('page-title', 'Tổng quan')
 
 @section('content')
 <style>
@@ -164,7 +164,7 @@
     <header class="sa-header">
         <div>
             <p class="sa-kicker">Tổng quan hệ thống</p>
-            <h1 class="sa-title">Super Admin Dashboard</h1>
+            <h1 class="sa-title">Tổng quan quản trị cấp cao</h1>
             <p class="sa-subtitle">Quản trị tài khoản, quyền truy cập, bảo mật và tình trạng nền tảng Chill Drink.</p>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
@@ -415,7 +415,7 @@
                         <tr>
                             <th>Hạng</th>
                             <th>Chi nhánh</th>
-                            <th>Admin</th>
+                            <th>Quản trị viên</th>
                             <th>Trạng thái</th>
                             <th>Nhân viên</th>
                             <th>Đơn hàng</th>
@@ -573,7 +573,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="alert alert-info" role="alert" style="font-size: 0.75rem; margin-bottom: 1rem;">
-                        <i class="bi bi-info-circle me-2"></i>Thêm chi nhánh trực tiếp từ Super Admin để quản lý tập trung.
+                        <i class="bi bi-info-circle me-2"></i>Thêm chi nhánh trực tiếp từ trang quản trị cấp cao để quản lý tập trung.
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold" for="branch_create_name">Tên chi nhánh</label>
@@ -637,8 +637,8 @@
             <input class="sa-control" type="search" name="q" value="{{ $filters['search'] }}" placeholder="Tìm theo tên hoặc email" aria-label="Tìm theo tên hoặc email">
             <select class="sa-control" name="role" aria-label="Lọc vai trò">
                 <option value="all">Tất cả vai trò</option>
-                <option value="super" @selected($filters['role'] === 'super')>Super Admin</option>
-                <option value="admin" @selected($filters['role'] === 'admin')>Admin hệ thống</option>
+                <option value="super" @selected($filters['role'] === 'super')>Quản trị cấp cao</option>
+                <option value="admin" @selected($filters['role'] === 'admin')>Quản trị hệ thống</option>
             </select>
             <select class="sa-control" name="status" aria-label="Lọc trạng thái">
                 <option value="all">Tất cả trạng thái</option>
@@ -683,7 +683,7 @@
                                     <div><div class="sa-admin-name">{{ $adminUser->name }}</div><div class="sa-admin-email">{{ $adminUser->email }}</div></div>
                                 </div>
                             </td>
-                            <td><span class="sa-role {{ $isSuper ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $isSuper ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $isSuper ? 'Super Admin' : 'Admin hệ thống' }}</span></td>
+                            <td><span class="sa-role {{ $isSuper ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $isSuper ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $isSuper ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span></td>
                             <td data-admin-branch-cell="{{ $adminUser->id }}">
                                 @if($adminUser->branch)
                                     <div style="font-size: 0.69rem; line-height: 1.4;" data-admin-branch-display>
@@ -696,13 +696,13 @@
                             </td>
                             <td>{{ $adminUser->last_login_at?->format('d/m/Y H:i') ?? ($isCurrentAccount ? 'Phiên hiện tại' : 'Chưa đăng nhập') }}</td>
                             <td><span class="sa-presence sa-presence-{{ $presence }}">{{ $presenceLabel }}</span></td>
-                            <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}">{{ $adminUser->is_active ? 'Active' : 'Locked' }}</span></td>
+                            <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}">{{ $adminUser->is_active ? 'Hoạt động' : 'Đã khóa' }}</span></td>
                             <td>
                                 <div class="sa-actions">
                                     @if($adminUser->isSuperAdmin())
                                         <a class="sa-action-btn" href="{{ route('admin.super-admin', ['q' => $adminUser->email]) }}" title="Xem trang quản trị"><i class="bi bi-eye"></i></a>
                                     @elseif($adminUser->branch_id)
-                                        <a class="sa-action-btn" href="{{ route('admin.dashboard', ['branch_id' => $adminUser->branch_id]) }}" title="Xem dashboard chi nhánh"><i class="bi bi-eye"></i></a>
+                                        <a class="sa-action-btn" href="{{ route('admin.dashboard', ['branch_id' => $adminUser->branch_id]) }}" title="Xem tổng quan chi nhánh"><i class="bi bi-eye"></i></a>
                                     @else
                                         <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                     @endif
@@ -736,7 +736,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="adminActionsLabel{{ $adminUser->id }}">Thao tác quản trị viên</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                     </div>
                     <div class="modal-body">
                         <!-- Admin Info -->
@@ -756,7 +756,7 @@
                                     <div style="color: #111827; font-weight: 700; font-size: 0.95rem;">{{ $adminUser->name }}</div>
                                     <div style="color: #6b7280; font-size: 0.85rem;">{{ $adminUser->email }}</div>
                                     <div style="margin-top: 0.3rem;">
-                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Super Admin' : 'Admin hệ thống' }}</span>
+                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -801,7 +801,7 @@
                                 <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
                                     <div style="font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Vai trò hiện tại</div>
                                     <div data-current-role>
-                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}" style="font-size: 0.75rem;"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Super Admin' : 'Admin hệ thống' }}</span>
+                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}" style="font-size: 0.75rem;"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span>
                                     </div>
                                 </div>
 
@@ -813,8 +813,8 @@
                                         <label style="display: block; font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Chọn vai trò mới</label>
                                         <select name="role_id" class="form-select" style="font-size: 0.85rem;">
                                             <option value="">-- Chọn vai trò --</option>
-                                            <option value="2" @selected($adminUser->role_id === 2)>Admin hệ thống</option>
-                                            <option value="3" @selected($adminUser->role_id === 3)>Super Admin</option>
+                                            <option value="2" @selected($adminUser->role_id === 2)>Quản trị hệ thống</option>
+                                            <option value="3" @selected($adminUser->role_id === 3)>Quản trị cấp cao</option>
                                         </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">
@@ -966,7 +966,7 @@
         </article>
 
         <aside class="sa-panel" id="health">
-            <div class="sa-panel-header"><div><h2 class="sa-panel-title">System Health</h2><p class="sa-panel-note">Trạng thái dịch vụ có thể kiểm tra</p></div><i class="bi bi-heart-pulse text-success"></i></div>
+            <div class="sa-panel-header"><div><h2 class="sa-panel-title">Tình trạng hệ thống</h2><p class="sa-panel-note">Trạng thái dịch vụ có thể kiểm tra</p></div><i class="bi bi-heart-pulse text-success"></i></div>
             <div class="sa-health-list">
                 <div class="sa-health-row"><span class="sa-health-name"><i class="bi bi-database"></i>Database</span><span class="sa-health-value {{ $systemHealth['database']['tone'] }}">{{ $systemHealth['database']['label'] }}</span></div>
                 <div class="sa-health-row"><span class="sa-health-name"><i class="bi bi-device-ssd"></i>Storage</span><span class="sa-health-value">{{ $systemHealth['storage'] }}</span></div>
@@ -991,9 +991,9 @@
     </section>
 
     <section class="sa-panel" id="permissions">
-        <div class="sa-panel-header"><div><h2 class="sa-panel-title">Phạm vi quyền hiện tại</h2><p class="sa-panel-note">Hai cấp tài khoản đang có trong bảng roles</p></div><span class="sa-role sa-role-super"><i class="bi bi-shield-check"></i>Super Admin</span></div>
+        <div class="sa-panel-header"><div><h2 class="sa-panel-title">Phạm vi quyền hiện tại</h2><p class="sa-panel-note">Hai cấp tài khoản đang có trong bảng vai trò</p></div><span class="sa-role sa-role-super"><i class="bi bi-shield-check"></i>Quản trị cấp cao</span></div>
         <div class="sa-permissions">
-            @foreach(['Dashboard hệ thống', 'Quản trị Admin', 'Vai trò và phân quyền', 'Bảo mật và nhật ký', 'Dashboard vận hành', 'Sản phẩm và danh mục', 'Đơn hàng và khách hàng', 'Voucher và đánh giá'] as $permission)
+            @foreach(['Tổng quan hệ thống', 'Quản trị tài khoản', 'Vai trò và phân quyền', 'Bảo mật và nhật ký', 'Tổng quan vận hành', 'Sản phẩm và danh mục', 'Đơn hàng và khách hàng', 'Phiếu ưu đãi và đánh giá'] as $permission)
                 <div class="sa-permission"><i class="bi bi-check-circle-fill"></i>{{ $permission }}</div>
             @endforeach
         </div>
@@ -1005,7 +1005,7 @@
         <form class="modal-content" method="POST" action="{{ route('admin.super-admin.admins.store') }}" style="border:0;border-radius:8px;">
             @csrf
             <input type="hidden" name="form_type" value="admin">
-            <div class="modal-header"><h2 class="modal-title fs-6 fw-bold" id="createAdminModalLabel">Thêm tài khoản Admin</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+            <div class="modal-header"><h2 class="modal-title fs-6 fw-bold" id="createAdminModalLabel">Thêm tài khoản quản trị viên</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
             <div class="modal-body">
                 <div class="alert alert-info" role="alert" style="font-size: 0.75rem; margin-bottom: 1rem;">
                     <i class="bi bi-info-circle me-2"></i>Tạo admin sẽ tự tạo một nhánh quản lý tương ứng.

@@ -268,7 +268,7 @@
                                                     </div>
                                                     <div class="flex-grow-1">
                                                         <h4 class="fw-bold mb-1" style="font-size: 0.95rem; color: var(--a-ink);">{{ $item->product?->name ?? 'Sản phẩm đã xóa' }}</h4>
-                                                        <div class="text-muted small mb-1">Size: {{ $item->productSize?->size?->name ?? 'Chưa chọn' }}</div>
+                                                        <div class="text-muted small mb-1">Kích cỡ: {{ $item->productSize?->size?->name ?? 'Chưa chọn' }}</div>
                                                         <div class="text-muted small">Đá: {{ (int) $item->ice_level }}% • Đường: {{ (int) $item->sugar_level }}%</div>
                                                     </div>
                                                     <div class="text-end d-flex flex-column align-items-end gap-1">
@@ -472,7 +472,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <h4 class="fw-bold mb-1" style="font-size: 0.95rem; color: var(--a-ink);">${escapeHtml(item.product_name || 'Sản phẩm')}</h4>
-                            <div class="text-muted small mb-1">Size: ${escapeHtml(item.size_name || 'Chưa chọn')}</div>
+                            <div class="text-muted small mb-1">Kích cỡ: ${escapeHtml(item.size_name || 'Chưa chọn')}</div>
                             <div class="text-muted small">Đá: ${parseInt(item.ice_level || 0)}% • Đường: ${parseInt(item.sugar_level || 0)}%</div>
                         </div>
                         <div class="text-end d-flex flex-column align-items-end gap-1">

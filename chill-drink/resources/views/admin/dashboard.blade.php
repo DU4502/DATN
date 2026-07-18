@@ -332,7 +332,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
 
 <div class="dashboard-header d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
     <div>
-        <h2 class="h3 fw-bold mb-1">Hi, Admin 👋</h2>
+        <h2 class="h3 fw-bold mb-1">Xin chào, Quản trị viên 👋</h2>
         <p id="dashboard-summary-text" class="text-secondary mb-0">Đây là hoạt động kinh doanh {{ $initialPeriodLabelLower }} của {{ $dashboardScopeLabel }}.</p>
         @if($dashboardBranch)
             <span class="badge text-bg-light border mt-2">Đang xem: {{ $dashboardBranch->name }} ({{ $dashboardBranch->code }})</span>

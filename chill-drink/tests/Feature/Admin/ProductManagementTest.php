@@ -292,7 +292,7 @@ class ProductManagementTest extends TestCase
 
         $response = $this->actingAs($admin)->delete(route('admin.products.destroy', $product));
 
-        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
         $response->assertRedirect(route('admin.products.index'));
     }
 
