@@ -17,20 +17,28 @@
         @endif
     </div>
     
-    @if($viewer->isSuperAdmin() && $branches->isNotEmpty())
-        <div class="d-flex align-items-center gap-2">
-            <span class="admin-kicker mb-0 text-nowrap">Chọn chi nhánh:</span>
-            <form action="{{ route('admin.slides.index') }}" method="GET" class="m-0">
-                <select name="branch_id" class="form-select" onchange="this.form.submit()" style="min-width: 220px;">
-                    @foreach($branches as $b)
-                        <option value="{{ $b->id }}" {{ $selectedBranchId == $b->id ? 'selected' : '' }}>
-                            {{ $b->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </form>
-        </div>
-    @endif
+    <div class="d-flex align-items-center gap-3">
+        @if($viewer->isSuperAdmin() && $branches->isNotEmpty())
+            <div class="d-flex align-items-center gap-2">
+                <span class="admin-kicker mb-0 text-nowrap">Chọn chi nhánh:</span>
+                <form action="{{ route('admin.slides.index') }}" method="GET" class="m-0">
+                    <select name="branch_id" class="form-select" onchange="this.form.submit()" style="min-width: 220px;">
+                        @foreach($branches as $b)
+                            <option value="{{ $b->id }}" {{ $selectedBranchId == $b->id ? 'selected' : '' }}>
+                                {{ $b->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            </div>
+        @endif
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createSlideModal">
+            <i class="bi bi-plus-lg me-1"></i>Tạo mới
+        </button>
+        <a href="{{ route('admin.slides.trash', ['branch_id' => $selectedBranchId]) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-trash me-1"></i>Thùng rác
+        </a>
+    </div>
 </section>
 
 @if(session('success'))
@@ -39,6 +47,66 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
+
+{{-- MODAL CREATE NEW SLIDE --}}
+<div class="modal fade" id="createSlideModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h4 class="modal-title fw-bold text-dark match-modal-title">Tạo Slide mới</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('admin.slides.store') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                @if($viewer->isSuperAdmin())
+                    <input type="hidden" name="branch_id" value="{{ $selectedBranchId }}">
+                @endif
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tên sản phẩm *</label>
+                            <input type="text" name="product_name" class="form-control" placeholder="Ví dụ: TRÀ ĐÀO CAM SẢ" value="{{ old('product_name') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tiêu đề slide *</label>
+                            <input type="text" name="title" class="form-control" placeholder="Ví dụ: HƯƠNG VỊ THANH NGỌT SẢNG KHOÁI" value="{{ old('title') }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Giá thành *</label>
+                            <input type="text" name="price" class="form-control" placeholder="Ví dụ: 85.000₫" value="{{ old('price') }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Màu nền slide *</label>
+                            <input type="color" name="bg_color" class="form-control form-control-color w-100" style="height: 40px; padding: 2px;" value="{{ old('bg_color', '#0d9373') }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Thứ tự hiển thị *</label>
+                            <input type="number" name="sort_order" class="form-control" value="{{ old('sort_order', '0') }}" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Nội dung mô tả *</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Ghi mô tả chi tiết của món nước uống này..." required>{{ old('description') }}</textarea>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Ảnh sản phẩm *</label>
+                            <input type="file" name="image" class="form-control" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActiveCreateSwitch" checked>
+                                <label class="form-check-label fw-bold text-dark" for="isActiveCreateSwitch">Bật hiển thị</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-primary px-4">Tạo slide mới</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @if($errors->any())
     <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
@@ -53,7 +121,7 @@
 
 <div class="row g-4">
     {{-- LIST SLIDES --}}
-    <div class="col-xl-8 col-lg-7">
+    <div class="col-12">
         <div class="admin-card">
             <h3 class="h5 fw-bold mb-3">Danh sách Slide hiện có</h3>
             <div class="table-responsive">
@@ -191,65 +259,5 @@
         </div>
     </div>
 
-    {{-- ADD NEW SLIDE --}}
-    <div class="col-xl-4 col-lg-5">
-        <div class="admin-card">
-            <h3 class="h5 fw-bold mb-3">Tạo slide mới</h3>
-            <form action="{{ route('admin.slides.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-                @if($viewer->isSuperAdmin())
-                    <input type="hidden" name="branch_id" value="{{ $selectedBranchId }}">
-                @endif
-
-                <div class="mb-3">
-                    <label class="form-label">Tên sản phẩm *</label>
-                    <input type="text" name="product_name" class="form-control" placeholder="Ví dụ: TRÀ ĐÀO CAM SẢ" value="{{ old('product_name') }}" required>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Tiêu đề slide *</label>
-                    <input type="text" name="title" class="form-control" placeholder="Ví dụ: HƯƠNG VỊ THANH NGỌT SẢNG KHOÁI" value="{{ old('title') }}" required>
-                </div>
-
-                <div class="row g-2 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Giá bán *</label>
-                        <input type="text" name="price" class="form-control" placeholder="Ví dụ: 85.000₫" value="{{ old('price') }}" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Màu nền slide *</label>
-                        <input type="color" name="bg_color" class="form-control form-control-color w-105" style="height: 40px; padding: 2px;" value="{{ old('bg_color', '#0d9373') }}" required>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Mô tả sản phẩm *</label>
-                    <textarea name="description" class="form-control" rows="3" placeholder="Ghi mô tả chi tiết của món nước uống này..." required>{{ old('description') }}</textarea>
-                </div>
-
-                <div class="row g-2 mb-3 align-items-end">
-                    <div class="col-7">
-                        <label class="form-label">Ảnh sản phẩm *</label>
-                        <input type="file" name="image" class="form-control" required>
-                    </div>
-                    <div class="col-5">
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActiveSwitch" checked>
-                            <label class="form-check-label fw-bold text-dark" for="isActiveSwitch">Hiển thị</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Thứ tự sắp xếp *</label>
-                    <input type="number" name="sort_order" class="form-control" value="{{ old('sort_order', '0') }}" required>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100 py-2 mt-2">
-                    <i class="bi bi-cloud-arrow-up-fill me-1"></i>Đăng slide lên
-                </button>
-            </form>
-        </div>
-    </div>
 </div>
 @endsection

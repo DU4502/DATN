@@ -9,9 +9,14 @@
         <h2 class="h2 fw-bold mb-1">Danh mục đồ uống</h2>
         <p class="text-secondary mb-0">Nhóm sản phẩm để khách hàng tìm kiếm nhanh hơn.</p>
     </div>
-    <a href="{{ route('admin.categories.create') }}" class="btn btn-primary align-self-start align-self-lg-auto">
-        <i class="bi bi-plus-circle me-1"></i>Thêm danh mục
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Thêm danh mục
+        </a>
+        <a href="{{ route('admin.categories.trash') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-trash me-1"></i>Thùng rác
+        </a>
+    </div>
 </section>
 
 <!-- Search Form -->

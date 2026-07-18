@@ -38,13 +38,27 @@ class BranchSlideController extends Controller
     {
         $user = auth()->user();
 
+        $branchId = $user->isSuperAdmin() ? $request->input('branch_id') : $user->branch_id;
+
         $rules = [
             'product_name' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'price' => 'required|string|max:50',
             'description' => 'required|string|max:1000',
             'bg_color' => 'required|string|max:20',
-            'sort_order' => 'required|integer|min:0',
+            'sort_order' => [
+                'required',
+                'integer',
+                'min:0',
+                function ($attribute, $value, $fail) use ($branchId) {
+                    $exists = BranchSlide::where('branch_id', $branchId)
+                        ->where('sort_order', $value)
+                        ->exists();
+                    if ($exists) {
+                        $fail('Thứ tự hiển thị ' . $value . ' đã được sử dụng. Vui lòng chọn số khác.');
+                    }
+                },
+            ],
             'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:4096',
         ];
 
@@ -53,8 +67,6 @@ class BranchSlideController extends Controller
         }
 
         $validated = $request->validate($rules);
-
-        $branchId = $user->isSuperAdmin() ? $request->input('branch_id') : $user->branch_id;
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('slides', 'public');
@@ -78,13 +90,28 @@ class BranchSlideController extends Controller
             abort(403, 'Bạn không có quyền chỉnh sửa slide của chi nhánh khác.');
         }
 
+        $branchId = $slide->branch_id;
+
         $rules = [
             'product_name' => 'required|string|max:255',
             'title' => 'required|string|max:255',
             'price' => 'required|string|max:50',
             'description' => 'required|string|max:1000',
             'bg_color' => 'required|string|max:20',
-            'sort_order' => 'required|integer|min:0',
+            'sort_order' => [
+                'required',
+                'integer',
+                'min:0',
+                function ($attribute, $value, $fail) use ($branchId, $slide) {
+                    $exists = BranchSlide::where('branch_id', $branchId)
+                        ->where('sort_order', $value)
+                        ->where('id', '!=', $slide->id)
+                        ->exists();
+                    if ($exists) {
+                        $fail('Thứ tự hiển thị ' . $value . ' đã được sử dụng. Vui lòng chọn số khác.');
+                    }
+                },
+            ],
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:4096',
         ];
 
@@ -115,13 +142,69 @@ class BranchSlideController extends Controller
             abort(403, 'Bạn không có quyền xóa slide của chi nhánh khác.');
         }
 
+        // Soft delete instead of permanent delete
+        $slide->delete();
+
+        return redirect()->back()->with('success', 'Slide đã được chuyển vào thùng rác!');
+    }
+
+    public function trash(Request $request)
+    {
+        $user = auth()->user();
+        $branches = collect();
+        $selectedBranchId = null;
+
+        if ($user->isSuperAdmin()) {
+            $branches = Branch::all();
+            $selectedBranchId = $request->input('branch_id', $branches->first()?->id);
+        } else {
+            $selectedBranchId = $user->branch_id;
+            if (!$selectedBranchId) {
+                $firstBranch = Branch::first();
+                $selectedBranchId = $firstBranch?->id;
+            }
+        }
+
+        $branch = Branch::find($selectedBranchId);
+        $slides = $branch ? $branch->slides()->onlyTrashed()->get() : collect();
+
+        return view('admin.slides.trash', compact('branches', 'selectedBranchId', 'branch', 'slides'));
+    }
+
+    public function restore($id)
+    {
+        $user = auth()->user();
+        
+        $slide = BranchSlide::withTrashed()->findOrFail($id);
+
+        // Check permission
+        if (!$user->isSuperAdmin() && $slide->branch_id !== $user->branch_id) {
+            abort(403, 'Bạn không có quyền khôi phục slide của chi nhánh khác.');
+        }
+
+        $slide->restore();
+
+        return redirect()->back()->with('success', 'Đã khôi phục slide thành công!');
+    }
+
+    public function forceDelete($id)
+    {
+        $user = auth()->user();
+        
+        $slide = BranchSlide::withTrashed()->findOrFail($id);
+
+        // Check permission
+        if (!$user->isSuperAdmin() && $slide->branch_id !== $user->branch_id) {
+            abort(403, 'Bạn không có quyền xóa vĩnh viễn slide của chi nhánh khác.');
+        }
+
         // Delete image if not seeded
         if ($slide->image && !str_starts_with($slide->image, '/')) {
             Storage::disk('public')->delete($slide->image);
         }
 
-        $slide->delete();
+        $slide->forceDelete();
 
-        return redirect()->back()->with('success', 'Xóa slide thành công!');
+        return redirect()->back()->with('success', 'Đã xóa vĩnh viễn slide!');
     }
 }
