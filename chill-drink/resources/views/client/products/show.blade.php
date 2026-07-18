@@ -45,7 +45,15 @@
         object-fit: contain !important;
         object-position: center;
         padding: 0.65rem;
-        transition: opacity 0.18s ease;
+        opacity: 1;
+        transform: scale(1);
+        transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1), transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: opacity, transform;
+    }
+
+    .detail-photo-card img.is-changing {
+        opacity: 0.18;
+        transform: scale(0.985);
     }
 
     .detail-gallery-nav {
@@ -84,7 +92,7 @@
         top: 104px;
         width: 100%;
         max-width: 680px;
-        height: 100%;
+        height: auto;
         display: flex;
         flex-direction: column;
         z-index: 1;
@@ -141,7 +149,7 @@
         display: grid;
         grid-template-columns: minmax(420px, 0.92fr) minmax(0, 1.08fr);
         gap: clamp(2rem, 3.5vw, 3.75rem);
-        align-items: stretch;
+        align-items: start;
         overflow: visible;
     }
 
@@ -151,13 +159,13 @@
     }
 
     .detail-media-panel {
-        height: 100%;
+        height: auto;
     }
 
     .detail-summary {
         max-width: 760px;
         width: 100%;
-        height: 100%;
+        height: auto;
         min-height: 0;
     }
 
@@ -292,19 +300,83 @@
     .product-detail-actions {
         order: 5;
         margin-top: auto;
-        border-top: 1px solid var(--c-border, #e5e7eb);
-        padding-top: 0.85rem;
-        background: #fff;
+        border-top: 0;
+        padding-top: 0;
+        background: transparent;
     }
 
     .product-detail-actions .btn-primary {
-        min-height: 50px;
+        min-height: 54px;
+    }
+
+    .detail-action-row.is-choosing {
+        grid-template-columns: 1fr;
+        margin-top: 0;
+    }
+
+    .detail-action-row.is-choosing .qty-control {
+        justify-self: start;
+    }
+
+    .detail-action-content.is-hidden { display: none; }
+
+    .product-option-panel[hidden] { display: none !important; }
+
+    .product-option-panel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 1061;
+        width: min(640px, calc(100vw - 2rem));
+        max-height: calc(100vh - 2rem);
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 1.25rem !important;
+        border: 1px solid #dce9e5;
+        border-radius: 20px;
+        background: #ffffff;
+        box-shadow: 0 28px 80px rgba(7, 30, 28, 0.28);
+        transform: translate(-50%, -50%);
+        animation: optionPanelIn .22s ease-out;
+    }
+
+    body.product-options-open { overflow: hidden; }
+
+    body.product-options-open::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 1060;
+        background: rgba(9, 24, 22, 0.48);
+        backdrop-filter: blur(2px);
+    }
+
+    .option-panel-head,
+    .option-confirm-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .option-panel-head { margin-bottom: .9rem; }
+    .option-confirm-row { padding-top: 1rem; border-top: 1px solid var(--c-border, #e5e7eb); }
+    .option-confirm-row .btn-primary { min-width: min(100%, 300px); min-height: 50px; }
+
+    @keyframes optionPanelIn {
+        from { opacity: 0; transform: translate(-50%, calc(-50% - 10px)) scale(.98); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
 
     .detail-buy-btn {
-        min-height: 50px;
+        min-height: 54px;
         border-radius: var(--radius-full, 999px);
         font-weight: 800;
+    }
+
+    .product-detail-actions .qty-control,
+    .product-detail-actions .detail-favorite-btn {
+        min-height: 54px;
     }
 
     .detail-quick-actions {
@@ -670,7 +742,7 @@
         }
 
         .product-detail-actions {
-            padding-top: 0.55rem;
+            padding-top: 0;
         }
 
         .detail-buy-btn,
@@ -686,6 +758,15 @@
         .detail-action-content {
             grid-template-columns: minmax(0, 1fr) 46px;
         }
+
+        .product-option-panel {
+            width: calc(100vw - 1.25rem);
+            max-height: calc(100vh - 1.25rem);
+            padding: 1rem !important;
+            border-radius: 18px;
+        }
+        .option-confirm-row { align-items: stretch; flex-direction: column-reverse; }
+        .option-confirm-row .btn { width: 100%; }
 
         .detail-thumb {
             width: 76px;
@@ -905,6 +986,26 @@
                     </div>
                     @endif
 
+                    <div class="option-card persistent-size-panel">
+                        <div class="option-block mb-0">
+                            <label class="option-label d-block mb-3">Size</label>
+                            <div class="d-flex flex-wrap gap-2" data-size-group>
+                                <button type="button" class="choice-btn size-choice active" data-size-option="S" data-size-extra="0">
+                                    S
+                                    <small>Giá gốc</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice" data-size-option="M" data-size-extra="5000">
+                                    M
+                                    <small>+5.000đ</small>
+                                </button>
+                                <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
+                                    L
+                                    <small>+10.000đ</small>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="product-detail-actions detail-action-row">
                         <div class="qty-control d-flex align-items-center justify-content-between">
                             <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
@@ -922,10 +1023,10 @@
                                 <input type="hidden" name="toppings" value="" data-topping-input>
                                 <input type="hidden" name="quantity" value="1" data-qty-input>
                                 <div class="detail-button-row">
-                                    <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill">
+                                    <button type="button" class="btn btn-outline-primary detail-buy-btn flex-fill" data-open-product-options="cart">
                                         <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
                                     </button>
-                                    <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill">Mua ngay</button>
+                                    <button type="button" class="btn btn-primary detail-buy-btn flex-fill" data-open-product-options="buy">Mua ngay</button>
                                 </div>
                             </form>
                             @auth
@@ -942,25 +1043,14 @@
                         @endif
                     </div>
 
-                    <div class="option-card p-4">
-                        <div class="option-block">
-                            <label class="option-label d-block mb-3">Size</label>
-                            <div class="d-flex flex-wrap gap-2" data-size-group>
-                                <button type="button" class="choice-btn size-choice active" data-size-option="S" data-size-extra="0">
-                                    S
-                                    <small>Giá gốc</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="M" data-size-extra="5000">
-                                    M
-                                    <small>+5.000đ</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
-                                    L
-                                    <small>+10.000đ</small>
-                                </button>
+                    <div class="option-card product-option-panel p-4" data-product-option-panel hidden>
+                        <div class="option-panel-head">
+                            <div>
+                                <div class="fw-bold fs-5">Tùy chọn đồ uống</div>
+                                <div class="small text-secondary">Chọn theo khẩu vị của bạn trước khi xác nhận</div>
                             </div>
+                            <button type="button" class="btn-close" data-close-product-options aria-label="Đóng"></button>
                         </div>
-
                         <div class="row g-3 option-block">
                             <div class="col-md-6">
                                 <label class="option-label d-block mb-3">Mức đường</label>
@@ -1012,6 +1102,13 @@
                                     </button>
                                 @endforeach
                             </div>
+                        </div>
+
+                        <div class="option-confirm-row">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-close-product-options>Quay lại</button>
+                            <button type="submit" form="productOrderForm" class="btn btn-primary rounded-pill px-4 fw-bold" data-option-confirm>
+                                Xác nhận thêm vào giỏ
+                            </button>
                         </div>
 
                     </div>
@@ -1219,7 +1316,7 @@
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
                         <form action="{{ route('cart.add', 'demo-'.$item[3]) }}" method="POST" class="related-add-form" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="related-add-btn" aria-label="Thêm {{ $item[0] }} vào giỏ" title="Thêm vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
                         <a href="{{ route('products.show', $item[3]) }}">
-                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
+                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top" loading="lazy" decoding="async">
                         </a>
                         <div class="card-body">
                             <h3 class="h5">
@@ -1324,6 +1421,55 @@
             });
         }
 
+        const optionPanel = document.querySelector('[data-product-option-panel]');
+        const actionRow = document.querySelector('.detail-action-row');
+        const actionContent = actionRow?.querySelector('.detail-action-content');
+        const optionConfirm = optionPanel?.querySelector('[data-option-confirm]');
+
+        function openProductOptions(mode) {
+            if (!optionPanel || !optionConfirm) return;
+            optionPanel.hidden = false;
+            document.body.classList.add('product-options-open');
+            actionRow?.classList.add('is-choosing');
+            actionContent?.classList.add('is-hidden');
+
+            if (mode === 'buy') {
+                optionConfirm.name = 'buy_now';
+                optionConfirm.value = '1';
+                optionConfirm.innerHTML = '<i class="bi bi-bag-check me-2"></i>Xác nhận mua ngay';
+            } else {
+                optionConfirm.removeAttribute('name');
+                optionConfirm.removeAttribute('value');
+                optionConfirm.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Xác nhận thêm vào giỏ';
+            }
+
+            optionPanel.scrollTop = 0;
+        }
+
+        function closeProductOptions() {
+            if (!optionPanel) return;
+            optionPanel.hidden = true;
+            document.body.classList.remove('product-options-open');
+            actionRow?.classList.remove('is-choosing');
+            actionContent?.classList.remove('is-hidden');
+        }
+
+        document.querySelectorAll('[data-open-product-options]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openProductOptions(button.dataset.openProductOptions || 'cart');
+            });
+        });
+
+        document.querySelectorAll('[data-close-product-options]').forEach(function (button) {
+            button.addEventListener('click', closeProductOptions);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && optionPanel && !optionPanel.hidden) {
+                closeProductOptions();
+            }
+        });
+
         // If user navigated with #reviews, scroll to review form and focus
         if (window.location.hash === '#reviews') {
             const reviewPanel = document.querySelector('.review-form-panel');
@@ -1415,10 +1561,30 @@
         }
 
         const mainImage = document.getElementById('detailMainImage');
+        const detailGallery = document.querySelector('.detail-gallery');
+        const detailPhotoCard = document.querySelector('.detail-photo-card');
+        const detailSummary = document.querySelector('.detail-summary');
         const thumbs = document.querySelectorAll('[data-detail-thumb]');
         const prevButton = document.querySelector('[data-gallery-prev]');
         const nextButton = document.querySelector('[data-gallery-next]');
         let activeImageIndex = 0;
+        let galleryTimer = null;
+        let galleryTransitionTimer = null;
+
+        const syncDetailColumns = function () {
+            if (!detailPhotoCard || !detailSummary) return;
+            if (window.matchMedia('(max-width: 991.98px)').matches) {
+                detailSummary.style.minHeight = '';
+                return;
+            }
+            detailSummary.style.minHeight = `${Math.round(detailPhotoCard.getBoundingClientRect().height)}px`;
+        };
+
+        syncDetailColumns();
+        window.addEventListener('resize', syncDetailColumns);
+        if (window.ResizeObserver && detailPhotoCard) {
+            new ResizeObserver(syncDetailColumns).observe(detailPhotoCard);
+        }
 
         const setActiveImage = function(index) {
             if (!mainImage || !thumbs.length) {
@@ -1433,32 +1599,73 @@
 
             const activeThumb = thumbs[activeImageIndex];
             activeThumb.classList.add('active');
-            mainImage.style.opacity = '0';
+            mainImage.classList.add('is-changing');
 
-            setTimeout(function() {
+            if (galleryTransitionTimer) {
+                window.clearTimeout(galleryTransitionTimer);
+            }
+
+            galleryTransitionTimer = window.setTimeout(function() {
                 mainImage.onerror = function() {
                     mainImage.onerror = null;
                     mainImage.src = mainImage.dataset.detailFallback || '';
                 };
                 mainImage.src = activeThumb.dataset.detailThumb;
-                mainImage.style.opacity = '1';
-            }, 120);
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        mainImage.classList.remove('is-changing');
+                    });
+                });
+            }, 220);
+        };
+
+        const stopGalleryAutoPlay = function () {
+            if (galleryTimer) {
+                window.clearInterval(galleryTimer);
+                galleryTimer = null;
+            }
+        };
+
+        const startGalleryAutoPlay = function () {
+            stopGalleryAutoPlay();
+            if (thumbs.length < 2 || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            galleryTimer = window.setInterval(function () {
+                setActiveImage(activeImageIndex + 1);
+            }, 3500);
+        };
+
+        const restartGalleryAutoPlay = function () {
+            stopGalleryAutoPlay();
+            startGalleryAutoPlay();
         };
 
         if (mainImage && thumbs.length) {
             thumbs.forEach(function(thumb, index) {
                 thumb.addEventListener('click', function() {
                     setActiveImage(index);
+                    restartGalleryAutoPlay();
                 });
             });
 
             prevButton?.addEventListener('click', function() {
                 setActiveImage(activeImageIndex - 1);
+                restartGalleryAutoPlay();
             });
 
             nextButton?.addEventListener('click', function() {
                 setActiveImage(activeImageIndex + 1);
+                restartGalleryAutoPlay();
             });
+
+            detailGallery?.addEventListener('mouseenter', stopGalleryAutoPlay);
+            detailGallery?.addEventListener('mouseleave', startGalleryAutoPlay);
+            detailGallery?.addEventListener('focusin', stopGalleryAutoPlay);
+            detailGallery?.addEventListener('focusout', startGalleryAutoPlay);
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) stopGalleryAutoPlay();
+                else startGalleryAutoPlay();
+            });
+            startGalleryAutoPlay();
         }
 
         const reviewForm = document.querySelector('[data-review-form]');
