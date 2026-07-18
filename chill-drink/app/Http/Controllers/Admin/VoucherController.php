@@ -101,7 +101,6 @@ class VoucherController extends Controller
     private function validatedData(Request $request, ?Voucher $voucher = null): array
     {
         $voucherId = $voucher?->id;
-        $rankKeys = array_keys(Voucher::RANK_LABELS);
 
         $validator = Validator::make($request->all(), [
             'code' => [
@@ -116,7 +115,6 @@ class VoucherController extends Controller
             'max_discount' => ['nullable', 'integer', 'min:0'],
             'min_order' => ['nullable', 'integer', 'min:0'],
             'usage_limit' => ['nullable', 'integer', 'min:0'],
-            'required_rank' => ['nullable', Rule::in($rankKeys)],
             'point_cost' => ['nullable', 'integer', 'min:0'],
             'starts_at' => ['nullable', 'date'],
             'expires_at' => ['nullable', 'date'],
@@ -188,7 +186,6 @@ class VoucherController extends Controller
             'starts_at' => $data['starts_at'] ?? now(),
             'expires_at' => $data['expires_at'] ?? null,
             'status' => $request->boolean('status'),
-            'required_rank' => $data['required_rank'] ?? null,
             'point_cost' => (int) ($data['point_cost'] ?? 0),
             'is_redeemable' => $request->boolean('is_redeemable'),
             'show_on_products' => $request->boolean('show_on_products'),
@@ -224,7 +221,6 @@ class VoucherController extends Controller
                 Voucher::TYPE_FIXED => 'Giảm cố định (VNĐ)',
                 Voucher::TYPE_PERCENT => 'Giảm theo phần trăm',
             ],
-            'rankOptions' => Voucher::RANK_LABELS,
         ];
     }
 

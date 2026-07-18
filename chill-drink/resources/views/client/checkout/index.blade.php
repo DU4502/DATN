@@ -26,17 +26,14 @@
     );
     $shippingFee = $fulfillmentType === 'pickup' ? 0 : $shippingQuote['total_fee'];
     $availableVouchers = collect($availableVouchers ?? []);
-    $loyaltyContext = $loyaltyContext ?? ['rank' => 'bronze', 'points' => 0];
-    $rankOrder = ['bronze' => 1, 'silver' => 2, 'gold' => 3, 'diamond' => 4];
-    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext, $rankOrder) {
+    $loyaltyContext = $loyaltyContext ?? ['points' => 0];
+    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext) {
         $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-        $hasRank = ! $voucher->required_rank
-            || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
         $hasPoints = ! $voucher->is_redeemable
             || (int) $voucher->point_cost <= 0
             || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
 
-        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
+        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasPoints;
     };
     $isShippingVoucher = fn ($voucher) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::upper((string) $voucher->code), ['SHIP', 'FREE']);
     $shippingVouchers = $availableVouchers->filter($isShippingVoucher)->values();
@@ -1453,14 +1450,11 @@
                                     ? 'bi-truck'
                                     : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                 $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                $hasRank = ! $voucher->required_rank || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
                                 $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
+                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
                                 $disabledReason = ! $hasMinimumOrder
                                     ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                    : (! $hasRank
-                                        ? 'Cần rank ' . $voucher->rankLabel()
-                                        : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null));
+                                    : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
                             @endphp
                             <div
                                 class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
@@ -1492,9 +1486,6 @@
                                     </div>
                                     <div class="text-secondary mb-2">
                                         Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
-                                        @if($voucher->required_rank)
-                                            · Rank {{ $voucher->rankLabel() }}
-                                        @endif
                                         @if($voucher->is_redeemable && $voucher->point_cost > 0)
                                             · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
                                         @endif
@@ -1555,14 +1546,11 @@
                                                 ? 'bi-truck'
                                                 : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                             $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                            $hasRank = ! $voucher->required_rank || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
                                             $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
+                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
                                             $disabledReason = ! $hasMinimumOrder
                                                 ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                                : (! $hasRank
-                                                    ? 'Cần rank ' . $voucher->rankLabel()
-                                                    : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null));
+                                                : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
                                         @endphp
                                         <div
                                             class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
@@ -1588,9 +1576,6 @@
                                                 </div>
                                                 <div class="text-secondary mb-2">
                                                     Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
-                                                    @if($voucher->required_rank)
-                                                        · Rank {{ $voucher->rankLabel() }}
-                                                    @endif
                                                     @if($voucher->is_redeemable && $voucher->point_cost > 0)
                                                         · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
                                                     @endif

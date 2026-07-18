@@ -295,10 +295,15 @@ class OrderController extends Controller
         
         $order->save();
 
-        // Nếu chuyển sang COMPLETED, cập nhật payment_status cho COD
+        // Nếu chuyển sang COMPLETED, cập nhật payment_status cho COD và cộng điểm thưởng
         if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
             $order->payment_status = 'paid';
             $order->save();
+        }
+        
+        // Award loyalty points when order is completed
+        if ($newStatus === OrderStatus::COMPLETED && $oldStatus !== OrderStatus::COMPLETED) {
+            $order->awardLoyaltyPoints();
         }
 
         RealtimeOrderNotifier::orderStatusUpdated($order);

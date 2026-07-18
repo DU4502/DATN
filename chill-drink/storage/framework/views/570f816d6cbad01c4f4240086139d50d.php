@@ -1,0 +1,2 @@
+<i class="<?php echo e(\App\Support\OrderStatus::notificationIconByType($type ?? null)); ?>"></i>
+<?php /**PATH C:\xampp\htdocs\DATN\chill-drink\resources\views/partials/notification-icon.blade.php ENDPATH**/ ?>

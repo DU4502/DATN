@@ -201,6 +201,36 @@ class Order extends Model
 
     public function pointsEarnable(): int
     {
-        return max(0, (int) floor(((int) $this->total) / 1000));
+        // 1 point per 10,000 VND spent
+        return LoyaltyPoint::calculatePointsFromAmount((int) $this->total);
+    }
+
+    /**
+     * Award loyalty points to user when order is completed
+     */
+    public function awardLoyaltyPoints(): void
+    {
+        // Only award points to registered users
+        if (!$this->user_id) {
+            return;
+        }
+
+        $points = $this->pointsEarnable();
+        
+        if ($points <= 0) {
+            return;
+        }
+
+        // Get or create loyalty point record
+        $loyaltyPoint = LoyaltyPoint::getOrCreateForUser($this->user_id);
+        
+        // Add points with transaction record
+        $loyaltyPoint->addPoints(
+            points: $points,
+            type: 'earn',
+            description: "Hoàn thành đơn hàng #{$this->id}",
+            referenceType: 'order',
+            referenceId: $this->id
+        );
     }
 }

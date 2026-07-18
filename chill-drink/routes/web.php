@@ -153,6 +153,10 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Loyalty Points
+    Route::get('/loyalty-points', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'index'])->name('loyalty.index');
+    Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
 });
 
 /*

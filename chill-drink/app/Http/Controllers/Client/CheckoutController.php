@@ -776,10 +776,6 @@ class CheckoutController extends Controller
     {
         $context = $this->loyaltyContext();
 
-        if ($voucher->required_rank && ! $this->rankAllows($context['rank'], $voucher->required_rank)) {
-            throw new \RuntimeException("Mã voucher này chỉ dành cho khách hạng {$voucher->rankLabel()} trở lên.");
-        }
-
         if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost) {
             throw new \RuntimeException(
                 'Bạn chưa đủ '
@@ -791,10 +787,6 @@ class CheckoutController extends Controller
 
     protected function userCanUseVoucher(Voucher $voucher, array $context): bool
     {
-        if ($voucher->required_rank && ! $this->rankAllows($context['rank'], $voucher->required_rank)) {
-            return false;
-        }
-
         return ! ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost);
     }
 
@@ -835,21 +827,8 @@ class CheckoutController extends Controller
         $row = $query->first();
 
         return [
-            'rank' => $row->level ?? 'bronze',
             'points' => (int) ($row->total_points ?? 0),
         ];
-    }
-
-    protected function rankAllows(?string $userRank, string $requiredRank): bool
-    {
-        $rankOrder = [
-            'bronze' => 1,
-            'silver' => 2,
-            'gold' => 3,
-            'diamond' => 4,
-        ];
-
-        return ($rankOrder[$userRank ?: 'bronze'] ?? 1) >= ($rankOrder[$requiredRank] ?? 1);
     }
 
     protected function paymentOptions(): array

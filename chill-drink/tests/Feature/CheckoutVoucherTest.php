@@ -151,7 +151,6 @@ class CheckoutVoucherTest extends TestCase
             'min_order' => 50000,
             'usage_limit' => 100,
             'status' => true,
-            'required_rank' => null,
             'point_cost' => 0,
             'is_redeemable' => false,
         ]);

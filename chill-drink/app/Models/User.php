@@ -206,6 +206,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Conversation::class, 'cskh_id');
     }
 
+    public function loyaltyPoint()
+    {
+        return $this->hasOne(LoyaltyPoint::class);
+    }
+
+    public function pointTransactions()
+    {
+        return $this->hasMany(PointTransaction::class);
+    }
+
     public function unreadConversationMessagesCount(): int
     {
         if ($this->isCustomer()) {
