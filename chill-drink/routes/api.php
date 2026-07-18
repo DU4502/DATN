@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\NearestBranchController;
+use App\Http\Controllers\Api\ResolveMapLinkController;
 use App\Http\Controllers\Api\ReverseGeocodeController;
 use App\Http\Controllers\Api\ProductApiController;
 use App\Http\Controllers\Api\VoucherController;
@@ -12,6 +13,7 @@ Route::get('/products', [ProductApiController::class, 'index'])->name('api.produ
 Route::get('/products/{product:slug}', [ProductApiController::class, 'show'])->name('api.products.show');
 Route::get('/branches/nearest', [NearestBranchController::class, 'nearest'])->name('api.branches.nearest');
 Route::get('/branches', [NearestBranchController::class, 'list'])->name('api.branches.list');
+Route::get('/map-link/resolve', ResolveMapLinkController::class)->name('api.map-link.resolve');
 Route::get('/reverse-geocode', ReverseGeocodeController::class)->name('api.reverse-geocode');
 
 // Voucher routes

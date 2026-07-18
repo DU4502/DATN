@@ -25,14 +25,6 @@
                 @endif
             </div>
         </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <button type="button" class="btn btn-sm btn-outline-success" data-branch-map-link-reverse>
-                <i class="bi bi-geo-alt me-1"></i>Lấy địa chỉ
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-primary" data-branch-map-link-apply>
-                <i class="bi bi-geo-alt me-1"></i>Lấy tọa độ
-            </button>
-        </div>
     </div>
 
     <div class="input-group">
@@ -44,7 +36,7 @@
             placeholder="Dán link Google Maps ở đây"
             data-branch-map-link-input
         >
-        <button type="button" class="btn btn-outline-secondary" data-branch-map-link-apply>
+        <button type="button" class="btn btn-outline-secondary" data-branch-map-link-apply data-branch-map-link-analyze>
             Phân tích link
         </button>
     </div>

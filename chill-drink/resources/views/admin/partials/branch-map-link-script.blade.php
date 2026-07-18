@@ -5,6 +5,7 @@
     }
 
     const reverseGeocodeUrl = @json(route('api.reverse-geocode'));
+    const resolveMapLinkUrl = @json(route('api.map-link.resolve'));
     const COORD_PATTERNS = [
         /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(?:,|$)/,
         /[?&](?:q|query|ll|center)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(?:&|$)/,
@@ -15,6 +16,10 @@
     function parseNumber(value) {
         const parsed = Number.parseFloat(value);
         return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function normalizeLink(value) {
+        return String(value || '').trim();
     }
 
     function extractCoordinatesFromLink(link) {
@@ -88,6 +93,46 @@
         }
     }
 
+    async function resolveCoordinatesFromLink(link) {
+        const directCoordinates = extractCoordinatesFromLink(link);
+        if (directCoordinates) {
+            return directCoordinates;
+        }
+
+        const raw = String(link || '').trim();
+        if (!raw) {
+            return null;
+        }
+
+        try {
+            const url = new URL(resolveMapLinkUrl, window.location.origin);
+            url.searchParams.set('map_link', raw);
+
+            const response = await fetch(url.toString(), {
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (!response.ok) {
+                return null;
+            }
+
+            const payload = await response.json().catch(() => null);
+            const latitude = parseNumber(payload?.latitude);
+            const longitude = parseNumber(payload?.longitude);
+
+            if (latitude === null || longitude === null) {
+                return null;
+            }
+
+            return { latitude, longitude };
+        } catch (error) {
+            return null;
+        }
+    }
+
     function resolveAddressTarget(container) {
         const selector = container.dataset.addressTarget?.trim();
 
@@ -107,17 +152,113 @@
             return container?.__branchMapLink ?? null;
         }
 
+        let isBusy = false;
+        let lastAnalyzedLink = '';
+        let processingPopup = null;
         const linkInput = container.querySelector('[data-branch-map-link-input]');
         const applyButtons = container.querySelectorAll('[data-branch-map-link-apply]');
-        const reverseButton = container.querySelector('[data-branch-map-link-reverse]');
         const latInput = container.querySelector('[data-branch-map-link-lat]');
         const lngInput = container.querySelector('[data-branch-map-link-lng]');
         const previewEl = container.querySelector('[data-branch-map-link-preview]');
         const addressInput = resolveAddressTarget(container);
+        const buttonHtmlCache = new WeakMap();
 
         if (!linkInput || !latInput || !lngInput) {
             return null;
         }
+
+        const ensureProcessingPopup = () => {
+            if (processingPopup) {
+                return processingPopup;
+            }
+
+            const overlay = document.createElement('div');
+            overlay.className = 'branch-map-link-processing-popup';
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.style.cssText = [
+                'position:fixed',
+                'inset:0',
+                'z-index:20000',
+                'display:none',
+                'align-items:center',
+                'justify-content:center',
+                'padding:1rem',
+                'background:rgba(15,23,42,0.42)',
+                'backdrop-filter:blur(2px)',
+            ].join(';');
+
+            overlay.innerHTML = `
+                <div style="min-width:min(92vw, 380px); max-width: 420px; padding: 1.1rem 1.25rem; border-radius: 14px; background: #fff; box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2); border: 1px solid rgba(13, 147, 115, 0.15); text-align: center;">
+                    <div class="spinner-border text-success mb-3" role="status" aria-hidden="true"></div>
+                    <div style="color: #111827; font-size: 0.98rem; font-weight: 800; line-height: 1.45;">Đang lấy tọa độ và địa chỉ...</div>
+                    <div style="margin-top: 0.35rem; color: #6b7280; font-size: 0.8rem; line-height: 1.45;">Vui lòng chờ trong giây lát để hệ thống phân tích link Google Maps.</div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+            processingPopup = overlay;
+            return overlay;
+        };
+
+        const showProcessingPopup = () => {
+            const overlay = ensureProcessingPopup();
+            overlay.style.display = 'flex';
+            overlay.setAttribute('aria-hidden', 'false');
+        };
+
+        const hideProcessingPopup = () => {
+            if (!processingPopup) {
+                return;
+            }
+
+            processingPopup.style.display = 'none';
+            processingPopup.setAttribute('aria-hidden', 'true');
+        };
+
+        const setButtonLoading = (button, loading) => {
+            if (!button) {
+                return;
+            }
+
+            if (loading) {
+                if (!buttonHtmlCache.has(button)) {
+                    buttonHtmlCache.set(button, button.innerHTML);
+                }
+
+                if (button.hasAttribute('data-branch-map-link-analyze')) {
+                    button.innerHTML = '<span class="spinner-border spinner-border-sm text-success me-1" role="status" aria-hidden="true"></span>Đang phân tích...';
+                }
+
+                button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
+                return;
+            }
+
+            const originalHtml = buttonHtmlCache.get(button);
+            if (originalHtml !== undefined) {
+                button.innerHTML = originalHtml;
+            }
+
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
+        };
+
+        const setPickerBusy = (busy, activeButton = null) => {
+            isBusy = busy;
+
+            applyButtons.forEach((button) => {
+                setButtonLoading(button, busy);
+            });
+
+            if (!busy) {
+                updatePreview();
+                return;
+            }
+
+            if (activeButton && activeButton.hasAttribute('data-branch-map-link-analyze')) {
+                setButtonLoading(activeButton, true);
+            }
+        };
 
         const updatePreview = () => {
             const latitude = parseNumber(latInput.value);
@@ -128,10 +269,6 @@
                 previewEl.textContent = hasCoordinates
                     ? formatCoordinates(latitude, longitude)
                     : 'Chưa có tọa độ';
-            }
-
-            if (reverseButton) {
-                reverseButton.disabled = !hasCoordinates;
             }
         };
 
@@ -161,15 +298,15 @@
             };
         };
 
-        const applyLink = async () => {
-            const coordinates = extractCoordinatesFromLink(linkInput.value);
+        const performLinkLookup = async (rawLink) => {
+            const coordinates = await resolveCoordinatesFromLink(rawLink);
 
             if (!coordinates) {
                 latInput.value = '';
                 lngInput.value = '';
                 updatePreview();
-                if (previewEl && linkInput.value.trim()) {
-                    previewEl.textContent = 'Link đã được nhận, sẽ xử lý khi lưu.';
+                if (previewEl && rawLink) {
+                    previewEl.textContent = 'Không đọc được tọa độ từ link này.';
                 }
                 return false;
             }
@@ -177,39 +314,49 @@
             latInput.value = coordinates.latitude.toFixed(6);
             lngInput.value = coordinates.longitude.toFixed(6);
             updatePreview();
+            lastAnalyzedLink = rawLink;
             await fillAddressFromCoordinates(coordinates.latitude, coordinates.longitude);
             return true;
         };
 
-        const applyAddress = async () => {
-            const latitude = parseNumber(latInput.value);
-            const longitude = parseNumber(lngInput.value);
-
-            if (latitude === null || longitude === null) {
-                const hasLinkValue = linkInput.value.trim().length > 0;
-                if (hasLinkValue) {
-                    return applyLink();
-                }
-
+        const runWithLoading = async (task, activeButton = null) => {
+            if (isBusy) {
                 return false;
             }
 
-            updatePreview();
-            await fillAddressFromCoordinates(latitude, longitude);
-            return true;
+            setPickerBusy(true, activeButton);
+
+            if (activeButton && activeButton.hasAttribute('data-branch-map-link-analyze')) {
+                showProcessingPopup();
+            }
+
+            try {
+                return await task();
+            } finally {
+                setPickerBusy(false);
+                hideProcessingPopup();
+            }
+        };
+
+        const applyLink = async (activeButton = null) => {
+            const rawLink = normalizeLink(linkInput.value);
+            const hasCoordinates = parseNumber(latInput.value) !== null && parseNumber(lngInput.value) !== null;
+
+            if (rawLink && rawLink === lastAnalyzedLink && hasCoordinates) {
+                updatePreview();
+                return true;
+            }
+
+            return runWithLoading(async () => {
+                return performLinkLookup(rawLink);
+            }, activeButton);
         };
 
         applyButtons.forEach((button) => {
             button.addEventListener('click', () => {
-                applyLink();
+                applyLink(button);
             });
         });
-
-        if (reverseButton) {
-            reverseButton.addEventListener('click', () => {
-                applyAddress();
-            });
-        }
 
         linkInput.addEventListener('change', () => {
             applyLink();
@@ -238,7 +385,6 @@
             previewEl,
             extractCoordinatesFromLink,
             applyLink,
-            applyAddress,
             updatePreview,
         };
 
@@ -259,25 +405,11 @@
         refreshPickers(event.target);
     });
 
-    document.addEventListener('submit', (event) => {
-        const form = event.target;
-        if (!(form instanceof HTMLFormElement)) {
-            return;
-        }
-
-        const picker = form.querySelector('[data-branch-map-link-picker]');
-        if (!picker) {
-            return;
-        }
-
-        const mounted = mountPicker(picker);
-        mounted?.applyLink();
-    }, true);
-
     window.ChillDrinkBranchMapLink = {
         mount: mountPicker,
         refresh: refreshPickers,
         extractCoordinatesFromLink,
+        resolveCoordinatesFromLink,
     };
 })();
 </script>
