@@ -235,6 +235,7 @@ class CheckoutController extends Controller
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
             'shipping_address_ui' => ['nullable', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'shipping_phone_ui' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
@@ -258,6 +259,8 @@ class CheckoutController extends Controller
             ],
         ], [
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ nhận hàng.',
+            'shipping_phone_ui.required' => 'Vui lòng nhập số điện thoại.',
+            'shipping_phone_ui.not_in' => 'Vui lòng nhập số điện thoại.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
@@ -359,6 +362,10 @@ class CheckoutController extends Controller
 
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
+            }
+
+            if (Schema::hasColumn('orders', 'contact_phone')) {
+                $orderData['contact_phone'] = $this->normalizeNullableString($request->input('shipping_phone_ui'));
             }
 
             if (Schema::hasColumn('orders', 'subtotal')) {

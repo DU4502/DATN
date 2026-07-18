@@ -21,6 +21,7 @@ class Order extends Model
         'guest_phone',
         'guest_email',
         'guest_token',
+        'contact_phone',
         'confirmation_token',
         'confirmation_token_expires_at',
         'delivery_type',
@@ -168,7 +169,7 @@ class Order extends Model
             return $this->guest_phone;
         }
 
-        return $this->user?->phone;
+        return $this->contact_phone ?: $this->user?->phone;
     }
 
     public function getShippingAddress(): string
