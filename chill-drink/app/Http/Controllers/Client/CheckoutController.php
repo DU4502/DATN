@@ -153,12 +153,43 @@ class CheckoutController extends Controller
                 && $voucher->hasRemainingUses())
             ->values();
 
+        // Get user's received vouchers (vouchers they have claimed)
+        $receivedVouchers = collect();
+        if (auth()->check()) {
+            $receivedVouchers = \App\Models\UserVoucher::where('user_id', auth()->id())
+                ->where('is_used', false)
+                ->with('voucher')
+                ->get()
+                ->filter(function ($userVoucher) {
+                    return $userVoucher->voucher 
+                        && $userVoucher->voucher->isActiveNow() 
+                        && $userVoucher->voucher->hasRemainingUses();
+                })
+                ->map(fn ($uv) => $uv->voucher)
+                ->values();
+        } else {
+            // For guest users
+            $guestIdentifier = session()->getId();
+            $receivedVouchers = \App\Models\UserVoucher::where('guest_identifier', $guestIdentifier)
+                ->where('is_used', false)
+                ->with('voucher')
+                ->get()
+                ->filter(function ($userVoucher) {
+                    return $userVoucher->voucher 
+                        && $userVoucher->voucher->isActiveNow() 
+                        && $userVoucher->voucher->hasRemainingUses();
+                })
+                ->map(fn ($uv) => $uv->voucher)
+                ->values();
+        }
+
         return view('client.checkout.index', compact(
             'cart',
             'shippingDistanceOptions',
             'shippingMethods',
             'paymentOptions',
             'availableVouchers',
+            'receivedVouchers',
             'loyaltyContext',
             'subtotal',
             'addressBook',
@@ -394,9 +425,9 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            RealtimeOrderNotifier::orderStatusUpdated($order);
-
+            // Chỉ notify admin khi không phải VNPay (VNPay sẽ notify sau khi thanh toán thành công)
             if ($order->payment_method !== 'vnpay') {
+                RealtimeOrderNotifier::orderStatusUpdated($order);
                 RealtimeOrderNotifier::orderCreated($order);
             }
 

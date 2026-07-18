@@ -27,6 +27,7 @@ class ChatController extends Controller
 
         if (!$conversation) {
             $branchId = $request->branch_id 
+                ?? session('nearest_branch_id')
                 ?? auth()->user()->branch_id 
                 ?? auth()->user()->orders()->latest()->value('branch_id')
                 ?? \App\Models\Branch::first()->id ?? 1;
@@ -58,6 +59,13 @@ class ChatController extends Controller
             ->with(['sender', 'displayAsSender'])
             ->get();
 
+        if ($request->input('mark_as_read')) {
+            $conversation->messages()
+                ->where('is_read', false)
+                ->where('sender_id', '!=', auth()->id())
+                ->update(['is_read' => true]);
+        }
+
         return response()->json([
             'messages' => $messages->map(
                 fn (Message $message) => MessageResource::toPublicArray($message)
@@ -76,7 +84,7 @@ class ChatController extends Controller
             'attachment' => 'nullable|file|max:10240',
         ]);
 
-        if (empty($request->content) && !$request->hasFile('attachment')) {
+        if (empty($request->input('content')) && !$request->hasFile('attachment')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vui lòng nhập nội dung hoặc đính kèm file.',
@@ -99,7 +107,7 @@ class ChatController extends Controller
 
         $message = $conversation->messages()->create([
             'sender_id' => auth()->id(),
-            'content' => $request->content,
+            'content' => $request->input('content'),
             'attachment_path' => $attachmentPath,
             'attachment_name' => $attachmentName,
         ]);

@@ -1112,7 +1112,7 @@
 <div class="home-page">
 
     {{-- Slideshow — giữ nguyên --}}
-    <x-animated-slider />
+    <x-animated-slider :slides="$slides" />
 
     {{-- Trust strip --}}
     <div class="home-trust">

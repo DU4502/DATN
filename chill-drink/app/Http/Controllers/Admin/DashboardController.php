@@ -156,7 +156,7 @@ class DashboardController extends Controller
      */
     private function applyBranchScope($query)
     {
-        if (! $this->dashboardUseBranchScope) {
+        if (! $this->dashboardUseBranchScope || ! $this->dashboardBranchId) {
             return $query;
         }
 

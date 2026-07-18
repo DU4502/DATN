@@ -316,8 +316,11 @@ class GuestCheckoutController extends CheckoutController
             GuestOrderAccess::remember($order);
             GuestOrderAccess::storeConvertPayload($order);
 
-            // Gửi email yêu cầu xác nhận đơn hàng (thay vì email thông báo)
-            $this->sendEmailConfirmationRequest($order);
+            // Chỉ gửi email xác nhận cho COD orders
+            // VNPay orders sẽ gửi email sau khi thanh toán thành công
+            if ($order->payment_method !== 'vnpay') {
+                $this->sendEmailConfirmationRequest($order);
+            }
 
             // Chưa notify admin — đơn chỉ được chuyển lên admin sau khi guest xác nhận email
             // RealtimeOrderNotifier chỉ chạy sau khi confirmEmail()
@@ -425,8 +428,11 @@ class GuestCheckoutController extends CheckoutController
         try {
             DB::beginTransaction();
 
+            // If already paid via VNPay, change to in_progress, otherwise pending
+            $newStatus = $order->payment_status === 'paid' ? 'in_progress' : 'pending';
+            
             $order->update([
-                'status'                         => 'pending',
+                'status'                         => $newStatus,
                 'confirmation_token'             => null,   // Dùng một lần, xoá sau khi dùng
                 'confirmation_token_expires_at'  => null,
             ]);

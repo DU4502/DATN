@@ -31,6 +31,16 @@ class VoucherController extends Controller
             return response()->json(['message' => 'Mã voucher không còn hiệu lực'], 400);
         }
 
+        // Check if voucher is expired
+        if ($voucher->expires_at && $voucher->expires_at < now()) {
+            return response()->json(['message' => 'Mã voucher đã hết hạn'], 400);
+        }
+
+        // Check if voucher has remaining uses
+        if ($voucher->usage_limit > 0 && $voucher->used_count >= $voucher->usage_limit) {
+            return response()->json(['message' => 'Mã voucher đã hết lượt sử dụng'], 400);
+        }
+
         // Check if user is authenticated
         if (Auth::check()) {
             // For logged-in users
@@ -73,6 +83,7 @@ class VoucherController extends Controller
 
         return response()->json([
             'message' => 'Nhận voucher thành công',
+            'guest_identifier' => $guestIdentifier, // Return for frontend to save
             'voucher' => [
                 'id' => $userVoucher->id,
                 'code' => $voucher->code,

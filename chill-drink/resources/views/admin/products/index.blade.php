@@ -36,6 +36,7 @@
                 @endif
             </button>
             <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
+            <a href="{{ route('admin.products.trash') }}" class="btn btn-outline-secondary"><i class="bi bi-trash me-1"></i>Thùng rác</a>
         </div>
         <div class="admin-category-scroller">
             @foreach($categories as $category)

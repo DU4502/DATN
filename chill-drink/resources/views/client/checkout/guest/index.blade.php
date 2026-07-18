@@ -5,7 +5,7 @@
 @section('content')
 @php
     $guestInfo = $guestInfo ?? [];
-    $deliveryType = old('delivery_type', $guestInfo['delivery_type'] ?? 'delivery');
+    $deliveryType = old('fulfillment_type', $guestInfo['fulfillment_type'] ?? 'delivery');
 @endphp
 
 <style>
@@ -99,11 +99,12 @@
                         <div class="mb-3">
                             <label class="form-label fw-semibold d-block">Nhận hàng *</label>
                             <div class="btn-group delivery-toggle w-100" role="group">
-                                <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
+                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType !== 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypeDelivery"><i class="bi bi-truck me-1"></i>Giao đến địa chỉ</label>
-                                <input type="radio" class="btn-check" name="delivery_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
+                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypePickup"><i class="bi bi-shop me-1"></i>Lấy tại chi nhánh</label>
                             </div>
+                            <input type="hidden" name="delivery_type" value="now">
                         </div>
 
                         <div class="mb-4">
@@ -175,6 +176,12 @@
             const isPickup = pickupInput?.checked;
             deliveryFields?.classList.toggle('is-hidden', isPickup);
             pickupFields?.classList.toggle('is-hidden', !isPickup);
+
+            // Địa chỉ giao hàng chỉ required khi chọn "Giao đến địa chỉ"
+            const addressInput = document.getElementById('shipping_address_ui');
+            if (addressInput) {
+                addressInput.required = !isPickup;
+            }
         }
 
         deliveryInput?.addEventListener('change', syncDeliveryMode);
