@@ -181,29 +181,173 @@
         <div class="alert alert-danger sa-alert"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}</div>
     @endif
 
-    <section class="sa-stats" aria-label="Thống kê tổng quan">
+    <!-- KPI Cards chính - Metrics quan trọng nhất -->
+    <section class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem;" aria-label="KPI chính">
         @foreach([
-            ['bi-people', $totalUserCount, 'Tổng tài khoản', 'Toàn hệ thống'],
-            ['bi-person-badge', $adminCount, 'Tổng Admin', 'Quyền quản trị'],
-            ['bi-person-check', $activeAdminCount, 'Admin hoạt động', 'Đang được phép'],
-            ['bi-cup-straw', $productCount, 'Tổng sản phẩm', 'Trong thực đơn'],
-            ['bi-grid', $categoryCount, 'Tổng danh mục', 'Đang quản lý'],
-            ['bi-diagram-3', $roleCount, 'Vai trò hệ thống', 'Bảng phân quyền'],
-            ['bi-shop', $branchSummaryStats['total_branches'], 'Tổng chi nhánh', 'Toàn hệ thống'],
-            ['bi-shop-window', $branchSummaryStats['active_branches'], 'Chi nhánh hoạt động', 'Đang vận hành'],
-            ['bi-bag-check', $branchSummaryStats['total_orders'], 'Tổng đơn chi nhánh', 'Có gắn chi nhánh'],
-            ['bi-cash-stack', number_format($branchSummaryStats['total_revenue'], 0, ',', '.').'đ', 'Tổng doanh thu chi nhánh', 'Đã thanh toán'],
-            ['bi-currency-dollar', number_format($branchSummaryStats['today_revenue'], 0, ',', '.').'đ', 'Doanh thu hôm nay', 'Toàn chi nhánh'],
-            ['bi-calendar3', number_format($branchSummaryStats['month_revenue'], 0, ',', '.').'đ', 'Doanh thu tháng', 'Tháng hiện tại'],
-            ['bi-people', $branchSummaryStats['total_branch_staff'], 'Nhân viên chi nhánh', 'Đã gán chi nhánh'],
-        ] as [$icon, $value, $label, $source])
-            <article class="sa-stat">
-                <div class="sa-stat-top"><span class="sa-stat-icon"><i class="bi {{ $icon }}"></i></span><span class="sa-stat-note">{{ $source }}</span></div>
-                <div class="sa-stat-value">{{ is_numeric($value) ? number_format($value) : $value }}</div>
+            ['bi-cash-stack', number_format($branchSummaryStats['total_revenue'], 0, ',', '.').'đ', 'Tổng doanh thu', 'Tất cả chi nhánh', 'revenue'],
+            ['bi-shop-window', $branchSummaryStats['active_branches'], 'Chi nhánh hoạt động', $branchSummaryStats['total_branches'] . ' tổng', 'branch'],
+            ['bi-bag-check', $branchSummaryStats['total_orders'], 'Tổng đơn hàng', 'Đã xử lý', 'order'],
+            ['bi-people', $totalUserCount, 'Tổng người dùng', $adminCount . ' Admin', 'user'],
+        ] as [$icon, $value, $label, $note, $type])
+            <article class="sa-stat" style="min-height: 110px; @if($type === 'revenue') background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-color: rgba(13, 147, 115, 0.25); @endif">
+                <div class="sa-stat-top">
+                    <span class="sa-stat-icon" style="width: 38px; height: 38px; @if($type === 'revenue') background: var(--sa-green); color: #fff; @endif">
+                        <i class="bi {{ $icon }}"></i>
+                    </span>
+                    <span class="sa-stat-note">{{ $note }}</span>
+                </div>
+                <div class="sa-stat-value" style="font-size: 1.4rem; @if($type === 'revenue') color: var(--sa-green); @endif">
+                    {{ is_numeric($value) ? number_format($value) : $value }}
+                </div>
                 <div class="sa-stat-label">{{ $label }}</div>
             </article>
         @endforeach
     </section>
+
+    <!-- Expandable Stats Sections -->
+    <div style="display: grid; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <!-- Chi tiết doanh thu -->
+        <div class="sa-panel" style="overflow: visible;">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none; border-bottom: 1px solid var(--sa-border);" onclick="toggleSection('revenue')">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="sa-stat-icon" style="width: 32px; height: 32px; background: var(--sa-green); color: #fff;">
+                        <i class="bi bi-currency-exchange"></i>
+                    </span>
+                    <div style="text-align: left;">
+                        <h3 class="sa-panel-title" style="margin-bottom: 0.1rem;">Chi tiết doanh thu</h3>
+                        <p class="sa-panel-note">Phân tích doanh thu theo thời gian</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">
+                        {{ number_format($branchSummaryStats['today_revenue'], 0, ',', '.') }}đ hôm nay
+                    </span>
+                    <i class="bi bi-chevron-down" style="font-size: 0.85rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-revenue"></i>
+                </div>
+            </button>
+            <div id="content-revenue" style="display: none; overflow: hidden; transition: all 0.3s ease;">
+                <div style="padding: 0.75rem 0.9rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem;">
+                        @foreach([
+                            ['bi-calendar-day', number_format($branchSummaryStats['today_revenue'], 0, ',', '.').'đ', 'Hôm nay'],
+                            ['bi-calendar-week', number_format($branchSummaryStats['month_revenue'], 0, ',', '.').'đ', 'Tháng này'],
+                            ['bi-graph-up', number_format($branchSummaryStats['total_revenue'], 0, ',', '.').'đ', 'Tổng cộng'],
+                        ] as [$icon, $value, $label])
+                            <div style="padding: 0.65rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 0.9rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.62rem; font-weight: 650;">{{ $label }}</span>
+                                </div>
+                                <div style="color: var(--sa-ink); font-size: 1.1rem; font-weight: 800;">{{ $value }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chi tiết chi nhánh -->
+        <div class="sa-panel" style="overflow: visible;">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none; border-bottom: 1px solid var(--sa-border);" onclick="toggleSection('branch')">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="sa-stat-icon" style="width: 32px; height: 32px;">
+                        <i class="bi bi-shop"></i>
+                    </span>
+                    <div style="text-align: left;">
+                        <h3 class="sa-panel-title" style="margin-bottom: 0.1rem;">Chi tiết chi nhánh</h3>
+                        <p class="sa-panel-note">Thông tin chi nhánh và nhân sự</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">
+                        {{ $branchSummaryStats['active_branches'] }}/{{ $branchSummaryStats['total_branches'] }} hoạt động
+                    </span>
+                    <i class="bi bi-chevron-down" style="font-size: 0.85rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-branch"></i>
+                </div>
+            </button>
+            <div id="content-branch" style="display: none; overflow: hidden; transition: all 0.3s ease;">
+                <div style="padding: 0.75rem 0.9rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem;">
+                        @foreach([
+                            ['bi-diagram-3', $branchSummaryStats['total_branches'], 'Tổng chi nhánh'],
+                            ['bi-shop-window', $branchSummaryStats['active_branches'], 'Đang hoạt động'],
+                            ['bi-people', $branchSummaryStats['total_branch_staff'], 'Nhân viên'],
+                            ['bi-bag-check', $branchSummaryStats['total_orders'], 'Đơn hàng'],
+                        ] as [$icon, $value, $label])
+                            <div style="padding: 0.65rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 0.9rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.62rem; font-weight: 650;">{{ $label }}</span>
+                                </div>
+                                <div style="color: var(--sa-ink); font-size: 1.1rem; font-weight: 800;">{{ number_format($value) }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chi tiết hệ thống -->
+        <div class="sa-panel" style="overflow: visible;">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none; border-bottom: 1px solid var(--sa-border);" onclick="toggleSection('system')">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="sa-stat-icon" style="width: 32px; height: 32px;">
+                        <i class="bi bi-gear"></i>
+                    </span>
+                    <div style="text-align: left;">
+                        <h3 class="sa-panel-title" style="margin-bottom: 0.1rem;">Chi tiết hệ thống</h3>
+                        <p class="sa-panel-note">Quản trị, sản phẩm và phân quyền</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">
+                        {{ $activeAdminCount }}/{{ $adminCount }} admin
+                    </span>
+                    <i class="bi bi-chevron-down" style="font-size: 0.85rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-system"></i>
+                </div>
+            </button>
+            <div id="content-system" style="display: none; overflow: hidden; transition: all 0.3s ease;">
+                <div style="padding: 0.75rem 0.9rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem;">
+                        @foreach([
+                            ['bi-person-badge', $adminCount, 'Tổng Admin'],
+                            ['bi-person-check', $activeAdminCount, 'Admin hoạt động'],
+                            ['bi-cup-straw', $productCount, 'Sản phẩm'],
+                            ['bi-grid', $categoryCount, 'Danh mục'],
+                            ['bi-diagram-3', $roleCount, 'Vai trò'],
+                        ] as [$icon, $value, $label])
+                            <div style="padding: 0.65rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 0.9rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.62rem; font-weight: 650;">{{ $label }}</span>
+                                </div>
+                                <div style="color: var(--sa-ink); font-size: 1.1rem; font-weight: 800;">{{ number_format($value) }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSection(section) {
+            const content = document.getElementById('content-' + section);
+            const icon = document.getElementById('icon-' + section);
+            
+            if (content && icon) {
+                const isVisible = content.style.display !== 'none';
+                
+                if (isVisible) {
+                    content.style.display = 'none';
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.display = 'block';
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            }
+        }
+    </script>
 
     <!-- System Charts -->
     <section class="sa-grid-2" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;" aria-label="Biểu đồ hệ thống">

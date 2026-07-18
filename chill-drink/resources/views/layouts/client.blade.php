@@ -1236,7 +1236,7 @@
                     $avatar = Auth::user()->avatar;
                     $avatarIsPreset = is_string($avatar) && str_starts_with($avatar, 'preset-');
                     $avatarClass = $avatarIsPreset ? 'avatar-' . $avatar : 'avatar-preset-mint';
-                    $avatarUrl = $avatar && ! $avatarIsPreset ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null;
+                    $avatarUrl = $avatar && ! $avatarIsPreset ? asset('storage/' . $avatar) : null;
                     @endphp
                     <div class="dropdown">
                         <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng" id="clientNotificationButton">
@@ -1249,7 +1249,7 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end notification-menu">
                             <div class="notification-head">
-                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
                                     <div>
                                         <div class="fw-bold" style="font-size: 0.9rem;">Thông báo</div>
                                         <div class="text-secondary" style="font-size: 0.8rem;">Cập nhật đơn hàng của bạn</div>
@@ -1258,6 +1258,14 @@
                                         {{ Auth::user()->unreadNotifications->count() }} mới
                                     </span>
                                 </div>
+                                @if(Auth::user()->unreadNotifications->count() > 0)
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary w-100" 
+                                        id="markAllReadBtn"
+                                        style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                    <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
+                                </button>
+                                @endif
                             </div>
                             <div class="notification-list" id="clientNotificationList">
                                 @forelse(Auth::user()->notifications->take(10) as $notification)
@@ -1804,6 +1812,38 @@
             };
             tick();
             window.setInterval(tick, 1000);
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    fetch('{{ route('select-nearest-branch') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            latitude: lat,
+                            longitude: lng
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success && data.changed) {
+                            window.location.reload();
+                        }
+                    })
+                    .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
+                }, function (error) {
+                    console.warn("Không thể lấy tọa độ GPS:", error);
+                });
+            }
         });
     </script>
     @include('partials.realtime')

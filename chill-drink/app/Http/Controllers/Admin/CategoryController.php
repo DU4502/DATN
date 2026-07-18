@@ -129,19 +129,68 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        // Kiểm tra nếu danh mục đang có sản phẩm thì không cho xóa
-        if ($category->products()->exists()) {
+        // Kiểm tra nếu danh mục đang có sản phẩm (kể cả trong thùng rác) thì không cho xóa
+        if ($category->products()->withTrashed()->exists()) {
             return redirect()->route('admin.categories.index')
-                ->with('error', 'Không thể xóa! Danh mục này đang chứa sản phẩm.');
+                ->with('error', 'Không thể xóa! Danh mục này đang chứa sản phẩm (kể cả sản phẩm trong thùng rác). Vui lòng xóa hết sản phẩm trước.');
+        }
+
+        // Soft delete instead of permanent delete
+        $category->delete();
+
+        return redirect()->route('admin.categories.index')
+            ->with('success', 'Danh mục đã được chuyển vào thùng rác!');
+    }
+
+    public function trash(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+        
+        $categories = Category::onlyTrashed()
+            ->withCount('products')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('description', 'like', '%' . $search . '%');
+                    
+                    if (Schema::hasColumn('categories', 'slug')) {
+                        $subQuery->orWhere('slug', 'like', '%' . $search . '%');
+                    }
+                });
+            })
+            ->latest('deleted_at')
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('admin.categories.trash', compact('categories'));
+    }
+
+    public function restore($id)
+    {
+        $category = Category::withTrashed()->findOrFail($id);
+        $category->restore();
+
+        return redirect()->route('admin.categories.trash')
+            ->with('success', 'Đã khôi phục danh mục thành công!');
+    }
+
+    public function forceDelete($id)
+    {
+        $category = Category::withTrashed()->findOrFail($id);
+
+        // Kiểm tra nếu danh mục đang có sản phẩm thì không cho xóa vĩnh viễn
+        if ($category->products()->withTrashed()->exists()) {
+            return redirect()->route('admin.categories.trash')
+                ->with('error', 'Không thể xóa vĩnh viễn! Danh mục này đang chứa sản phẩm (kể cả trong thùng rác).');
         }
 
         if ($category->image) {
             Storage::disk('public')->delete($category->image);
         }
 
-        $category->delete();
+        $category->forceDelete();
 
-        return redirect()->route('admin.categories.index')
-            ->with('success', 'Xóa danh mục thành công!');
+        return redirect()->route('admin.categories.trash')
+            ->with('success', 'Đã xóa vĩnh viễn danh mục!');
     }
 }

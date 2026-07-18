@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
@@ -34,6 +35,7 @@ use Illuminate\Support\Facades\Route;
 
 // Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBranch'])->name('select-nearest-branch');
 
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');
@@ -145,6 +147,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
     Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
+    Route::post('/notifications/mark-all-read', [ProfileController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -181,10 +184,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Voucher Management
     Route::resource('vouchers', VoucherController::class)->except(['show']);
 
+    // Product Trash Management
+    Route::get('/products/trash', [AdminProductController::class, 'trash'])->name('products.trash');
+    Route::post('/products/{id}/restore', [AdminProductController::class, 'restore'])->name('products.restore');
+    Route::delete('/products/{id}/force-delete', [AdminProductController::class, 'forceDelete'])->name('products.force-delete');
+
     // Product Management
     Route::resource('products', AdminProductController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
 
     // Category Management
+    Route::get('/categories/trash', [CategoryController::class, 'trash'])->name('categories.trash');
+    Route::post('/categories/{id}/restore', [CategoryController::class, 'restore'])->name('categories.restore');
+    Route::delete('/categories/{id}/force-delete', [CategoryController::class, 'forceDelete'])->name('categories.force-delete');
     Route::resource('categories', CategoryController::class)->except(['show']);
 
     // Order Management
@@ -200,6 +211,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // User Management
     Route::patch('/users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'update']);
+
+    // Slideshow Management
+    Route::get('/slides', [BranchSlideController::class, 'index'])->name('slides.index');
+    Route::post('/slides', [BranchSlideController::class, 'store'])->name('slides.store');
+    Route::put('/slides/{slide}', [BranchSlideController::class, 'update'])->name('slides.update');
+    Route::delete('/slides/{slide}', [BranchSlideController::class, 'destroy'])->name('slides.destroy');
+    
+    // Slide Trash Management
+    Route::get('/slides/trash', [BranchSlideController::class, 'trash'])->name('slides.trash');
+    Route::post('/slides/{id}/restore', [BranchSlideController::class, 'restore'])->name('slides.restore');
+    Route::delete('/slides/{id}/force-delete', [BranchSlideController::class, 'forceDelete'])->name('slides.force-delete');
 });
 
 require __DIR__.'/auth.php';

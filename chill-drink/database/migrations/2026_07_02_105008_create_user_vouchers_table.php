@@ -25,7 +25,7 @@ return new class extends Migration
             $table->timestamp('received_at')->useCurrent();
             $table->timestamp('used_at')->nullable();
             $table->timestamps();
-            
+
             // Add unique constraint for user + voucher
             $table->unique(['user_id', 'voucher_id']);
         });
