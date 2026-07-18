@@ -507,9 +507,9 @@
                 <a href="{{ route('admin.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
 
                 <p class="root-nav-label">Hệ thống</p>
-                <a href="#security" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
-                <a href="#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
-                <a href="#audit" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
+                <a href="{{ route('admin.super-admin') }}#security" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
+                <a href="{{ route('admin.super-admin') }}#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
+                <a href="{{ route('admin.super-admin') }}#audit" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
             </nav>
 
             <div class="root-sidebar-footer">
@@ -601,9 +601,29 @@
         document.querySelectorAll('.root-nav-link').forEach((link) => link.addEventListener('click', closeRootSidebar));
 
         const updateRootNavigation = () => {
-            const section = window.location.hash.replace('#', '') || 'top';
-            document.querySelectorAll('[data-root-section]').forEach((link) => {
-                link.classList.toggle('active', link.dataset.rootSection === section);
+            const currentPath = window.location.pathname;
+            const currentHash = window.location.hash.replace('#', '');
+
+            document.querySelectorAll('.root-nav-link').forEach((link) => {
+                const href = link.getAttribute('href') || '';
+                const section = link.dataset.rootSection;
+
+                if (section) {
+                    // Link hash: active khi đang ở trang super-admin VÀ hash khớp
+                    const isSuperAdminPage = currentPath === '{{ parse_url(route("admin.super-admin"), PHP_URL_PATH) }}';
+                    const hashMatch = section === 'top'
+                        ? (currentHash === '' || currentHash === 'top')
+                        : currentHash === section;
+                    link.classList.toggle('active', isSuperAdminPage && hashMatch);
+                } else {
+                    // Link route thật: active khi URL path cocó trong href
+                    try {
+                        const linkPath = new URL(href, window.location.origin).pathname;
+                        link.classList.toggle('active', currentPath.startsWith(linkPath) && linkPath !== '/');
+                    } catch {
+                        // giữ nguyên class active từ blade nếu có
+                    }
+                }
             });
         };
 
