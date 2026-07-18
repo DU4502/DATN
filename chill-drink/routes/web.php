@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\ChatController;
@@ -108,6 +109,8 @@ Route::middleware('auth')->group(function () {
 // Chat routes (client)
 Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
     Route::get('/', [ChatController::class, 'getOrCreateConversation'])->name('index');
+    Route::get('/nearest-branches', [ChatController::class, 'nearestBranches'])->name('nearest-branches');
+    Route::post('/select-branch', [ChatController::class, 'selectBranch'])->name('select-branch');
     Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
     Route::post('/send', [ChatController::class, 'send'])->name('send');
 });
@@ -189,6 +192,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Voucher Management
     Route::resource('vouchers', VoucherController::class)->except(['show']);
+
+    // Topping Management
+    Route::resource('toppings', ToppingController::class)->except(['show']);
 
     // Product Trash Management
     Route::get('/products/trash', [AdminProductController::class, 'trash'])->name('products.trash');

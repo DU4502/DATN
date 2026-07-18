@@ -282,26 +282,25 @@
                         @enderror
                     </div>
 
-                    @include('admin.partials.branch-map-link', [
-                        'pickerId' => 'create-branch-map-link',
-                        'label' => 'Link Google Maps',
-                        'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
-                        'mapLinkValue' => old('map_link'),
+                    @include('admin.partials.location-picker', [
+                        'pickerId' => 'create-branch-location-picker',
+                        'label' => 'Vị trí chi nhánh',
+                        'hint' => 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.',
                         'latValue' => old('latitude'),
                         'lngValue' => old('longitude'),
-                        'errorBag' => 'createBranch',
+                        'addressTarget' => 'textarea[name="address"]',
                     ])
 
-                    <div class="form-check mb-3">
+                    <div class="form-check my-3">
                         <input class="form-check-input" type="checkbox" name="status" value="1" id="createStatus" checked>
-                        <label class="form-check-label" for="createStatus">
-                            Kích hoạt chi nhánh này
+                        <label class="form-check-label fw-bold text-dark" for="createStatus">
+                            Kích hoạt chi nhánh ngay
                         </label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background:#0D9373; border-color:#0D9373;">
                         <i class="bi bi-check-circle me-1"></i>Thêm chi nhánh
                     </button>
                 </div>
@@ -318,6 +317,6 @@
 </script>
 @endif
 
-@include('admin.partials.branch-map-link-script')
+@include('admin.partials.location-picker-script')
 
 @endsection
