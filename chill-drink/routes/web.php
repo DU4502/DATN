@@ -109,6 +109,8 @@ Route::middleware('auth')->group(function () {
 // Chat routes (client)
 Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
     Route::get('/', [ChatController::class, 'getOrCreateConversation'])->name('index');
+    Route::get('/nearest-branches', [ChatController::class, 'nearestBranches'])->name('nearest-branches');
+    Route::post('/select-branch', [ChatController::class, 'selectBranch'])->name('select-branch');
     Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
     Route::post('/send', [ChatController::class, 'send'])->name('send');
 });

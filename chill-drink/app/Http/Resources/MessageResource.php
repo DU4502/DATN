@@ -15,7 +15,7 @@ class MessageResource
         return [
             'id' => $message->id,
             'conversation_id' => $message->conversation_id,
-            'sender_id' => $display->id,
+            'sender_id' => $display?->id,
             'content' => $message->content,
             'attachment_path' => $message->attachment_path,
             'attachment_name' => $message->attachment_name,
@@ -23,9 +23,9 @@ class MessageResource
             'is_read' => $message->is_read,
             'created_at' => $message->created_at->toIso8601String(),
             'sender' => [
-                'id' => $display->id,
-                'name' => $display->name,
-                'avatar' => $display->avatar,
+                'id' => $display?->id,
+                'name' => $display?->name ?? 'Hệ thống',
+                'avatar' => $display?->avatar,
             ],
         ];
     }
