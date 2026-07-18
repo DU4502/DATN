@@ -302,7 +302,7 @@
                         @endphp
                         <button
                             type="button"
-                            @click="openChat({{ $conv->id }}, '{{ addslashes($conv->user->name) }}', '{{ addslashes($conv->user->email) }}', {{ $conv->user_id }}, {{ $canReply ? 'true' : 'false' }})"
+                            @click="openChat({{ $conv->id }}, '{{ addslashes($conv->user->name) }}', '{{ addslashes($conv->user->email) }}', {{ $conv->user_id }}, {{ ($viewer->isAdmin() || $conv->cskh_id === null || $conv->cskh_id === $viewer->id) ? 'true' : 'false' }})"
                             class="d-block w-100 p-3 border-bottom text-start bg-white"
                             style="border: none; cursor: pointer; transition: background 0.2s;"
                             onmouseover="this.style.background='#f8f9fa'"
@@ -488,6 +488,9 @@ function chatManager() {
                 if (data.success) {
                     const chat = this.openChats.find(c => c.id === conversationId);
                     if (chat) {
+                        if (typeof data.can_reply !== 'undefined') {
+                            chat.canReply = data.can_reply;
+                        }
                         chat.messages = data.messages.map(msg => ({
                             id: msg.id,
                             content: msg.content,

@@ -56,6 +56,7 @@ class AdminChatController extends Controller
 
         return response()->json([
             'success' => true,
+            'can_reply' => $this->canReply($conversation),
             'messages' => $messages->map(
                 fn (Message $message) => MessageResource::toStaffArray($message, auth()->user())
             ),
