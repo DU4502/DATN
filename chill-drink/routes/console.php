@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\AutoCompleteDeliveredOrders;
 use App\Console\Commands\CancelExpiredGuestOrders;
 use App\Console\Commands\CleanupOldChats;
 use Illuminate\Foundation\Inspiring;
@@ -19,5 +20,11 @@ Schedule::command(CancelExpiredGuestOrders::class)
 // Tự động xoá chat cũ
 Schedule::command(CleanupOldChats::class)
     ->daily()
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Tự động hoàn thành đơn hàng đã giao sau 30 phút
+Schedule::command(AutoCompleteDeliveredOrders::class)
+    ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();

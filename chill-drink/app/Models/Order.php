@@ -38,6 +38,8 @@ class Order extends Model
         'payment_status',
         'vnpay_transaction_id',
         'status',
+        'cancellation_reason',
+        'delivered_at',
         'note',
         'scheduled_at',
     ];
@@ -56,6 +58,7 @@ class Order extends Model
         'confirmation_token_expires_at'  => 'datetime',
         'scheduled_at'                   => 'datetime',
         'scheduled_delivery_time'        => 'datetime',
+        'delivered_at'                   => 'datetime',
     ];
 
     /**
@@ -95,13 +98,16 @@ class Order extends Model
     public function getStatusBadgeColor()
     {
         return match (OrderStatus::normalize((string) $this->status)) {
-            OrderStatus::PENDING => 'yellow',
-            OrderStatus::IN_PROGRESS => 'blue',
-            OrderStatus::SHIPPER_ACCEPTED => 'purple',
-            OrderStatus::ARRIVED => 'indigo',
-            OrderStatus::COMPLETED => 'green',
-            OrderStatus::CANCELLED => 'red',
-            default => 'gray',
+            OrderStatus::PENDING => 'warning',
+            OrderStatus::CONFIRMED => 'info',
+            OrderStatus::PREPARING => 'primary',
+            OrderStatus::READY_FOR_DELIVERY, OrderStatus::READY_FOR_PICKUP => 'cyan',
+            OrderStatus::SHIPPER_PICKED_UP => 'indigo',
+            OrderStatus::DELIVERING => 'purple',
+            OrderStatus::DELIVERED => 'teal',
+            OrderStatus::COMPLETED => 'success',
+            OrderStatus::CANCELLED => 'danger',
+            default => 'secondary',
         };
     }
 

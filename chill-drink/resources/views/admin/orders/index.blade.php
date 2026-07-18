@@ -64,11 +64,14 @@
         font-weight: 600;
     }
 
-    /* Custom order status texts matching image 1 */
+    /* Custom order status texts matching new flow */
     .status-text-pending { color: #d97706 !important; }
-    .status-text-in_progress { color: #0284c7 !important; }
-    .status-text-shipper_accepted { color: #7c3aed !important; }
-    .status-text-arrived { color: #0891b2 !important; }
+    .status-text-confirmed { color: #0891b2 !important; }
+    .status-text-preparing { color: #0284c7 !important; }
+    .status-text-ready_for_delivery { color: #06b6d4 !important; }
+    .status-text-delivering { color: #7c3aed !important; }
+    .status-text-delivered { color: #14b8a6 !important; }
+    .status-text-ready_for_pickup { color: #06b6d4 !important; }
     .status-text-completed { color: #16a34a !important; }
     .status-text-cancelled { color: #dc2626 !important; }
 </style>
@@ -168,8 +171,9 @@
                 @forelse($orders as $order)
                 @php
                     $detailId = 'order-detail-'.$order->id;
-                    $statusStepOptions = \App\Support\OrderStatus::stepwiseOptions((string) $order->status);
-                    $nextStatus = \App\Support\OrderStatus::nextStatus((string) $order->status);
+                    $fulfillmentType = $order->fulfillment_type ?? 'delivery';
+                    $statusStepOptions = \App\Support\OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType);
+                    $nextStatus = \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType);
                 @endphp
                 <tr data-order-id="{{ $order->id }}">
                     <td class="fw-bold text-primary">#{{ $order->id }}</td>
@@ -303,6 +307,17 @@
                                         </div>
                                     </div>
 
+                                    @if($order->status === \App\Support\OrderStatus::CANCELLED && $order->cancellation_reason)
+                                        <!-- Lý do hủy đơn -->
+                                        <div class="alert alert-danger d-flex align-items-start gap-2 mb-4" style="border-radius: 12px; border-left: 4px solid #dc2626;">
+                                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.2rem;"></i>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold mb-1">Lý do hủy đơn:</div>
+                                                <div>{{ $order->cancellation_reason }}</div>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     <!-- Thẻ tóm tắt thanh toán -->
                                     <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
                                         <div class="d-flex flex-column gap-2" style="font-size: 0.875rem;">
@@ -348,14 +363,9 @@
                                                     </form>
                                                 @endif
                                                 @if(!in_array($order->status, [\App\Support\OrderStatus::COMPLETED, \App\Support\OrderStatus::CANCELLED], true))
-                                                    <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="m-0" onsubmit="return confirm('Hủy đơn hàng #{{ $order->id }}?');">
-                                                        @csrf
-                                                        @method('PUT')
-                                                        <input type="hidden" name="status" value="cancelled">
-                                                        <button type="submit" class="btn btn-outline-danger h-100 px-3 py-2" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.875rem; white-space: nowrap;">
-                                                            Hủy đơn
-                                                        </button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-outline-danger h-100 px-3 py-2" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.875rem; white-space: nowrap;" data-bs-toggle="modal" data-bs-target="#cancelOrderModal" data-order-id="{{ $order->id }}">
+                                                        Hủy đơn
+                                                    </button>
                                                 @endif
                                             </div>
                                         </div>
@@ -711,6 +721,71 @@
             handleNewOrders([event.detail || {}]);
         });
 
+        // Listen for order status updates (including cancellations)
+        document.addEventListener('order:status-updated', function (event) {
+            const payload = event.detail || {};
+            const orderRow = document.querySelector(`tr[data-order-id="${payload.order_id}"]`);
+            
+            if (!orderRow || !payload.status) {
+                return;
+            }
+
+            // Update status dropdown
+            const statusSelect = orderRow.querySelector('select[name="status"]');
+            if (statusSelect) {
+                statusSelect.value = payload.status;
+                
+                // If cancelled or completed, disable the dropdown
+                if (payload.status === 'cancelled' || payload.status === 'completed') {
+                    statusSelect.disabled = true;
+                }
+            }
+
+            // If order is cancelled and has reason, display it in detail section
+            if (payload.status === 'cancelled' && payload.cancellation_reason) {
+                const detailRow = document.getElementById(`order-detail-${payload.order_id}`);
+                if (detailRow && !detailRow.classList.contains('d-none')) {
+                    const customerInfoSection = detailRow.querySelector('.col-lg-5 .mb-4');
+                    if (customerInfoSection) {
+                        // Remove existing cancellation reason if any
+                        const existingReason = customerInfoSection.parentElement.querySelector('.cancellation-reason-alert');
+                        if (existingReason) {
+                            existingReason.remove();
+                        }
+                        
+                        // Add new cancellation reason
+                        const reasonHtml = `
+                            <div class="alert alert-danger d-flex align-items-start gap-2 mb-4 cancellation-reason-alert" style="border-radius: 12px; border-left: 4px solid #dc2626;">
+                                <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.2rem;"></i>
+                                <div class="flex-grow-1">
+                                    <div class="fw-bold mb-1">Lý do hủy đơn:</div>
+                                    <div>${escapeHtml(payload.cancellation_reason)}</div>
+                                </div>
+                            </div>
+                        `;
+                        customerInfoSection.insertAdjacentHTML('afterend', reasonHtml);
+                    }
+                }
+            }
+
+            // Highlight the updated row
+            orderRow.style.backgroundColor = 'rgba(13, 147, 115, 0.1)';
+            setTimeout(() => {
+                orderRow.style.backgroundColor = '';
+            }, 2500);
+        });
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text ? String(text).replace(/[&<>"']/g, m => map[m]) : '';
+        }
+
         if (!hasActiveFilters) {
             let lastOrderId = initialLatestId;
             const liveBadge = document.getElementById('adminOrdersLiveBadge');
@@ -748,4 +823,57 @@
         }
     })();
 </script>
+
+<!-- Modal Hủy đơn hàng -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+            <div class="modal-header" style="border-bottom: 1px solid #e9ecef;">
+                <h5 class="modal-title fw-bold" id="cancelOrderModalLabel">
+                    <i class="bi bi-x-circle text-danger me-2"></i>Hủy đơn hàng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="cancelOrderForm" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-body p-4">
+                    <input type="hidden" name="status" value="cancelled">
+                    <div class="mb-3">
+                        <label for="cancellationReason" class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="cancellationReason" name="cancellation_reason" rows="4" placeholder="Vui lòng nhập lý do hủy đơn hàng để thông báo cho khách hàng..." required style="border-radius: 12px;"></textarea>
+                        <div class="form-text">Lý do này sẽ được gửi đến khách hàng qua thông báo và hiển thị trong lịch sử đơn hàng.</div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #e9ecef;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 12px;">Đóng</button>
+                    <button type="submit" class="btn btn-danger" style="border-radius: 12px;">
+                        <i class="bi bi-x-circle me-1"></i>Xác nhận hủy đơn
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Handle cancel order modal
+    document.addEventListener('DOMContentLoaded', function() {
+        const cancelModal = document.getElementById('cancelOrderModal');
+        const cancelForm = document.getElementById('cancelOrderForm');
+        const cancelReasonTextarea = document.getElementById('cancellationReason');
+        
+        if (cancelModal) {
+            cancelModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const orderId = button.getAttribute('data-order-id');
+                const updateUrl = '{{ route("admin.orders.updateStatus", ":id") }}'.replace(':id', orderId);
+                
+                cancelForm.setAttribute('action', updateUrl);
+                cancelReasonTextarea.value = '';
+            });
+        }
+    });
+</script>
+
 @endsection
