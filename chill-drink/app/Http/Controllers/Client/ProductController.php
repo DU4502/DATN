@@ -51,13 +51,14 @@ class ProductController extends Controller
                 $categoryLookup->orWhere('name', $categoryValue);
             });
 
-            $category = $categoryQuery->first();
+            $category = $categoryQuery->withTrashed()->first();
 
             if ($category) {
                 $query->where('category_id', $category->id);
             } else {
                 $query->whereHas('category', function ($categoryQuery) use ($categoryValue, $hasCategorySlugColumn) {
-                    $categoryQuery->where('name', 'like', '%'.$categoryValue.'%');
+                    $categoryQuery->withTrashed()
+                        ->where('name', 'like', '%'.$categoryValue.'%');
 
                     if ($hasCategorySlugColumn) {
                         $categoryQuery->orWhere('slug', 'like', '%'.$categoryValue.'%');
@@ -110,7 +111,7 @@ class ProductController extends Controller
         $favoriteProductIds = auth()->check()
             ? Favorite::where('user_id', auth()->id())->pluck('product_id')
             : collect();
-        $categories = Category::withCount([
+        $categories = Category::withTrashed()->withCount([
             'products' => fn ($query) => $this->onlyVisibleProducts($query),
         ])
             ->orderBy('id')

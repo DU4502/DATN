@@ -22,8 +22,8 @@ class HomeController extends Controller
             ->take(8)
             ->get();
 
-        // Get all categories
-        $categories = Category::orderBy('name')->get();
+        // Get all categories (include soft-deleted, hide only after force delete)
+        $categories = Category::withTrashed()->orderBy('name')->get();
 
         $discoverProductSlugs = [
             'nuoc-ep-cam',
