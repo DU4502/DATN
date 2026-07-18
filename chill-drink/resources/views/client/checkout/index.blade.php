@@ -27,6 +27,9 @@
     $shippingFee = $fulfillmentType === 'pickup' ? 0 : $shippingQuote['total_fee'];
     $availableVouchers = collect($availableVouchers ?? []);
     $loyaltyContext = $loyaltyContext ?? ['points' => 0];
+    $selectedCheckoutAddress = collect($addressBook ?? [])->firstWhere('id', $selectedAddressId ?? 'primary');
+    $selectedCheckoutPhone = trim((string) ($selectedCheckoutAddress['phone'] ?? $user->phone ?? ''));
+    $checkoutPhoneReady = $selectedCheckoutPhone !== '' && $selectedCheckoutPhone !== 'Chưa cập nhật';
     $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext) {
         $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
         $hasPoints = ! $voucher->is_redeemable
@@ -936,6 +939,12 @@
                                 type="hidden"
                                 value="{{ old('longitude', $userLongitude) }}"
                             >
+                            <input
+                                id="shipping_phone_ui"
+                                name="shipping_phone_ui"
+                                type="hidden"
+                                value="{{ old('shipping_phone_ui', $checkoutPhoneReady ? $selectedCheckoutPhone : '') }}"
+                            >
 
                             <div class="selected-address-row">
                                 <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
@@ -943,7 +952,7 @@
                                     <div class="address-person mb-1">
                                         <span id="selectedReceiver">{{ $user->name }}</span>
                                         <span class="address-phone-divider"></span>
-                                        <span id="selectedPhone">{{ $user->phone ?: 'Chưa cập nhật' }}</span>
+                                        <span id="selectedPhone">{{ $checkoutPhoneReady ? $selectedCheckoutPhone : 'Chưa cập nhật' }}</span>
                                     </div>
                                     <div class="address-line" id="selectedAddressText">
                                         {{ $primaryAddressText ?: 'Chưa có địa chỉ. Bấm Thay đổi để thêm địa chỉ nhận hàng.' }}
@@ -959,11 +968,9 @@
                                 </div>
                             @endif
 
-                            @if(empty($user->phone))
-                                <div class="alert alert-warning border-0 rounded-4 mt-4 mb-0">
-                                    Bạn chưa có số điện thoại. Có thể cập nhật trong mục địa chỉ để đơn hàng rõ ràng hơn.
-                                </div>
-                            @endif
+                            <div class="alert alert-warning border-0 rounded-4 mt-4 mb-0 {{ $checkoutPhoneReady ? 'd-none' : '' }}" data-checkout-phone-warning>
+                                Bạn cần thêm số điện thoại cho địa chỉ đang chọn trước khi đặt đơn.
+                            </div>
                         </div>
                     </div>
 
@@ -1238,7 +1245,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="placeOrderButton" @disabled(! $checkoutPhoneReady)>
                             <i class="bi bi-check2-circle me-2"></i>Đặt hàng
                         </button>
                         <a href="{{ route('cart.index') }}" class="btn btn-outline-primary w-100 mt-3">Quay lại giỏ hàng</a>
@@ -1633,11 +1640,14 @@
     document.addEventListener('DOMContentLoaded', function () {
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
+        const shippingPhoneInput = document.getElementById('shipping_phone_ui');
         const selectedReceiver = document.getElementById('selectedReceiver');
         const selectedPhone = document.getElementById('selectedPhone');
         const selectedAddressText = document.getElementById('selectedAddressText');
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
+        const placeOrderButton = document.getElementById('placeOrderButton');
+        const phoneWarning = document.querySelector('[data-checkout-phone-warning]');
 
         const addressListModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressListModal'));
         const addressEditModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressEditModal'));
@@ -1798,6 +1808,19 @@
 
         function compactAddress(parts) {
             return parts.filter(Boolean).join(', ');
+        }
+
+        function syncCheckoutPhoneState() {
+            const phoneValue = String(shippingPhoneInput?.value || '').trim();
+            const hasPhone = phoneValue !== '' && phoneValue !== 'Chưa cập nhật';
+
+            if (placeOrderButton) {
+                placeOrderButton.disabled = !hasPhone;
+            }
+
+            if (phoneWarning) {
+                phoneWarning.classList.toggle('d-none', hasPhone);
+            }
         }
 
         function escapeHtml(value) {
@@ -2132,6 +2155,9 @@
             selectedDefaultBadge.classList.toggle('d-none', !address.isDefault);
             shippingAddressInput.value = address.street || '';
             shippingAreaInput.value = address.area || '';
+            if (shippingPhoneInput) {
+                shippingPhoneInput.value = address.phone || '';
+            }
             const addressLatitude = Number.parseFloat(address.latitude);
             const addressLongitude = Number.parseFloat(address.longitude);
             if (Number.isFinite(addressLatitude) && Number.isFinite(addressLongitude)) {
@@ -2157,6 +2183,7 @@
             }
             renderAddressList();
             updateShippingSummary();
+            syncCheckoutPhoneState();
             updateBranchSelectorState();
         }
 
@@ -2654,6 +2681,7 @@
         applyAddress(getAddressById(selectedAddressId));
         renderBranchOptions(confirmedLocation.latitude, confirmedLocation.longitude);
         updateShippingSummary();
+        syncCheckoutPhoneState();
     });
 
     // Delivery type toggle
