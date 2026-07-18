@@ -101,14 +101,27 @@ class HomeController extends Controller
 
         if ($nearestBranch) {
             $oldBranchId = session('nearest_branch_id');
-            session(['nearest_branch_id' => $nearestBranch->id]);
+            session([
+                'nearest_branch_id' => $nearestBranch->id,
+                'user_lat'          => $latitude,
+                'user_lng'          => $longitude,
+            ]);
+
+            // Lưu tọa độ vào DB nếu user đã đăng nhập
+            if (auth()->check()) {
+                auth()->user()->updateQuietly([
+                    'latitude'  => $latitude,
+                    'longitude' => $longitude,
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
-                'changed' => $oldBranchId !== $nearestBranch->id,
+                'changed' => $oldBranchId != $nearestBranch->id,
                 'branch' => [
-                    'id' => $nearestBranch->id,
+                    'id'   => $nearestBranch->id,
                     'name' => $nearestBranch->name,
-                ]
+                ],
             ]);
         }
 
