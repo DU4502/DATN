@@ -56,27 +56,138 @@ class ChatController extends Controller
     {
         $this->ensureCustomer();
 
-        $conversation = auth()->user()->conversations()
+        $user = auth()->user();
+
+        // --- Xác định branch_id theo ưu tiên ---
+        // 1. Đơn hàng gần nhất còn đang xử lý của user
+        $activeOrder = $user->orders()
+            ->whereNotNull('branch_id')
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->latest()
+            ->first();
+
+        $targetBranchId = $activeOrder?->branch_id
+            ?? session('nearest_branch_id')
+            ?? null;
+
+        // 2. Fallback: chi nhánh đầu tiên đang hoạt động
+        if (!$targetBranchId) {
+            $targetBranchId = \App\Models\Branch::where('status', true)->value('id');
+        }
+
+        // 3. Kiểm tra chi nhánh đã chọn có đang mở không
+        //    Nếu đóng → tìm chi nhánh gần nhất đang mở dựa vào vị trí GPS (session)
+        if ($targetBranchId) {
+            $targetBranch = \App\Models\Branch::find($targetBranchId);
+
+            if (!$targetBranch || !$targetBranch->status) {
+                $nearestOpen = $this->findNearestOpenBranch();
+                if ($nearestOpen) {
+                    $targetBranchId = $nearestOpen->id;
+                } else {
+                    // Tất cả chi nhánh đều đóng — lấy bất kỳ chi nhánh nào còn tồn tại
+                    $targetBranchId = \App\Models\Branch::value('id');
+                }
+            }
+        }
+
+        // --- Tìm conversation open hiện có ---
+        $conversation = $user->conversations()
             ->where('status', 'open')
             ->latest()
             ->first();
 
+        $isNew = false;
+
         if (!$conversation) {
-            $conversation = auth()->user()->conversations()->create([
+            $conversation = $user->conversations()->create([
                 'subject' => 'Hỗ trợ khách hàng',
-                'status' => 'open',
-                'branch_id' => null,
+                'status'  => 'open',
+                'branch_id' => $targetBranchId,
             ]);
+            $isNew = true;
+        } elseif ($targetBranchId && !$conversation->branch_id) {
+            // Conversation cũ chưa có branch → assign ngay
+            $conversation->update(['branch_id' => $targetBranchId]);
+            $isNew = true;
+        }
+
+        // --- Gửi system message chào khi branch vừa được assign ---
+        if ($isNew && $targetBranchId) {
+            $branch = \App\Models\Branch::find($targetBranchId);
+
+            if ($branch) {
+                $staffUser = \App\Models\User::whereIn('role_id', [2, 3, 4])
+                    ->where('branch_id', $branch->id)
+                    ->first()
+                    ?? \App\Models\User::whereIn('role_id', [2, 3, 4])->first()
+                    ?? $user;
+
+                $systemContent = "Xin chào! Bạn đang được kết nối với Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
+
+                if ($activeOrder && $activeOrder->branch_id === $targetBranchId) {
+                    $systemContent = "Xin chào! Bạn có đơn hàng #{$activeOrder->id} tại Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
+                } elseif ($activeOrder && $activeOrder->branch_id !== $targetBranchId) {
+                    // Chi nhánh của đơn hàng đã đóng, đang chuyển sang chi nhánh khác
+                    $systemContent = "Xin chào! Chi nhánh xử lý đơn hàng của bạn hiện đóng cửa.\nBạn đang được kết nối với Chi nhánh {$branch->name} để được hỗ trợ.";
+                }
+
+                $message = $conversation->messages()->create([
+                    'sender_id' => $staffUser->id,
+                    'content'   => $systemContent,
+                ]);
+
+                DB::table('conversations')
+                    ->where('id', $conversation->id)
+                    ->update(['last_message_at' => now()]);
+
+                $message->load(['sender', 'displayAsSender']);
+
+                try {
+                    broadcast(new MessageSent($message))->toOthers();
+                } catch (\Throwable) {
+                    // Broadcasting optional
+                }
+            }
         }
 
         $conversation->load('branch');
 
         return response()->json([
             'conversation_id' => $conversation->id,
-            'branch_id' => $conversation->branch_id,
-            'branch_name' => $conversation->branch?->name,
-            'success' => true,
+            'branch_id'       => $conversation->branch_id,
+            'branch_name'     => $conversation->branch?->name ?? '',
+            'success'         => true,
         ]);
+    }
+
+    /**
+     * Tìm chi nhánh mở gần nhất dựa theo tọa độ user (DB → session → fallback).
+     */
+    private function findNearestOpenBranch(): ?\App\Models\Branch
+    {
+        $branches = \App\Models\Branch::where('status', true)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->get();
+
+        if ($branches->isEmpty()) {
+            return null;
+        }
+
+        // Ưu tiên tọa độ lưu trong DB user, rồi mới đến session
+        $user = auth()->user();
+        $lat  = $user?->latitude ?? session('user_lat');
+        $lng  = $user?->longitude ?? session('user_lng');
+
+        if ($lat && $lng) {
+            return $branches
+                ->sortBy(fn ($b) => $b->distanceTo((float) $lat, (float) $lng))
+                ->first();
+        }
+
+        // Không có tọa độ → trả về chi nhánh đầu tiên đang mở
+        return $branches->first();
     }
 
     public function selectBranch(Request $request)
