@@ -130,6 +130,21 @@
             flex: 1 1 auto;
             min-height: 0;
             margin-top: 0.45rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .root-nav::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .root-nav::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .root-nav::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 999px;
         }
 
         .root-nav-label {
@@ -449,6 +464,7 @@
             .root-footer { align-items: flex-start; flex-direction: column; padding: 0.75rem 0.85rem; }
         }
     </style>
+    @include('admin.partials.styles')
 </head>
 <body>
     <div class="root-shell">

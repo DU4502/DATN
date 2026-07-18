@@ -269,9 +269,7 @@ class ProductController extends Controller
         $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
 
         $productsQuery = Product::onlyTrashed()
-            ->with(['category' => function($query) {
-                $query->withTrashed();
-            }])
+            ->with('category')
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword = $filters['q'];
 
