@@ -143,6 +143,9 @@ class ProfileController extends Controller
         }
         
         $order->save();
+        
+        // Award loyalty points when customer confirms order
+        $order->awardLoyaltyPoints();
 
         // Send notification (through RealtimeOrderNotifier)
         \App\Support\RealtimeOrderNotifier::orderStatusUpdated($order);

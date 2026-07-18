@@ -29,7 +29,6 @@ class VoucherFactory extends Factory
             'starts_at' => now()->subDay(),
             'expires_at' => now()->addMonth(),
             'status' => true,
-            'required_rank' => null,
             'point_cost' => 0,
             'is_redeemable' => false,
             'created_at' => now(),

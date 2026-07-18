@@ -55,6 +55,9 @@ class AutoCompleteDeliveredOrders extends Command
                 }
                 
                 $order->save();
+                
+                // Award loyalty points
+                $order->awardLoyaltyPoints();
 
                 // Send notification
                 RealtimeOrderNotifier::orderStatusUpdated($order);
