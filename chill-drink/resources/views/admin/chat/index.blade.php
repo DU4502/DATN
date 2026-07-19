@@ -32,25 +32,61 @@
 
 /* Chat boxes */
 .chat-boxes-container {
-    position: fixed; bottom: 0; right: 20px;
-    display: flex; gap: 10px; align-items: flex-end;
+    position: fixed; bottom: 20px; right: 20px;
+    display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-end;
     z-index: 1050; pointer-events: none;
 }
 .chat-box {
     width: 330px; background: #fff;
-    border: 1px solid #dee2e6; border-radius: 10px 10px 0 0;
-    box-shadow: 0 -2px 10px rgba(0,0,0,.12);
+    border: 1px solid #dee2e6; border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
     display: flex; flex-direction: column;
-    pointer-events: auto; transition: height .2s ease;
+    pointer-events: auto; transition: all .2s ease;
 }
 .chat-box:not(.minimized) { height: 450px; }
-.chat-box.minimized        { height: 48px !important; }
+
+/* Minimized: thu về icon tròn */
+.chat-box.minimized {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 50% !important;
+    border: none !important;
+    box-shadow: 0 4px 16px rgba(0,132,255,.35) !important;
+    overflow: hidden;
+    cursor: pointer;
+}
+.chat-box.minimized .chat-box-header {
+    width: 52px; height: 52px;
+    border-radius: 50% !important;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+.chat-box.minimized .chat-box-header-left { display: none; }
+.chat-box.minimized .chat-box-actions { display: none; }
+.chat-box.minimized .chat-box-body,
+.chat-box.minimized .chat-box-footer { display: none; }
+
+/* Badge unread trên icon minimized */
+.chat-box-minimized-badge {
+    display: none;
+    position: absolute; top: -4px; right: -4px;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: 999px; background: #dc3545; color: #fff;
+    border: 2px solid #fff; font-size: 11px; font-weight: 800;
+    align-items: center; justify-content: center;
+}
+.chat-box.minimized .chat-box-minimized-badge { display: flex; }
+
+/* Icon hiện khi minimized */
+.chat-box-minimized-icon { display: none; font-size: 1.4rem; }
+.chat-box.minimized .chat-box-minimized-icon { display: block; }
 
 .chat-box-header {
     background: #0084ff; color: #fff;
     padding: .6rem .8rem; border-radius: 10px 10px 0 0;
     display: flex; align-items: center; justify-content: space-between;
     cursor: pointer; user-select: none; flex-shrink: 0;
+    position: relative;
 }
 .chat-box-header-left { display: flex; align-items: center; gap: .5rem; min-width: 0; flex: 1; }
 .chat-box-avatar {
@@ -74,13 +110,11 @@
     padding: .75rem; background: #f8f9fa;
     display: flex; flex-direction: column; gap: .5rem;
 }
-.chat-box.minimized .chat-box-body,
-.chat-box.minimized .chat-box-footer { display: none; }
-
 .chat-box-footer {
     padding: .6rem .8rem; background: #fff;
     border-top: 1px solid #dee2e6;
     display: flex; gap: .5rem; flex-shrink: 0;
+    border-radius: 0 0 10px 10px;
 }
 .chat-box-input {
     flex: 1; border: 1px solid #dee2e6; border-radius: 20px;
@@ -221,6 +255,14 @@
 
                 {{-- Header --}}
                 <div class="chat-box-header" @click="toggleMinimize(chatBox.id)">
+                    {{-- Icon hiện khi minimized --}}
+                    <i class="bi bi-chat-dots-fill chat-box-minimized-icon"></i>
+                    {{-- Badge unread khi minimized --}}
+                    <span
+                        class="chat-box-minimized-badge"
+                        x-show="chatBox.unreadCount > 0"
+                        x-text="chatBox.unreadCount > 9 ? '9+' : chatBox.unreadCount"
+                    ></span>
                     <div class="chat-box-header-left">
                         <div class="chat-box-avatar" x-text="chatBox.userName.charAt(0).toUpperCase()"></div>
                         <div class="chat-box-title" x-text="chatBox.userName"></div>
@@ -289,6 +331,7 @@ function chatManager() {
         listLoading: true,
         openChats: [],
         echoChannels: {},
+        chatPollTimers: {},
         listPollTimer: null,
 
         viewerId:  {{ $viewer->id }},
@@ -357,11 +400,14 @@ function chatManager() {
                 sending: false,
                 minimized: false,
                 loading: true,
+                unreadCount: 0,
             });
 
             this.fetchMessages(conversationId).then(() => {
                 // Refresh list ngay sau khi fetch để badge unread biến mất
                 this.fetchList();
+                // Cập nhật badge sidebar ngay lập tức
+                document.dispatchEvent(new CustomEvent('chat:messages-read'));
             });
             this.subscribeEcho(conversationId, userId);
         },
@@ -371,6 +417,11 @@ function chatManager() {
                 window.Echo.leave('conversation.' + conversationId);
                 delete this.echoChannels[conversationId];
             }
+            // Dọn polling timer nếu có
+            if (this.chatPollTimers && this.chatPollTimers[conversationId]) {
+                clearInterval(this.chatPollTimers[conversationId]);
+                delete this.chatPollTimers[conversationId];
+            }
             this.openChats = this.openChats.filter(c => c.id !== conversationId);
         },
 
@@ -378,7 +429,10 @@ function chatManager() {
             const chat = this.openChats.find(c => c.id === conversationId);
             if (!chat) return;
             chat.minimized = !chat.minimized;
-            if (!chat.minimized) this.$nextTick(() => this.scrollToBottom(conversationId));
+            if (!chat.minimized) {
+                chat.unreadCount = 0;
+                this.$nextTick(() => this.scrollToBottom(conversationId));
+            }
         },
 
         /* ─── messages ─── */
@@ -442,9 +496,58 @@ function chatManager() {
                     });
 
                     if (!chat.minimized) this.$nextTick(() => this.scrollToBottom(conversationId));
+                    // Tăng unreadCount nếu chat đang thu nhỏ và tin từ user
+                    if (chat.minimized && payload.sender_id === chat.userId) {
+                        chat.unreadCount = (chat.unreadCount || 0) + 1;
+                    }
                     // Refresh list để cập nhật unread badge
-                    this.fetchList();
+                    this.fetchList();                });
+
+            // Fallback polling mỗi 3 giây cho trường hợp WebSocket không hoạt động
+            if (!this.chatPollTimers) this.chatPollTimers = {};
+            this.chatPollTimers[conversationId] = setInterval(() => {
+                if (!document.hidden) this.pollMessages(conversationId);
+            }, 3000);
+        },
+
+        /* ─── Poll messages (fallback khi WebSocket không hoạt động) ─── */
+        async pollMessages(conversationId) {
+            const chat = this.openChats.find(c => c.id === conversationId);
+            if (!chat || chat.minimized) return;
+
+            try {
+                const res = await fetch(`/admin/chat/${conversationId}/messages`, {
+                    headers: { Accept: 'application/json' },
                 });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.success) return;
+
+                const c = this.openChats.find(c => c.id === conversationId);
+                if (!c) return;
+
+                // Chỉ thêm tin nhắn mới, không render lại toàn bộ
+                const existingIds = new Set(c.messages.map(m => m.id));
+                const newMessages = data.messages.filter(msg => !existingIds.has(msg.id));
+
+                if (newMessages.length > 0) {
+                    newMessages.forEach(msg => {
+                        c.messages.push({
+                            id:         msg.id,
+                            content:    msg.content ?? '',
+                            isCustomer: msg.sender_id === c.userId,
+                            time:       new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                        });
+                        if (c.minimized && msg.sender_id === c.userId) {
+                            c.unreadCount = (c.unreadCount || 0) + 1;
+                        }
+                    });
+                    if (!c.minimized) this.$nextTick(() => this.scrollToBottom(conversationId));
+                    this.fetchList();
+                }
+            } catch (e) {
+                // bỏ qua lỗi mạng
+            }
         },
 
         /* ─── send ─── */
