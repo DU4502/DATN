@@ -302,8 +302,12 @@
                         @endphp
                         <button
                             type="button"
-                            @click="openChat({{ $conv->id }}, '{{ addslashes($conv->user->name) }}', '{{ addslashes($conv->user->email) }}', {{ $conv->user_id }}, {{ ($viewer->isAdmin() || $conv->cskh_id === null || $conv->cskh_id === $viewer->id) ? 'true' : 'false' }})"
-                            class="d-block w-100 p-3 border-bottom text-start bg-white"
+                            data-conv-id="{{ $conv->id }}"
+                            data-conv-name="{{ addslashes($conv->user->name) }}"
+                            data-conv-email="{{ addslashes($conv->user->email) }}"
+                            data-conv-user="{{ $conv->user_id }}"
+                            data-conv-can-reply="{{ ($viewer->isAdmin() || $conv->cskh_id === null || $conv->cskh_id === $viewer->id) ? '1' : '0' }}"
+                            class="conv-item d-block w-100 p-3 border-bottom text-start bg-white"
                             style="border: none; cursor: pointer; transition: background 0.2s;"
                             onmouseover="this.style.background='#f8f9fa'"
                             onmouseout="this.style.background='white'"
@@ -428,6 +432,20 @@ function chatManager() {
         viewerId: {{ $viewer->id }},
         csrfToken: '{{ csrf_token() }}',
         maxChats: 3,
+
+        init() {
+            // Event delegation: lắng nghe click trên container, không bị mất khi innerHTML replace
+            document.querySelector('.admin-chat-scroll')?.addEventListener('click', (e) => {
+                const btn = e.target.closest('.conv-item');
+                if (!btn) return;
+                const id = parseInt(btn.dataset.convId);
+                const name = btn.dataset.convName;
+                const email = btn.dataset.convEmail;
+                const userId = parseInt(btn.dataset.convUser);
+                const canReply = btn.dataset.convCanReply === '1';
+                this.openChat(id, name, email, userId, canReply);
+            });
+        },
 
         openChat(conversationId, userName, userEmail, userId, canReply) {
             // Check if already open

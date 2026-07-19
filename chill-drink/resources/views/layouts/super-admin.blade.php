@@ -506,8 +506,7 @@
                 <a href="{{ route('admin.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
 
                 <p class="root-nav-label">Hệ thống</p>
-                <a href="{{ route('admin.super-admin') }}#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
-                <a href="{{ route('admin.super-admin') }}#audit" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
+                <a href="{{ route('admin.super-admin') }}#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Hệ thống</a>
             </nav>
 
             <div class="root-sidebar-footer">
@@ -598,35 +597,142 @@
         rootBackdrop?.addEventListener('click', closeRootSidebar);
         document.querySelectorAll('.root-nav-link').forEach((link) => link.addEventListener('click', closeRootSidebar));
 
-        const updateRootNavigation = () => {
-            const currentPath = window.location.pathname;
-            const currentHash = window.location.hash.replace('#', '');
+        const superAdminPath = '{{ parse_url(route("admin.super-admin"), PHP_URL_PATH) }}';
+        const currentPath = window.location.pathname;
+        const isSuperAdminPage = currentPath === superAdminPath;
 
+        // Cập nhật active cho các link route thật (không phải hash)
+        const updateRouteLinks = () => {
             document.querySelectorAll('.root-nav-link').forEach((link) => {
-                const href = link.getAttribute('href') || '';
                 const section = link.dataset.rootSection;
-
-                if (section) {
-                    // Link hash: active khi đang ở trang super-admin VÀ hash khớp
-                    const isSuperAdminPage = currentPath === '{{ parse_url(route("admin.super-admin"), PHP_URL_PATH) }}';
-                    const hashMatch = section === 'top'
-                        ? (currentHash === '' || currentHash === 'top')
-                        : currentHash === section;
-                    link.classList.toggle('active', isSuperAdminPage && hashMatch);
-                } else {
-                    // Link route thật: active khi URL path cocó trong href
-                    try {
-                        const linkPath = new URL(href, window.location.origin).pathname;
-                        link.classList.toggle('active', currentPath.startsWith(linkPath) && linkPath !== '/');
-                    } catch {
-                        // giữ nguyên class active từ blade nếu có
-                    }
-                }
+                if (section) return; // bỏ qua, scrollspy xử lý
+                const href = link.getAttribute('href') || '';
+                try {
+                    const linkPath = new URL(href, window.location.origin).pathname;
+                    link.classList.toggle('active', currentPath.startsWith(linkPath) && linkPath !== '/');
+                } catch { /* giữ nguyên */ }
             });
         };
 
-        window.addEventListener('hashchange', updateRootNavigation);
-        updateRootNavigation();
+        // Scrollspy: chỉ chạy trên trang super-admin
+        if (isSuperAdminPage) {
+            const sectionLinks = [...document.querySelectorAll('.root-nav-link[data-root-section]')];
+
+            const setActiveSection = (sectionId) => {
+                sectionLinks.forEach((link) => {
+                    const s = link.dataset.rootSection;
+                    const match = sectionId === null
+                        ? s === 'top'
+                        : s === sectionId;
+                    link.classList.toggle('active', match);
+                });
+            };
+
+            // Lấy tất cả section có id tương ứng với data-root-section
+            const sections = sectionLinks
+                .map((link) => {
+                    const s = link.dataset.rootSection;
+                    return s === 'top' ? null : document.getElementById(s);
+                })
+                .filter(Boolean);
+
+            // Dùng IntersectionObserver để detect section nào đang visible
+            let visibleSections = new Set();
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        visibleSections.add(entry.target.id);
+                    } else {
+                        visibleSections.delete(entry.target.id);
+                    }
+                });
+
+                // Tìm section gần đầu trang nhất trong các section đang visible
+                if (visibleSections.size > 0) {
+                    let topSection = null;
+                    let topOffset = Infinity;
+                    visibleSections.forEach((id) => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            if (rect.top < topOffset) {
+                                topOffset = rect.top;
+                                topSection = id;
+                            }
+                        }
+                    });
+                    setActiveSection(topSection);
+                } else {
+                    // Không có section nào visible → dựa vào scroll position
+                    const scrollY = window.scrollY;
+                    if (scrollY < 100) {
+                        setActiveSection(null); // top
+                    } else {
+                        // Tìm section cuối cùng đã scroll qua
+                        let lastPassed = null;
+                        sections.forEach((el) => {
+                            if (el && el.offsetTop <= scrollY + 120) {
+                                lastPassed = el.id;
+                            }
+                        });
+                        setActiveSection(lastPassed);
+                    }
+                }
+            }, {
+                rootMargin: '-80px 0px -40% 0px',
+                threshold: 0
+            });
+
+            sections.forEach((el) => el && observer.observe(el));
+
+            // Nếu scroll lên đầu trang → active "Tổng quan"
+            window.addEventListener('scroll', () => {
+                if (window.scrollY < 80) setActiveSection(null);
+            }, { passive: true });
+
+            // Click link hash → scroll smooth, không reload trang, active ngay lập tức
+            const rootNav = document.querySelector('.root-nav');
+            sectionLinks.forEach((link) => {
+                link.addEventListener('click', (e) => {
+                    const s = link.dataset.rootSection;
+                    if (s === 'top') {
+                        e.preventDefault();
+                        setActiveSection(null);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        history.replaceState(null, '', superAdminPath);
+                        return;
+                    }
+                    const target = document.getElementById(s);
+                    if (target) {
+                        e.preventDefault();
+                        // Lưu vị trí scroll của sidebar trước
+                        const navScrollTop = rootNav ? rootNav.scrollTop : 0;
+                        // Active ngay, không chờ observer
+                        setActiveSection(s);
+                        // Scroll trang đến section (dùng window.scrollTo để tránh browser cuộn sidebar)
+                        const topbarHeight = document.querySelector('.root-topbar')?.offsetHeight ?? 68;
+                        const targetTop = target.getBoundingClientRect().top + window.scrollY - topbarHeight - 16;
+                        window.scrollTo({ top: targetTop, behavior: 'smooth' });
+                        // Restore scroll sidebar ngay sau (tránh browser tự reset)
+                        if (rootNav) {
+                            requestAnimationFrame(() => { rootNav.scrollTop = navScrollTop; });
+                        }
+                        history.replaceState(null, '', superAdminPath + '#' + s);
+                    }
+                });
+            });
+
+            // Khởi tạo active dựa vào hash hiện tại khi load
+            const initHash = window.location.hash.replace('#', '');
+            if (initHash && document.getElementById(initHash)) {
+                setTimeout(() => {
+                    document.getElementById(initHash)?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+
+        updateRouteLinks();
     </script>
 </body>
 </html>
