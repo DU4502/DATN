@@ -176,7 +176,6 @@
             <div class="bg-white border rounded-3 shadow-sm overflow-hidden admin-chat-list-panel">
                 <div class="p-3 border-bottom bg-light d-flex align-items-center justify-content-between">
                     <h2 class="h6 fw-bold mb-0 text-dark">Danh sách trò chuyện</h2>
-                    <span class="badge rounded-pill bg-danger" x-show="totalUnread > 0" x-text="totalUnread > 99 ? '99+' : totalUnread" style="font-size:.75rem;"></span>
                 </div>
 
                 <div class="admin-chat-scroll">
@@ -204,16 +203,10 @@
                             <div class="d-flex align-items-start gap-2">
                                 <div class="position-relative flex-shrink-0">
                                     <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;" x-text="conv.user_name.charAt(0).toUpperCase()"></div>
-                                    <span
-                                        x-show="conv.unread > 0"
-                                        x-text="conv.unread > 9 ? '9+' : conv.unread"
-                                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                        style="font-size:.65rem;"
-                                    ></span>
                                 </div>
                                 <div class="min-w-0 flex-grow-1">
                                     <div class="d-flex align-items-center justify-content-between gap-2">
-                                        <strong class="text-dark small text-truncate" :class="{ 'fw-bolder': conv.unread > 0 }" x-text="conv.user_name"></strong>
+                                        <strong class="text-dark small text-truncate" x-text="conv.user_name"></strong>
                                         <span x-show="conv.unread > 0" x-text="conv.unread > 99 ? '99+' : conv.unread" class="badge rounded-pill bg-danger flex-shrink-0" style="font-size:.7rem;"></span>
                                         <span x-show="conv.unread === 0 && conv.last_at" x-text="conv.last_at" class="text-secondary small flex-shrink-0"></span>
                                     </div>
