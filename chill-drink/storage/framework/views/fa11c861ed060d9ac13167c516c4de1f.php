@@ -489,9 +489,7 @@
                     <?php
                         $unreadChatMessages = auth()->user()?->unreadConversationMessagesCount() ?? 0;
                     ?>
-                    <?php if($unreadChatMessages > 0): ?>
-                        <span class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;"><?php echo e($unreadChatMessages > 99 ? '99+' : $unreadChatMessages); ?></span>
-                    <?php endif; ?>
+                    <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;<?php echo e($unreadChatMessages > 0 ? '' : 'display:none;'); ?>"><?php echo e($unreadChatMessages > 99 ? '99+' : $unreadChatMessages); ?></span>
                 </a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>

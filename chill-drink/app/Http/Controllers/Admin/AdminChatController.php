@@ -23,6 +23,15 @@ class AdminChatController extends Controller
     }
 
     /**
+     * API: trả về số tin nhắn chưa đọc của admin hiện tại.
+     */
+    public function unreadCount()
+    {
+        return response()->json([
+            'count' => auth()->user()->unreadConversationMessagesCount(),
+        ]);
+    }
+    /**
      * API: trả về danh sách conversation dạng JSON cho frontend polling nhẹ.
      */
     public function conversationList()

@@ -5,6 +5,7 @@
         groupChatAvailable: false,
         groupChatOpen: false,
         groupUnread: 0,
+        supportUnread: 0,
         conversationId: null,
         branchId: null,
         branchName: '',
@@ -12,6 +13,7 @@
         newMessage: '',
         loading: false,
         pollInterval: null,
+        unreadPollInterval: null,
         echoChannel: null,
         visibilityHandler: null,
 
@@ -35,23 +37,37 @@
             this.visibilityHandler = () => {
                 if (document.hidden) {
                     this.stopPolling();
-                    this.leaveEchoChannel();
+                    this.stopUnreadPolling();
                 } else if (this.isOpen) {
                     this.activateSupportChat();
+                } else {
+                    this.startUnreadPolling();
                 }
             };
             document.addEventListener('visibilitychange', this.visibilityHandler);
             this.$watch('isOpen', (isOpen) => {
-                if (isOpen) this.activateSupportChat();
-                else {
+                if (isOpen) {
+                    this.supportUnread = 0;
+                    this.stopUnreadPolling();
+                    this.activateSupportChat();
+                } else {
                     this.stopPolling();
-                    this.leaveEchoChannel();
+                    // KHÔNG leaveEchoChannel — giữ subscribe để nhận unread realtime
+                    this.startUnreadPolling();
                 }
             });
+
+            // Lấy conversationId + unread count ngay khi load trang
+            await this.fetchUnreadCount();
+            // Subscribe WebSocket ngay lập tức (dù chat đóng)
+            this.subscribeEchoChannel();
+            // Poll backup 20s nếu Reverb không hoạt động
+            this.startUnreadPolling();
         },
 
         destroy() {
             this.stopPolling();
+            this.stopUnreadPolling();
             this.leaveEchoChannel();
             document.removeEventListener('visibilitychange', this.visibilityHandler);
         },
@@ -98,9 +114,11 @@
             if (document.hidden || !this.isOpen) return;
             if (!this.conversationId) await this.getOrCreateConversation();
             if (!this.conversationId || !this.isOpen) return;
-            await this.fetchMessages();
+            this.supportUnread = 0;
+            await this.fetchMessages(true); // mark as read
+            // subscribeEchoChannel đã được gọi từ init, chỉ gọi lại nếu chưa có
             this.subscribeEchoChannel();
-            this.startPolling(); // fallback polling mỗi 15s nếu Reverb không hoạt động
+            this.startPolling(); // fallback polling 15s
         },
 
         subscribeEchoChannel() {
@@ -110,9 +128,12 @@
 
             this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
                 .listen('.message-sent', (payload) => {
-                    // Bỏ qua tin nhắn do chính user này gửi (đã append ở sendMessage)
+                    // Bỏ qua tin nhắn do chính user này gửi
                     const alreadyExists = this.messages.some(m => m.id === payload.message_id);
                     if (alreadyExists) return;
+
+                    // Tin từ admin/CSKH (không phải user đang đăng nhập)
+                    const isFromAdmin = payload.sender_id !== {{ auth()->id() }};
 
                     this.messages.push({
                         id: payload.message_id,
@@ -124,14 +145,57 @@
                         attachment_url: payload.attachment_url,
                         is_read: payload.is_read,
                         created_at: payload.created_at,
-                        sender: {
-                            id: payload.sender_id,
-                            name: payload.sender_name,
-                        },
+                        sender: { id: payload.sender_id, name: payload.sender_name },
                     });
 
-                    this.$nextTick(() => { this.scrollToBottom(); });
+                    // Chat đang đóng → tăng badge unread
+                    if (!this.isOpen && isFromAdmin) {
+                        this.supportUnread++;
+                    }
+
+                    if (this.isOpen) {
+                        this.$nextTick(() => { this.scrollToBottom(); });
+                    }
                 });
+        },
+
+        // Fetch unread count từ server (fallback khi Reverb chưa kết nối)
+        async fetchUnreadCount() {
+            if (!this.conversationId) {
+                try {
+                    const res = await fetch('{{ route('chat.index') }}');
+                    const data = await res.json();
+                    if (data.success) {
+                        this.conversationId = data.conversation_id;
+                        this.branchId       = data.branch_id;
+                        this.branchName     = data.branch_name || '';
+                        // Có conversationId → subscribe WebSocket ngay
+                        this.subscribeEchoChannel();
+                    }
+                } catch (e) { return; }
+            }
+            if (!this.conversationId) return;
+            try {
+                const res  = await fetch('{{ route('chat.messages') }}?conversation_id=' + this.conversationId);
+                const data = await res.json();
+                if (data.success) {
+                    const uid = {{ auth()->id() }};
+                    this.supportUnread = data.messages.filter(m => m.sender_id !== uid && !m.is_read).length;
+                }
+            } catch (e) { /* silent */ }
+        },
+
+        startUnreadPolling() {
+            if (this.unreadPollInterval || this.isOpen || document.hidden) return;
+            this.unreadPollInterval = window.setInterval(() => {
+                if (!this.isOpen && !document.hidden) this.fetchUnreadCount();
+            }, 1000);
+        },
+
+        stopUnreadPolling() {
+            if (!this.unreadPollInterval) return;
+            window.clearInterval(this.unreadPollInterval);
+            this.unreadPollInterval = null;
         },
 
         leaveEchoChannel() {
@@ -173,9 +237,11 @@
             // Không còn dùng - branch được tự động xác định từ server
         },
 
-        async fetchMessages() {
+        async fetchMessages(markRead = false) {
             try {
-                const res = await fetch('{{ route('chat.messages') }}?conversation_id=' + this.conversationId);
+                const url = '{{ route('chat.messages') }}?conversation_id=' + this.conversationId
+                    + (markRead ? '&mark_as_read=1' : '');
+                const res = await fetch(url);
                 const data = await res.json();
                 if (data.success) {
                     if (data.messages.length !== this.messages.length) {
@@ -184,6 +250,8 @@
                             this.scrollToBottom();
                         });
                     }
+                    // Reset unread khi đã mark as read
+                    if (markRead) this.supportUnread = 0;
                 }
             } catch (e) {
                 console.error('Error fetching messages', e);
@@ -247,7 +315,14 @@
         <svg x-show="isOpen || groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
-        <span x-show="groupUnread > 0" x-text="groupUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
+        {{-- Badge group unread --}}
+        <span x-show="groupUnread > 0 && supportUnread === 0" x-text="groupUnread > 99 ? '99+' : groupUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
+        {{-- Badge support unread (hỗ trợ khách hàng) --}}
+        <span x-show="supportUnread > 0" x-text="supportUnread > 99 ? '99+' : supportUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
+        {{-- Badge tổng cộng khi có cả 2 --}}
+        <template x-if="groupUnread > 0 && supportUnread > 0">
+            <span style="position:absolute;bottom:-4px;left:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#5b50d6;color:#fff;border:2px solid #fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;" x-text="groupUnread > 9 ? '9+' : groupUnread"></span>
+        </template>
     </button>
 
     <div x-show="menuOpen && groupChatAvailable" x-transition style="position:absolute;right:0;bottom:5rem;width:230px;padding:.55rem;border-radius:16px;background:#fff;border:1px solid #e1ebe8;box-shadow:0 18px 48px rgba(7,52,58,.2);display:grid;gap:.4rem;">
@@ -258,7 +333,8 @@
         </button>
         <button type="button" @click="openSupportChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#ecfaf6;color:#087c63;font-weight:800;text-align:left;">
             <span style="width:36px;height:36px;border-radius:50%;background:var(--c-primary);color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-headset"></i></span>
-            <span>Hỗ trợ khách hàng</span>
+            <span style="flex:1;">Hỗ trợ khách hàng</span>
+            <span x-show="supportUnread > 0" x-text="supportUnread > 99 ? '99+' : supportUnread" class="badge rounded-pill bg-danger"></span>
         </button>
     </div>
 

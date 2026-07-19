@@ -359,7 +359,10 @@ function chatManager() {
                 loading: true,
             });
 
-            this.fetchMessages(conversationId);
+            this.fetchMessages(conversationId).then(() => {
+                // Refresh list ngay sau khi fetch để badge unread biến mất
+                this.fetchList();
+            });
             this.subscribeEcho(conversationId, userId);
         },
 
