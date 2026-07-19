@@ -978,28 +978,7 @@
         </aside>
     </section>
 
-    <section class="sa-panel" id="security">
-        <div class="sa-panel-header"><div><h2 class="sa-panel-title">Bảo mật hệ thống</h2><p class="sa-panel-note">Chỉ số được ghi nhận trong ngày</p></div><i class="bi bi-shield-check text-success"></i></div>
-        <div class="sa-security-grid">
-            @foreach([
-                ['bi-person-x', $securityStats['failed_logins'], 'Đăng nhập thất bại'],
-                ['bi-lock', $securityStats['locked_admins'], 'Admin đang khóa'],
-                ['bi-key', $securityStats['pending_resets'], 'Yêu cầu đặt lại mật khẩu'],
-                ['bi-bell', $securityStats['unread_notifications'], 'Thông báo chưa đọc'],
-            ] as [$icon, $value, $label])
-                <div class="sa-security-item"><i class="bi {{ $icon }}"></i><div><div class="sa-security-value">{{ $value }}</div><div class="sa-security-label">{{ $label }}</div></div></div>
-            @endforeach
-        </div>
-    </section>
 
-    <section class="sa-panel" id="permissions">
-        <div class="sa-panel-header"><div><h2 class="sa-panel-title">Phạm vi quyền hiện tại</h2><p class="sa-panel-note">Hai cấp tài khoản đang có trong bảng vai trò</p></div><span class="sa-role sa-role-super"><i class="bi bi-shield-check"></i>Quản trị cấp cao</span></div>
-        <div class="sa-permissions">
-            @foreach(['Tổng quan hệ thống', 'Quản trị tài khoản', 'Vai trò và phân quyền', 'Bảo mật và nhật ký', 'Tổng quan vận hành', 'Sản phẩm và danh mục', 'Đơn hàng và khách hàng', 'Phiếu ưu đãi và đánh giá'] as $permission)
-                <div class="sa-permission"><i class="bi bi-check-circle-fill"></i>{{ $permission }}</div>
-            @endforeach
-        </div>
-    </section>
 </div>
 
 <div class="modal fade" id="createAdminModal" tabindex="-1" aria-labelledby="createAdminModalLabel" aria-hidden="true" data-auto-open="{{ $errors->any() ? 'true' : 'false' }}">
