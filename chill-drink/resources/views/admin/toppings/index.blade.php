@@ -97,20 +97,18 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="text-end pe-4">
-                            <div class="d-flex align-items-center justify-content-end gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-circle" data-bs-toggle="modal" data-bs-target="#editToppingModal{{ $topping->id }}" title="Chỉnh sửa">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
+                        <td class="text-end text-nowrap pe-4">
+                            <button type="button" class="admin-action" data-bs-toggle="modal" data-bs-target="#editToppingModal{{ $topping->id }}" title="Chỉnh sửa">
+                                <i class="bi bi-pencil"></i>
+                            </button>
 
-                                <form method="POST" action="{{ route('admin.toppings.destroy', $topping->id) }}" onsubmit="return confirm('Bạn chắc chắn muốn xóa Topping này?')" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle" title="Xóa">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                </form>
-                            </div>
+                            <form method="POST" action="{{ route('admin.toppings.destroy', $topping->id) }}" onsubmit="return confirm('Bạn chắc chắn muốn xóa Topping này?')" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="admin-action" title="Xóa" style="color: var(--a-danger);">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 @empty
