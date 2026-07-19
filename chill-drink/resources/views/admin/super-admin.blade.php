@@ -486,49 +486,44 @@
                             </div>
                             <div class="modal-body">
                                 <div class="alert alert-danger d-none" role="alert" data-branch-edit-errors="{{ $branch['branch_id'] }}" style="font-size: 0.8rem;"></div>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold" for="branch_name_{{ $branch['branch_id'] }}">Tên chi nhánh</label>
-                                    <input id="branch_name_{{ $branch['branch_id'] }}" class="form-control @error('name', 'editBranch') is-invalid @enderror" name="name" value="{{ $isEditingThisBranch ? old('name', $branch['branch_name']) : $branch['branch_name'] }}" required>
-                                    @error('name', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold" for="branch_name_{{ $branch['branch_id'] }}">Tên chi nhánh <span class="text-danger">*</span></label>
+                                        <input id="branch_name_{{ $branch['branch_id'] }}" class="form-control @error('name', 'editBranch') is-invalid @enderror" name="name" value="{{ $isEditingThisBranch ? old('name', $branch['branch_name']) : $branch['branch_name'] }}" placeholder="Nhập tên chi nhánh" required>
+                                        @error('name', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-bold" for="branch_code_{{ $branch['branch_id'] }}">Mã chi nhánh <span class="text-danger">*</span></label>
+                                        <input id="branch_code_{{ $branch['branch_id'] }}" class="form-control @error('code', 'editBranch') is-invalid @enderror" name="code" value="{{ $isEditingThisBranch ? old('code', $branch['branch_code']) : $branch['branch_code'] }}" placeholder="VD: CN1, CN2" required>
+                                        @error('code', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold" for="branch_code_{{ $branch['branch_id'] }}">Mã chi nhánh</label>
-                                    <input id="branch_code_{{ $branch['branch_id'] }}" class="form-control @error('code', 'editBranch') is-invalid @enderror" name="code" value="{{ $isEditingThisBranch ? old('code', $branch['branch_code']) : $branch['branch_code'] }}" required>
-                                    @error('code', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
-                                <div class="row g-3">
-                                    <div class="col-sm-6">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
                                         <label class="form-label small fw-bold" for="branch_email_{{ $branch['branch_id'] }}">Email</label>
                                         <input id="branch_email_{{ $branch['branch_id'] }}" class="form-control @error('email', 'editBranch') is-invalid @enderror" type="email" name="email" value="{{ $isEditingThisBranch ? old('email', $branch['branch_email']) : $branch['branch_email'] }}" placeholder="branch@example.com">
                                         @error('email', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
-                                    <div class="col-sm-6">
+                                    <div class="col-md-6">
                                         <label class="form-label small fw-bold" for="branch_phone_{{ $branch['branch_id'] }}">Điện thoại</label>
                                         <input id="branch_phone_{{ $branch['branch_id'] }}" class="form-control @error('phone', 'editBranch') is-invalid @enderror" type="text" name="phone" value="{{ $isEditingThisBranch ? old('phone', $branch['branch_phone']) : $branch['branch_phone'] }}" placeholder="0123456789">
                                         @error('phone', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                 </div>
-                                <div class="mb-3 mt-3">
+                                <div class="mb-3">
                                     <label class="form-label small fw-bold" for="branch_address_{{ $branch['branch_id'] }}">Địa chỉ</label>
-                                    <textarea id="branch_address_{{ $branch['branch_id'] }}" class="form-control @error('address', 'editBranch') is-invalid @enderror" name="address" rows="3" placeholder="Nhập địa chỉ chi nhánh">{{ $isEditingThisBranch ? old('address', $branch['branch_address']) : $branch['branch_address'] }}</textarea>
+                                    <textarea id="branch_address_{{ $branch['branch_id'] }}" class="form-control @error('address', 'editBranch') is-invalid @enderror" name="address" rows="2" placeholder="Nhập địa chỉ chi nhánh">{{ $isEditingThisBranch ? old('address', $branch['branch_address']) : $branch['branch_address'] }}</textarea>
                                     @error('address', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-                                @php
-                                    $branchMapLink = is_numeric($branch['branch_latitude']) && is_numeric($branch['branch_longitude'])
-                                        ? 'https://www.google.com/maps?q='.$branch['branch_latitude'].','.$branch['branch_longitude']
-                                        : '';
-                                @endphp
-                                @include('admin.partials.branch-map-link', [
-                                    'pickerId' => 'branch-map-link-'.$branch['branch_id'],
-                                    'label' => 'Link Google Maps',
-                                    'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
-                                    'mapLinkValue' => $isEditingThisBranch ? old('map_link', $branchMapLink) : $branchMapLink,
+                                @include('admin.partials.location-picker', [
+                                    'pickerId' => 'super-admin-edit-branch-picker-'.$branch['branch_id'],
+                                    'label' => 'Vị trí chi nhánh',
+                                    'hint' => 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.',
                                     'addressTarget' => '#branch_address_'.$branch['branch_id'],
                                     'latName' => 'latitude',
                                     'lngName' => 'longitude',
                                     'latValue' => $isEditingThisBranch ? old('latitude', $branch['branch_latitude']) : $branch['branch_latitude'],
                                     'lngValue' => $isEditingThisBranch ? old('longitude', $branch['branch_longitude']) : $branch['branch_longitude'],
-                                    'errorBag' => 'editBranch',
                                 ])
                                 <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
                                     <input type="hidden" name="status" value="{{ $branchStatusValue ? 1 : 0 }}" data-branch-status-input="{{ $branch['branch_id'] }}">
@@ -576,42 +571,60 @@
                     <div class="alert alert-info" role="alert" style="font-size: 0.75rem; margin-bottom: 1rem;">
                         <i class="bi bi-info-circle me-2"></i>Thêm chi nhánh trực tiếp từ trang quản trị cấp cao để quản lý tập trung.
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold" for="branch_create_name">Tên chi nhánh</label>
-                        <input id="branch_create_name" class="form-control @error('name', 'createBranch') is-invalid @enderror" name="name" value="{{ old('name') }}" required>
-                        @error('name', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold" for="branch_create_code">Mã chi nhánh</label>
-                        <input id="branch_create_code" class="form-control @error('code', 'createBranch') is-invalid @enderror" name="code" value="{{ old('code') }}" required>
-                        @error('code', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-bold" for="branch_create_email">Email</label>
-                            <input id="branch_create_email" class="form-control @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="branch@example.com">
-                            @error('email', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" for="branch_create_name">Tên chi nhánh <span class="text-danger">*</span></label>
+                            <input id="branch_create_name" class="form-control @error('name', 'createBranch') is-invalid @enderror" name="name" value="{{ old('name') }}" placeholder="Nhập tên chi nhánh" required>
+                            @error('name', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-bold" for="branch_create_phone">Điện thoại</label>
-                            <input id="branch_create_phone" class="form-control @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123456789">
-                            @error('phone', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" for="branch_create_code">Mã chi nhánh <span class="text-danger">*</span></label>
+                            <input id="branch_create_code" class="form-control @error('code', 'createBranch') is-invalid @enderror" name="code" value="{{ old('code') }}" placeholder="VD: CN1, CN2" required>
+                            @error('code', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                     </div>
-                    <div class="mb-3 mt-3">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold" for="branch_create_phone">Điện thoại</label>
+                        <input id="branch_create_phone" class="form-control @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123 456 789">
+                        @error('phone', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="p-3 mb-3 rounded-3" style="background: #f0fdf4; border: 1px solid #dcfce7;">
+                        <div class="d-flex align-items-center gap-2 mb-1" style="color: #166534; font-weight: 700; font-size: 0.85rem;">
+                            <i class="bi bi-person-badge-fill"></i>
+                            <span>Tài khoản Admin chi nhánh</span>
+                        </div>
+                        <p class="text-secondary mb-3" style="font-size: 0.78rem;">Dùng để đăng nhập giao diện quản lý chi nhánh.</p>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold" for="branch_create_email">Email đăng nhập <span class="text-danger">*</span></label>
+                                <input id="branch_create_email" class="form-control @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="admin@chinhanh.com">
+                                @error('email', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold" for="branch_create_password">Mật khẩu <span class="text-danger">*</span></label>
+                                <input id="branch_create_password" class="form-control @error('password', 'createBranch') is-invalid @enderror" type="password" name="password" placeholder="Ít nhất 8 ký tự">
+                                @error('password', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label small fw-bold" for="branch_create_address">Địa chỉ</label>
-                        <textarea id="branch_create_address" class="form-control @error('address', 'createBranch') is-invalid @enderror" name="address" rows="3" placeholder="Nhập địa chỉ chi nhánh">{{ old('address') }}</textarea>
+                        <textarea id="branch_create_address" class="form-control @error('address', 'createBranch') is-invalid @enderror" name="address" rows="2" placeholder="Nhập địa chỉ chi nhánh">{{ old('address') }}</textarea>
                         @error('address', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
-                    @include('admin.partials.branch-map-link', [
-                        'pickerId' => 'super-admin-create-branch-map-link',
-                        'label' => 'Link Google Maps',
-                        'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
-                        'mapLinkValue' => old('map_link'),
+                    @include('admin.partials.location-picker', [
+                        'pickerId' => 'super-admin-create-branch-picker',
+                        'label' => 'Vị trí chi nhánh',
+                        'hint' => 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.',
                         'addressTarget' => '#branch_create_address',
+                        'latName' => 'latitude',
+                        'lngName' => 'longitude',
                         'latValue' => old('latitude'),
                         'lngValue' => old('longitude'),
-                        'errorBag' => 'createBranch',
                     ])
                     <div class="form-check mb-3 mt-3">
                         <input class="form-check-input" type="checkbox" name="status" value="1" id="branch_create_status" checked>
@@ -1009,7 +1022,7 @@
     </div>
 </div>
 
-@include('admin.partials.branch-map-link-script')
+@include('admin.partials.location-picker-script')
 
 @php
     $modalToOpen = old('form_type') === 'admin'
