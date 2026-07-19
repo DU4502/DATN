@@ -191,6 +191,13 @@ class ChatController extends Controller
             abort(403);
         }
 
+        if ($request->boolean('mark_as_read', false)) {
+            $conversation->messages()
+                ->where('sender_id', '!=', auth()->id())
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+        }
+
         $messages = $conversation->messages()
             ->with(['sender', 'displayAsSender'])
             ->oldest()
