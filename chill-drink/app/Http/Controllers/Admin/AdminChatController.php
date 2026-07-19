@@ -22,6 +22,40 @@ class AdminChatController extends Controller
         return view('admin.chat.index', compact('conversations'));
     }
 
+    /**
+     * API: trả về danh sách conversation dạng JSON cho frontend polling nhẹ.
+     */
+    public function conversationList()
+    {
+        $user = auth()->user();
+
+        $conversations = $this->conversationQuery()
+            ->withCount([
+                'messages as unread_count' => fn ($q) => $q
+                    ->where('is_read', false)
+                    ->whereColumn('sender_id', 'conversations.user_id'),
+            ])
+            ->orderBy('last_message_at', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'conversations' => $conversations->map(fn ($c) => [
+                'id'         => $c->id,
+                'user_id'    => $c->user_id,
+                'user_name'  => $c->user?->name ?? '—',
+                'user_email' => $c->user?->email ?? '',
+                'cskh_name'  => $c->cskh?->name,
+                'unread'     => (int) $c->unread_count,
+                'can_reply'  => $user->isAdmin() || !$c->cskh_id || $c->cskh_id === $user->id,
+                'last_at'    => $c->latestMessage?->created_at?->format('H:i'),
+            ]),
+            'total_unread' => $conversations->sum('unread_count'),
+        ]);
+    }
+
     public function show(Conversation $conversation)
     {
         $this->authorizeView($conversation);
