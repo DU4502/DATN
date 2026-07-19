@@ -226,7 +226,8 @@ class User extends Authenticatable implements MustVerifyEmail
                 ->count();
         }
 
-        // For staff
+        // For staff: chỉ đếm tin nhắn từ KHÁCH HÀNG (role_id = 1) chưa đọc.
+        // Không đếm tin nhắn từ staff khác để tránh đếm nhầm sau khi fix markMessagesAsRead.
         $query = Conversation::whereHas('user', fn ($c) => $c->customers())
             ->where('status', 'open');
 
@@ -244,8 +245,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $conversationIds = $query->pluck('id');
 
+        // Lấy danh sách customer IDs để lọc chỉ tin từ khách hàng
+        $customerIds = \App\Models\User::where('role_id', 1)->pluck('id');
+
         return \App\Models\Message::whereIn('conversation_id', $conversationIds)
-            ->where('sender_id', '!=', $this->id)
+            ->whereIn('sender_id', $customerIds)
             ->where('is_read', false)
             ->count();
     }

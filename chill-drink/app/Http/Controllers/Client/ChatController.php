@@ -143,11 +143,11 @@ class ChatController extends Controller
 
                 $message->load(['sender', 'displayAsSender']);
 
-                try {
-                    broadcast(new MessageSent($message))->toOthers();
-                } catch (\Throwable) {
-                    // Broadcasting optional
-                }
+        $systemMsgId = $message->id;
+        try {
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Throwable) {}
+        unset($systemMsgId);
             }
         }
 
@@ -236,9 +236,7 @@ class ChatController extends Controller
 
         try {
             broadcast(new MessageSent($message))->toOthers();
-        } catch (\Throwable) {
-            // Broadcasting optional when Reverb/queue is not configured
-        }
+        } catch (\Throwable) {}
 
         return response()->json([
             'success' => true,
@@ -329,9 +327,7 @@ class ChatController extends Controller
 
         try {
             broadcast(new MessageSent($message))->toOthers();
-        } catch (\Throwable) {
-            // Broadcasting optional when Reverb/queue is not configured
-        }
+        } catch (\Throwable) {}
 
         return response()->json([
             'message' => MessageResource::toPublicArray($message),

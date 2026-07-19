@@ -47,9 +47,8 @@
             document.addEventListener('visibilitychange', this.visibilityHandler);
             this.$watch('isOpen', (isOpen) => {
                 if (isOpen) {
-                    this.supportUnread = 0;
                     this.stopUnreadPolling();
-                    this.activateSupportChat();
+                    this.activateSupportChat(); // reset unread CHỈ sau khi đã fetch + mark read
                 } else {
                     this.stopPolling();
                     // KHÔNG leaveEchoChannel — giữ subscribe để nhận unread realtime
@@ -114,11 +113,11 @@
             if (document.hidden || !this.isOpen) return;
             if (!this.conversationId) await this.getOrCreateConversation();
             if (!this.conversationId || !this.isOpen) return;
+            await this.fetchMessages(true); // mark as read trước, rồi mới reset badge
             this.supportUnread = 0;
-            await this.fetchMessages(true); // mark as read
             // subscribeEchoChannel đã được gọi từ init, chỉ gọi lại nếu chưa có
             this.subscribeEchoChannel();
-            this.startPolling(); // fallback polling 15s
+            this.startPolling();
         },
 
         subscribeEchoChannel() {
@@ -128,7 +127,7 @@
 
             this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
                 .listen('.message-sent', (payload) => {
-                    // Bỏ qua tin nhắn do chính user này gửi
+                    // Bỏ qua tin nhắn đã có
                     const alreadyExists = this.messages.some(m => m.id === payload.message_id);
                     if (alreadyExists) return;
 
@@ -156,6 +155,12 @@
                     if (this.isOpen) {
                         this.$nextTick(() => { this.scrollToBottom(); });
                     }
+                })
+                .error((error) => {
+                    // WebSocket auth thất bại → tăng tần suất polling làm fallback
+                    console.warn('Echo channel error, switching to fast polling', error);
+                    this.echoChannel = null;
+                    if (this.isOpen) this.startPolling();
                 });
         },
 
@@ -207,10 +212,10 @@
         startPolling() {
             this.stopPolling();
             if (!this.isOpen || document.hidden || !this.conversationId) return;
-            // Polling 15s chỉ là fallback khi Reverb không hoạt động
+            // Polling 100ms fallback khi Reverb không hoạt động
             this.pollInterval = window.setInterval(() => {
                 if (this.isOpen && !document.hidden) this.fetchMessages();
-            }, 15000);
+            }, 100);
         },
 
         stopPolling() {
@@ -244,13 +249,13 @@
                 const res = await fetch(url);
                 const data = await res.json();
                 if (data.success) {
-                    if (data.messages.length !== this.messages.length) {
+                    // So sánh ID tin nhắn cuối để tránh re-render không cần thiết
+                    const lastLocalId  = this.messages.length ? this.messages[this.messages.length - 1].id : null;
+                    const lastServerId = data.messages.length ? data.messages[data.messages.length - 1].id : null;
+                    if (lastServerId !== lastLocalId || data.messages.length !== this.messages.length) {
                         this.messages = data.messages;
-                        this.$nextTick(() => {
-                            this.scrollToBottom();
-                        });
+                        this.$nextTick(() => { this.scrollToBottom(); });
                     }
-                    // Reset unread khi đã mark as read
                     if (markRead) this.supportUnread = 0;
                 }
             } catch (e) {
@@ -268,10 +273,30 @@
         async sendMessage() {
             if (!this.newMessage.trim() || !this.conversationId) return;
 
+            const text = this.newMessage.trim();
+            this.newMessage = '';
+
+            // Optimistic UI: hiện tin ngay lập tức không chờ server
+            const tempId = 'tmp_' + Date.now();
+            const tempMsg = {
+                id: tempId,
+                conversation_id: this.conversationId,
+                sender_id: {{ auth()->id() }},
+                content: text,
+                attachment_path: null,
+                attachment_name: null,
+                is_read: false,
+                created_at: new Date().toISOString(),
+                sender: { id: {{ auth()->id() }}, name: '{{ addslashes(auth()->user()->name) }}' },
+                _pending: true,
+            };
+            this.messages.push(tempMsg);
+            this.$nextTick(() => { this.scrollToBottom(); });
+
             this.loading = true;
             const formData = new FormData();
             formData.append('conversation_id', this.conversationId);
-            formData.append('content', this.newMessage);
+            formData.append('content', text);
 
             try {
                 const res = await fetch('{{ route('chat.send') }}', {
@@ -284,17 +309,18 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    this.messages.push(data.message);
-                    this.newMessage = '';
-                    this.$nextTick(() => {
-                        this.scrollToBottom();
-                    });
+                    // Thay tin tạm bằng tin thật từ server
+                    const idx = this.messages.findIndex(m => m.id === tempId);
+                    if (idx !== -1) this.messages.splice(idx, 1, data.message);
                 } else {
-                    console.error('Server error:', data.message);
+                    // Xóa tin tạm nếu server báo lỗi
+                    this.messages = this.messages.filter(m => m.id !== tempId);
+                    this.newMessage = text;
                     alert(data.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.');
                 }
             } catch (e) {
-                console.error('Error sending message', e);
+                this.messages = this.messages.filter(m => m.id !== tempId);
+                this.newMessage = text;
                 alert('Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.');
             } finally {
                 this.loading = false;
@@ -398,7 +424,7 @@
                                     'max-w-[85%] rounded-xl px-3 py-2 shadow-sm text-sm break-words',
                                     message.sender_id == {{ auth()->id() }} ? 'rounded-tr-none' : 'rounded-tl-none'
                                 ]"
-                                :style="message.sender_id == {{ auth()->id() }} ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : 'background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border);'"
+                            :style="message.sender_id == {{ auth()->id() }} ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' + (message._pending ? 'opacity:0.7;' : '') : 'background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border);'"
                             >
                                 <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
                                 <div
@@ -420,14 +446,14 @@
                     type="text"
                     x-model="newMessage"
                     @keydown.enter.prevent="sendMessage()"
-                    :disabled="!conversationId || loading"
+                    :disabled="!conversationId"
                     placeholder="Nhập tin nhắn..."
                     class="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none transition-all disabled:opacity-60"
                     style="background: var(--c-background); border: 1px solid var(--c-border); color: var(--c-text);"
                 >
                 <button
                     @click="sendMessage()"
-                    :disabled="!conversationId || loading || !newMessage.trim()"
+                    :disabled="!conversationId || !newMessage.trim()"
                     class="p-2 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
                     style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;"
                 >
