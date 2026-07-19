@@ -215,6 +215,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Order Management
     Route::get('orders/recent', [OrderController::class, 'recent'])->name('orders.recent');
     Route::resource('orders', OrderController::class)->only(['index']);
+    // Tránh màn hình lỗi khi người dùng mở lại URL cập nhật trạng thái bằng GET.
+    // Cập nhật trạng thái vẫn chỉ được phép bằng PUT ở route phía dưới.
+    Route::get('orders/{id}/status', function () {
+        return redirect()->route('admin.orders.index')
+            ->with('error', 'Vui lòng cập nhật trạng thái đơn hàng bằng nút trên trang quản lý đơn hàng.');
+    })->name('orders.status.redirect');
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
     Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
