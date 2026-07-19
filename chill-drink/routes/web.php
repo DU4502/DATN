@@ -119,6 +119,7 @@ Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
 Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->group(function () {
     Route::get('/', [AdminChatController::class, 'index'])->name('index');
     Route::get('/conversations', [AdminChatController::class, 'conversationList'])->name('conversations');
+    Route::get('/unread-count', [AdminChatController::class, 'unreadCount'])->name('unread-count');
     Route::get('/{conversation}/messages', [AdminChatController::class, 'messages'])->name('messages');
     Route::get('/{conversation}', [AdminChatController::class, 'show'])->name('show');
     Route::post('/{conversation}/reply', [AdminChatController::class, 'reply'])->name('reply');
