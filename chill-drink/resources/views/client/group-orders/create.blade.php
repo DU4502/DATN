@@ -35,7 +35,17 @@
                                 <div class="group-create-option-head"><span><i class="bi bi-shop"></i></span><label class="group-form-label mb-0" for="groupBranch">Chi nhánh phục vụ</label></div>
                                 <div data-vue-group-branch
                                      data-selected="{{ $selectedBranchId }}"
-                                     data-branches="{{ $branches->map(fn ($branch) => ['id' => $branch->id, 'name' => $branch->name, 'address' => $branch->address])->values()->toJson() }}"></div>
+                                     data-branches="{{ $branches->map(fn ($branch) => ['id' => $branch->id, 'name' => $branch->name, 'address' => $branch->address])->values()->toJson() }}">
+                                    {{-- Fallback để vẫn chọn được chi nhánh nếu máy chưa build lại bundle Vue. --}}
+                                    <select name="branch_id" class="form-select group-branch-fallback" aria-label="Chọn chi nhánh">
+                                        <option value="">Chọn chi nhánh</option>
+                                        @foreach($branches as $branch)
+                                            <option value="{{ $branch->id }}" @selected((string) $selectedBranchId === (string) $branch->id)>
+                                                {{ $branch->name }}{{ $branch->address ? ' — '.$branch->address : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
                                 <div class="form-text mt-2">Nơi chuẩn bị món của cả nhóm.</div>
                             </div>
                         </div>
