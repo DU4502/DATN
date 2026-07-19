@@ -39,7 +39,7 @@
 
         async init() {
             this.groupChatAvailable = Boolean(document.querySelector('[data-vue-group-chat]'));
-            
+
             if (localStorage.getItem('support_chat_open') === 'true') {
                 this.isOpen = true;
             }
