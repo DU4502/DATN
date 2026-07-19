@@ -1,3 +1,7 @@
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+
 <div
     x-data="{
         isOpen: false,
@@ -6,17 +10,34 @@
         groupChatOpen: false,
         groupUnread: 0,
         conversationId: null,
+        currentUserId: {{ (int) (auth()->id() ?? 0) }},
         branchId: null,
         branchName: '',
+        nearestBranches: [],
+        loadingLocation: false,
+        locationState: 'prompt', // 'prompt' | 'granted' | 'denied'
+        needLogin: false,
+        selectingBranch: false,
+        selectedBranchNameTemp: '',
         messages: [],
         newMessage: '',
         loading: false,
         pollInterval: null,
         echoChannel: null,
         visibilityHandler: null,
+        _activating: false,
+
+        get hasUserSentMessage() {
+            return this.messages.some(m => Number(m.sender_id) === Number(this.currentUserId));
+        },
 
         async init() {
             this.groupChatAvailable = Boolean(document.querySelector('[data-vue-group-chat]'));
+            
+            if (localStorage.getItem('support_chat_open') === 'true') {
+                this.isOpen = true;
+            }
+
             window.addEventListener('group-chat-unread', (event) => {
                 this.groupUnread = Number(event.detail?.count || 0);
             });
@@ -24,6 +45,7 @@
                 this.isOpen = false;
                 this.menuOpen = false;
                 this.groupChatOpen = true;
+                localStorage.setItem('support_chat_open', 'false');
             });
             window.addEventListener('group-chat-closed', () => {
                 this.groupChatOpen = false;
@@ -31,6 +53,7 @@
             window.addEventListener('support-chat-close', () => {
                 this.isOpen = false;
                 this.menuOpen = false;
+                localStorage.setItem('support_chat_open', 'false');
             });
             this.visibilityHandler = () => {
                 if (document.hidden) {
@@ -42,12 +65,17 @@
             };
             document.addEventListener('visibilitychange', this.visibilityHandler);
             this.$watch('isOpen', (isOpen) => {
+                localStorage.setItem('support_chat_open', isOpen ? 'true' : 'false');
                 if (isOpen) this.activateSupportChat();
                 else {
                     this.stopPolling();
                     this.leaveEchoChannel();
                 }
             });
+
+            if (this.isOpen) {
+                this.activateSupportChat();
+            }
         },
 
         destroy() {
@@ -60,26 +88,25 @@
             this.menuOpen = false;
             if (this.isOpen) {
                 this.isOpen = false;
+                localStorage.setItem('support_chat_open', 'false');
                 return;
             }
             window.dispatchEvent(new CustomEvent('group-chat-close'));
-            this.isOpen = true;
-
-            // Luôn gọi getOrCreateConversation — backend tự xác định branch
-            if (!this.conversationId) {
-                await this.getOrCreateConversation();
-            }
+            this.isOpen = true; // $watch sẽ tự gọi activateSupportChat()
+            localStorage.setItem('support_chat_open', 'true');
         },
 
         async openGroupChat() {
             this.menuOpen = false;
             this.isOpen = false;
+            localStorage.setItem('support_chat_open', 'false');
             window.dispatchEvent(new CustomEvent('group-chat-toggle'));
         },
 
         async toggleUnifiedChat() {
             if (this.isOpen) {
                 this.isOpen = false;
+                localStorage.setItem('support_chat_open', 'false');
                 return;
             }
             if (this.groupChatOpen) {
@@ -95,22 +122,142 @@
         },
 
         async activateSupportChat() {
-            if (document.hidden || !this.isOpen) return;
-            if (!this.conversationId) await this.getOrCreateConversation();
-            if (!this.conversationId || !this.isOpen) return;
-            await this.fetchMessages();
-            this.subscribeEchoChannel();
-            this.startPolling(); // fallback polling mỗi 15s nếu Reverb không hoạt động
+            if (document.hidden || !this.isOpen || this._activating) return;
+            this._activating = true;
+            try {
+                // Luôn gọi server để lấy đúng conversation của user hiện tại
+                if (!this.needLogin) {
+                    await this.getOrCreateConversation();
+                }
+                if (!this.conversationId || !this.isOpen || this.needLogin) return;
+
+                if (this.branchId) {
+                    await this.fetchMessages();
+                    this.subscribeEchoChannel();
+                    this.startPolling();
+                } else {
+                    await this.requestLocationAndFetchBranches();
+                }
+            } finally {
+                this._activating = false;
+            }
+        },
+
+        async requestLocationAndFetchBranches() {
+            this.loadingLocation = true;
+            this.locationState = 'prompt';
+
+            if (!navigator.geolocation) {
+                this.locationState = 'denied';
+                await this.fetchNearestBranches();
+                this.loadingLocation = false;
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    this.locationState = 'granted';
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    await this.fetchNearestBranches(lat, lng);
+                    this.loadingLocation = false;
+                },
+                async (err) => {
+                    console.warn('Geolocation denied or error', err);
+                    this.locationState = 'denied';
+                    await this.fetchNearestBranches();
+                    this.loadingLocation = false;
+                },
+                { timeout: 7000, maximumAge: 60000 }
+            );
+        },
+
+        async fetchNearestBranches(lat = null, lng = null) {
+            try {
+                let url = '{{ route('chat.nearest-branches') }}';
+                const params = new URLSearchParams();
+                if (lat !== null) params.append('lat', lat);
+                if (lng !== null) params.append('lng', lng);
+
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+
+                const res = await fetch(url);
+                if (res.status === 401 || res.redirected) {
+                    this.needLogin = true;
+                    return;
+                }
+                const data = await res.json();
+                if (data.success) {
+                    this.nearestBranches = data.branches || [];
+                }
+            } catch (e) {
+                console.error('Error fetching nearest branches', e);
+            }
+        },
+
+        async selectBranch(branch) {
+            if (!this.conversationId || this.selectingBranch) return;
+            this.selectingBranch = true;
+            this.selectedBranchNameTemp = branch.name;
+
+            try {
+                const res = await fetch('{{ route('chat.select-branch') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        conversation_id: this.conversationId,
+                        branch_id: branch.id,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.branchId = data.branch_id;
+                    this.branchName = data.branch_name;
+                    if (data.message) {
+                        this.messages = [data.message];
+                    }
+                    await this.fetchMessages();
+                    this.subscribeEchoChannel();
+                    this.startPolling();
+                }
+            } catch (e) {
+                console.error('Error selecting branch', e);
+            } finally {
+                this.selectingBranch = false;
+                this.selectedBranchNameTemp = '';
+            }
+        },
+
+        changeBranch() {
+            if (this.hasUserSentMessage) {
+                alert('Bạn đã gửi tin nhắn trong cuộc trò chuyện này. Vui lòng tiếp tục hỗ trợ với ' + this.branchName + '.');
+                return;
+            }
+            this.branchId = null;
+            this.branchName = '';
+            this.messages = [];
+            this.stopPolling();
+            this.leaveEchoChannel();
+            this.requestLocationAndFetchBranches();
+        },
+
+        selectQuickSuggestion(text) {
+            this.newMessage = text;
+            this.sendMessage();
         },
 
         subscribeEchoChannel() {
             if (!window.Echo || !this.conversationId) return;
-            // Tránh subscribe trùng
             if (this.echoChannel) return;
 
             this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
                 .listen('.message-sent', (payload) => {
-                    // Bỏ qua tin nhắn do chính user này gửi (đã append ở sendMessage)
                     const alreadyExists = this.messages.some(m => m.id === payload.message_id);
                     if (alreadyExists) return;
 
@@ -142,8 +289,7 @@
 
         startPolling() {
             this.stopPolling();
-            if (!this.isOpen || document.hidden || !this.conversationId) return;
-            // Polling 15s chỉ là fallback khi Reverb không hoạt động
+            if (!this.isOpen || document.hidden || !this.conversationId || !this.branchId) return;
             this.pollInterval = window.setInterval(() => {
                 if (this.isOpen && !document.hidden) this.fetchMessages();
             }, 15000);
@@ -158,8 +304,13 @@
         async getOrCreateConversation() {
             try {
                 const res = await fetch('{{ route('chat.index') }}');
+                if (res.status === 401 || res.redirected) {
+                    this.needLogin = true;
+                    return;
+                }
                 const data = await res.json();
                 if (data.success) {
+                    this.needLogin = false;
                     this.conversationId = data.conversation_id;
                     this.branchId = data.branch_id;
                     this.branchName = data.branch_name || '';
@@ -169,21 +320,16 @@
             }
         },
 
-        async selectBranch(branch) {
-            // Không còn dùng - branch được tự động xác định từ server
-        },
-
         async fetchMessages() {
+            if (!this.conversationId) return;
             try {
                 const res = await fetch('{{ route('chat.messages') }}?conversation_id=' + this.conversationId);
                 const data = await res.json();
-                if (data.success) {
-                    if (data.messages.length !== this.messages.length) {
-                        this.messages = data.messages;
-                        this.$nextTick(() => {
-                            this.scrollToBottom();
-                        });
-                    }
+                if (data.success && Array.isArray(data.messages)) {
+                    this.messages = data.messages;
+                    this.$nextTick(() => {
+                        this.scrollToBottom();
+                    });
                 }
             } catch (e) {
                 console.error('Error fetching messages', e);
@@ -198,7 +344,7 @@
         },
 
         async sendMessage() {
-            if (!this.newMessage.trim() || !this.conversationId) return;
+            if (!this.newMessage.trim() || !this.conversationId || !this.branchId) return;
 
             this.loading = true;
             const formData = new FormData();
@@ -235,100 +381,256 @@
     }"
     class="fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;"
 >
-    <!-- Toggle button -->
+    <!-- Floating Toggle Button (Always visible at bottom right, z-index 1060 above modal window) -->
     <button
-        @click="toggleUnifiedChat()"
-        class="flex items-center justify-center w-16 h-16 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
-        style="position:relative;background: linear-gradient(135deg, var(--c-primary), var(--c-accent));"
+        type="button"
+        @click.prevent.stop="toggleUnifiedChat()"
+        class="flex items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-110"
+        style="position: relative; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; outline: none; z-index: 1060;"
     >
-        <svg x-show="!isOpen && !groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg x-show="!isOpen && !groupChatOpen" xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: 28px; color: white;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
-        <svg x-show="isOpen || groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg x-show="isOpen || groupChatOpen" xmlns="http://www.w3.org/2000/svg" style="width: 28px; height: 28px; color: white;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
-        <span x-show="groupUnread > 0" x-text="groupUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
+        <span x-show="groupUnread > 0" x-text="groupUnread" style="position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: #dc3545; color: #fff; border: 2px solid #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;"></span>
     </button>
 
-    <div x-show="menuOpen && groupChatAvailable" x-transition style="position:absolute;right:0;bottom:5rem;width:230px;padding:.55rem;border-radius:16px;background:#fff;border:1px solid #e1ebe8;box-shadow:0 18px 48px rgba(7,52,58,.2);display:grid;gap:.4rem;">
-        <button type="button" @click="openGroupChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#f1f0ff;color:#4f46c8;font-weight:800;text-align:left;">
-            <span style="width:36px;height:36px;border-radius:50%;background:#5b50d6;color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-people-fill"></i></span>
-            <span style="flex:1;">Trò chuyện trong đơn nhóm</span>
-            <span x-show="groupUnread > 0" x-text="groupUnread" class="badge rounded-pill bg-danger"></span>
+    <!-- Unified Menu Popup -->
+    <div
+        x-show="menuOpen"
+        x-cloak
+        @click.away="menuOpen = false"
+        class="absolute bottom-20 right-0 w-64 rounded-2xl shadow-2xl p-2 border space-y-1 transition-all duration-200"
+        style="background: #ffffff; border-color: var(--c-border);"
+    >
+        <button
+            type="button"
+            @click.prevent="openSupportChat()"
+            class="w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center justify-between group"
+            style="background: transparent;"
+            onmouseover="this.style.background='#f8fafc'"
+            onmouseout="this.style.background='transparent'"
+        >
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;">
+                    💬
+                </div>
+                <div>
+                    <div class="text-sm font-bold" style="color: var(--c-text);">Hỗ trợ khách hàng</div>
+                    <div class="text-xs opacity-70" style="color: var(--c-text);">Trò chuyện trực tiếp với CSKH</div>
+                </div>
+            </div>
         </button>
-        <button type="button" @click="openSupportChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#ecfaf6;color:#087c63;font-weight:800;text-align:left;">
-            <span style="width:36px;height:36px;border-radius:50%;background:var(--c-primary);color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-headset"></i></span>
-            <span>Hỗ trợ khách hàng</span>
+
+        <button
+            type="button"
+            x-show="groupChatAvailable"
+            @click.prevent="openGroupChat()"
+            class="w-full text-left px-3 py-2.5 rounded-xl transition-all flex items-center justify-between group"
+            style="background: transparent;"
+            onmouseover="this.style.background='#f8fafc'"
+            onmouseout="this.style.background='transparent'"
+        >
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: #ec4899; color: white;">
+                    👥
+                </div>
+                <div>
+                    <div class="text-sm font-bold flex items-center gap-1.5" style="color: var(--c-text);">
+                        <span>Chat Nhóm Chung</span>
+                        <span x-show="groupUnread > 0" class="w-2 h-2 rounded-full" style="background: #dc3545;"></span>
+                    </div>
+                    <div class="text-xs opacity-70" style="color: var(--c-text);">Trò chuyện cùng cộng đồng</div>
+                </div>
+            </div>
+            <span x-show="groupUnread > 0" x-text="groupUnread" class="px-2 py-0.5 rounded-full text-xs font-bold text-white" style="background: #dc3545;"></span>
         </button>
     </div>
 
-    <!-- Chat window -->
+    <!-- Main Customer Support Chat Window Popup -->
     <div
         x-show="isOpen"
-        x-transition:enter="transition ease-out duration-300"
-        x-transition:enter-start="opacity-0 translate-y-4"
-        x-transition:enter-end="opacity-100 translate-y-0"
-        x-transition:leave="transition ease-in duration-200"
-        x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 translate-y-4"
-        class="absolute bottom-20 right-0 w-80 max-w-[85vw] rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="position: absolute; right: 0; bottom: 5rem; width: 22rem; max-width: calc(100vw - 2rem); height: min(480px, calc(100vh - 7rem)); max-height: calc(100vh - 7rem); display: flex; flex-direction: column; overflow: hidden; background: var(--c-surface);"
+        x-cloak
+        class="fixed absolute bottom-20 right-0 w-[calc(100vw-2rem)] sm:w-[380px] h-[540px] max-h-[80vh] sm:max-h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300"
+        style="background: #ffffff; border-color: var(--c-border); z-index: 1040;"
     >
         <!-- Header -->
-        <div class="p-3 border-b flex-shrink-0" style="flex: 0 0 auto; background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); border-color: var(--c-border);">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h3 class="text-white font-semibold text-sm mb-0">Hỗ trợ khách hàng</h3>
-                        <p x-show="branchName" class="text-white/80 text-xs m-0" x-text="'Chi nhánh: ' + branchName" style="font-size: 11px; color: rgba(255,255,255,0.85);"></p>
-                    </div>
+        <div class="p-3.5 flex items-center justify-between flex-shrink-0 shadow-sm" style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: rgba(255,255,255,0.2);">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
                 </div>
-                <button @click="isOpen = false" class="text-white/80 hover:text-white" style="background: none; border: 0; color: white;">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+                <div>
+                    <h4 class="font-bold text-sm leading-tight mb-0">Hỗ trợ khách hàng</h4>
+                    <p class="text-xs opacity-90 mb-0 flex items-center gap-1">
+                        <span x-text="branchId ? ('Đang hỗ trợ bởi: ' + branchName) : (loadingLocation ? 'Đang xác định vị trí...' : 'Vui lòng chọn chi nhánh bên dưới')"></span>
+                        <template x-if="branchId && !hasUserSentMessage">
+                            <button type="button" @click.prevent="changeBranch()" class="ml-1 underline text-[11px] hover:opacity-100 opacity-90 font-semibold" style="color: #fef08a;">[Đổi chi nhánh]</button>
+                        </template>
+                    </p>
+                </div>
             </div>
+            <button type="button" @click.prevent="isOpen = false; localStorage.setItem('support_chat_open', 'false');" class="p-1 rounded-lg hover:bg-white/10 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
-        <!-- Messages Area -->
+        <!-- Messages & Branch Selector Area (Solid Pure White Background) -->
         <div
             x-ref="messageList"
             class="flex-1 p-3 overflow-y-auto space-y-3"
-            style="min-height: 0; background: var(--c-background);"
+            style="min-height: 0; background: #ffffff !important;"
         >
-            <!-- Loading state khi đang kết nối -->
-            <template x-if="!conversationId">
-                <div class="flex flex-col items-center justify-center h-full gap-3 py-8">
-                    <div class="spinner-border spinner-border-sm" role="status" style="color: var(--c-primary); width: 28px; height: 28px;"></div>
-                    <p class="text-xs opacity-60 mb-0" style="color: var(--c-text);">Đang kết nối tới nhân viên hỗ trợ...</p>
+            <!-- Case: Unauthenticated User Prompt -->
+            <template x-if="needLogin">
+                <div class="flex flex-col items-center justify-center h-full gap-3 py-8 text-center px-4">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style="background: #fef3c7; color: #d97706;">
+                        🔐
+                    </div>
+                    <div class="font-bold text-sm text-slate-800">Vui lòng đăng nhập</div>
+                    <p class="text-xs text-slate-500 mb-2">Đăng nhập tài khoản để kết nối trực tiếp với nhân viên hỗ trợ chi nhánh.</p>
+                    <a
+                        href="{{ route('login') }}"
+                        class="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-md active:scale-95"
+                        style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); text-decoration: none;"
+                    >
+                        Đăng nhập ngay
+                    </a>
                 </div>
             </template>
 
-            <!-- Messages stream -->
-            <template x-if="conversationId">
-                <div>
+            <!-- Loading state when fetching conversation -->
+            <template x-if="!conversationId && !needLogin">
+                <div class="flex flex-col items-center justify-center h-full gap-3 py-8">
+                    <div class="spinner-border spinner-border-sm text-emerald-600" role="status" style="width: 28px; height: 28px;"></div>
+                    <p class="text-xs text-slate-500 mb-0">Đang kết nối...</p>
+                </div>
+            </template>
+
+            <!-- STEP 1 & 2: Sequential Location State Machine & Branch Selection Cards -->
+            <template x-if="conversationId && !branchId && !needLogin">
+                <div class="space-y-3">
+                    <!-- Instant feedback toast when connecting to selected branch -->
+                    <div x-show="selectingBranch" x-cloak class="p-3 rounded-xl shadow-md text-center border animate-pulse" style="background: #ecfaf6; color: #059669; border-color: #a7f3d0;">
+                        <div class="font-bold text-xs">✔ Đã chọn <span x-text="selectedBranchNameTemp"></span></div>
+                        <div class="text-[11px] mt-0.5">Đang kết nối với nhân viên hỗ trợ...</div>
+                    </div>
+
+                    <!-- STATE 1: Waiting for Browser Geolocation Permission Prompt -->
+                    <div x-show="loadingLocation && locationState === 'prompt'" x-cloak class="p-4 rounded-2xl border text-center space-y-3" style="background: #f8fafc; border-color: #e2e8f0;">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center mx-auto text-xl shadow-sm" style="background: #ecfaf6; color: #059669;">
+                            📍
+                        </div>
+                        <div class="font-bold text-xs text-slate-800">Đang chờ bạn cho phép vị trí...</div>
+                        <p class="text-[11px] text-slate-500 mb-0 leading-relaxed">
+                            Bấm <b>[Cho phép]</b> trên thông báo trình duyệt ở góc trên màn hình để tìm 03 chi nhánh gần bạn nhất.
+                        </p>
+                        <div class="spinner-border spinner-border-sm text-emerald-600 mx-auto" role="status" style="width: 18px; height: 18px;"></div>
+                    </div>
+
+                    <!-- STATE 2: Location Granted -> Fetching Nearest Branches Loading State -->
+                    <div x-show="loadingLocation && locationState === 'granted'" x-cloak class="p-4 rounded-2xl border text-center space-y-2" style="background: #f8fafc; border-color: #e2e8f0;">
+                        <div class="spinner-border spinner-border-sm text-emerald-600 mx-auto" role="status" style="width: 22px; height: 22px;"></div>
+                        <div class="text-xs font-semibold text-slate-700">Đang tìm 03 chi nhánh gần bạn nhất...</div>
+                    </div>
+
+                    <!-- STATE 3a: Location Denied - show message, no branch list -->
+                    <template x-if="!loadingLocation && locationState === 'denied'">
+                        <div class="flex flex-col items-center justify-center h-full gap-3 py-10 px-4 text-center">
+                            <div class="w-14 h-14 rounded-full flex items-center justify-center text-2xl" style="background: #fff7ed; color: #ea580c;">
+                                📍
+                            </div>
+                            <div class="font-bold text-sm text-slate-800">Không thể xác định vị trí</div>
+                            <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+                                Vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt rồi thử lại để chúng tôi tìm chi nhánh gần bạn nhất.
+                            </p>
+                            <button
+                                type="button"
+                                @click.prevent="requestLocationAndFetchBranches()"
+                                class="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-sm active:scale-95"
+                                style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent));"
+                            >
+                                🔄 Thử lại
+                            </button>
+                        </div>
+                    </template>
+
+                    <!-- STATE 3b: Location Granted -> Branch cards -->
+                    <template x-if="!loadingLocation && locationState !== 'denied'">
+                        <div class="space-y-3">
+                            <!-- Welcome Card -->
+                            <div class="p-3.5 rounded-2xl shadow-sm border space-y-1" style="background: #f8fafc; border-color: #e2e8f0;">
+                                <div class="font-bold text-emerald-700 text-sm">Xin chào! 👋</div>
+                                <p class="text-xs text-slate-600 mb-0 leading-relaxed">
+                                    Chúng tôi đã tìm thấy 03 chi nhánh gần bạn nhất. Vui lòng chọn một chi nhánh để bắt đầu trò chuyện.
+                                </p>
+                            </div>
+
+                            <!-- 3 Branch Selection Cards -->
+                            <div class="space-y-2 pt-1">
+                                <div class="text-xs font-bold text-slate-700 px-1">
+                                    Chi nhánh gần bạn:
+                                </div>
+
+                                <template x-for="branch in nearestBranches" :key="branch.id">
+                                    <div class="p-3 rounded-2xl shadow-sm border transition-all hover:border-emerald-500" style="background: #ffffff; border-color: #e2e8f0;">
+                                        <div class="flex items-start justify-between gap-2 mb-1">
+                                            <div class="font-bold text-sm text-slate-900" x-text="'📍 ' + branch.name"></div>
+                                            <span
+                                                class="px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+                                                style="background: #ecfaf6; color: #059669; border: 1px solid #a7f3d0;"
+                                                x-text="branch.distance_text"
+                                            ></span>
+                                        </div>
+                                        <div class="text-xs text-slate-500 mb-2 leading-tight" x-text="branch.address"></div>
+
+                                        <button
+                                            type="button"
+                                            @click.prevent="selectBranch(branch)"
+                                            :disabled="selectingBranch"
+                                            class="w-full py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95"
+                                            style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent));"
+                                        >
+                                            <span x-show="!selectingBranch || selectedBranchNameTemp !== branch.name">Kết nối ngay</span>
+                                            <span x-show="selectingBranch && selectedBranchNameTemp === branch.name" class="spinner-border spinner-border-sm" role="status"></span>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- STEP 3: Connected Chat Message Stream -->
+            <template x-if="conversationId && branchId && !needLogin">
+                <div class="space-y-3">
+                    <!-- Message list -->
                     <template x-for="message in messages" :key="message.id">
                         <div
                             :class="[
                                 'flex w-full mb-2',
-                                message.sender_id == {{ auth()->id() }} ? 'justify-end' : 'justify-start'
+                                message.sender_id == currentUserId ? 'justify-end' : 'justify-start'
                             ]"
                         >
                             <div
                                 :class="[
-                                    'max-w-[85%] rounded-xl px-3 py-2 shadow-sm text-sm break-words',
-                                    message.sender_id == {{ auth()->id() }} ? 'rounded-tr-none' : 'rounded-tl-none'
+                                    'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm break-words',
+                                    message.sender_id == currentUserId ? 'rounded-tr-none' : 'rounded-tl-none'
                                 ]"
-                                :style="message.sender_id == {{ auth()->id() }} ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : 'background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-border);'"
+                                :style="message.sender_id == currentUserId ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : (message.content && message.content.includes('🤖 Hệ thống') ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;')"
                             >
                                 <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
                                 <div
-                                    x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
-                                    class="text-xs opacity-70"
-                                    :title="new Date(message.created_at).toLocaleString('vi-VN')"
+                                    x-text="message.created_at ? new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''"
+                                    class="text-[11px] opacity-70"
+                                    :title="message.created_at ? new Date(message.created_at).toLocaleString('vi-VN') : ''"
                                 ></div>
                             </div>
                         </div>
@@ -337,29 +639,32 @@
             </template>
         </div>
 
-        <!-- Input -->
-        <div class="p-3 border-t flex-shrink-0" style="flex: 0 0 auto; background: var(--c-surface); border-color: var(--c-border);">
-            <div class="flex items-center gap-2">
-                <input
-                    type="text"
-                    x-model="newMessage"
-                    @keydown.enter.prevent="sendMessage()"
-                    :disabled="!conversationId || loading"
-                    placeholder="Nhập tin nhắn..."
-                    class="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none transition-all disabled:opacity-60"
-                    style="background: var(--c-background); border: 1px solid var(--c-border); color: var(--c-text);"
-                >
-                <button
-                    @click="sendMessage()"
-                    :disabled="!conversationId || loading || !newMessage.trim()"
-                    class="p-2 rounded-lg transition-all hover:opacity-80 disabled:opacity-50"
-                    style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                    </svg>
-                </button>
+        <!-- Input Area (Only visible AFTER branch is selected & authenticated) -->
+        <template x-if="conversationId && branchId && !needLogin">
+            <div class="p-3 border-t flex-shrink-0" style="flex: 0 0 auto; background: #ffffff; border-color: #e2e8f0;">
+                <div class="flex items-center gap-2">
+                    <input
+                        type="text"
+                        x-model="newMessage"
+                        @keydown.enter.prevent="sendMessage()"
+                        :disabled="loading"
+                        placeholder="Nhập câu hỏi hoặc yêu cầu của bạn..."
+                        class="flex-1 px-3 py-2 rounded-xl text-sm focus:outline-none transition-all disabled:opacity-60"
+                        style="background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a;"
+                    >
+                    <button
+                        type="button"
+                        @click.prevent="sendMessage()"
+                        :disabled="loading || !newMessage.trim()"
+                        class="p-2 rounded-xl transition-all hover:opacity-90 disabled:opacity-50"
+                        style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </div>
             </div>
-        </div>
+        </template>
     </div>
 </div>
