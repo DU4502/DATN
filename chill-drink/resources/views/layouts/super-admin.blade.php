@@ -482,9 +482,8 @@
             <nav class="root-nav">
                 <p class="root-nav-label">Điều hành</p>
                 <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
-                <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
                 <a href="{{ route('admin.super-admin') . '#branch-ranking' }}" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh <span class="root-nav-badge">{{ \App\Models\Branch::count() }}</span></a>
-                <a href="{{ route('admin.super-admin') . '#permissions' }}" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
+                <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
                 <a href="{{ route('admin.chat.index') }}" class="root-nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}">
                     <i class="bi bi-chat-dots"></i> Chat khách hàng
                     @php
@@ -507,7 +506,6 @@
                 <a href="{{ route('admin.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
 
                 <p class="root-nav-label">Hệ thống</p>
-                <a href="{{ route('admin.super-admin') }}#security" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
                 <a href="{{ route('admin.super-admin') }}#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
                 <a href="{{ route('admin.super-admin') }}#audit" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
             </nav>
