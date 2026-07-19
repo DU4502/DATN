@@ -46,9 +46,7 @@
                     @php
                         $unreadChatMessages = auth()->user()?->unreadConversationMessagesCount() ?? 0;
                     @endphp
-                    @if($unreadChatMessages > 0)
-                        <span class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
-                    @endif
+                    <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
             </nav>
 
