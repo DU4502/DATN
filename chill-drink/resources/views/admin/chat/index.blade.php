@@ -282,11 +282,20 @@
                         <p class="text-center text-secondary small py-3 mb-0">Chưa có tin nhắn nào.</p>
                     </template>
                     <template x-for="msg in chatBox.messages" :key="msg.id">
-                        <div class="chat-msg" :class="msg.isCustomer ? 'from-customer' : 'from-admin'">
-                            <div class="chat-msg-bubble">
-                                <div x-text="msg.content" style="white-space:pre-line;"></div>
-                                <div class="chat-msg-time" x-text="msg.time"></div>
-                            </div>
+                        <div class="chat-msg" :class="msg.isSystem ? 'justify-content-center my-2' : (msg.isCustomer ? 'from-customer' : 'from-admin')">
+                            <template x-if="msg.isSystem">
+                                <div style="max-width: 90%; background: #edf9f5; border: 1px solid #c3ebd9; border-radius: 10px; padding: 0.5rem 0.75rem; color: #0d684d; font-size: 0.78rem; text-align: center;">
+                                    <div style="font-weight: 700; color: #00a870; margin-bottom: 0.2rem;">🤖 Hệ thống</div>
+                                    <div x-text="msg.content.replace('🤖 Hệ thống\n', '').replace('🤖 Hệ thống', '')" style="white-space:pre-line;"></div>
+                                    <div class="chat-msg-time text-center mt-1" x-text="msg.time"></div>
+                                </div>
+                            </template>
+                            <template x-if="!msg.isSystem">
+                                <div class="chat-msg-bubble">
+                                    <div x-text="msg.content" style="white-space:pre-line;"></div>
+                                    <div class="chat-msg-time" x-text="msg.time"></div>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
@@ -363,7 +372,7 @@ function chatManager() {
             if (this.listPollTimer) return;
             this.listPollTimer = setInterval(() => {
                 if (!document.hidden) this.fetchList();
-            }, 4000);
+            }, 1500);
         },
 
         stopListPolling() {
@@ -450,6 +459,7 @@ function chatManager() {
                 const mapped = data.messages.map(msg => ({
                     id:         msg.id,
                     content:    msg.content ?? '',
+                    isSystem:   msg.content && msg.content.startsWith('🤖 Hệ thống'),
                     isCustomer: msg.sender_id === c.userId,
                     time:       new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                 }));
@@ -472,35 +482,38 @@ function chatManager() {
 
         /* ─── WebSocket ─── */
         subscribeEcho(conversationId, userId) {
-            if (!window.Echo || this.echoChannels[conversationId]) return;
+            if (window.Echo && !this.echoChannels[conversationId]) {
+                this.echoChannels[conversationId] = window.Echo
+                    .private('conversation.' + conversationId)
+                    .listen('.message-sent', (payload) => {
+                        const chat = this.openChats.find(c => c.id === conversationId);
+                        if (!chat) return;
+                        if (chat.messages.some(m => m.id === payload.message_id)) return;
 
-            this.echoChannels[conversationId] = window.Echo
-                .private('conversation.' + conversationId)
-                .listen('.message-sent', (payload) => {
-                    const chat = this.openChats.find(c => c.id === conversationId);
-                    if (!chat) return;
-                    if (chat.messages.some(m => m.id === payload.message_id)) return;
+                        const isSys = payload.content && payload.content.startsWith('🤖 Hệ thống');
+                        chat.messages.push({
+                            id:         payload.message_id,
+                            content:    payload.content ?? '',
+                            isSystem:   isSys,
+                            isCustomer: payload.sender_id === chat.userId,
+                            time:       new Date(payload.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                        });
 
-                    chat.messages.push({
-                        id:         payload.message_id,
-                        content:    payload.content ?? '',
-                        isCustomer: payload.sender_id === chat.userId,
-                        time:       new Date(payload.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                        if (!chat.minimized) this.$nextTick(() => this.scrollToBottom(conversationId));
+                        if (chat.minimized && payload.sender_id === chat.userId) {
+                            chat.unreadCount = (chat.unreadCount || 0) + 1;
+                        }
+                        this.fetchList();
                     });
+            }
 
-                    if (!chat.minimized) this.$nextTick(() => this.scrollToBottom(conversationId));
-                    // Tăng unreadCount nếu chat đang thu nhỏ và tin từ user
-                    if (chat.minimized && payload.sender_id === chat.userId) {
-                        chat.unreadCount = (chat.unreadCount || 0) + 1;
-                    }
-                    // Refresh list để cập nhật unread badge
-                    this.fetchList();                });
-
-            // Fallback polling mỗi 3 giây cho trường hợp WebSocket không hoạt động
+            // Fallback polling mỗi 1.2s để đảm bảo đồng bộ tức thì
             if (!this.chatPollTimers) this.chatPollTimers = {};
-            this.chatPollTimers[conversationId] = setInterval(() => {
-                if (!document.hidden) this.pollMessages(conversationId);
-            }, 3000);
+            if (!this.chatPollTimers[conversationId]) {
+                this.chatPollTimers[conversationId] = setInterval(() => {
+                    if (!document.hidden) this.pollMessages(conversationId);
+                }, 1200);
+            }
         },
 
         /* ─── Poll messages (fallback khi WebSocket không hoạt động) ─── */
@@ -519,15 +532,16 @@ function chatManager() {
                 const c = this.openChats.find(c => c.id === conversationId);
                 if (!c) return;
 
-                // Chỉ thêm tin nhắn mới, không render lại toàn bộ
                 const existingIds = new Set(c.messages.map(m => m.id));
                 const newMessages = data.messages.filter(msg => !existingIds.has(msg.id));
 
                 if (newMessages.length > 0) {
                     newMessages.forEach(msg => {
+                        const isSys = msg.content && msg.content.startsWith('🤖 Hệ thống');
                         c.messages.push({
                             id:         msg.id,
                             content:    msg.content ?? '',
+                            isSystem:   isSys,
                             isCustomer: msg.sender_id === c.userId,
                             time:       new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                         });
