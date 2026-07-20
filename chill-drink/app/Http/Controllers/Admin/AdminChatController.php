@@ -139,6 +139,14 @@ class AdminChatController extends Controller
 
         $conversation->update(['status' => 'closed']);
 
+        try {
+            broadcast(new \App\Events\ConversationClosed($conversation, 'cskh'))->toOthers();
+        } catch (\Throwable) {}
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return back()->with('success', 'Cuộc trò chuyện đã được đóng!');
     }
 
