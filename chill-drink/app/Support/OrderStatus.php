@@ -473,4 +473,23 @@ final class OrderStatus
     {
         return 'in:'.implode(',', array_keys(self::labels()));
     }
+
+    /**
+     * Trả về map [status => badge_color] dùng cho JS phía client.
+     */
+    public static function badgeColorMap(): array
+    {
+        return [
+            self::PENDING              => 'warning',
+            self::CONFIRMED            => 'info',
+            self::PREPARING            => 'primary',
+            self::READY_FOR_DELIVERY   => 'cyan',
+            self::READY_FOR_PICKUP     => 'cyan',
+            self::SHIPPER_PICKED_UP    => 'indigo',
+            self::DELIVERING           => 'purple',
+            self::DELIVERED            => 'teal',
+            self::COMPLETED            => 'success',
+            self::CANCELLED            => 'danger',
+        ];
+    }
 }

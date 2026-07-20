@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\OrderLookupController;
 use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
@@ -41,6 +42,11 @@ Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBran
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [ClientProductController::class, 'show'])->name('products.show');
+
+// Order Lookup
+Route::get('/tra-cuu-don-hang', [OrderLookupController::class, 'index'])->name('order-lookup.index');
+Route::post('/tra-cuu-don-hang', [OrderLookupController::class, 'search'])->name('order-lookup.search');
+Route::get('/tra-cuu-don-hang/{order}/status', [OrderLookupController::class, 'status'])->name('order-lookup.status');
 
 // Cart
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');

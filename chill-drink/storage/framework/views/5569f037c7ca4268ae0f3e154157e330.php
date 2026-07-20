@@ -1259,6 +1259,9 @@
                     <li class="nav-item">
                         <a href="<?php echo e(route('products.index')); ?>" class="nav-link <?php echo e(request()->routeIs('products.*') ? 'active' : ''); ?>">Sản Phẩm</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="<?php echo e(route('order-lookup.index')); ?>" class="nav-link <?php echo e(request()->routeIs('order-lookup.*') ? 'active' : ''); ?>">Tra Cứu Đơn Hàng</a>
+                    </li>
                 </ul>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
