@@ -258,7 +258,7 @@ class QuickOrderFeaturesTest extends TestCase
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
         $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
-        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 10.7769, 'longitude' => 106.7009, 'status' => true]);
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
@@ -271,6 +271,9 @@ class QuickOrderFeaturesTest extends TestCase
             'fulfillment_type' => 'delivery',
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
+            'shipping_phone_ui' => '0912345678',
+            'latitude' => 10.7769,
+            'longitude' => 106.7009,
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
 
@@ -288,7 +291,7 @@ class QuickOrderFeaturesTest extends TestCase
     {
         $user = User::factory()->create();
         $product = Product::factory()->create(['status' => true, 'stock' => 5, 'price' => 40000]);
-        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 10.7769, 'longitude' => 106.7009, 'status' => true]);
         $cart = [
             'scheduled-cart-item' => [
                 'product_id' => $product->id,
@@ -313,6 +316,9 @@ class QuickOrderFeaturesTest extends TestCase
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ',
             'shipping_area_ui' => 'Quận 1',
+            'shipping_phone_ui' => '0912345678',
+            'latitude' => 10.7769,
+            'longitude' => 106.7009,
             'delivery_type' => 'scheduled',
             'scheduled_delivery_time' => now()->addDay()->setTime(10, 0)->format('Y-m-d H:i:s'),
         ])->assertSessionHasErrors('payment_method');
@@ -387,7 +393,13 @@ class QuickOrderFeaturesTest extends TestCase
     {
         return Branch::firstOrCreate(
             ['code' => 'GROUP-TEST'],
-            ['name' => 'Chi nhánh kiểm thử', 'address' => '123 Đường kiểm thử', 'status' => true]
+            [
+                'name' => 'Chi nhánh kiểm thử',
+                'address' => '123 Đường kiểm thử',
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
+                'status' => true,
+            ]
         );
     }
 }

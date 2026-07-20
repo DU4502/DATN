@@ -17,6 +17,7 @@ use App\Models\Size;
 use App\Models\Voucher;
 use App\Support\ShippingFee;
 use App\Support\AddressLearning;
+use App\Support\OrderDistancePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Support\ScheduledDelivery;
 use Throwable;
 
@@ -93,6 +95,7 @@ class CheckoutController extends Controller
                         'hasCoordinates' => $hasCoordinates,
                     ];
                 })
+                ->filter(fn (array $item) => $item['distance'] !== null && OrderDistancePolicy::isInsideServiceRadius((float) $item['distance']))
                 ->sort(function (array $a, array $b) {
                     if ($a['hasCoordinates'] && ! $b['hasCoordinates']) {
                         return -1;
@@ -234,15 +237,14 @@ class CheckoutController extends Controller
                 },
             ],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => ['nullable', 'string', 'max:255'],
+            'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
             'shipping_phone_ui' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_if:fulfillment_type,delivery'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_if:fulfillment_type,delivery'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'branch_id' => [
-                'nullable',
-                'required_if:fulfillment_type,pickup',
+                'required',
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
             ],
@@ -269,9 +271,18 @@ class CheckoutController extends Controller
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
             'fulfillment_type.required' => 'Vui lòng chọn phương thức nhận hàng.',
             'fulfillment_type.in' => 'Phương thức nhận hàng không hợp lệ.',
-            'branch_id.required_if' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
+            'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
+            'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
         ]);
+
+        $serviceDistance = $this->validateOrderServiceRadius(
+            $request->input('fulfillment_type'),
+            $request->input('branch_id'),
+            $request->input('latitude'),
+            $request->input('longitude')
+        );
 
         $fullCart = session()->get('cart', []);
         $selectedKeys = session()->get('checkout_cart_keys');
@@ -315,7 +326,7 @@ class CheckoutController extends Controller
                 $branch = Branch::find($branchId);
 
                 if ($lat !== null && $lng !== null && $branch && $branch->latitude !== null && $branch->longitude !== null) {
-                    $distance = $branch->distanceTo((float) $lat, (float) $lng);
+                    $distance = $serviceDistance ?? $branch->distanceTo((float) $lat, (float) $lng);
                     $shippingQuote = ShippingFee::calculate($distance, $request->shipping_method_ui);
                     $shippingFee = $shippingQuote['total_fee'];
                 } else {
@@ -565,6 +576,31 @@ class CheckoutController extends Controller
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    protected function validateOrderServiceRadius(mixed $fulfillmentType, mixed $branchId, mixed $latitude, mixed $longitude): ?float
+    {
+        if ($fulfillmentType === 'pickup') {
+            return null;
+        }
+
+        $branch = Branch::availableForLocation()->find($branchId);
+
+        if (! $branch) {
+            throw ValidationException::withMessages([
+                'branch_id' => 'Chi nhánh được chọn chưa có tọa độ để kiểm tra khoảng cách giao hàng.',
+            ]);
+        }
+
+        $distance = OrderDistancePolicy::distanceFromBranch($branch, $latitude, $longitude);
+
+        if ($distance === null || ! OrderDistancePolicy::isInsideServiceRadius($distance)) {
+            throw ValidationException::withMessages([
+                'branch_id' => OrderDistancePolicy::message(),
+            ]);
+        }
+
+        return $distance;
     }
 
     public function updatePrimaryAddress(Request $request): JsonResponse
