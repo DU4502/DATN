@@ -101,11 +101,6 @@
                             @endforeach
                         </div>
 
-                        <div class="qr-hint mb-4">
-                            <strong><i class="bi bi-qr-code me-1"></i>VNPay / Quét QR</strong>
-                            <p class="small text-secondary mb-0 mt-2">Sau khi xác nhận, bạn sẽ được chuyển đến cổng VNPay để quét mã QR hoặc thanh toán qua ngân hàng. Hệ thống tự cập nhật khi thanh toán thành công.</p>
-                        </div>
-
                         @error('payment_method')
                             <div class="alert alert-danger">{{ $message }}</div>
                         @enderror

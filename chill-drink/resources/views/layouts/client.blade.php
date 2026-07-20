@@ -1254,6 +1254,9 @@
                     <li class="nav-item">
                         <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('order-lookup.index') }}" class="nav-link {{ request()->routeIs('order-lookup.*') ? 'active' : '' }}">Tra Cứu Đơn Hàng</a>
+                    </li>
                 </ul>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
