@@ -63,6 +63,7 @@
                     this.stopUnreadPolling();
                     this.activateSupportChat();
                 } else {
+                    this.showEndSessionModal = false;
                     this.stopPolling();
                     this.startUnreadPolling();
                 }
@@ -453,31 +454,38 @@
             }
         },
     }"
-    class="fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;"
->
+    class="fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;">
     <!-- Custom Scrollbar Styles for Chatbox -->
     <style>
-        .chatbox-body-scroll {
-            flex: 1 1 0% !important;
-            min-height: 0 !important;
-            height: 100% !important;
-            max-height: 100% !important;
-            overflow-y: auto !important;
-            overscroll-behavior: contain !important;
-            -webkit-overflow-scrolling: touch !important;
+        .chatbox-window {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            overflow: hidden;
         }
-        .chatbox-body-scroll::-webkit-scrollbar {
+
+        .chatbox-scroll {
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chatbox-scroll::-webkit-scrollbar {
             width: 6px;
         }
-        .chatbox-body-scroll::-webkit-scrollbar-track {
+
+        .chatbox-scroll::-webkit-scrollbar-track {
             background: #f1f5f9;
             border-radius: 4px;
         }
-        .chatbox-body-scroll::-webkit-scrollbar-thumb {
+
+        .chatbox-scroll::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
         }
-        .chatbox-body-scroll::-webkit-scrollbar-thumb:hover {
+
+        .chatbox-scroll::-webkit-scrollbar-thumb:hover {
             background: #00a870;
         }
     </style>
@@ -486,8 +494,7 @@
     <button
         @click="toggleUnifiedChat()"
         class="flex items-center justify-center w-16 h-16 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
-        style="position:relative; background: #00a870;"
-    >
+        style="position:relative; background: #00a870;">
         <svg x-show="!isOpen && !groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
@@ -521,10 +528,10 @@
         x-transition:leave="transition ease-in duration-200"
         x-transition:leave-start="opacity-100 translate-y-0"
         x-transition:leave-end="opacity-0 translate-y-4"
-        style="position: absolute; right: 0; bottom: 5rem; width: 23rem; max-width: calc(100vw - 2rem); height: min(520px, calc(100vh - 7rem)); max-height: calc(100vh - 7rem); display: flex; flex-direction: column; overflow: hidden; background: #ffffff; border-radius: 1.25rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18);"
-    >
-        <!-- Header Green (Giống ảnh 1 & 3) -->
-        <div style="padding: 0.85rem 1rem; background: #00a870; color: white; flex: 0 0 auto;">
+        class="chatbox-window"
+        style="position: absolute; right: 0; bottom: 5rem; width: 23rem; max-width: calc(100vw - 2rem); height: min(520px, calc(100vh - 7rem)); max-height: calc(100vh - 7rem); background: #ffffff; border-radius: 1.25rem; box-shadow: 0 20px 40px rgba(0,0,0,0.18);">
+        <!-- Header -->
+        <div style="padding: 0.85rem 1rem; background: #00a870; color: white;">
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 0.65rem;">
                     <div style="width: 2.25rem; height: 2.25rem; border-radius: 50%; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center;">
@@ -539,8 +546,7 @@
                             <button
                                 @click="openEndSessionModal()"
                                 type="button"
-                                style="background: none; border: none; padding: 0; margin-left: 0.4rem; color: #ffffff; text-decoration: underline; font-weight: 700; cursor: pointer;"
-                            >[Đổi chi nhánh]</button>
+                                style="background: none; border: none; padding: 0; margin-left: 0.4rem; color: #ffffff; text-decoration: underline; font-weight: 700; cursor: pointer;">[Đổi chi nhánh]</button>
                         </p>
                         <p x-show="!branchId" style="margin: 0; font-size: 0.72rem; color: rgba(255,255,255,0.85);">
                             Vui lòng chọn chi nhánh bên dưới
@@ -558,9 +564,8 @@
         <!-- STATE 1: Màn hình chọn Chi nhánh (Khi chưa có branchId) -->
         <div
             x-show="!branchId"
-            class="chatbox-body-scroll"
-            style="padding: 0.9rem; background: #f8faf9; display: flex; flex-direction: column; gap: 0.8rem;"
-        >
+            class="chatbox-scroll"
+            style="padding: 0.9rem; background: #f8faf9; display: flex; flex-direction: column; gap: 0.8rem;">
             <!-- Card banner xin chào -->
             <div style="background: #ffffff; border: 1px solid #e2ece9; border-radius: 1rem; padding: 1rem; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
                 <h4 style="margin: 0 0 0.4rem 0; font-size: 0.95rem; font-weight: 700; color: #0d684d;">Xin chào! 👋</h4>
@@ -578,8 +583,7 @@
                     <button
                         @click="requestGpsLocation()"
                         type="button"
-                        style="background: #00a870; color: white; border: none; border-radius: 0.6rem; padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;"
-                    >
+                        style="background: #00a870; color: white; border: none; border-radius: 0.6rem; padding: 0.5rem 1rem; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
                         Thử lại lấy vị trí GPS
                     </button>
                 </div>
@@ -597,7 +601,7 @@
             <template x-if="branches && branches.length > 0">
                 <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                     <span style="font-size: 0.8rem; font-weight: 700; color: #374151;">Chi nhánh gần bạn:</span>
-                    
+
                     <template x-for="b in branches" :key="b.id">
                         <div style="background: #ffffff; border: 1px solid #e1ebe8; border-radius: 1rem; padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
                             <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem;">
@@ -613,8 +617,7 @@
                             <button
                                 @click="selectBranchItem(b.id)"
                                 type="button"
-                                style="width: 100%; background: #00a870; color: white; border: none; border-radius: 0.6rem; padding: 0.5rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: background 0.2s;"
-                            >
+                                style="width: 100%; background: #00a870; color: white; border: none; border-radius: 0.6rem; padding: 0.5rem; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: background 0.2s;">
                                 Kết nối ngay
                             </button>
                         </div>
@@ -623,108 +626,103 @@
             </template>
         </div>
 
-        <!-- STATE 2: Cửa sổ Chat Active (Khi đã chọn branchId) -->
+        <!-- STATE 2: Danh sách tin nhắn (cuộn trong khung cố định) -->
         <div
             x-show="branchId"
-            style="flex: 1 1 0%; min-height: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden;"
-        >
-            <!-- List tin nhắn -->
-            <div
-                x-ref="messageList"
-                class="chatbox-body-scroll"
-                style="padding: 0.9rem; background: #ffffff; display: flex; flex-direction: column; gap: 0.75rem;"
-            >
-                <template x-for="message in messages" :key="message.id">
-                    <div
-                        :style="message.sender_id == {{ auth()->id() ?? 0 }} ? 'display: flex; justify-content: flex-end;' : 'display: flex; justify-content: flex-start;'"
-                    >
-                        <!-- Tin nhắn từ Bot hệ thống -->
-                        <template x-if="message.content && message.content.startsWith('🤖 Hệ thống')">
-                            <div style="max-width: 90%; background: #edf9f5; border: 1px solid #c3ebd9; border-radius: 1rem; padding: 0.75rem 0.85rem; color: #0d684d; font-size: 0.82rem; line-height: 1.45;">
-                                <div style="font-weight: 700; color: #00a870; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
-                                    <span>🤖</span> Hệ thống
-                                </div>
-                                <div x-text="message.content.replace('🤖 Hệ thống\n', '').replace('🤖 Hệ thống', '')" style="white-space: pre-line;"></div>
-                                <div
-                                    x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
-                                    style="font-size: 0.68rem; opacity: 0.65; text-align: left; margin-top: 0.3rem;"
-                                ></div>
+            x-ref="messageList"
+            class="chatbox-scroll"
+            style="padding: 0.9rem; background: #ffffff;">
+            <template x-for="message in messages" :key="message.id">
+                <div
+                    :style="message.sender_id == {{ auth()->id() ?? 0 }} ? 'display: flex; justify-content: flex-end; margin-bottom: 0.75rem;' : 'display: flex; justify-content: flex-start; margin-bottom: 0.75rem;'">
+                    <!-- Tin nhắn từ Bot hệ thống -->
+                    <template x-if="message.content && message.content.startsWith('🤖 Hệ thống')">
+                        <div style="max-width: 90%; background: #edf9f5; border: 1px solid #c3ebd9; border-radius: 1rem; padding: 0.75rem 0.85rem; color: #0d684d; font-size: 0.82rem; line-height: 1.45;">
+                            <div style="font-weight: 700; color: #00a870; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
+                                <span>🤖</span> Hệ thống
                             </div>
-                        </template>
-
-                        <!-- Tin nhắn thường (User hoặc Admin/CSKH) -->
-                        <template x-if="!message.content || !message.content.startsWith('🤖 Hệ thống')">
+                            <div x-text="message.content.replace('🤖 Hệ thống\n', '').replace('🤖 Hệ thống', '')" style="white-space: pre-line;"></div>
                             <div
-                                :style="message.sender_id == {{ auth()->id() ?? 0 }} 
-                                    ? 'max-w-[82%]; background: #00a870; color: white; border-radius: 1rem 1rem 0 1rem; padding: 0.6rem 0.8rem; font-size: 0.83rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);' 
-                                    : 'max-w-[82%]; background: #f1f5f9; color: #1e293b; border-radius: 1rem 1rem 1rem 0; padding: 0.6rem 0.8rem; font-size: 0.83rem; border: 1px solid #e2e8f0;'"
-                            >
-                                <div x-text="message.content" x-show="message.content" style="white-space: pre-line;"></div>
-                                <div
-                                    x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
-                                    :style="message.sender_id == {{ auth()->id() ?? 0 }} ? 'font-size: 0.68rem; opacity: 0.8; text-align: right; margin-top: 0.25rem;' : 'font-size: 0.68rem; opacity: 0.6; text-align: left; margin-top: 0.25rem;'"
-                                ></div>
-                            </div>
-                        </template>
-                    </div>
-                </template>
-            </div>
+                                x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
+                                style="font-size: 0.68rem; opacity: 0.65; text-align: left; margin-top: 0.3rem;"></div>
+                        </div>
+                    </template>
 
-            <!-- Input Chat -->
-            <div style="padding: 0.75rem 0.85rem; border-top: 1px solid #e2e8f0; background: #ffffff; flex: 0 0 auto;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input
-                        type="text"
-                        x-model="newMessage"
-                        @keydown.enter.prevent="sendMessage()"
-                        :disabled="loading"
-                        placeholder="Nhập câu hỏi hoặc yêu cầu của bạn..."
-                        style="flex: 1; padding: 0.6rem 0.85rem; border-radius: 1.25rem; border: 1px solid #cbd5e1; font-size: 0.82rem; outline: none; background: #f8fafc;"
-                    >
-                    <button
-                        @click="sendMessage()"
-                        :disabled="loading || !newMessage.trim()"
-                        style="width: 2.3rem; height: 2.3rem; border-radius: 50%; background: #00a870; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                    </button>
+                    <!-- Tin nhắn thường (User hoặc Admin/CSKH) -->
+                    <template x-if="!message.content || !message.content.startsWith('🤖 Hệ thống')">
+                        <div
+                            :style="message.sender_id == {{ auth()->id() ?? 0 }}
+                                ? 'max-width: 82%; background: #00a870; color: white; border-radius: 1rem 1rem 0 1rem; padding: 0.6rem 0.8rem; font-size: 0.83rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);'
+                                : 'max-width: 82%; background: #f1f5f9; color: #1e293b; border-radius: 1rem 1rem 1rem 0; padding: 0.6rem 0.8rem; font-size: 0.83rem; border: 1px solid #e2e8f0;'">
+                            <div x-text="message.content" x-show="message.content" style="white-space: pre-line;"></div>
+                            <div
+                                x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
+                                :style="message.sender_id == {{ auth()->id() ?? 0 }} ? 'font-size: 0.68rem; opacity: 0.8; text-align: right; margin-top: 0.25rem;' : 'font-size: 0.68rem; opacity: 0.6; text-align: left; margin-top: 0.25rem;'"></div>
+                        </div>
+                    </template>
                 </div>
+            </template>
+        </div>
+
+        <!-- Input Chat (cố định dưới cùng) -->
+        <div
+            x-show="branchId"
+            style="padding: 0.75rem 0.85rem; border-top: 1px solid #e2e8f0; background: #ffffff;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <input
+                    type="text"
+                    x-model="newMessage"
+                    @keydown.enter.prevent="sendMessage()"
+                    :disabled="loading"
+                    placeholder="Nhập câu hỏi hoặc yêu cầu của bạn..."
+                    style="flex: 1; padding: 0.6rem 0.85rem; border-radius: 1.25rem; border: 1px solid #cbd5e1; font-size: 0.82rem; outline: none; background: #f8fafc;">
+                <button
+                    @click="sendMessage()"
+                    :disabled="loading || !newMessage.trim()"
+                    style="width: 2.3rem; height: 2.3rem; border-radius: 50%; background: #00a870; border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                </button>
             </div>
         </div>
-    </div>
 
-    <!-- Confirmation Modal toàn màn hình khi bấm Kết thúc phiên / Đổi chi nhánh -->
-    <div
-        x-show="showEndSessionModal"
-        x-transition
-        style="position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem;"
-    >
-        <div style="background: white; border-radius: 1.25rem; padding: 1.5rem; width: 100%; max-width: 20rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3); text-align: center;">
-            <div style="width: 3.5rem; height: 3.5rem; border-radius: 50%; background: #edf9f5; color: #00a870; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.8rem auto; font-size: 1.75rem;">
-                <i class="bi bi-arrow-repeat"></i>
-            </div>
-            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.05rem; font-weight: 700; color: #111827;">Xác nhận kết thúc phiên?</h4>
-            <p style="margin: 0 0 1.25rem 0; font-size: 0.83rem; color: #4b5563; line-height: 1.5;">
-                Phiên làm việc với <strong style="color: #00a870;" x-text="branchNameDisplay"></strong> sẽ được khép lại để bạn chọn chi nhánh khác. Bạn có chắc chắn muốn kết thúc không?
-            </p>
-            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <button
-                    @click="confirmEndSession()"
-                    :disabled="endingSession"
-                    type="button"
-                    style="width: 100%; background: #dc2626; color: white; border: none; border-radius: 0.75rem; padding: 0.65rem; font-size: 0.85rem; font-weight: 700; cursor: pointer;"
-                >
-                    Kết thúc & Chọn chi nhánh mới
-                </button>
-                <button
-                    @click="showEndSessionModal = false"
-                    type="button"
-                    style="width: 100%; background: #f3f4f6; color: #374151; border: none; border-radius: 0.75rem; padding: 0.6rem; font-size: 0.85rem; font-weight: 600; cursor: pointer;"
-                >
-                    Hủy bỏ (Tiếp tục chat)
-                </button>
+        <!-- Confirmation Overlay đè gọn trực tiếp trên khung Chatbox -->
+        <div
+            x-show="showEndSessionModal"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(3px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1.25rem; border-radius: 1.25rem;">
+            <div style="background: #ffffff; border-radius: 1rem; padding: 1.25rem 1rem; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); text-align: center;">
+                <div style="width: 3.25rem; height: 3.25rem; border-radius: 50%; background: #edf9f5; color: #00a870; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem auto; font-size: 1.6rem;">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+                <h4 style="margin: 0 0 0.4rem 0; font-size: 1rem; font-weight: 700; color: #111827;">Xác nhận kết thúc phiên?</h4>
+                <p style="margin: 0 0 1.1rem 0; font-size: 0.8rem; color: #4b5563; line-height: 1.45;">
+                    Phiên làm việc với <strong style="color: #00a870;" x-text="branchNameDisplay"></strong> sẽ được khép lại để bạn chọn chi nhánh khác. Bạn có chắc chắn muốn kết thúc không?
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <button
+                        @click="confirmEndSession()"
+                        :disabled="endingSession"
+                        type="button"
+                        style="width: 100%; background: #dc2626; color: white; border: none; border-radius: 0.65rem; padding: 0.65rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s;">
+                        <span x-show="!endingSession">Kết thúc & Chọn chi nhánh mới</span>
+                        <span x-show="endingSession" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                            <span class="spinner-border spinner-border-sm" role="status"></span> Đang xử lý...
+                        </span>
+                    </button>
+                    <button
+                        @click="showEndSessionModal = false"
+                        type="button"
+                        style="width: 100%; background: #f3f4f6; color: #374151; border: none; border-radius: 0.65rem; padding: 0.55rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s;">
+                        Hủy bỏ (Tiếp tục chat)
+                    </button>
+                </div>
             </div>
         </div>
     </div>

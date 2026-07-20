@@ -94,9 +94,21 @@ class AdminChatController extends Controller
 
         $this->markMessagesAsRead($conversation);
 
-        $messages = $conversation->messages()
-            ->with(['sender', 'displayAsSender'])
-            ->get();
+        if ($conversation->branch_id) {
+            $conversationIds = Conversation::where('user_id', $conversation->user_id)
+                ->where('branch_id', $conversation->branch_id)
+                ->pluck('id');
+
+            $messages = Message::whereIn('conversation_id', $conversationIds)
+                ->with(['sender', 'displayAsSender'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+        } else {
+            $messages = Message::where('conversation_id', $conversation->id)
+                ->with(['sender', 'displayAsSender'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
 
         return response()->json([
             'success' => true,
@@ -241,12 +253,13 @@ class AdminChatController extends Controller
     {
         $adminId = auth()->id();
 
-        // Chỉ đánh dấu đã đọc các tin nhắn do KHÁCH HÀNG (role_id = 1) gửi.
-        // Không được mark tin nhắn của admin/CSKH khác, vì điều đó sẽ làm mất
-        // thông báo chưa đọc bên phía user khi họ chưa tự mở chatbox.
+        $conversationIds = $conversation->branch_id
+            ? Conversation::where('user_id', $conversation->user_id)->where('branch_id', $conversation->branch_id)->pluck('id')
+            : collect([$conversation->id]);
+
         $customerIds = \App\Models\User::where('role_id', 1)
             ->whereIn('id',
-                $conversation->messages()
+                Message::whereIn('conversation_id', $conversationIds)
                     ->where('is_read', false)
                     ->where('sender_id', '!=', $adminId)
                     ->pluck('sender_id')
@@ -257,7 +270,7 @@ class AdminChatController extends Controller
             return;
         }
 
-        $conversation->messages()
+        Message::whereIn('conversation_id', $conversationIds)
             ->where('is_read', false)
             ->whereIn('sender_id', $customerIds)
             ->update(['is_read' => true]);
