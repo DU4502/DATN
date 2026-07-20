@@ -12,9 +12,9 @@ class GroupOrderManagementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_view_group_orders_and_their_details(): void
+    public function test_super_admin_can_view_group_orders_and_their_details(): void
     {
-        $admin = User::factory()->create(['role_id' => 2]);
+        $admin = User::factory()->create(['role_id' => 3]);
         $owner = User::factory()->create();
         $group = GroupOrder::create([
             'owner_id' => $owner->id,
@@ -40,5 +40,14 @@ class GroupOrderManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Chủ nhóm')
             ->assertSee('1 / 20 thành viên');
+    }
+
+    public function test_regular_admin_cannot_view_group_orders(): void
+    {
+        $admin = User::factory()->create(['role_id' => 2]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.group-orders.index'))
+            ->assertRedirect(route('admin.dashboard'));
     }
 }

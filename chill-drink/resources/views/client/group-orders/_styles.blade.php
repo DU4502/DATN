@@ -105,7 +105,7 @@
     .group-order-form { overflow: hidden; padding: 0 !important; }
     .group-chat-launcher { position: fixed; right: 28px; bottom: 100px; z-index: 1055; width: 58px; height: 58px; border: 3px solid #fff; border-radius: 50%; background: linear-gradient(135deg, #3857c8, #7048d7); color: #fff; box-shadow: 0 12px 32px rgba(63,75,180,.34); font-size: 1.35rem; transition: transform .2s ease; }
     .group-chat-launcher:hover { transform: translateY(-3px); }
-    .group-chat-panel { position: fixed; right: 28px; bottom: 100px; z-index: 1055; width: min(390px, calc(100vw - 32px)); overflow: hidden; border: 0 !important; border-radius: 22px !important; box-shadow: 0 22px 60px rgba(31,38,90,.25); }
+    .group-chat-panel { position: fixed; right: 24px; bottom: 100px; z-index: 1055; width: min(390px, calc(100vw - 32px)); max-height: calc(100vh - 124px); overflow: hidden; border: 0 !important; border-radius: 22px !important; box-shadow: 0 22px 60px rgba(31,38,90,.25); }
     .group-chat-head { padding: 1rem 1.15rem; display: flex; gap: .75rem; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #3857c8, #7048d7); color: #fff; }
     .group-chat-head .group-eyebrow { color: rgba(255,255,255,.72); }
     .group-chat-head strong { color: #fff; }

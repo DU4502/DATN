@@ -492,8 +492,8 @@
         x-show="menuOpen"
         x-cloak
         @click.away="menuOpen = false"
-        class="absolute bottom-20 right-0 w-64 rounded-2xl shadow-2xl p-2 border space-y-1 transition-all duration-200"
-        style="background: #ffffff; border-color: var(--c-border);">
+        class="rounded-2xl shadow-2xl p-2 border space-y-1 transition-all duration-200"
+        style="position: fixed; right: 1.5rem; bottom: 6.25rem; width: min(320px, calc(100vw - 2rem)); background: #ffffff; border-color: var(--c-border); z-index: 1061;">
         <button
             type="button"
             @click.prevent="openSupportChat()"
@@ -527,10 +527,10 @@
                 </div>
                 <div>
                     <div class="text-sm font-bold flex items-center gap-1.5" style="color: var(--c-text);">
-                        <span>Chat Nhóm Chung</span>
+                        <span>Chat đơn nhóm</span>
                         <span x-show="groupUnread > 0" class="w-2 h-2 rounded-full" style="background: #dc3545;"></span>
                     </div>
-                    <div class="text-xs opacity-70" style="color: var(--c-text);">Trò chuyện cùng cộng đồng</div>
+                    <div class="text-xs opacity-70" style="color: var(--c-text);">Trò chuyện với thành viên trong phòng</div>
                 </div>
             </div>
             <span x-show="groupUnread > 0" x-text="groupUnread" class="px-2 py-0.5 rounded-full text-xs font-bold text-white" style="background: #dc3545;"></span>
@@ -540,8 +540,8 @@
     <div
         x-show="isOpen"
         x-cloak
-        class="fixed absolute bottom-20 right-0 w-[calc(100vw-2rem)] sm:w-[380px] h-[540px] max-h-[80vh] sm:max-h-[600px] rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300"
-        style="background: #ffffff; border-color: var(--c-border); z-index: 1040;">
+        class="rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300"
+        style="position: fixed; right: 1.5rem; bottom: 6.25rem; width: min(380px, calc(100vw - 2rem)); height: min(540px, calc(100vh - 8rem)); background: #ffffff; border-color: var(--c-border); z-index: 1055;">
         <!-- Header -->
         <div class="p-3.5 flex items-center justify-between flex-shrink-0 shadow-sm" style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;">
             <div class="flex items-center gap-3">

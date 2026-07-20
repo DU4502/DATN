@@ -182,6 +182,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::put('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
     Route::delete('/branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
     Route::patch('/branches/{branch}/status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
+
+    // Đơn nhóm là dữ liệu tổng hợp toàn hệ thống, chỉ Super Admin được xem.
+    Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -223,8 +226,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     })->name('orders.status.redirect');
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
-    Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
-
     // Review Management
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 

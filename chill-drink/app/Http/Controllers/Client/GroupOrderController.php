@@ -76,11 +76,21 @@ class GroupOrderController extends Controller
                 ->where('status', 'open')
                 ->update(['status' => 'cancelled', 'cancelled_at' => now()]);
 
-            return GroupOrder::create($data + [
+            $group = GroupOrder::create($data + [
                 'owner_id' => auth()->id(),
                 'code' => $this->uniqueCode(),
                 'closes_at' => $closesAt,
             ]);
+
+            // Chủ phòng cũng là một thành viên để có thể chọn món và chat ngay,
+            // không phải tham gia lại bằng chính link của phòng.
+            $group->members()->create([
+                'user_id' => auth()->id(),
+                'name' => auth()->user()->name,
+                'member_token' => Str::random(48),
+            ]);
+
+            return $group;
         });
 
         $redirectUrl = route('group-orders.show', $group->code);
@@ -100,6 +110,16 @@ class GroupOrderController extends Controller
     {
         $group = GroupOrder::where('code', $code)->firstOrFail();
         $group->closeIfExpired();
+
+        // Khôi phục dữ liệu các phòng đã được tạo trước khi chủ phòng được tự
+        // thêm vào danh sách thành viên. Nhờ đó chủ phòng cũ cũng chat được.
+        if ($group->owner_id === auth()->id()) {
+            $group->members()->firstOrCreate(
+                ['user_id' => auth()->id()],
+                ['name' => auth()->user()->name, 'member_token' => Str::random(48)]
+            );
+        }
+
         if ($group->owner_id === auth()->id() && $group->isOpen()) {
             $group->update(['owner_last_seen_at' => now()]);
         }

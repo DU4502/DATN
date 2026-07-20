@@ -28,6 +28,11 @@ class QuickOrderFeaturesTest extends TestCase
 
         $group = GroupOrder::firstOrFail();
         $response->assertRedirect(route('group-orders.show', $group->code));
+        $this->assertDatabaseHas('group_order_members', [
+            'group_order_id' => $group->id,
+            'user_id' => $user->id,
+            'name' => $user->name,
+        ]);
         $this->assertSame($user->id, $group->owner_id);
         $this->assertTrue($group->closes_at->between(now()->addMinutes(29), now()->addMinutes(31)));
         $this->get(route('group-orders.show', $group->code))->assertOk()->assertSee('Team Marketing');
