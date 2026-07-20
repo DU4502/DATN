@@ -75,9 +75,8 @@
             this.$watch('isOpen', (isOpen) => {
                 localStorage.setItem('support_chat_open', isOpen ? 'true' : 'false');
                 if (isOpen) {
-                    this.supportUnread = 0;
                     this.stopUnreadPolling();
-                    this.activateSupportChat();
+                    this.activateSupportChat(); // reset unread CHỈ sau khi đã fetch + mark read
                 } else {
                     this.stopPolling();
                     // Giữ Echo subscribe để nhận thông báo unread real-time khi chat đóng
@@ -281,7 +280,7 @@
             if (!window.Echo || !this.conversationId) return;
             if (this.echoChannel) return;
 
-            this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
+        this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
                 .listen('.message-sent', (payload) => {
                     // Bỏ qua tin nhắn do chính user này gửi (tránh duplicate với sendMessage)
                     const alreadyExists = this.messages.some(m => m.id === payload.message_id);
@@ -311,6 +310,12 @@
                     if (this.isOpen) {
                         this.$nextTick(() => { this.scrollToBottom(); });
                     }
+                })
+                .error((error) => {
+                    // WebSocket auth thất bại → tăng tần suất polling làm fallback
+                    console.warn('Echo channel error, switching to fast polling', error);
+                    this.echoChannel = null;
+                    if (this.isOpen) this.startPolling();
                 });
         },
 
@@ -368,7 +373,7 @@
             if (!this.isOpen || document.hidden || !this.conversationId || !this.branchId) return;
             this.pollInterval = window.setInterval(() => {
                 if (this.isOpen && !document.hidden) this.fetchMessages();
-            }, 15000);
+            }, 100);
         },
 
         stopPolling() {
@@ -431,10 +436,30 @@
         async sendMessage() {
             if (!this.newMessage.trim() || !this.conversationId || !this.branchId) return;
 
+            const text = this.newMessage.trim();
+            this.newMessage = '';
+
+            // Optimistic UI: hiện tin ngay lập tức không chờ server
+            const tempId = 'tmp_' + Date.now();
+            const tempMsg = {
+                id: tempId,
+                conversation_id: this.conversationId,
+                sender_id: {{ auth()->id() }},
+                content: text,
+                attachment_path: null,
+                attachment_name: null,
+                is_read: false,
+                created_at: new Date().toISOString(),
+                sender: { id: {{ auth()->id() }}, name: '{{ addslashes(auth()->user()->name) }}' },
+                _pending: true,
+            };
+            this.messages.push(tempMsg);
+            this.$nextTick(() => { this.scrollToBottom(); });
+
             this.loading = true;
             const formData = new FormData();
             formData.append('conversation_id', this.conversationId);
-            formData.append('content', this.newMessage);
+            formData.append('content', text);
 
             try {
                 const res = await fetch('{{ route('chat.send') }}', {
@@ -447,17 +472,18 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    this.messages.push(data.message);
-                    this.newMessage = '';
-                    this.$nextTick(() => {
-                        this.scrollToBottom();
-                    });
+                    // Thay tin tạm bằng tin thật từ server
+                    const idx = this.messages.findIndex(m => m.id === tempId);
+                    if (idx !== -1) this.messages.splice(idx, 1, data.message);
                 } else {
-                    console.error('Server error:', data.message);
+                    // Xóa tin tạm nếu server báo lỗi
+                    this.messages = this.messages.filter(m => m.id !== tempId);
+                    this.newMessage = text;
                     alert(data.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.');
                 }
             } catch (e) {
-                console.error('Error sending message', e);
+                this.messages = this.messages.filter(m => m.id !== tempId);
+                this.newMessage = text;
                 alert('Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.');
             } finally {
                 this.loading = false;

@@ -152,6 +152,42 @@
     </script>
     @include('partials.realtime')
     <script>
+        // Cập nhật badge chat sidebar mỗi 5 giây
+        (function () {
+            const badge = document.getElementById('sidebar-chat-badge');
+            if (!badge) return;
+
+            const unreadUrl = '{{ route('admin.chat.unread-count') }}';
+
+            const updateChatBadge = async () => {
+                try {
+                    const res = await fetch(unreadUrl, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const count = data.count ?? 0;
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.style.display = '';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                } catch (e) {
+                    // bỏ qua lỗi mạng
+                }
+            };
+
+            // Cập nhật ngay khi admin vừa đọc tin
+            document.addEventListener('chat:messages-read', updateChatBadge);
+
+            updateChatBadge();
+            setInterval(() => {
+                if (!document.hidden) updateChatBadge();
+            }, 5000);
+        })();
+    </script>
+    <script>
         document.querySelectorAll('[data-image-input]').forEach((input) => {
             input.addEventListener('change', () => {
                 const target = document.querySelector(input.dataset.previewTarget);
