@@ -112,10 +112,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/taste-profile', [QuickOrderController::class, 'saveTaste'])->name('taste-profiles.store');
 });
 
-// Chat routes (client)
-Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
+// Chat routes (client) — không yêu cầu auth, dùng guest_token để xác thực
+Route::prefix('chat')->name('chat.')->group(function () {
     Route::get('/', [ChatController::class, 'getOrCreateConversation'])->name('index');
     Route::get('/nearest-branches', [ChatController::class, 'nearestBranches'])->name('nearest-branches');
+    Route::post('/guest-init', [ChatController::class, 'guestInit'])->name('guest-init');
     Route::post('/select-branch', [ChatController::class, 'selectBranch'])->name('select-branch');
     Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
     Route::post('/send', [ChatController::class, 'send'])->name('send');
