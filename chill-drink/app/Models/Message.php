@@ -14,6 +14,7 @@ class Message extends Model
         'impersonated_by_id',
         'display_as_sender_id',
         'content',
+        'guest_sender_name',
         'attachment_path',
         'attachment_name',
         'is_read',

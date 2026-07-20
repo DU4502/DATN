@@ -25,46 +25,76 @@
     display: block; width: 100%; padding: .75rem 1rem;
     border: none; border-bottom: 1px solid #f0f0f0;
     text-align: left; background: #fff; cursor: pointer;
-    transition: background .15s;
+    transition: background .2s ease, transform .15s ease;
 }
-.conv-item:hover { background: #f8f9fa; }
-.conv-item.active  { background: #e7f3ff; }
+.conv-item:hover { background: #f0f7ff; transform: translateX(3px); }
+.conv-item.active { background: #e7f3ff; }
 
-/* Chat boxes */
+/* Chat boxes – open windows: hàng ngang từ phải sang trái */
 .chat-boxes-container {
-    position: fixed; bottom: 20px; right: 20px;
-    display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-end;
+    position: fixed; bottom: 20px; right: 72px;
+    display: flex; flex-direction: row-reverse; gap: 10px; align-items: flex-end;
     z-index: 1050; pointer-events: none;
 }
+
+/* Minimized icons – cột dọc sát góc phải */
+.chat-minimized-container {
+    position: fixed; bottom: 20px; right: 20px;
+    display: flex; flex-direction: column-reverse; gap: 8px; align-items: center;
+    z-index: 1051; pointer-events: none;
+}
+
+/* Animation khi chat box xuất hiện */
+@keyframes chatSlideUp {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+@keyframes chatSlideDown {
+    from { opacity: 1; transform: translateY(0)    scale(1); }
+    to   { opacity: 0; transform: translateY(24px) scale(0.96); }
+}
+
+/* Animation cho icon minimize xuất hiện */
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* Animation tin nhắn mới */
+@keyframes msgFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 .chat-box {
     width: 330px; background: #fff;
-    border: 1px solid #dee2e6; border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    border: 1px solid #dee2e6; border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08);
     display: flex; flex-direction: column;
-    pointer-events: auto; transition: all .2s ease;
+    pointer-events: auto;
+    height: 450px;
+    animation: chatSlideUp .28s cubic-bezier(.34,1.56,.64,1) both;
+    transform-origin: bottom right;
 }
-.chat-box:not(.minimized) { height: 450px; }
 
-/* Minimized: thu về icon tròn */
-.chat-box.minimized {
-    width: 52px !important;
-    height: 52px !important;
-    border-radius: 50% !important;
-    border: none !important;
-    box-shadow: 0 4px 16px rgba(0,132,255,.35) !important;
-    overflow: hidden;
-    cursor: pointer;
-}
-.chat-box.minimized .chat-box-header {
+/* Minimized icon tròn – dùng trong .chat-minimized-container */
+.chat-mini-icon {
     width: 52px; height: 52px;
-    border-radius: 50% !important;
-    padding: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1a8fff 0%, #0065d0 100%);
+    box-shadow: 0 4px 16px rgba(0,132,255,.4);
     display: flex; align-items: center; justify-content: center;
+    cursor: pointer; pointer-events: auto;
+    position: relative; flex-shrink: 0;
+    transition: transform .2s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease;
+    animation: popIn .25s cubic-bezier(.34,1.56,.64,1) both;
 }
-.chat-box.minimized .chat-box-header-left { display: none; }
-.chat-box.minimized .chat-box-actions { display: none; }
-.chat-box.minimized .chat-box-body,
-.chat-box.minimized .chat-box-footer { display: none; }
+.chat-mini-icon:hover {
+    transform: scale(1.12);
+    box-shadow: 0 6px 24px rgba(0,132,255,.55);
+}
+.chat-mini-icon:active { transform: scale(0.96); }
+.chat-mini-icon i { color: #fff; font-size: 1.4rem; }
 
 /* Badge unread trên icon minimized */
 .chat-box-minimized-badge {
@@ -74,76 +104,109 @@
     border-radius: 999px; background: #dc3545; color: #fff;
     border: 2px solid #fff; font-size: 11px; font-weight: 800;
     align-items: center; justify-content: center;
+    animation: popIn .2s ease both;
 }
-.chat-box.minimized .chat-box-minimized-badge { display: flex; }
-
-/* Icon hiện khi minimized */
-.chat-box-minimized-icon { display: none; font-size: 1.4rem; }
-.chat-box.minimized .chat-box-minimized-icon { display: block; }
+.chat-mini-icon .chat-box-minimized-badge { display: flex; }
 
 .chat-box-header {
-    background: #0084ff; color: #fff;
-    padding: .6rem .8rem; border-radius: 10px 10px 0 0;
+    background: linear-gradient(135deg, #1a8fff 0%, #0065d0 100%);
+    color: #fff;
+    padding: .65rem .85rem; border-radius: 12px 12px 0 0;
     display: flex; align-items: center; justify-content: space-between;
     cursor: pointer; user-select: none; flex-shrink: 0;
     position: relative;
+    transition: filter .2s ease;
 }
+.chat-box-header:hover { filter: brightness(1.08); }
 .chat-box-header-left { display: flex; align-items: center; gap: .5rem; min-width: 0; flex: 1; }
 .chat-box-avatar {
     width: 32px; height: 32px; border-radius: 50%;
-    background: rgba(255,255,255,.2);
+    background: rgba(255,255,255,.25);
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: .85rem; flex-shrink: 0;
+    transition: transform .2s ease;
 }
+.chat-box-header:hover .chat-box-avatar { transform: scale(1.1); }
 .chat-box-title { font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-box-actions { display: flex; gap: .3rem; flex-shrink: 0; }
 .chat-box-btn {
     background: rgba(255,255,255,.2); border: none; color: #fff;
-    width: 24px; height: 24px; border-radius: 50%;
+    width: 26px; height: 26px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; padding: 0; transition: background .2s;
+    cursor: pointer; padding: 0;
+    transition: background .2s ease, transform .15s ease;
 }
-.chat-box-btn:hover { background: rgba(255,255,255,.35); }
+.chat-box-btn:hover { background: rgba(255,255,255,.38); transform: scale(1.1); }
+.chat-box-btn:active { transform: scale(0.92); }
 
 .chat-box-body {
     flex: 1; overflow-y: auto; overflow-x: hidden;
-    padding: .75rem; background: #f8f9fa;
+    padding: .75rem; background: #f5f7fb;
     display: flex; flex-direction: column; gap: .5rem;
+    scroll-behavior: smooth;
 }
+.chat-box-body::-webkit-scrollbar { width: 4px; }
+.chat-box-body::-webkit-scrollbar-track { background: transparent; }
+.chat-box-body::-webkit-scrollbar-thumb { background: #c5cfe0; border-radius: 4px; }
+.chat-box-body::-webkit-scrollbar-thumb:hover { background: #0084ff; }
+
 .chat-box-footer {
     padding: .6rem .8rem; background: #fff;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid #e9ecef;
     display: flex; gap: .5rem; flex-shrink: 0;
-    border-radius: 0 0 10px 10px;
+    border-radius: 0 0 12px 12px;
 }
 .chat-box-input {
-    flex: 1; border: 1px solid #dee2e6; border-radius: 20px;
-    padding: .4rem .8rem; font-size: .875rem; outline: none;
+    flex: 1; border: 1.5px solid #dee2e6; border-radius: 20px;
+    padding: .4rem .85rem; font-size: .875rem; outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+    background: #f8f9fa;
 }
-.chat-box-input:focus { border-color: #0084ff; }
+.chat-box-input:focus {
+    border-color: #0084ff;
+    box-shadow: 0 0 0 3px rgba(0,132,255,.12);
+    background: #fff;
+}
 .chat-box-send-btn {
     background: #0084ff; color: #fff; border: none;
-    border-radius: 50%; width: 32px; height: 32px;
+    border-radius: 50%; width: 34px; height: 34px;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; flex-shrink: 0;
+    transition: background .2s ease, transform .15s ease, box-shadow .2s ease;
+    box-shadow: 0 2px 8px rgba(0,132,255,.3);
 }
-.chat-box-send-btn:hover:not(:disabled) { background: #0073e6; }
-.chat-box-send-btn:disabled { opacity: .5; cursor: not-allowed; }
+.chat-box-send-btn:hover:not(:disabled) {
+    background: #0065d0;
+    transform: scale(1.08);
+    box-shadow: 0 4px 14px rgba(0,132,255,.45);
+}
+.chat-box-send-btn:active:not(:disabled) { transform: scale(0.94); }
+.chat-box-send-btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
 
-.chat-msg { display: flex; margin-bottom: .4rem; }
+.chat-msg { display: flex; margin-bottom: .4rem; animation: msgFadeIn .22s ease both; }
 .chat-msg.from-customer { justify-content: flex-start; }
 .chat-msg.from-admin    { justify-content: flex-end; }
 .chat-msg-bubble {
-    max-width: 75%; padding: .45rem .7rem;
-    border-radius: 12px; font-size: .85rem; line-height: 1.4; word-break: break-word;
+    max-width: 75%; padding: .45rem .75rem;
+    border-radius: 14px; font-size: .85rem; line-height: 1.45; word-break: break-word;
+    transition: box-shadow .2s ease;
 }
-.from-customer .chat-msg-bubble { background: #fff; color: #212529; border: 1px solid #e9ecef; }
-.from-admin    .chat-msg-bubble { background: #0084ff; color: #fff; }
-.chat-msg-time { font-size: .68rem; opacity: .65; margin-top: .15rem; }
+.chat-msg-bubble:hover { box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.from-customer .chat-msg-bubble {
+    background: #fff; color: #212529;
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 4px;
+}
+.from-admin .chat-msg-bubble {
+    background: linear-gradient(135deg, #1a8fff 0%, #0065d0 100%);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+.chat-msg-time { font-size: .67rem; opacity: .6; margin-top: .18rem; }
 
 @media (max-width: 991.98px) {
     .chat-box { width: 280px; }
-    .chat-boxes-container { right: 10px; gap: 8px; }
+    .chat-boxes-container { right: 68px; gap: 8px; }
 }
 </style>
 
@@ -202,11 +265,22 @@
                         >
                             <div class="d-flex align-items-start gap-2">
                                 <div class="position-relative flex-shrink-0">
-                                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;" x-text="conv.user_name.charAt(0).toUpperCase()"></div>
+                                    <!-- Guest avatar: icon người dùng vô danh -->
+                                    <template x-if="conv.is_guest">
+                                        <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;font-size:1.1rem;"><i class="bi bi-incognito" style="line-height:1;"></i></div>
+                                    </template>
+                                    <!-- User avatar: chữ cái đầu -->
+                                    <template x-if="!conv.is_guest">
+                                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;" x-text="conv.user_name.charAt(0).toUpperCase()"></div>
+                                    </template>
                                 </div>
                                 <div class="min-w-0 flex-grow-1">
                                     <div class="d-flex align-items-center justify-content-between gap-2">
-                                        <strong class="text-dark small text-truncate" x-text="conv.user_name"></strong>
+                                        <div class="d-flex align-items-center gap-1 min-w-0">
+                                            <strong class="text-dark small text-truncate" x-text="conv.user_name"></strong>
+                                            <!-- Badge Khách vãng lai -->
+                                            <span x-show="conv.is_guest" class="badge rounded-pill flex-shrink-0" style="background:#f59e0b;color:#fff;font-size:.62rem;padding:2px 6px;">Khách VL</span>
+                                        </div>
                                         <span x-show="conv.unread > 0" x-text="conv.unread > 99 ? '99+' : conv.unread" class="badge rounded-pill bg-danger flex-shrink-0" style="font-size:.7rem;"></span>
                                         <span x-show="conv.unread === 0 && conv.last_at" x-text="conv.last_at" class="text-secondary small flex-shrink-0"></span>
                                     </div>
@@ -241,28 +315,20 @@
         </div>
     </div>
 
-    {{-- Chat Boxes --}}
+    {{-- Chat Boxes (open/expanded) --}}
     <div class="chat-boxes-container">
-        <template x-for="chatBox in openChats" :key="chatBox.id">
-            <div class="chat-box" :class="{ minimized: chatBox.minimized }">
+        <template x-for="chatBox in openChats.filter(c => !c.minimized)" :key="chatBox.id">
+            <div class="chat-box">
 
                 {{-- Header --}}
                 <div class="chat-box-header" @click="toggleMinimize(chatBox.id)">
-                    {{-- Icon hiện khi minimized --}}
-                    <i class="bi bi-chat-dots-fill chat-box-minimized-icon"></i>
-                    {{-- Badge unread khi minimized --}}
-                    <span
-                        class="chat-box-minimized-badge"
-                        x-show="chatBox.unreadCount > 0"
-                        x-text="chatBox.unreadCount > 9 ? '9+' : chatBox.unreadCount"
-                    ></span>
                     <div class="chat-box-header-left">
                         <div class="chat-box-avatar" x-text="chatBox.userName.charAt(0).toUpperCase()"></div>
                         <div class="chat-box-title" x-text="chatBox.userName"></div>
                     </div>
                     <div class="chat-box-actions" @click.stop>
-                        <button class="chat-box-btn" @click="toggleMinimize(chatBox.id)" :title="chatBox.minimized ? 'Mở rộng' : 'Thu nhỏ'">
-                            <i class="bi" :class="chatBox.minimized ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                        <button class="chat-box-btn" @click="toggleMinimize(chatBox.id)" title="Thu nhỏ">
+                            <i class="bi bi-chevron-down"></i>
                         </button>
                         <button class="chat-box-btn" @click="closeChat(chatBox.id)" title="Đóng">
                             <i class="bi bi-x-lg"></i>
@@ -318,6 +384,23 @@
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </div>
+            </div>
+        </template>
+    </div>
+
+    {{-- Minimized icons – xếp dọc sát góc phải --}}
+    <div class="chat-minimized-container">
+        <template x-for="chatBox in openChats.filter(c => c.minimized)" :key="chatBox.id">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:auto;">
+                <div class="chat-mini-icon" @click="toggleMinimize(chatBox.id)" :title="chatBox.userName">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    <span
+                        class="chat-box-minimized-badge"
+                        x-show="chatBox.unreadCount > 0"
+                        x-text="chatBox.unreadCount > 9 ? '9+' : chatBox.unreadCount"
+                    ></span>
+                </div>
+                <span x-text="chatBox.userName" style="font-size:0.7rem;font-weight:600;color:#333;max-width:70px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;"></span>
             </div>
         </template>
     </div>
