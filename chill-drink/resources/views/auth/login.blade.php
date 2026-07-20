@@ -78,7 +78,7 @@
                             </div>
 
                             @if(session('status'))
-                                <div class="alert alert-success d-flex align-items-center mb-4"><i class="bi bi-check-circle-fill me-2"></i> {{ session('status') }}</div>
+                                <div class="alert alert-success d-flex align-items-center mb-4"><i class="bi bi-check-circle-fill me-2"></i> {{ __((string) session('status')) }}</div>
                             @endif
                             @if(session('error'))
                                 <div class="alert alert-danger d-flex align-items-center mb-4"><i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}</div>
@@ -122,7 +122,6 @@
 
                             <div class="d-flex flex-column gap-3 mb-4">
                                 <a href="{{ route('auth.google.redirect') }}" class="btn social-btn"><i class="bi bi-google text-danger fs-5"></i> Tiếp tục với Google</a>
-                                <a href="{{ route('auth.facebook.redirect') }}" class="btn social-btn"><i class="bi bi-facebook text-primary fs-5"></i> Tiếp tục với Facebook</a>
                             </div>
 
                             <p class="text-center text-secondary mb-0">
