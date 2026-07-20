@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\OrderLookupController;
 use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
@@ -41,6 +42,11 @@ Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBran
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [ClientProductController::class, 'show'])->name('products.show');
+
+// Order Lookup
+Route::get('/tra-cuu-don-hang', [OrderLookupController::class, 'index'])->name('order-lookup.index');
+Route::post('/tra-cuu-don-hang', [OrderLookupController::class, 'search'])->name('order-lookup.search');
+Route::get('/tra-cuu-don-hang/{order}/status', [OrderLookupController::class, 'status'])->name('order-lookup.status');
 
 // Cart
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -183,9 +189,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::put('/branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
     Route::delete('/branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
     Route::patch('/branches/{branch}/status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
-
-    // Đơn nhóm là dữ liệu tổng hợp toàn hệ thống, chỉ Super Admin được xem.
-    Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
 });
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -219,14 +222,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Order Management
     Route::get('orders/recent', [OrderController::class, 'recent'])->name('orders.recent');
     Route::resource('orders', OrderController::class)->only(['index']);
-    // Tránh màn hình lỗi khi người dùng mở lại URL cập nhật trạng thái bằng GET.
-    // Cập nhật trạng thái vẫn chỉ được phép bằng PUT ở route phía dưới.
-    Route::get('orders/{id}/status', function () {
-        return redirect()->route('admin.orders.index')
-            ->with('error', 'Vui lòng cập nhật trạng thái đơn hàng bằng nút trên trang quản lý đơn hàng.');
-    })->name('orders.status.redirect');
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
+    Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
+
     // Review Management
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
 
