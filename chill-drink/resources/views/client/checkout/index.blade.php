@@ -1666,6 +1666,7 @@
             fixedShippingFee: {{ (int) $shippingFee }},
         };
         const shippingTiers = @json($shippingDistanceOptions);
+        const maxOrderDistanceKm = {{ json_encode(\App\Support\OrderDistancePolicy::MAX_DISTANCE_KM) }};
         const shippingDistanceLabel = document.getElementById('shippingDistanceLabel');
         const shippingEstimateDetail = document.getElementById('shippingEstimateDetail');
         const shippingInlineFee = document.getElementById('shippingInlineFee');
@@ -2125,7 +2126,11 @@
                 };
             });
 
-            branchesWithDistance.sort((a, b) => {
+            const availableBranches = hasValidCoords
+                ? branchesWithDistance.filter((branch) => branch.distance !== null && branch.distance < maxOrderDistanceKm)
+                : branchesWithDistance;
+
+            availableBranches.sort((a, b) => {
                 if (a.distance === null && b.distance === null) return 0;
                 if (a.distance === null) return 1;
                 if (b.distance === null) return -1;
@@ -2134,7 +2139,15 @@
 
             branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
 
-            branchesWithDistance.forEach((branch) => {
+            if (hasValidCoords && availableBranches.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.disabled = true;
+                option.textContent = 'Không có chi nhánh nào dưới 15 km';
+                branchSelect.appendChild(option);
+            }
+
+            availableBranches.forEach((branch) => {
                 const option = document.createElement('option');
                 option.value = branch.id;
                 option.dataset.latitude = branch.latitude || '';
@@ -2153,8 +2166,15 @@
                 branchSelect.appendChild(option);
             });
 
-            if (currentValue) {
+            if (currentValue && Array.from(branchSelect.options).some((option) => option.value === currentValue)) {
                 branchSelect.value = currentValue;
+            }
+
+            if (branchSelectNote) {
+                branchSelectNote.classList.remove('d-none');
+                branchSelectNote.textContent = hasValidCoords
+                    ? 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng dưới 15 km.'
+                    : 'Vui lòng xác định vị trí giao hàng để kiểm tra chi nhánh dưới 15 km.';
             }
         }
 
@@ -2927,6 +2947,7 @@
     // Initialize branch labels based on user coordinates
     function initializeBranchSorting() {
         const branchSelect = document.getElementById('branch_id');
+        const branchSelectNote = document.querySelector('[data-branch-select-note]');
 
         if (!branchSelect) {
             return;
@@ -2959,7 +2980,9 @@
             };
         });
 
-        branchesWithDistance.sort((a, b) => {
+        const availableBranches = branchesWithDistance.filter((branch) => branch.distance !== null && branch.distance < maxOrderDistanceKm);
+
+        availableBranches.sort((a, b) => {
             if (a.distance === null && b.distance === null) return 0;
             if (a.distance === null) return 1;
             if (b.distance === null) return -1;
@@ -2968,7 +2991,15 @@
 
         branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
 
-        branchesWithDistance.forEach((branch) => {
+        if (availableBranches.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.disabled = true;
+            option.textContent = 'Không có chi nhánh nào dưới 15 km';
+            branchSelect.appendChild(option);
+        }
+
+        availableBranches.forEach((branch) => {
             const option = document.createElement('option');
             option.value = branch.id;
             option.dataset.latitude = branch.latitude || '';
@@ -2987,8 +3018,13 @@
             branchSelect.appendChild(option);
         });
 
-        if (currentValue) {
+        if (currentValue && Array.from(branchSelect.options).some((option) => option.value === currentValue)) {
             branchSelect.value = currentValue;
+        }
+
+        if (branchSelectNote) {
+            branchSelectNote.classList.remove('d-none');
+            branchSelectNote.textContent = 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng dưới 15 km.';
         }
     }
     
