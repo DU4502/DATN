@@ -482,8 +482,8 @@
             <nav class="root-nav">
                 <p class="root-nav-label">Điều hành</p>
                 <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
-                <a href="{{ route('admin.super-admin') . '#branch-ranking' }}" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh</a>
-                <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên</a>
+                <a href="{{ route('admin.super-admin') . '#branch-ranking' }}" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh <span class="root-nav-badge">{{ \App\Models\Branch::count() }}</span></a>
+                <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
                 <a href="{{ route('admin.chat.index') }}" class="root-nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}">
                     <i class="bi bi-chat-dots"></i> Chat khách hàng
                     @php
@@ -731,40 +731,6 @@
         }
 
         updateRouteLinks();
-
-        // Cập nhật badge chat sidebar mỗi 5 giây
-        (function () {
-            const badge = document.getElementById('sidebar-chat-badge');
-            if (!badge) return;
-
-            const unreadUrl = '{{ route('admin.chat.unread-count') }}';
-
-            const updateChatBadge = async () => {
-                try {
-                    const res = await fetch(unreadUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-                    if (!res.ok) return;
-                    const data = await res.json();
-                    const count = data.count ?? 0;
-                    if (count > 0) {
-                        badge.textContent = count > 99 ? '99+' : count;
-                        badge.style.display = '';
-                    } else {
-                        badge.style.display = 'none';
-                    }
-                } catch (e) {
-                    // Bỏ qua lỗi mạng
-                }
-            };
-
-            // Cập nhật ngay khi admin vừa đọc tin
-            document.addEventListener('chat:messages-read', updateChatBadge);
-
-            // Chạy ngay và poll mỗi 5 giây khi tab đang active
-            updateChatBadge();
-            setInterval(() => {
-                if (!document.hidden) updateChatBadge();
-            }, 5000);
-        })();
     </script>
 </body>
 </html>

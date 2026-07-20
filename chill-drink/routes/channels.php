@@ -30,5 +30,5 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
 
     return (int) $user->id === (int) $conversation->user_id
         || (int) $user->id === (int) $conversation->cskh_id
-        || $user->isAdmin();  // admin và super admin đều được xem
+        || $user->canMonitorChat();
 });
