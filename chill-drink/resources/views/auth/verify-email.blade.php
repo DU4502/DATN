@@ -12,8 +12,8 @@
                         <h1 class="h3 fw-bold mb-3">Xác thực email</h1>
                         <p class="text-secondary">Vui lòng kiểm tra email và bấm vào liên kết xác thực tài khoản.</p>
 
-                        @if (session('status') == 'verification-link-sent')
-                            <div class="alert alert-success">Liên kết xác thực mới đã được gửi tới email của bạn.</div>
+                        @if (session('status'))
+                            <div class="alert alert-success">{{ __((string) session('status')) }}</div>
                         @endif
 
                         <div class="d-flex flex-wrap gap-3">
