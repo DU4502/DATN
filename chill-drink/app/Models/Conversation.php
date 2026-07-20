@@ -16,6 +16,9 @@ class Conversation extends Model
         'subject',
         'status',
         'last_message_at',
+        'guest_name',
+        'guest_email',
+        'guest_token',
     ];
 
     protected function casts(): array
@@ -73,5 +76,28 @@ class Conversation extends Model
     public function scopeUnassigned($query)
     {
         return $query->whereNull('cskh_id');
+    }
+
+    public function scopeForGuest($query, string $token)
+    {
+        return $query->where('guest_token', $token);
+    }
+
+    public function isGuest(): bool
+    {
+        return is_null($this->user_id) && !is_null($this->guest_token);
+    }
+
+    public function isOwnedBy(?int $userId, ?string $guestToken): bool
+    {
+        if ($userId) {
+            return $this->user_id === $userId;
+        }
+
+        if ($guestToken) {
+            return $this->guest_token === $guestToken;
+        }
+
+        return false;
     }
 }

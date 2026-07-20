@@ -74,6 +74,10 @@ class FacebookController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
+        if (str_contains(session('url.intended', ''), '/chat')) {
+            request()->session()->forget('url.intended');
+        }
+
         return redirect()->intended(route('home', absolute: false));
     }
 

@@ -13,6 +13,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->redirectGuestsTo(function (\Illuminate\Http\Request $request) {
+            if (! $request->expectsJson()) {
+                if ($request->is('chat*') || $request->is('admin/chat*')) {
+                    session()->forget('url.intended');
+                }
+
+                return route('login');
+            }
+        });
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'superadmin' => \App\Http\Middleware\SuperAdminMiddleware::class,
