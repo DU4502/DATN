@@ -1484,7 +1484,9 @@
     <?php endif; ?>
 
     <?php if(auth()->guard()->check()): ?>
-        <?php echo $__env->make('components.chatbox', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+        <?php if(auth()->user()->isCustomer()): ?>
+            <?php echo $__env->make('components.chatbox', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+        <?php endif; ?>
     <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
