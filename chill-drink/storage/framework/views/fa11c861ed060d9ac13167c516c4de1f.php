@@ -581,6 +581,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <?php echo $__env->make('partials.realtime', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <script>
         const rootSidebar = document.querySelector('[data-root-sidebar]');
         const rootBackdrop = document.querySelector('[data-root-backdrop]');
