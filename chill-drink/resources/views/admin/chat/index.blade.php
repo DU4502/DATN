@@ -30,41 +30,42 @@
 .conv-item:hover { background: #f8f9fa; }
 .conv-item.active  { background: #e7f3ff; }
 
-/* Chat boxes */
+/* Chat boxes – open windows: hàng ngang từ phải sang trái */
 .chat-boxes-container {
-    position: fixed; bottom: 20px; right: 20px;
-    display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-end;
+    position: fixed; bottom: 20px; right: 72px;
+    display: flex; flex-direction: row-reverse; gap: 10px; align-items: flex-end;
     z-index: 1050; pointer-events: none;
 }
+
+/* Minimized icons – cột dọc sát góc phải */
+.chat-minimized-container {
+    position: fixed; bottom: 20px; right: 20px;
+    display: flex; flex-direction: column-reverse; gap: 8px; align-items: center;
+    z-index: 1051; pointer-events: none;
+}
+
 .chat-box {
     width: 330px; background: #fff;
     border: 1px solid #dee2e6; border-radius: 10px;
     box-shadow: 0 4px 20px rgba(0,0,0,.15);
     display: flex; flex-direction: column;
     pointer-events: auto; transition: all .2s ease;
+    height: 450px;
 }
-.chat-box:not(.minimized) { height: 450px; }
 
-/* Minimized: thu về icon tròn */
-.chat-box.minimized {
-    width: 52px !important;
-    height: 52px !important;
-    border-radius: 50% !important;
-    border: none !important;
-    box-shadow: 0 4px 16px rgba(0,132,255,.35) !important;
-    overflow: hidden;
-    cursor: pointer;
-}
-.chat-box.minimized .chat-box-header {
+/* Minimized icon tròn – dùng trong .chat-minimized-container */
+.chat-mini-icon {
     width: 52px; height: 52px;
-    border-radius: 50% !important;
-    padding: 0;
+    border-radius: 50%;
+    background: #0084ff;
+    box-shadow: 0 4px 16px rgba(0,132,255,.35);
     display: flex; align-items: center; justify-content: center;
+    cursor: pointer; pointer-events: auto;
+    position: relative; flex-shrink: 0;
+    transition: transform .15s;
 }
-.chat-box.minimized .chat-box-header-left { display: none; }
-.chat-box.minimized .chat-box-actions { display: none; }
-.chat-box.minimized .chat-box-body,
-.chat-box.minimized .chat-box-footer { display: none; }
+.chat-mini-icon:hover { transform: scale(1.08); }
+.chat-mini-icon i { color: #fff; font-size: 1.4rem; }
 
 /* Badge unread trên icon minimized */
 .chat-box-minimized-badge {
@@ -75,11 +76,7 @@
     border: 2px solid #fff; font-size: 11px; font-weight: 800;
     align-items: center; justify-content: center;
 }
-.chat-box.minimized .chat-box-minimized-badge { display: flex; }
-
-/* Icon hiện khi minimized */
-.chat-box-minimized-icon { display: none; font-size: 1.4rem; }
-.chat-box.minimized .chat-box-minimized-icon { display: block; }
+.chat-mini-icon .chat-box-minimized-badge { display: flex; }
 
 .chat-box-header {
     background: #0084ff; color: #fff;
@@ -252,28 +249,20 @@
         </div>
     </div>
 
-    {{-- Chat Boxes --}}
+    {{-- Chat Boxes (open/expanded) --}}
     <div class="chat-boxes-container">
-        <template x-for="chatBox in openChats" :key="chatBox.id">
-            <div class="chat-box" :class="{ minimized: chatBox.minimized }">
+        <template x-for="chatBox in openChats.filter(c => !c.minimized)" :key="chatBox.id">
+            <div class="chat-box">
 
                 {{-- Header --}}
                 <div class="chat-box-header" @click="toggleMinimize(chatBox.id)">
-                    {{-- Icon hiện khi minimized --}}
-                    <i class="bi bi-chat-dots-fill chat-box-minimized-icon"></i>
-                    {{-- Badge unread khi minimized --}}
-                    <span
-                        class="chat-box-minimized-badge"
-                        x-show="chatBox.unreadCount > 0"
-                        x-text="chatBox.unreadCount > 9 ? '9+' : chatBox.unreadCount"
-                    ></span>
                     <div class="chat-box-header-left">
                         <div class="chat-box-avatar" x-text="chatBox.userName.charAt(0).toUpperCase()"></div>
                         <div class="chat-box-title" x-text="chatBox.userName"></div>
                     </div>
                     <div class="chat-box-actions" @click.stop>
-                        <button class="chat-box-btn" @click="toggleMinimize(chatBox.id)" :title="chatBox.minimized ? 'Mở rộng' : 'Thu nhỏ'">
-                            <i class="bi" :class="chatBox.minimized ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                        <button class="chat-box-btn" @click="toggleMinimize(chatBox.id)" title="Thu nhỏ">
+                            <i class="bi bi-chevron-down"></i>
                         </button>
                         <button class="chat-box-btn" @click="closeChat(chatBox.id)" title="Đóng">
                             <i class="bi bi-x-lg"></i>
@@ -329,6 +318,23 @@
                         <i class="bi bi-send-fill"></i>
                     </button>
                 </div>
+            </div>
+        </template>
+    </div>
+
+    {{-- Minimized icons – xếp dọc sát góc phải --}}
+    <div class="chat-minimized-container">
+        <template x-for="chatBox in openChats.filter(c => c.minimized)" :key="chatBox.id">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:auto;">
+                <div class="chat-mini-icon" @click="toggleMinimize(chatBox.id)" :title="chatBox.userName">
+                    <i class="bi bi-chat-dots-fill"></i>
+                    <span
+                        class="chat-box-minimized-badge"
+                        x-show="chatBox.unreadCount > 0"
+                        x-text="chatBox.unreadCount > 9 ? '9+' : chatBox.unreadCount"
+                    ></span>
+                </div>
+                <span x-text="chatBox.userName" style="font-size:0.7rem;font-weight:600;color:#333;max-width:70px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;"></span>
             </div>
         </template>
     </div>
