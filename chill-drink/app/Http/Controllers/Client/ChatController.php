@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Events\ConversationClosed;
 use App\Events\MessageSent;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MessageResource;
+use App\Models\Branch;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -21,30 +24,45 @@ class ChatController extends Controller
     {
         $this->ensureCustomer();
 
-        $request->validate([
-            'lat' => 'required|numeric',
-            'lng' => 'required|numeric',
-        ]);
+        $lat = $request->input('lat');
+        $lng = $request->input('lng');
 
-        $lat = (float) $request->input('lat');
-        $lng = (float) $request->input('lng');
+        if (is_numeric($lat) && is_numeric($lng)) {
+            $lat = (float) $lat;
+            $lng = (float) $lng;
+            session(['user_lat' => $lat, 'user_lng' => $lng]);
 
-        $branches = \App\Models\Branch::availableForLocation()
-            ->get()
-            ->map(function (\App\Models\Branch $branch) use ($lat, $lng) {
-                $distanceKm = $branch->distanceTo($lat, $lng);
-                return [
-                    'id' => $branch->id,
-                    'name' => $branch->name,
-                    'address' => $branch->address,
-                    'phone' => $branch->phone,
-                    'distance' => round($distanceKm, 2),
-                    'distance_text' => round($distanceKm, 1) . ' km',
-                ];
-            })
-            ->sortBy('distance')
-            ->values()
-            ->take(3);
+            $branches = Branch::availableForLocation()
+                ->get()
+                ->map(function (Branch $branch) use ($lat, $lng) {
+                    $distanceKm = $branch->distanceTo($lat, $lng);
+                    return [
+                        'id' => $branch->id,
+                        'name' => $branch->name,
+                        'address' => $branch->address,
+                        'phone' => $branch->phone,
+                        'distance' => round($distanceKm, 2),
+                        'distance_text' => round($distanceKm, 1) . ' km',
+                    ];
+                })
+                ->sortBy('distance')
+                ->values()
+                ->take(3);
+        } else {
+            $branches = Branch::availableForLocation()
+                ->take(3)
+                ->get()
+                ->map(function (Branch $branch) {
+                    return [
+                        'id' => $branch->id,
+                        'name' => $branch->name,
+                        'address' => $branch->address,
+                        'phone' => $branch->phone,
+                        'distance' => 0,
+                        'distance_text' => '',
+                    ];
+                });
+        }
 
         return response()->json([
             'success' => true,
@@ -58,97 +76,19 @@ class ChatController extends Controller
 
         $user = auth()->user();
 
-        // --- Xác định branch_id theo ưu tiên ---
-        // 1. Đơn hàng gần nhất còn đang xử lý của user
-        $activeOrder = $user->orders()
-            ->whereNotNull('branch_id')
-            ->whereNotIn('status', ['completed', 'cancelled'])
-            ->latest()
-            ->first();
-
-        $targetBranchId = $activeOrder?->branch_id
-            ?? session('nearest_branch_id')
-            ?? null;
-
-        // 2. Fallback: chi nhánh đầu tiên đang hoạt động
-        if (!$targetBranchId) {
-            $targetBranchId = \App\Models\Branch::where('status', true)->value('id');
-        }
-
-        // 3. Kiểm tra chi nhánh đã chọn có đang mở không
-        //    Nếu đóng → tìm chi nhánh gần nhất đang mở dựa vào vị trí GPS (session)
-        if ($targetBranchId) {
-            $targetBranch = \App\Models\Branch::find($targetBranchId);
-
-            if (!$targetBranch || !$targetBranch->status) {
-                $nearestOpen = $this->findNearestOpenBranch();
-                if ($nearestOpen) {
-                    $targetBranchId = $nearestOpen->id;
-                } else {
-                    // Tất cả chi nhánh đều đóng — lấy bất kỳ chi nhánh nào còn tồn tại
-                    $targetBranchId = \App\Models\Branch::value('id');
-                }
-            }
-        }
-
-        // --- Tìm conversation open hiện có ---
+        // Tìm conversation 'open' hiện tại
         $conversation = $user->conversations()
             ->where('status', 'open')
             ->latest()
             ->first();
 
-        $isNew = false;
-
         if (!$conversation) {
+            // Tạo conversation mới chưa chọn branch
             $conversation = $user->conversations()->create([
-                'subject' => 'Hỗ trợ khách hàng',
-                'status'  => 'open',
-                'branch_id' => $targetBranchId,
+                'subject'   => 'Hỗ trợ khách hàng',
+                'status'    => 'open',
+                'branch_id' => null,
             ]);
-            $isNew = true;
-        } elseif ($targetBranchId && !$conversation->branch_id) {
-            // Conversation cũ chưa có branch → assign ngay
-            $conversation->update(['branch_id' => $targetBranchId]);
-            $isNew = true;
-        }
-
-        // --- Gửi system message chào khi branch vừa được assign ---
-        if ($isNew && $targetBranchId) {
-            $branch = \App\Models\Branch::find($targetBranchId);
-
-            if ($branch) {
-                $staffUser = \App\Models\User::whereIn('role_id', [2, 3, 4])
-                    ->where('branch_id', $branch->id)
-                    ->first()
-                    ?? \App\Models\User::whereIn('role_id', [2, 3, 4])->first()
-                    ?? $user;
-
-                $systemContent = "Xin chào! Bạn đang được kết nối với Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
-
-                if ($activeOrder && $activeOrder->branch_id === $targetBranchId) {
-                    $systemContent = "Xin chào! Bạn có đơn hàng {$activeOrder->displayCode()} tại Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
-                } elseif ($activeOrder && $activeOrder->branch_id !== $targetBranchId) {
-                    // Chi nhánh của đơn hàng đã đóng, đang chuyển sang chi nhánh khác
-                    $systemContent = "Xin chào! Chi nhánh xử lý đơn hàng của bạn hiện đóng cửa.\nBạn đang được kết nối với Chi nhánh {$branch->name} để được hỗ trợ.";
-                }
-
-                $message = $conversation->messages()->create([
-                    'sender_id' => $staffUser->id,
-                    'content'   => $systemContent,
-                ]);
-
-                DB::table('conversations')
-                    ->where('id', $conversation->id)
-                    ->update(['last_message_at' => now()]);
-
-                $message->load(['sender', 'displayAsSender']);
-
-        $systemMsgId = $message->id;
-        try {
-            broadcast(new MessageSent($message))->toOthers();
-        } catch (\Throwable) {}
-        unset($systemMsgId);
-            }
         }
 
         $conversation->load('branch');
@@ -157,37 +97,9 @@ class ChatController extends Controller
             'conversation_id' => $conversation->id,
             'branch_id'       => $conversation->branch_id,
             'branch_name'     => $conversation->branch?->name ?? '',
+            'status'          => $conversation->status,
             'success'         => true,
         ]);
-    }
-
-    /**
-     * Tìm chi nhánh mở gần nhất dựa theo tọa độ user (DB → session → fallback).
-     */
-    private function findNearestOpenBranch(): ?\App\Models\Branch
-    {
-        $branches = \App\Models\Branch::where('status', true)
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->get();
-
-        if ($branches->isEmpty()) {
-            return null;
-        }
-
-        // Ưu tiên tọa độ lưu trong DB user, rồi mới đến session
-        $user = auth()->user();
-        $lat  = $user?->latitude ?? session('user_lat');
-        $lng  = $user?->longitude ?? session('user_lng');
-
-        if ($lat && $lng) {
-            return $branches
-                ->sortBy(fn ($b) => $b->distanceTo((float) $lat, (float) $lng))
-                ->first();
-        }
-
-        // Không có tọa độ → trả về chi nhánh đầu tiên đang mở
-        return $branches->first();
     }
 
     public function selectBranch(Request $request)
@@ -196,7 +108,7 @@ class ChatController extends Controller
 
         $request->validate([
             'conversation_id' => 'required|exists:conversations,id',
-            'branch_id' => 'required|exists:branches,id',
+            'branch_id'       => 'required|exists:branches,id',
         ]);
 
         $conversation = Conversation::findOrFail($request->conversation_id);
@@ -205,7 +117,9 @@ class ChatController extends Controller
             abort(403);
         }
 
-        $branch = \App\Models\Branch::findOrFail($request->branch_id);
+        $branch = Branch::findOrFail($request->branch_id);
+
+        $isNewBranch = ($conversation->branch_id !== $branch->id);
 
         $conversation->update([
             'branch_id' => $branch->id,
@@ -213,42 +127,50 @@ class ChatController extends Controller
 
         session(['nearest_branch_id' => $branch->id]);
 
-        $systemContent = "Bạn đã được kết nối với Chi nhánh " . $branch->name . ".\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
+        $systemMessage = null;
 
-        // Find staff/admin assigned to this branch, or any staff user
-        $staffUser = \App\Models\User::whereIn('role_id', [2, 3, 4])
-            ->where('branch_id', $branch->id)
-            ->first()
-            ?? \App\Models\User::whereIn('role_id', [2, 3, 4])->first()
-            ?? auth()->user();
+        // Chỉ gửi tin nhắn chào từ Bot nếu conversation chưa có tin nhắn chào bot hoặc vừa chọn branch mới
+        if ($isNewBranch || $conversation->messages()->count() === 0) {
+            $staffUser = User::whereIn('role_id', [2, 3, 4])
+                ->where('branch_id', $branch->id)
+                ->first()
+                ?? User::whereIn('role_id', [2, 3, 4])->first()
+                ?? auth()->user();
 
-        $message = $conversation->messages()->create([
-            'sender_id' => $staffUser->id,
-            'content' => $systemContent,
-        ]);
+            $branchNameFormatted = \Illuminate\Support\Str::startsWith($branch->name, 'Chi nhánh') ? $branch->name : 'Chi nhánh ' . $branch->name;
+            $systemContent = "🤖 Hệ thống\nXin chào!\nBạn đã được kết nối với " . $branchNameFormatted . ".\n\nNhân viên sẽ phản hồi bạn trong giây lát.\nBạn có thể gửi trước câu hỏi hoặc yêu cầu của mình.";
 
-        // Cập nhật last_message_at nhanh nhất bằng raw SQL ngay sau khi tạo message
-        DB::table('conversations')
-            ->where('id', $conversation->id)
-            ->update(['last_message_at' => now()]);
+            $systemMessage = $conversation->messages()->create([
+                'sender_id' => $staffUser->id,
+                'content'   => $systemContent,
+            ]);
 
-        $message->load(['sender', 'displayAsSender']);
+            DB::table('conversations')
+                ->where('id', $conversation->id)
+                ->update(['last_message_at' => now()]);
 
-        try {
-            broadcast(new MessageSent($message))->toOthers();
-        } catch (\Throwable) {}
+            $systemMessage->load(['sender', 'displayAsSender']);
+
+            try {
+                broadcast(new MessageSent($systemMessage))->toOthers();
+            } catch (\Throwable) {}
+        }
 
         return response()->json([
-            'success' => true,
-            'branch_id' => $branch->id,
+            'success'     => true,
+            'branch_id'   => $branch->id,
             'branch_name' => $branch->name,
-            'message' => MessageResource::toPublicArray($message),
+            'message'     => $systemMessage ? MessageResource::toPublicArray($systemMessage) : null,
         ]);
     }
 
-    public function messages(Request $request)
+    public function endSession(Request $request)
     {
         $this->ensureCustomer();
+
+        $request->validate([
+            'conversation_id' => 'required|exists:conversations,id',
+        ]);
 
         $conversation = Conversation::findOrFail($request->conversation_id);
 
@@ -256,9 +178,47 @@ class ChatController extends Controller
             abort(403);
         }
 
-        $messages = $conversation->messages()
-            ->with(['sender', 'displayAsSender'])
-            ->get();
+        $conversation->update(['status' => 'closed']);
+
+        try {
+            broadcast(new ConversationClosed($conversation, 'client'))->toOthers();
+        } catch (\Throwable) {}
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã kết thúc phiên tư vấn thành công.',
+        ]);
+    }
+
+    public function messages(Request $request)
+    {
+        $this->ensureCustomer();
+
+        $request->validate([
+            'conversation_id' => 'required|exists:conversations,id',
+        ]);
+
+        $conversation = Conversation::findOrFail($request->conversation_id);
+
+        if ($conversation->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        // Nếu conversation đã chọn branch: Tải tất cả tin nhắn từ mọi conversation (cả closed) của user tại chi nhánh này
+        if ($conversation->branch_id) {
+            $conversationIds = Conversation::where('user_id', auth()->id())
+                ->where('branch_id', $conversation->branch_id)
+                ->pluck('id');
+
+            $messages = Message::whereIn('conversation_id', $conversationIds)
+                ->with(['sender', 'displayAsSender'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+        } else {
+            $messages = $conversation->messages()
+                ->with(['sender', 'displayAsSender'])
+                ->get();
+        }
 
         if ($request->input('mark_as_read')) {
             $conversation->messages()
@@ -268,10 +228,11 @@ class ChatController extends Controller
         }
 
         return response()->json([
-            'messages' => $messages->map(
+            'success'             => true,
+            'conversation_status' => $conversation->status,
+            'messages'            => $messages->map(
                 fn (Message $message) => MessageResource::toPublicArray($message)
             ),
-            'success' => true,
         ]);
     }
 
@@ -281,8 +242,8 @@ class ChatController extends Controller
 
         $request->validate([
             'conversation_id' => 'required|exists:conversations,id',
-            'content' => 'nullable|string',
-            'attachment' => 'nullable|file|max:10240',
+            'content'         => 'nullable|string',
+            'attachment'      => 'nullable|file|max:10240',
         ]);
 
         if (empty($request->input('content')) && !$request->hasFile('attachment')) {
@@ -307,18 +268,16 @@ class ChatController extends Controller
         }
 
         $message = $conversation->messages()->create([
-            'sender_id' => auth()->id(),
-            'content' => $request->input('content'),
+            'sender_id'       => auth()->id(),
+            'content'         => $request->input('content'),
             'attachment_path' => $attachmentPath,
             'attachment_name' => $attachmentName,
         ]);
 
         if ($conversation->status === 'closed') {
-            // Mở lại conversation bằng Eloquent (cần update status)
             $conversation->update(['status' => 'open']);
         }
 
-        // Cập nhật last_message_at nhanh nhất bằng raw SQL ngay sau khi tạo message
         DB::table('conversations')
             ->where('id', $conversation->id)
             ->update(['last_message_at' => now()]);
@@ -330,10 +289,11 @@ class ChatController extends Controller
         } catch (\Throwable) {}
 
         return response()->json([
-            'message' => MessageResource::toPublicArray($message),
             'success' => true,
+            'message' => MessageResource::toPublicArray($message),
         ]);
     }
+
     protected function ensureCustomer(): void
     {
         abort_unless(auth()->user()?->isCustomer(), 403);
