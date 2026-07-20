@@ -90,9 +90,6 @@
                                 <a href="{{ route('auth.google.redirect') }}" class="btn social-btn">
                                     <i class="bi bi-google text-danger fs-5"></i> Tiếp tục với Google
                                 </a>
-                                <a href="{{ route('auth.facebook.redirect') }}" class="btn social-btn">
-                                    <i class="bi bi-facebook text-primary fs-5"></i> Tiếp tục với Facebook
-                                </a>
                             </div>
 
                             <form method="POST" action="{{ route('register') }}">
