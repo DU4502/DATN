@@ -2,8 +2,8 @@
 <?php if(! auth()->user()->isAdmin()): ?>
 <script>
     (function () {
-        const feedUrl = <?php echo json_encode(route('notifications.feed'), 15, 512) ?>;
-        const ordersIndexUrl = <?php echo json_encode(route('orders.index'), 15, 512) ?>;
+        const feedUrl = <?php echo json_encode(route('notifications.feed', [], false)) ?>;
+        const ordersIndexUrl = <?php echo json_encode(route('orders.index', [], false)) ?>;
 
         function orderNotificationUrl(orderId) {
             if (!orderId) {
@@ -245,7 +245,7 @@
             if (markAllReadBtn) {
                 markAllReadBtn.addEventListener('click', async function() {
                     try {
-                        const response = await fetch(<?php echo json_encode(route('notifications.mark-all-read'), 15, 512) ?>, {
+                        const response = await fetch(<?php echo json_encode(route('notifications.mark-all-read', [], false)) ?>, {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',

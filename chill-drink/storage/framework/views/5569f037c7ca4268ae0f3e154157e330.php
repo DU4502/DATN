@@ -1259,9 +1259,6 @@
                     <li class="nav-item">
                         <a href="<?php echo e(route('products.index')); ?>" class="nav-link <?php echo e(request()->routeIs('products.*') ? 'active' : ''); ?>">Sản Phẩm</a>
                     </li>
-                    <li class="nav-item">
-                        <a href="<?php echo e(route('order-lookup.index')); ?>" class="nav-link <?php echo e(request()->routeIs('order-lookup.*') ? 'active' : ''); ?>">Tra Cứu Đơn Hàng</a>
-                    </li>
                 </ul>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
@@ -1487,37 +1484,7 @@
     <?php endif; ?>
 
     <?php if(auth()->guard()->check()): ?>
-        <?php if(auth()->user()->isCustomer()): ?>
-            <?php echo $__env->make('components.chatbox', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
-
-            
-            <div
-                id="location-permission-banner"
-                style="display:none; position:fixed; top:1rem; left:50%; transform:translateX(-50%); z-index:1100;
-                       background:#fff; border:1px solid #d1fae5; border-radius:16px; box-shadow:0 8px 32px rgba(7,52,58,.18);
-                       padding:1rem 1.25rem; gap:.75rem; align-items:flex-start; max-width:360px; width:calc(100vw - 2rem);"
-            >
-                <span style="font-size:1.5rem; flex-shrink:0;">📍</span>
-                <div style="flex:1;">
-                    <p style="margin:0 0 .3rem; font-weight:700; font-size:.9rem; color:#065f46;">Cho phép truy cập vị trí?</p>
-                    <p style="margin:0 0 .75rem; font-size:.8rem; color:#374151; line-height:1.5;">
-                        Chill Drink sẽ tìm chi nhánh gần bạn nhất để hỗ trợ đặt hàng và chat nhanh hơn.
-                    </p>
-                    <div style="display:flex; gap:.5rem;">
-                        <button id="location-allow-btn"
-                            style="flex:1; padding:.45rem .75rem; border-radius:8px; border:0; font-size:.8rem; font-weight:700;
-                                   background:linear-gradient(135deg,var(--c-primary),var(--c-accent)); color:#fff; cursor:pointer;">
-                            Cho phép
-                        </button>
-                        <button id="location-skip-btn"
-                            style="padding:.45rem .75rem; border-radius:8px; border:1px solid #d1d5db; font-size:.8rem;
-                                   background:#f9fafb; color:#6b7280; cursor:pointer;">
-                            Bỏ qua
-                        </button>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
+        <?php echo $__env->make('components.chatbox', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -1957,7 +1924,7 @@
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('<?php echo e(route('select-nearest-branch')); ?>', {
+                fetch('<?php echo e(route('select-nearest-branch', [], false)); ?>', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1986,9 +1953,7 @@
                             { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
                         );
                     } else if (result.state === 'prompt') {
-                        // Chưa hỏi → hiện banner giải thích trước khi hỏi
-                        var banner = document.getElementById('location-permission-banner');
-                        if (banner) banner.style.display = 'flex';
+                        // Chưa hỏi → không làm gì, để chatbox tự xin quyền khi user mở chat
                     }
                     // 'denied' → không làm gì
                 });
@@ -2001,28 +1966,7 @@
                 );
             }
 
-            // Nút "Cho phép" trên banner
-            var allowBtn = document.getElementById('location-allow-btn');
-            if (allowBtn) {
-                allowBtn.addEventListener('click', function() {
-                    var banner = document.getElementById('location-permission-banner');
-                    if (banner) banner.style.display = 'none';
-                    navigator.geolocation.getCurrentPosition(
-                        pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
-                        function(err) { console.warn("User từ chối vị trí:", err); },
-                        { enableHighAccuracy: true, timeout: 10000 }
-                    );
-                });
-            }
 
-            // Nút "Bỏ qua"
-            var skipBtn = document.getElementById('location-skip-btn');
-            if (skipBtn) {
-                skipBtn.addEventListener('click', function() {
-                    var banner = document.getElementById('location-permission-banner');
-                    if (banner) banner.style.display = 'none';
-                });
-            }
             <?php endif; ?>
         });
     </script>
