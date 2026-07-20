@@ -202,11 +202,22 @@
                         >
                             <div class="d-flex align-items-start gap-2">
                                 <div class="position-relative flex-shrink-0">
-                                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;" x-text="conv.user_name.charAt(0).toUpperCase()"></div>
+                                    <!-- Guest avatar: icon người dùng vô danh -->
+                                    <template x-if="conv.is_guest">
+                                        <div class="rounded-circle bg-secondary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;font-size:1.1rem;"><i class="bi bi-incognito" style="line-height:1;"></i></div>
+                                    </template>
+                                    <!-- User avatar: chữ cái đầu -->
+                                    <template x-if="!conv.is_guest">
+                                        <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width:36px;height:36px;" x-text="conv.user_name.charAt(0).toUpperCase()"></div>
+                                    </template>
                                 </div>
                                 <div class="min-w-0 flex-grow-1">
                                     <div class="d-flex align-items-center justify-content-between gap-2">
-                                        <strong class="text-dark small text-truncate" x-text="conv.user_name"></strong>
+                                        <div class="d-flex align-items-center gap-1 min-w-0">
+                                            <strong class="text-dark small text-truncate" x-text="conv.user_name"></strong>
+                                            <!-- Badge Khách vãng lai -->
+                                            <span x-show="conv.is_guest" class="badge rounded-pill flex-shrink-0" style="background:#f59e0b;color:#fff;font-size:.62rem;padding:2px 6px;">Khách VL</span>
+                                        </div>
                                         <span x-show="conv.unread > 0" x-text="conv.unread > 99 ? '99+' : conv.unread" class="badge rounded-pill bg-danger flex-shrink-0" style="font-size:.7rem;"></span>
                                         <span x-show="conv.unread === 0 && conv.last_at" x-text="conv.last_at" class="text-secondary small flex-shrink-0"></span>
                                     </div>
