@@ -2,8 +2,8 @@
 @if(! auth()->user()->isAdmin())
 <script>
     (function () {
-        const feedUrl = @json(route('notifications.feed'));
-        const ordersIndexUrl = @json(route('orders.index'));
+        const feedUrl = @json(route('notifications.feed', [], false));
+        const ordersIndexUrl = @json(route('orders.index', [], false));
 
         function orderNotificationUrl(orderId) {
             if (!orderId) {
@@ -245,7 +245,7 @@
             if (markAllReadBtn) {
                 markAllReadBtn.addEventListener('click', async function() {
                     try {
-                        const response = await fetch(@json(route('notifications.mark-all-read')), {
+                        const response = await fetch(@json(route('notifications.mark-all-read', [], false)), {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',

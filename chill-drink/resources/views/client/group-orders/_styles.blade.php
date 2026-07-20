@@ -105,34 +105,39 @@
     .group-order-form { overflow: hidden; padding: 0 !important; }
     .group-chat-launcher { position: fixed; right: 28px; bottom: 100px; z-index: 1055; width: 58px; height: 58px; border: 3px solid #fff; border-radius: 50%; background: linear-gradient(135deg, #3857c8, #7048d7); color: #fff; box-shadow: 0 12px 32px rgba(63,75,180,.34); font-size: 1.35rem; transition: transform .2s ease; }
     .group-chat-launcher:hover { transform: translateY(-3px); }
-    .group-chat-panel { position: fixed; right: 28px; bottom: 100px; z-index: 1055; width: min(390px, calc(100vw - 32px)); overflow: hidden; border: 0 !important; border-radius: 22px !important; box-shadow: 0 22px 60px rgba(31,38,90,.25); }
-    .group-chat-head { padding: 1rem 1.15rem; display: flex; gap: .75rem; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #3857c8, #7048d7); color: #fff; }
+    .group-chat-launcher-badge { position: absolute; top: -5px; right: -5px; min-width: 22px; height: 22px; padding: 0 5px; border: 2px solid #fff; border-radius: 999px; background: #dc3545; color: #fff; font-size: .7rem; font-weight: 800; line-height: 18px; }
+    .group-chat-panel { position: fixed; right: 24px; bottom: 100px; z-index: 1070; width: min(376px, calc(100vw - 32px)); height: min(500px, calc(100vh - 124px)); overflow: hidden; border: 1px solid #dfe5f3 !important; border-radius: 20px !important; background: #fff; box-shadow: 0 20px 50px rgba(31,38,90,.24); display: flex; flex-direction: column; }
+    .group-chat-head { min-height: 82px; padding: .9rem 1.1rem; display: flex; gap: .75rem; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #3857c8, #7048d7); color: #fff; }
     .group-chat-head .group-eyebrow { color: rgba(255,255,255,.72); }
     .group-chat-head strong { color: #fff; }
-    .group-chat-tools { padding: .75rem 1rem; border-bottom: 1px solid #e5efed; display: grid; grid-template-columns: auto 1fr; gap: .65rem; align-items: center; background: #fff; }
+    .group-chat-tools { padding: .75rem 1rem; border-bottom: 1px solid #e5efed; display: grid; grid-template-columns: auto 1fr; gap: .65rem; align-items: center; background: #fff; flex-shrink: 0; }
     .group-chat-tabs { display: flex; gap: .5rem; flex-wrap: wrap; }
     .group-chat-tab { border: 1px solid #d9e8e4; background: #fff; border-radius: 999px; padding: .45rem .8rem; font-weight: 600; color: #52615e; }
     .group-chat-tab.is-active { background: #5264ce; border-color: #5264ce; color: #fff; }
     .group-chat-recipient { min-height: 42px !important; padding: .45rem .7rem !important; border-radius: 12px !important; font-size: .9rem !important; }
     .group-chat-private-button { min-height: 42px; border: 1px solid #d9e0f4; background: #fff; border-radius: 12px; padding: .45rem .7rem; display: flex; align-items: center; color: #48516b; font-weight: 700; }
     .group-chat-private-button.is-active { border-color: #5264ce; color: #5264ce; background: #f3f4ff; }
-    .group-chat-contacts { padding: .75rem 1rem; border-bottom: 1px solid #e5e8f1; background: #f8f9ff; }
+    .group-chat-contacts { padding: .75rem 1rem; border-bottom: 1px solid #e5e8f1; background: #f8f9ff; flex-shrink: 0; max-height: 220px; overflow-y: auto; }
     .group-chat-contact-search { display: flex; align-items: center; gap: .5rem; background: #fff; border: 1px solid #dfe3ef; border-radius: 12px; padding: .5rem .7rem; }
     .group-chat-contact-search input { width: 100%; border: 0; outline: 0; background: transparent; }
-    .group-chat-contact-list { max-height: 145px; overflow-y: auto; margin-top: .55rem; display: grid; gap: .35rem; }
+    .group-chat-contact-list { max-height: 130px; overflow-y: auto; margin-top: .55rem; display: grid; gap: .35rem; }
     .group-chat-contact { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: .55rem; width: 100%; padding: .42rem .5rem; border: 0; border-radius: 11px; background: transparent; text-align: left; }
     .group-chat-contact:hover, .group-chat-contact.is-active { background: #e9ebff; color: #4657c5; }
     .group-chat-contact .member-avatar { width: 32px; height: 32px; font-size: .8rem; }
-    .group-chat-messages { height: 235px; overflow-y: auto; padding: 1rem; background: linear-gradient(180deg, #f4fbf8, #fff); }
+    .group-chat-messages { flex: 1 1 0; min-height: 120px; overflow-y: auto; padding: 1rem; background: linear-gradient(180deg, #f4fbf8, #fff); }
     .group-chat-message { display: flex; margin-bottom: .75rem; }
     .group-chat-message.is-mine { justify-content: flex-end; }
     .group-chat-bubble { max-width: min(78%, 520px); background: #fff; border: 1px solid #e2ece9; border-radius: 16px; padding: .65rem .85rem; }
     .group-chat-message.is-mine .group-chat-bubble { background: linear-gradient(135deg, #5264ce, #7048d7); border-color: #5264ce; color: #fff; }
-    .group-chat-compose { display: flex; gap: .6rem; padding: .8rem 1rem; border-top: 1px solid #e5efed; background: #fff; }
+    .group-chat-compose { display: flex; gap: .6rem; padding: .8rem 1rem; border-top: 1px solid #e5efed; background: #fff; flex-shrink: 0; }
     .group-chat-compose .group-input { min-height: 44px; padding: .55rem .75rem; border-radius: 13px; }
     .group-chat-send { width: 44px; height: 44px; padding: 0 !important; border-radius: 50% !important; flex: 0 0 44px; }
     .group-chat-send { background: #5b5fd2 !important; border-color: #5b5fd2 !important; }
     .group-chat-read { display: block; margin-top: .35rem; text-align: right; color: rgba(255,255,255,.82); font-size: .7rem; }
+    .group-chat-recipient-bar { display: flex; align-items: center; gap: .5rem; padding: .55rem 1rem; border-bottom: 1px solid #e5e8f1; background: #f3f4ff; cursor: pointer; flex-shrink: 0; transition: background .15s ease; }
+    .group-chat-recipient-bar:hover { background: #e9ebff; }
+    .group-chat-recipient-bar strong { font-size: .85rem; color: #3d49a6; }
+    .group-chat-recipient-bar .bi-chevron-left { color: #5264ce; font-size: .75rem; }
     .group-chat-notification-stack { position: fixed; right: 24px; top: 92px; z-index: 2000; width: min(380px, calc(100vw - 32px)); display: grid; gap: .55rem; }
     .group-chat-notification { width: 100%; border: 0; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .65rem; text-align: left; padding: .85rem 1rem; border-radius: 14px; background: #303b8f; color: #fff; box-shadow: 0 14px 38px rgba(24,30,80,.3); font-weight: 600; animation: groupChatNoticeIn .22s ease-out; }
     .group-chat-notification:hover { background: #3d49a6; transform: translateY(-1px); }

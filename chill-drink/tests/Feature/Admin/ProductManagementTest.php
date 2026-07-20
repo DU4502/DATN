@@ -122,7 +122,7 @@ class ProductManagementTest extends TestCase
 
         $this->assertNotNull($product);
         $this->assertSame($category->id, $product->category_id);
-        $response->assertRedirect(route('admin.products.show', $product->id));
+        $response->assertRedirect(route('admin.products.index'));
     }
 
     public function test_admin_can_upload_image_when_creating_product(): void
@@ -152,7 +152,7 @@ class ProductManagementTest extends TestCase
         $this->assertStringStartsWith('products/', $product->image);
         $this->assertStringContainsString('/storage/products/', $product->image_url);
         Storage::disk('public')->assertExists($product->image);
-        $response->assertRedirect(route('admin.products.show', $product->id));
+        $response->assertRedirect(route('admin.products.index'));
 
         $this->actingAs($admin)
             ->get(route('admin.products.show', $product->id))
@@ -191,7 +191,7 @@ class ProductManagementTest extends TestCase
         $this->assertSame('Cà Phê Mới', $product->name);
         $this->assertSame('ca-phe-moi', $product->slug);
         $this->assertFalse($product->status);
-        $response->assertRedirect(route('admin.products.show', $product->id));
+        $response->assertRedirect(route('admin.products.index'));
     }
 
     public function test_admin_can_replace_old_image_when_updating_product(): void
@@ -233,7 +233,7 @@ class ProductManagementTest extends TestCase
         Storage::disk('public')->assertExists($product->image);
         $this->assertNotSame($oldPath, $product->image);
         $this->assertStringContainsString('/storage/products/', $product->image_url);
-        $response->assertRedirect(route('admin.products.show', $product->id));
+        $response->assertRedirect(route('admin.products.index'));
 
         $this->actingAs($admin)
             ->get(route('admin.products.edit', $product->id))
