@@ -655,6 +655,7 @@
             }
 
             const url = new URL(guestUrl, window.location.origin);
+            url.searchParams.set('require_location', '1');
             selectedItems().forEach((input) => {
                 url.searchParams.append('items[]', input.value);
             });

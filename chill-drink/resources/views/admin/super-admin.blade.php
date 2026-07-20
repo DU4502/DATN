@@ -478,7 +478,7 @@
                 @endphp
                 <div class="modal fade" id="branchEditModal{{ $branch['branch_id'] }}" tabindex="-1" aria-labelledby="branchEditModalLabel{{ $branch['branch_id'] }}" aria-hidden="true">
                     <div class="modal-dialog modal-dialog-centered modal-lg">
-                        <form class="modal-content branch-edit-form" method="POST" action="{{ route('admin.branches.update', $branch['branch_id']) }}" data-branch-id="{{ $branch['branch_id'] }}" style="border:0;border-radius:8px;">
+                        <form class="modal-content branch-edit-form" method="POST" action="{{ route('admin.branches.update', ['branch' => $branch['branch_id']], false) }}" data-branch-id="{{ $branch['branch_id'] }}" style="border:0;border-radius:8px;">
                             @csrf
                             @method('PUT')
                             <input type="hidden" name="form_type" value="branch-edit">
@@ -567,7 +567,7 @@
 
     <div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true" data-auto-open="{{ old('form_type') === 'branch' ? 'true' : 'false' }}">
         <div class="modal-dialog modal-lg">
-            <form class="modal-content" method="POST" action="{{ route('admin.branches.store') }}" style="border:0;border-radius:8px;">
+            <form class="modal-content" method="POST" action="{{ route('admin.branches.store', [], false) }}" style="border:0;border-radius:8px;">
                 @csrf
                 <input type="hidden" name="form_type" value="branch">
                 <input type="hidden" name="return_to" value="super-admin">
@@ -1232,6 +1232,7 @@ function hideBranchEditModal(form) {
 async function submitBranchEditForm(form) {
     const formData = new FormData(form);
     const action = form.getAttribute('action');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn ? submitBtn.innerHTML : '';
 
@@ -1248,7 +1249,9 @@ async function submitBranchEditForm(form) {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
             },
+            credentials: 'same-origin',
             body: formData,
         });
 
@@ -1460,7 +1463,9 @@ document.addEventListener('submit', async function(e) {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
             },
+            credentials: 'same-origin',
             body: formData,
         });
 

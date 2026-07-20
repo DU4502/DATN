@@ -184,6 +184,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::post('/super-admin/admins', [SuperAdminController::class, 'storeAdmin'])->name('super-admin.admins.store');
     Route::patch('/super-admin/admins/{user}/branch', [SuperAdminController::class, 'updateBranch'])->name('super-admin.update-branch');
     Route::patch('/super-admin/admins/{user}/role', [SuperAdminController::class, 'updateRole'])->name('super-admin.update-role');
+
     
     // Branch Management
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
