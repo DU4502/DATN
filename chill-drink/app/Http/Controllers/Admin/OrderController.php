@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
+use App\Support\AddressLearning;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
@@ -312,6 +313,10 @@ class OrderController extends Controller
         }
         
         $order->save();
+
+        if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
+            app(AddressLearning::class)->markOrderDelivered($order->fresh());
+        }
 
         // Nếu chuyển sang COMPLETED, cập nhật payment_status cho COD và cộng điểm thưởng
         if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
