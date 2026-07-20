@@ -87,11 +87,29 @@
         top: calc(100% + 6px);
         left: 0;
         right: 0;
-        overflow: hidden;
+        max-height: min(320px, 45vh);
+        overflow-y: auto;
+        overscroll-behavior: contain;
         border: 1px solid #d5eee8;
         border-radius: 14px;
         background: #fff;
         box-shadow: 0 18px 45px rgba(15, 23, 42, 0.15);
+        scrollbar-width: thin;
+        scrollbar-color: #0d9488 #eefaf7;
+    }
+
+    .guest-address-suggestions::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .guest-address-suggestions::-webkit-scrollbar-track {
+        background: #eefaf7;
+        border-radius: 999px;
+    }
+
+    .guest-address-suggestions::-webkit-scrollbar-thumb {
+        background: #0d9488;
+        border-radius: 999px;
     }
 
     .guest-address-suggestion {
@@ -171,8 +189,25 @@
 
                         <div class="mb-3">
                             <label for="guest_phone" class="form-label fw-semibold">Số điện thoại *</label>
-                            <input type="tel" id="guest_phone" name="guest_phone" class="form-control guest-input @error('guest_phone') is-invalid @enderror" value="{{ old('guest_phone', $guestInfo['guest_phone'] ?? '') }}" required autocomplete="tel" placeholder="09xx xxx xxx">
-                            @error('guest_phone')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <input
+                                type="tel"
+                                id="guest_phone"
+                                name="guest_phone"
+                                class="form-control guest-input @error('guest_phone') is-invalid @enderror"
+                                value="{{ old('guest_phone', $guestInfo['guest_phone'] ?? '') }}"
+                                required
+                                autocomplete="tel-national"
+                                inputmode="numeric"
+                                maxlength="11"
+                                pattern="^(?:0(?:3|5|7|8|9)[0-9]{8}|84(?:3|5|7|8|9)[0-9]{8})$"
+                                placeholder="0912345678"
+                                title="Nhập số di động Việt Nam hợp lệ, ví dụ 0912345678 hoặc 84912345678."
+                                data-server-error="{{ $errors->has('guest_phone') ? '1' : '0' }}"
+                            >
+                            <div class="form-text">Chỉ nhận số di động Việt Nam hợp lệ.</div>
+                            <div class="invalid-feedback" data-guest-phone-feedback>
+                                @error('guest_phone'){{ $message }}@else Số điện thoại phải là số di động Việt Nam hợp lệ.@enderror
+                            </div>
                         </div>
 
                         <div class="mb-4">
@@ -312,6 +347,7 @@
         const pickupInput = document.getElementById('deliveryTypePickup');
         const branchSelect = document.getElementById('branch_id');
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
+        const guestPhoneInput = document.getElementById('guest_phone');
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
         const locationRefreshButton = document.querySelector('[data-location-refresh]');
@@ -327,6 +363,7 @@
         const shouldPromptLocation = checkoutRoot?.dataset.shouldPromptLocation === '1';
         const reverseGeocodeUrl = checkoutRoot?.dataset.reverseGeocodeUrl || '/api/reverse-geocode';
         const addressLookupUrl = '/api/address-lookup';
+        const maxOrderDistanceKm = {{ json_encode(\App\Support\OrderDistancePolicy::MAX_DISTANCE_KM) }};
         const guestLatitudeInput = document.getElementById('guest_latitude');
         const guestLongitudeInput = document.getElementById('guest_longitude');
         const branchesData = (() => {
@@ -355,6 +392,44 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+        }
+
+        function normalizeVietnamesePhone(value) {
+            const digits = String(value || '').replace(/\D+/g, '');
+
+            if (digits.startsWith('84') && digits.length === 11) {
+                return `0${digits.slice(2)}`;
+            }
+
+            return digits;
+        }
+
+        function isValidVietnameseMobilePhone(value) {
+            return /^(?:0(?:3|5|7|8|9)\d{8}|84(?:3|5|7|8|9)\d{8})$/.test(String(value || ''));
+        }
+
+        function syncGuestPhoneInput(touched = false) {
+            if (!guestPhoneInput) {
+                return true;
+            }
+
+            const normalized = normalizeVietnamesePhone(guestPhoneInput.value).slice(0, 11);
+            if (guestPhoneInput.value !== normalized) {
+                guestPhoneInput.value = normalized;
+            }
+
+            const isValid = isValidVietnameseMobilePhone(normalized);
+            const feedback = guestPhoneInput.parentElement?.querySelector('[data-guest-phone-feedback]');
+            const hasServerError = guestPhoneInput.dataset.serverError === '1';
+
+            guestPhoneInput.setCustomValidity(isValid ? '' : 'Số điện thoại Việt Nam không đúng định dạng.');
+            guestPhoneInput.classList.toggle('is-invalid', (touched || hasServerError) && !isValid);
+
+            if (feedback && !hasServerError) {
+                feedback.textContent = 'Số điện thoại phải là số di động Việt Nam hợp lệ.';
+            }
+
+            return isValid;
         }
 
         function normalizeAddressSuggestion(feature) {
@@ -719,7 +794,11 @@
                 };
             });
 
-            branches.sort((a, b) => {
+            const availableBranches = hasLocation
+                ? branches.filter((branch) => branch.distance !== null && branch.distance < maxOrderDistanceKm)
+                : branches;
+
+            availableBranches.sort((a, b) => {
                 if (a.distance === null && b.distance === null) {
                     return 0;
                 }
@@ -737,7 +816,15 @@
 
             branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
 
-            branches.forEach((branch) => {
+            if (hasLocation && availableBranches.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.disabled = true;
+                option.textContent = 'Không có chi nhánh nào dưới 15 km';
+                branchSelect.appendChild(option);
+            }
+
+            availableBranches.forEach((branch) => {
                 const option = document.createElement('option');
                 option.value = branch.id;
                 option.dataset.latitude = branch.latitude || '';
@@ -756,15 +843,15 @@
                 branchSelect.appendChild(option);
             });
 
-            if (currentValue) {
+            if (currentValue && Array.from(branchSelect.options).some((option) => option.value === currentValue)) {
                 branchSelect.value = currentValue;
             }
 
             if (branchSelectNote) {
                 branchSelectNote.classList.remove('d-none');
                 branchSelectNote.textContent = hasLocation
-                    ? 'Đã xác định vị trí, các chi nhánh được sắp theo khoảng cách gần nhất. Bạn vẫn phải chọn 1 chi nhánh để tiếp tục.'
-                    : 'Bạn phải chọn 1 chi nhánh để tiếp tục đặt hàng. Cho phép vị trí để hệ thống sắp xếp chi nhánh gần nhất.';
+                    ? 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng dưới 15 km.'
+                    : 'Bạn phải xác định vị trí giao hàng để kiểm tra chi nhánh dưới 15 km.';
             }
         }
 
@@ -912,13 +999,26 @@
         });
         if (branchSelect) {
             const validateBranchSelect = () => {
-                branchSelect.setCustomValidity(branchSelect.value ? '' : 'Vui lòng chọn chi nhánh');
+                branchSelect.setCustomValidity(branchSelect.value ? '' : 'Vui lòng chọn chi nhánh dưới 15 km');
             };
 
             branchSelect.addEventListener('invalid', validateBranchSelect);
             branchSelect.addEventListener('change', validateBranchSelect);
             validateBranchSelect();
         }
+        guestPhoneInput?.addEventListener('input', function () {
+            syncGuestPhoneInput(false);
+        });
+        guestPhoneInput?.addEventListener('blur', function () {
+            syncGuestPhoneInput(true);
+        });
+        document.getElementById('guestInfoForm')?.addEventListener('submit', function (event) {
+            if (!syncGuestPhoneInput(true)) {
+                event.preventDefault();
+                guestPhoneInput?.reportValidity();
+            }
+        });
+        syncGuestPhoneInput(false);
         findNearestBranchButton?.addEventListener('click', function () {
             const originalText = this.innerHTML;
             this.disabled = true;
