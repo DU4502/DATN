@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\ShippingFee;
+use App\Support\AddressLearning;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -57,15 +58,27 @@ class GuestCheckoutController extends CheckoutController
         $cart = $this->hydrateCheckoutCart($cart);
         $subtotal = $this->cartSubtotal($cart);
         $branches = Branch::query()->where('status', true)->orderBy('name')->get();
+        $branchesData = $branches->map(fn (Branch $branch) => [
+            'id' => $branch->id,
+            'name' => $branch->name,
+            'address' => $branch->address,
+            'latitude' => $branch->latitude,
+            'longitude' => $branch->longitude,
+        ])->values()->all();
         $guestInfo = session('guest_checkout', []);
         $shippingDistanceOptions = ShippingFee::distanceOptions();
+        $shouldPromptLocation = $request->boolean('require_location')
+            || (bool) session('guest_checkout_require_location');
+        session()->forget('guest_checkout_require_location');
 
         return view('client.checkout.guest.index', compact(
             'cart',
             'subtotal',
             'branches',
+            'branchesData',
             'guestInfo',
-            'shippingDistanceOptions'
+            'shippingDistanceOptions',
+            'shouldPromptLocation'
         ));
     }
 
@@ -85,9 +98,11 @@ class GuestCheckoutController extends CheckoutController
             'guest_email' => ['required', 'string', 'email', 'max:255'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
+            'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'branch_id' => [
-                'nullable',
-                'required_if:fulfillment_type,pickup',
+                'required',
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
             ],
@@ -108,7 +123,7 @@ class GuestCheckoutController extends CheckoutController
             'guest_email.required' => 'Vui lòng nhập email.',
             'guest_email.email' => 'Email không đúng định dạng.',
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
-            'branch_id.required_if' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.required' => 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
             'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
         ]);
@@ -128,6 +143,10 @@ class GuestCheckoutController extends CheckoutController
 
         if (empty($guestInfo)) {
             return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng nhập thông tin nhận hàng trước.');
+        }
+
+        if (empty($guestInfo['branch_id'])) {
+            return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.');
         }
 
         $fullCart = session()->get('cart', []);
@@ -182,6 +201,10 @@ class GuestCheckoutController extends CheckoutController
 
         if (empty($guestInfo)) {
             return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng nhập thông tin nhận hàng trước.');
+        }
+
+        if (empty($guestInfo['branch_id'])) {
+            return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.');
         }
 
         $request->validate([
@@ -277,6 +300,18 @@ class GuestCheckoutController extends CheckoutController
                 'note' => $note,
             ];
 
+            if (Schema::hasColumn('orders', 'shipping_address_text')) {
+                $orderData['shipping_address_text'] = $addressText ?: null;
+            }
+
+            if (Schema::hasColumn('orders', 'shipping_latitude')) {
+                $orderData['shipping_latitude'] = $guestInfo['latitude'] ?? null;
+            }
+
+            if (Schema::hasColumn('orders', 'shipping_longitude')) {
+                $orderData['shipping_longitude'] = $guestInfo['longitude'] ?? null;
+            }
+
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
             }
@@ -302,6 +337,7 @@ class GuestCheckoutController extends CheckoutController
             }
 
             $order = Order::create($orderData);
+            app(AddressLearning::class)->recordOrderSubmitted($order);
 
             foreach ($orderItems as $item) {
                 $orderItem = \App\Models\OrderItem::create($this->orderItemData($order->id, $item));

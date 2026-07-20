@@ -951,8 +951,8 @@
                                 <div class="flex-grow-1">
                                     <div class="address-person mb-1">
                                         <span id="selectedReceiver">{{ $user->name }}</span>
-                                        <span class="address-phone-divider"></span>
-                                        <span id="selectedPhone">{{ $checkoutPhoneReady ? $selectedCheckoutPhone : 'Chưa cập nhật' }}</span>
+                                        <span class="address-phone-divider {{ $checkoutPhoneReady ? '' : 'd-none' }}" id="selectedPhoneDivider"></span>
+                                        <span id="selectedPhone">{{ $checkoutPhoneReady ? $selectedCheckoutPhone : '' }}</span>
                                     </div>
                                     <div class="address-line" id="selectedAddressText">
                                         {{ $primaryAddressText ?: 'Chưa có địa chỉ. Bấm Thay đổi để thêm địa chỉ nhận hàng.' }}
@@ -967,10 +967,6 @@
                                     {{ $errors->first('shipping_address_ui') }}
                                 </div>
                             @endif
-
-                            <div class="alert alert-warning border-0 rounded-4 mt-4 mb-0 {{ $checkoutPhoneReady ? 'd-none' : '' }}" data-checkout-phone-warning>
-                                Bạn cần thêm số điện thoại cho địa chỉ đang chọn trước khi đặt đơn.
-                            </div>
                         </div>
                     </div>
 
@@ -1304,7 +1300,8 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small text-secondary mb-1" for="editAddressPhone">Số điện thoại</label>
-                        <input id="editAddressPhone" type="text" class="form-control address-modal-field" value="{{ $user->phone }}">
+                        <input id="editAddressPhone" type="tel" class="form-control address-modal-field {{ $checkoutPhoneReady ? '' : 'is-invalid' }}" value="{{ $checkoutPhoneReady ? $selectedCheckoutPhone : '' }}" required autocomplete="tel" minlength="10" inputmode="numeric">
+                        <div class="invalid-feedback" data-phone-feedback>Số điện thoại không đúng.</div>
                     </div>
                     <div class="col-12">
                         <label class="form-label small text-secondary mb-1" for="editAddressArea">Tỉnh/Thành phố, Quận/Huyện</label>
@@ -1344,7 +1341,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-link text-dark text-decoration-none" data-return-address-list>Trở lại</button>
-                <button type="button" class="btn btn-address-primary" id="saveEditedAddress">Lưu địa chỉ</button>
+                <button type="button" class="btn btn-address-primary" id="saveEditedAddress" @disabled(! $checkoutPhoneReady)>Lưu địa chỉ</button>
             </div>
         </div>
     </div>
@@ -1365,7 +1362,8 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label small text-secondary mb-1" for="newAddressPhone">Số điện thoại</label>
-                        <input id="newAddressPhone" type="text" class="form-control address-modal-field" placeholder="Số điện thoại" value="{{ $user->phone }}">
+                        <input id="newAddressPhone" type="tel" class="form-control address-modal-field {{ $checkoutPhoneReady ? '' : 'is-invalid' }}" placeholder="Số điện thoại" value="{{ $checkoutPhoneReady ? $selectedCheckoutPhone : '' }}" required autocomplete="tel" minlength="10" inputmode="numeric">
+                        <div class="invalid-feedback" data-phone-feedback>Số điện thoại không đúng.</div>
                     </div>
                     <div class="col-12">
                         <label class="form-label small text-secondary mb-1" for="newAddressArea">Tỉnh/Thành phố, Quận/Huyện</label>
@@ -1405,7 +1403,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-link text-dark text-decoration-none" data-return-address-list>Trở lại</button>
-                <button type="button" class="btn btn-address-primary" id="saveNewAddress">Lưu địa chỉ</button>
+                <button type="button" class="btn btn-address-primary" id="saveNewAddress" @disabled(! $checkoutPhoneReady)>Lưu địa chỉ</button>
             </div>
         </div>
     </div>
@@ -1643,11 +1641,15 @@
         const shippingPhoneInput = document.getElementById('shipping_phone_ui');
         const selectedReceiver = document.getElementById('selectedReceiver');
         const selectedPhone = document.getElementById('selectedPhone');
+        const selectedPhoneDivider = document.getElementById('selectedPhoneDivider');
         const selectedAddressText = document.getElementById('selectedAddressText');
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
         const placeOrderButton = document.getElementById('placeOrderButton');
-        const phoneWarning = document.querySelector('[data-checkout-phone-warning]');
+        const editAddressPhone = document.getElementById('editAddressPhone');
+        const newAddressPhone = document.getElementById('newAddressPhone');
+        const saveEditedAddressButton = document.getElementById('saveEditedAddress');
+        const saveNewAddressButton = document.getElementById('saveNewAddress');
 
         const addressListModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressListModal'));
         const addressEditModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressEditModal'));
@@ -1677,6 +1679,7 @@
         const addressStoreEndpoint = @json(route('checkout.addresses.store'));
         const addressUpdateEndpoint = @json(url('/checkout/addresses'));
         const nearestBranchEndpoint = @json(route('api.branches.nearest'));
+        const addressLookupEndpoint = @json(route('api.address-lookup'));
         const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
         const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
         const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
@@ -1810,16 +1813,41 @@
             return parts.filter(Boolean).join(', ');
         }
 
+        function isValidCheckoutPhone(value) {
+            const phone = String(value || '').trim();
+            return phone !== '' && phone !== 'Chưa cập nhật' && /^0\d{9,10}$/.test(phone);
+        }
+
+        function syncAddressPhoneInput(input, button = null, touched = false) {
+            if (!input) {
+                return false;
+            }
+
+            const isValid = isValidCheckoutPhone(input.value);
+            const feedback = input.parentElement?.querySelector('[data-phone-feedback]');
+            input.classList.toggle('is-invalid', touched && !isValid);
+            if (!isValid) {
+                input.setCustomValidity('Số điện thoại không đúng.');
+                if (feedback) {
+                    feedback.textContent = 'Số điện thoại không đúng.';
+                }
+            } else {
+                input.setCustomValidity('');
+            }
+
+            if (button) {
+                button.disabled = !isValid;
+            }
+
+            return isValid;
+        }
+
         function syncCheckoutPhoneState() {
             const phoneValue = String(shippingPhoneInput?.value || '').trim();
-            const hasPhone = phoneValue !== '' && phoneValue !== 'Chưa cập nhật';
+            const hasPhone = isValidCheckoutPhone(phoneValue);
 
             if (placeOrderButton) {
                 placeOrderButton.disabled = !hasPhone;
-            }
-
-            if (phoneWarning) {
-                phoneWarning.classList.toggle('d-none', hasPhone);
             }
         }
 
@@ -1839,6 +1867,83 @@
 
         function hasConfirmedLocation() {
             return Number.isFinite(confirmedLocation.latitude) && Number.isFinite(confirmedLocation.longitude);
+        }
+
+        async function lookupKnownAddress(street, area = '') {
+            const query = compactAddress([street, area]).trim();
+            if (query.length < 3) {
+                return null;
+            }
+
+            const url = new URL(addressLookupEndpoint, window.location.origin);
+            url.searchParams.set('q', query);
+            url.searchParams.set('limit', '1');
+            if (hasConfirmedLocation()) {
+                url.searchParams.set('latitude', String(confirmedLocation.latitude));
+                url.searchParams.set('longitude', String(confirmedLocation.longitude));
+            }
+
+            const response = await fetch(url.toString(), {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok || !Array.isArray(payload?.data) || payload.data.length === 0) {
+                return null;
+            }
+
+            const match = payload.data[0];
+            const latitude = Number.parseFloat(match.latitude);
+            const longitude = Number.parseFloat(match.longitude);
+
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                return null;
+            }
+
+            return {
+                latitude,
+                longitude,
+                address: match.full_address || match.name || query,
+                canAutofillCoordinates: match.can_autofill_coordinates !== false,
+            };
+        }
+
+        function applyKnownAddressLocation(match) {
+            if (!match || match.canAutofillCoordinates === false) {
+                return;
+            }
+
+            confirmedLocation = {
+                latitude: match.latitude,
+                longitude: match.longitude,
+            };
+
+            const latInput = document.getElementById('checkout_latitude');
+            const lngInput = document.getElementById('checkout_longitude');
+            if (latInput) latInput.value = String(match.latitude);
+            if (lngInput) lngInput.value = String(match.longitude);
+
+            renderBranchOptions(match.latitude, match.longitude);
+            updateShippingSummary();
+            updateBranchSelectorState();
+        }
+
+        async function resolveKnownAddressIfMissing(street, area = '') {
+            if (hasConfirmedLocation()) {
+                return null;
+            }
+
+            try {
+                const match = await lookupKnownAddress(street, area);
+                applyKnownAddressLocation(match);
+                return match;
+            } catch (error) {
+                console.error('Address lookup failed:', error);
+                return null;
+            }
         }
 
         window.updateBranchSelectorState = function updateBranchSelectorState() {
@@ -2150,7 +2255,9 @@
 
             selectedAddressId = address.id;
             selectedReceiver.textContent = address.name || 'Chưa cập nhật';
-            selectedPhone.textContent = address.phone || 'Chưa cập nhật';
+            const addressHasPhone = isValidCheckoutPhone(address.phone);
+            selectedPhone.textContent = addressHasPhone ? address.phone : '';
+            selectedPhoneDivider?.classList.toggle('d-none', !addressHasPhone);
             selectedAddressText.textContent = compactAddress([address.street, address.area]) || 'Chưa có địa chỉ. Bấm Thay đổi để thêm địa chỉ nhận hàng.';
             selectedDefaultBadge.classList.toggle('d-none', !address.isDefault);
             shippingAddressInput.value = address.street || '';
@@ -2195,6 +2302,7 @@
             const rows = addressBook.map((address) => {
                 const isActive = address.id === selectedAddressId;
                 const fullAddress = compactAddress([address.street, address.area]) || 'Chưa có địa chỉ cụ thể';
+                const phoneText = isValidCheckoutPhone(address.phone) ? address.phone : '';
 
                 return `
                     <div class="address-choice-row" data-address-row="${address.id}">
@@ -2202,8 +2310,7 @@
                         <div class="flex-grow-1">
                             <div class="address-person mb-1">
                                 <span>${escapeHtml(address.name || 'Chưa cập nhật')}</span>
-                                <span class="address-phone-divider"></span>
-                                <span class="fw-semibold text-secondary">${escapeHtml(address.phone || 'Chưa cập nhật')}</span>
+                                ${phoneText ? '<span class="address-phone-divider"></span><span class="fw-semibold text-secondary">' + escapeHtml(phoneText) + '</span>' : ''}
                             </div>
                             <div class="address-line">${escapeHtml(fullAddress)}</div>
                             ${address.isDefault ? '<span class="address-badge">Mặc định</span>' : ''}
@@ -2228,11 +2335,12 @@
 
         function fillEditModal(address) {
             document.getElementById('editAddressName').value = address.name || '';
-            document.getElementById('editAddressPhone').value = address.phone || '';
+            document.getElementById('editAddressPhone').value = isValidCheckoutPhone(address.phone) ? address.phone : '';
             document.getElementById('editAddressArea').value = address.area || '';
             document.getElementById('editAddressStreet').value = address.street || '';
             document.getElementById('editAddressDefault').checked = !!address.isDefault;
             setTypeActive('edit', address.type || 'Nhà Riêng');
+            syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, !isValidCheckoutPhone(address.phone));
         }
 
         function openEditModal(id = selectedAddressId) {
@@ -2264,11 +2372,12 @@
 
         function openAddModal() {
             document.getElementById('newAddressName').value = @json($user->name);
-            document.getElementById('newAddressPhone').value = @json($user->phone ?? '');
+            document.getElementById('newAddressPhone').value = @json($checkoutPhoneReady ? $selectedCheckoutPhone : '');
             document.getElementById('newAddressArea').value = '';
             document.getElementById('newAddressStreet').value = '';
             document.getElementById('newAddressDefault').checked = false;
             setTypeActive('new', 'Nhà Riêng');
+            syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, !isValidCheckoutPhone(newAddressPhone?.value));
             const picker = document.querySelector('[data-location-picker="checkout-new-location-picker"]');
             confirmedLocation = {
                 latitude: null,
@@ -2443,13 +2552,48 @@
             updateBranchSelectorState();
         });
 
+        editAddressPhone?.addEventListener('input', () => syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, true));
+        editAddressPhone?.addEventListener('blur', () => syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, true));
+        newAddressPhone?.addEventListener('input', () => syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, true));
+        newAddressPhone?.addEventListener('blur', () => syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, true));
+
+        let knownAddressLookupTimer = null;
+        shippingAddressInput?.addEventListener('input', () => {
+            const latInput = document.getElementById('checkout_latitude');
+            const lngInput = document.getElementById('checkout_longitude');
+            if (latInput) latInput.value = '';
+            if (lngInput) lngInput.value = '';
+            confirmedLocation = { latitude: null, longitude: null };
+            window.clearTimeout(knownAddressLookupTimer);
+            knownAddressLookupTimer = window.setTimeout(() => {
+                resolveKnownAddressIfMissing(shippingAddressInput.value, shippingAreaInput?.value || '');
+            }, 500);
+        });
+
+        shippingAddressInput?.addEventListener('blur', () => {
+            resolveKnownAddressIfMissing(shippingAddressInput.value, shippingAreaInput?.value || '');
+        });
+
         document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {
             const address = getAddressById(selectedAddressId);
             const name = document.getElementById('editAddressName').value.trim();
             const phone = document.getElementById('editAddressPhone').value.trim();
             const area = document.getElementById('editAddressArea').value.trim();
             const street = document.getElementById('editAddressStreet').value.trim();
-            const resolvedLocation = getPickerCoordinates('edit');
+            let resolvedLocation = getPickerCoordinates('edit');
+
+            if (!Number.isFinite(resolvedLocation?.latitude) || !Number.isFinite(resolvedLocation?.longitude)) {
+                const knownAddress = await lookupKnownAddress(street, area);
+                if (knownAddress) {
+                    resolvedLocation = knownAddress;
+                    applyKnownAddressLocation(knownAddress);
+                }
+            }
+
+            if (!syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, true)) {
+                editAddressPhone?.focus();
+                return;
+            }
 
             const payload = {
                 name,
@@ -2461,6 +2605,7 @@
                 longitude: Number.isFinite(resolvedLocation?.longitude) ? resolvedLocation.longitude : null,
                 is_default: document.getElementById('editAddressDefault').checked ? 1 : 0,
             };
+            let saved = false;
 
             try {
                 const response = await fetch(
@@ -2483,20 +2628,26 @@
                 if (response.ok) {
                     try {
                         syncAddressBook(data);
+                        saved = true;
                     } catch (syncError) {
                         console.error(syncError);
                     }
                 } else {
-                    console.error(
-                        data?.message
-                            || Object.values(data?.errors || {})?.flat()?.[0]
-                            || 'Không thể lưu địa chỉ.'
-                    );
+                    const errorMessage = Object.values(data?.errors || {})?.flat()?.[0] || data?.message || 'Không thể lưu địa chỉ.';
+                    if (data?.errors?.phone) {
+                        syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, true);
+                        editAddressPhone?.focus();
+                    }
+                    console.error(errorMessage);
+                    return;
                 }
             } catch (error) {
                 console.error(error);
+                return;
             } finally {
-                addressEditModal.hide();
+                if (saved) {
+                    addressEditModal.hide();
+                }
             }
         });
 
@@ -2505,7 +2656,20 @@
             const phone = document.getElementById('newAddressPhone').value.trim();
             const area = document.getElementById('newAddressArea').value.trim();
             const street = document.getElementById('newAddressStreet').value.trim();
-            const resolvedLocation = getPickerCoordinates('new');
+            let resolvedLocation = getPickerCoordinates('new');
+
+            if (!Number.isFinite(resolvedLocation?.latitude) || !Number.isFinite(resolvedLocation?.longitude)) {
+                const knownAddress = await lookupKnownAddress(street, area);
+                if (knownAddress) {
+                    resolvedLocation = knownAddress;
+                    applyKnownAddressLocation(knownAddress);
+                }
+            }
+
+            if (!syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, true)) {
+                newAddressPhone?.focus();
+                return;
+            }
 
             const payload = {
                 name,
@@ -2517,6 +2681,7 @@
                 longitude: Number.isFinite(resolvedLocation?.longitude) ? resolvedLocation.longitude : null,
                 is_default: document.getElementById('newAddressDefault').checked ? 1 : 0,
             };
+            let saved = false;
 
             try {
                 const response = await fetch(addressSaveUrls.store, {
@@ -2534,20 +2699,26 @@
                 if (response.ok) {
                     try {
                         syncAddressBook(data);
+                        saved = true;
                     } catch (syncError) {
                         console.error(syncError);
                     }
                 } else {
-                    console.error(
-                        data?.message
-                            || Object.values(data?.errors || {})?.flat()?.[0]
-                            || 'Không thể lưu địa chỉ mới.'
-                    );
+                    const errorMessage = Object.values(data?.errors || {})?.flat()?.[0] || data?.message || 'Không thể lưu địa chỉ mới.';
+                    if (data?.errors?.phone) {
+                        syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, true);
+                        newAddressPhone?.focus();
+                    }
+                    console.error(errorMessage);
+                    return;
                 }
             } catch (error) {
                 console.error(error);
+                return;
             } finally {
-                addressAddModal.hide();
+                if (saved) {
+                    addressAddModal.hide();
+                }
             }
         });
 
