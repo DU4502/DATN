@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Models\Branch;
 use App\Models\Order;
+use App\Services\OrderCodeGenerator;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\ShippingFee;
@@ -258,14 +259,15 @@ class GuestCheckoutController extends CheckoutController
             }
 
             $orderData = [
-                'user_id'       => null,
-                'guest_name'    => $guestInfo['guest_name'],
-                'guest_phone'   => $guestInfo['guest_phone'],
-                'guest_email'   => strtolower($guestInfo['guest_email']),
-                'guest_token'   => $guestToken,
+                'order_code'     => OrderCodeGenerator::generate($branchId, $deliveryType),
+                'user_id'        => null,
+                'guest_name'     => $guestInfo['guest_name'],
+                'guest_phone'    => $guestInfo['guest_phone'],
+                'guest_email'    => strtolower($guestInfo['guest_email']),
+                'guest_token'    => $guestToken,
                 'fulfillment_type' => $deliveryType,
-                'branch_id'     => $branchId,
-                'delivery_type' => $guestInfo['delivery_type'] ?? 'now',
+                'branch_id'      => $branchId,
+                'delivery_type'  => $guestInfo['delivery_type'] ?? 'now',
                 'scheduled_delivery_time' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
                 'scheduled_at' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
                 'delivery_note' => $guestInfo['delivery_note'] ?? null,

@@ -126,7 +126,7 @@ class ChatController extends Controller
                 $systemContent = "Xin chào! Bạn đang được kết nối với Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
 
                 if ($activeOrder && $activeOrder->branch_id === $targetBranchId) {
-                    $systemContent = "Xin chào! Bạn có đơn hàng #{$activeOrder->id} tại Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
+                    $systemContent = "Xin chào! Bạn có đơn hàng {$activeOrder->displayCode()} tại Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.";
                 } elseif ($activeOrder && $activeOrder->branch_id !== $targetBranchId) {
                     // Chi nhánh của đơn hàng đã đóng, đang chuyển sang chi nhánh khác
                     $systemContent = "Xin chào! Chi nhánh xử lý đơn hàng của bạn hiện đóng cửa.\nBạn đang được kết nối với Chi nhánh {$branch->name} để được hỗ trợ.";

@@ -176,7 +176,7 @@
                     $nextStatus = \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType);
                 @endphp
                 <tr data-order-id="{{ $order->id }}">
-                    <td class="fw-bold text-primary">#{{ $order->id }}</td>
+                    <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
                     <td class="text-secondary">{{ optional($order->created_at)->format('d/m/Y H:i') }}</td>
                     <td>
                         @if($order->delivery_type === 'scheduled' && ($order->scheduled_delivery_time || $order->scheduled_at))

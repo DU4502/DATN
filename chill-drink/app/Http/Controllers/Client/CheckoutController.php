@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
+use App\Services\OrderCodeGenerator;
 use App\Support\ShippingFee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -348,16 +349,17 @@ class CheckoutController extends Controller
 
             // Create order
             $orderData = [
-                'user_id' => auth()->id(),
+                'order_code'     => OrderCodeGenerator::generate($branchId, $fulfillmentType),
+                'user_id'        => auth()->id(),
                 'payment_method' => $request->payment_method,
                 'fulfillment_type' => $fulfillmentType,
-                'branch_id' => $branchId,
-                'status' => 'pending',
-                'note' => $note,
-                'delivery_type' => $request->input('delivery_type', 'now'),
+                'branch_id'      => $branchId,
+                'status'         => 'pending',
+                'note'           => $note,
+                'delivery_type'  => $request->input('delivery_type', 'now'),
                 'scheduled_delivery_time' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
-                'scheduled_at' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
-                'delivery_note' => $request->input('delivery_note'),
+                'scheduled_at'   => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
+                'delivery_note'  => $request->input('delivery_note'),
             ];
 
             if (Schema::hasColumn('orders', 'total_price')) {

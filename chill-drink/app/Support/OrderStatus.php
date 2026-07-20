@@ -408,59 +408,55 @@ final class OrderStatus
     {
         $status = self::normalize((string) $order->status);
         $label = self::label($status);
-        $orderId = (int) $order->id;
+        $orderCode = $order->displayCode();
         $customerMessage = self::customerMessages()[$status] ?? '';
 
         $content = match ($status) {
             self::PENDING => [
-                'title' => "Đơn hàng #{$orderId} - Chờ xác nhận",
+                'title' => "Đơn hàng {$orderCode} - Chờ xác nhận",
                 'message' => $customerMessage,
             ],
             self::CONFIRMED => [
-                'title' => "Đơn hàng #{$orderId} - Đã xác nhận",
+                'title' => "Đơn hàng {$orderCode} - Đã xác nhận",
                 'message' => $customerMessage,
             ],
             self::PREPARING => [
-                'title' => "Đơn hàng #{$orderId} - Đang pha chế",
+                'title' => "Đơn hàng {$orderCode} - Đang pha chế",
                 'message' => $customerMessage,
             ],
             self::READY_FOR_DELIVERY => [
-                'title' => "Đơn hàng #{$orderId} - Sẵn sàng giao",
+                'title' => "Đơn hàng {$orderCode} - Sẵn sàng giao",
                 'message' => $customerMessage,
             ],
             self::SHIPPER_PICKED_UP => [
-                'title' => "Đơn hàng #{$orderId} - Shipper đã lấy hàng",
+                'title' => "Đơn hàng {$orderCode} - Shipper đã lấy hàng",
                 'message' => $customerMessage,
             ],
             self::DELIVERING => [
-                'title' => "Đơn hàng #{$orderId} - Đang giao",
+                'title' => "Đơn hàng {$orderCode} - Đang giao",
                 'message' => $customerMessage,
             ],
             self::DELIVERED => [
-                'title' => "Đơn hàng #{$orderId} - Đã giao",
-                'message' => $customerMessage,
-            ],
-            self::DELIVERED => [
-                'title' => "Đơn hàng #{$orderId} - Đã giao hàng",
+                'title' => "Đơn hàng {$orderCode} - Đã giao hàng",
                 'message' => $customerMessage,
             ],
             self::READY_FOR_PICKUP => [
-                'title' => "Đơn hàng #{$orderId} - Sẵn sàng lấy",
+                'title' => "Đơn hàng {$orderCode} - Sẵn sàng lấy",
                 'message' => $customerMessage,
             ],
             self::COMPLETED => [
-                'title' => "Đơn hàng #{$orderId} - Hoàn thành",
+                'title' => "Đơn hàng {$orderCode} - Hoàn thành",
                 'message' => $customerMessage,
             ],
             self::CANCELLED => [
-                'title' => "Đơn hàng #{$orderId} - Đã hủy",
-                'message' => $order->cancellation_reason 
+                'title' => "Đơn hàng {$orderCode} - Đã hủy",
+                'message' => $order->cancellation_reason
                     ? "Đơn hàng đã được hủy. Lý do: {$order->cancellation_reason}"
                     : $customerMessage,
             ],
             default => [
-                'title' => "Cập nhật đơn hàng #{$orderId}",
-                'message' => "Đơn hàng #{$orderId} đã chuyển sang: {$label}.",
+                'title' => "Cập nhật đơn hàng {$orderCode}",
+                'message' => "Đơn hàng {$orderCode} đã chuyển sang: {$label}.",
             ],
         };
 

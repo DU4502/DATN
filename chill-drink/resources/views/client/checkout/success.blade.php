@@ -122,7 +122,7 @@
                     <div class="order-summary">
                         <div class="summary-item">
                             <span class="summary-label">Mã đơn hàng</span>
-                            <strong>#{{ $order->id }}</strong>
+                            <strong>{{ $order->displayCode() }}</strong>
                         </div>
                         <div class="summary-item">
                             <span class="summary-label">Thanh toán</span>

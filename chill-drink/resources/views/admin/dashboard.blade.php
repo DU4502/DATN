@@ -535,7 +535,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
                 @endphp
                 <tr>
                     <td class="fw-bold">
-                        <a href="#" class="text-primary text-decoration-none">#{{ $order->id }}</a>
+                        <a href="#" class="text-primary text-decoration-none">{{ $order->displayCode() }}</a>
                     </td>
                     <td>
                         <div class="d-flex align-items-center gap-2">

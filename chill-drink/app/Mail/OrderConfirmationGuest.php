@@ -35,7 +35,7 @@ class OrderConfirmationGuest extends Mailable
      */
     public function build()
     {
-        return $this->subject('Xác nhận đơn hàng #' . $this->order->id . ' từ Chill Drink')
+        return $this->subject('Xác nhận đơn hàng ' . $this->order->displayCode() . ' từ Chill Drink')
                     ->view('emails.guest_order_confirmation');
     }
 }

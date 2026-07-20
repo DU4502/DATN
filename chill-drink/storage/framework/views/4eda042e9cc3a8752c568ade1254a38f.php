@@ -215,7 +215,7 @@ $paymentLabels = $paymentLabels ?? [
     <article class="order-card mb-4" id="order-<?php echo e($order->id); ?>" data-order-id="<?php echo e($order->id); ?>">
         <div class="order-card-header">
             <div>
-                <div class="fw-bold text-primary">#<?php echo e(str_pad((string) $order->id, 5, '0', STR_PAD_LEFT)); ?></div>
+                <div class="fw-bold text-primary"><?php echo e($order->displayCode()); ?></div>
                 <div class="text-secondary small"><?php echo e($order->created_at?->format('d/m/Y H:i')); ?></div>
                 <?php if($order->scheduled_at): ?>
                 <div class="small fw-semibold text-primary mt-1"><i class="bi bi-calendar-check me-1"></i>Nhận lúc <?php echo e($order->scheduled_at->format('H:i · d/m/Y')); ?></div>
