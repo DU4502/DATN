@@ -32,3 +32,14 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
         || (int) $user->id === (int) $conversation->cskh_id
         || $user->isAdmin();  // admin và super admin đều được xem
 });
+
+Broadcast::channel('group-order.{groupOrderId}', function ($user, $groupOrderId) {
+    $groupOrder = \App\Models\GroupOrder::find($groupOrderId);
+    if (! $groupOrder) {
+        return false;
+    }
+
+    return $user->isAdmin()
+        || (int) $groupOrder->owner_id === (int) $user->id
+        || $groupOrder->members()->where('user_id', $user->id)->exists();
+});

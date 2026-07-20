@@ -183,6 +183,25 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame('Tên mới', $group->members()->where('user_id', $member->id)->value('name'));
     }
 
+    public function test_member_can_leave_an_open_group_order(): void
+    {
+        [$group] = $this->openGroup();
+        $memberUser = User::factory()->create();
+        $member = GroupOrderMember::create([
+            'group_order_id' => $group->id,
+            'user_id' => $memberUser->id,
+            'name' => 'Thành viên',
+            'member_token' => 'leave-room-member',
+        ]);
+
+        $this->actingAs($memberUser)
+            ->post(route('group-orders.leave-room', $group->code))
+            ->assertRedirect(route('group-orders.index'));
+
+        $this->assertDatabaseMissing('group_order_members', ['id' => $member->id]);
+        $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'open']);
+    }
+
     public function test_group_item_cannot_exceed_product_stock(): void
     {
         [$group] = $this->openGroup();
@@ -276,6 +295,7 @@ class QuickOrderFeaturesTest extends TestCase
             'fulfillment_type' => 'delivery',
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
+            'shipping_phone_ui' => '0987654321',
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
 
@@ -318,6 +338,7 @@ class QuickOrderFeaturesTest extends TestCase
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ',
             'shipping_area_ui' => 'Quận 1',
+            'shipping_phone_ui' => '0987654321',
             'delivery_type' => 'scheduled',
             'scheduled_delivery_time' => now()->addDay()->setTime(10, 0)->format('Y-m-d H:i:s'),
         ])->assertSessionHasErrors('payment_method');
@@ -376,6 +397,23 @@ class QuickOrderFeaturesTest extends TestCase
         GroupOrderMember::create(['group_order_id' => $newGroup->id, 'user_id' => $otherUser->id, 'name' => 'Bạn A', 'member_token' => 'new-room-member']);
         $this->getJson(route('group-orders.messages', $newGroup->code))
             ->assertOk()->assertJsonPath('group_id', $newGroup->id)->assertJsonCount(0, 'messages');
+    }
+
+    public function test_group_members_can_view_chat_after_group_is_closed(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $group->update(['status' => 'closed']);
+
+        $this->actingAs($owner)
+            ->get(route('group-orders.show', $group->code))
+            ->assertOk()
+            ->assertSee('Đã đóng')
+            ->assertSee('data-vue-group-chat');
+
+        $this->actingAs($owner)
+            ->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Nội dung thử'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Phòng đã đóng nên không thể gửi tin nhắn mới.');
     }
 
     private function openGroup(): array

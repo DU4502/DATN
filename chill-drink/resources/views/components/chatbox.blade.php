@@ -14,6 +14,7 @@
         supportUnread: 0,
         conversationId: null,
         currentUserId: {{ (int) (auth()->id() ?? 0) }},
+        isCustomer: {{ auth()->check() && auth()->user()->isCustomer() ? 'true' : 'false' }},
         branchId: null,
         branchName: '',
         nearestBranches: [],
@@ -39,10 +40,8 @@
 
         async init() {
             this.groupChatAvailable = Boolean(document.querySelector('[data-vue-group-chat]'));
-
-            if (localStorage.getItem('support_chat_open') === 'true') {
-                this.isOpen = true;
-            }
+            window.__groupChatHostReady = true;
+            window.dispatchEvent(new CustomEvent('group-chat-host-ready'));
 
             window.addEventListener('group-chat-unread', (event) => {
                 this.groupUnread = Number(event.detail?.count || 0);
@@ -56,6 +55,15 @@
             window.addEventListener('group-chat-closed', () => {
                 this.groupChatOpen = false;
             });
+
+            if (!this.isCustomer) {
+                return;
+            }
+
+            if (localStorage.getItem('support_chat_open') === 'true') {
+                this.isOpen = true;
+            }
+
             window.addEventListener('support-chat-close', () => {
                 this.isOpen = false;
                 this.menuOpen = false;
@@ -97,10 +105,12 @@
         },
 
         destroy() {
-            this.stopPolling();
-            this.stopUnreadPolling();
-            this.leaveEchoChannel();
-            document.removeEventListener('visibilitychange', this.visibilityHandler);
+            if (this.isCustomer) {
+                this.stopPolling();
+                this.stopUnreadPolling();
+                this.leaveEchoChannel();
+                document.removeEventListener('visibilitychange', this.visibilityHandler);
+            }
         },
 
         async openSupportChat() {
@@ -134,10 +144,16 @@
                 return;
             }
             if (this.groupChatAvailable) {
-                this.menuOpen = !this.menuOpen;
+                if (this.isCustomer) {
+                    this.menuOpen = !this.menuOpen;
+                } else {
+                    this.openGroupChat();
+                }
                 return;
             }
-            await this.openSupportChat();
+            if (this.isCustomer) {
+                await this.openSupportChat();
+            }
         },
 
         async activateSupportChat() {
@@ -204,7 +220,7 @@
 
         async fetchNearestBranches(lat = null, lng = null) {
             try {
-                let url = '{{ route('chat.nearest-branches') }}';
+                let url = '{{ route('chat.nearest-branches', [], false) }}';
                 const params = new URLSearchParams();
                 if (lat !== null) params.append('lat', lat);
                 if (lng !== null) params.append('lng', lng);
@@ -233,7 +249,7 @@
             this.selectedBranchNameTemp = branch.name;
 
             try {
-                const res = await fetch('{{ route('chat.select-branch') }}', {
+                const res = await fetch('{{ route('chat.select-branch', [], false) }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -322,7 +338,7 @@
             }
             if (!this.conversationId) {
                 try {
-                    const res = await fetch('{{ route('chat.index') }}');
+                    const res = await fetch('{{ route('chat.index', [], false) }}');
                     const data = await res.json();
                     if (data.success) {
                         this.conversationId = data.conversation_id;
@@ -335,7 +351,7 @@
             }
             if (!this.conversationId) return;
             try {
-                const res  = await fetch('{{ route('chat.messages') }}?conversation_id=' + this.conversationId);
+                const res  = await fetch('{{ route('chat.messages', [], false) }}?conversation_id=' + this.conversationId);
                 const data = await res.json();
                 if (data.success) {
                     const uid = {{ auth()->id() }};
@@ -379,7 +395,7 @@
 
         async getOrCreateConversation() {
             try {
-                const res = await fetch('{{ route('chat.index') }}');
+                const res = await fetch('{{ route('chat.index', [], false) }}');
                 if (res.status === 401 || res.redirected) {
                     this.needLogin = true;
                     return;
@@ -402,7 +418,7 @@
                 this.loadingMessages = true;
             }
             try {
-                const url = '{{ route('chat.messages') }}?conversation_id=' + this.conversationId
+                const url = '{{ route('chat.messages', [], false) }}?conversation_id=' + this.conversationId
                     + (markRead ? '&mark_as_read=1' : '');
                 const res = await fetch(url);
                 const data = await res.json();
@@ -437,7 +453,7 @@
             formData.append('content', this.newMessage);
 
             try {
-                const res = await fetch('{{ route('chat.send') }}', {
+                const res = await fetch('{{ route('chat.send', [], false) }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -464,6 +480,7 @@
             }
         },
     }"
+    x-show="isCustomer || groupChatAvailable"
     class="fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;">
     <!-- Floating Toggle Button (Always visible at bottom right, z-index 1060 above modal window) -->
     <button
@@ -489,7 +506,7 @@
 
     <!-- Unified Menu Popup -->
     <div
-        x-show="menuOpen"
+        x-show="menuOpen && !groupChatOpen"
         x-cloak
         @click.away="menuOpen = false"
         class="rounded-2xl shadow-2xl p-2 border space-y-1 transition-all duration-200"
@@ -534,11 +551,12 @@
                 </div>
             </div>
             <span x-show="groupUnread > 0" x-text="groupUnread" class="px-2 py-0.5 rounded-full text-xs font-bold text-white" style="background: #dc3545;"></span>
+        </button>
     </div>
 
     <!-- Main Customer Support Chat Window Popup -->
     <div
-        x-show="isOpen"
+        x-show="isOpen && !groupChatOpen"
         x-cloak
         class="rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300"
         style="position: fixed; right: 1.5rem; bottom: 6.25rem; width: min(380px, calc(100vw - 2rem)); height: min(540px, calc(100vh - 8rem)); background: #ffffff; border-color: var(--c-border); z-index: 1055;">
@@ -581,7 +599,7 @@
                     <div class="font-bold text-sm text-slate-800">Vui lòng đăng nhập</div>
                     <p class="text-xs text-slate-500 mb-2">Đăng nhập tài khoản để kết nối trực tiếp với nhân viên hỗ trợ chi nhánh.</p>
                     <a
-                        href="{{ route('login') }}"
+                        href="{{ route('login', [], false) }}"
                         class="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all shadow-md active:scale-95"
                         style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); text-decoration: none;">
                         Đăng nhập ngay

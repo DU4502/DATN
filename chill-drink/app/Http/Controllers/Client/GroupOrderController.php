@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\GroupOrder;
+use App\Events\GroupOrderGroupMessageSent;
 use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderMessage;
@@ -112,7 +113,8 @@ class GroupOrderController extends Controller
         $group->closeIfExpired();
 
         // Khôi phục dữ liệu các phòng đã được tạo trước khi chủ phòng được tự
-        // thêm vào danh sách thành viên. Nhờ đó chủ phòng cũ cũng chat được.
+        // thêm vào danh sách thành viên. Nhờ đó chủ phòng cũ vẫn xem/chat được
+        // cả khi phòng đã đóng.
         if ($group->owner_id === auth()->id()) {
             $group->members()->firstOrCreate(
                 ['user_id' => auth()->id()],
@@ -160,6 +162,35 @@ class GroupOrderController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * leave() chỉ ghi nhận chủ phòng rời tab. Hàm này là thao tác rời phòng
+     * thực sự: xóa phần tham gia của thành viên và giải phóng một chỗ trong phòng.
+     */
+    public function leaveRoom(string $code)
+    {
+        $group = GroupOrder::where('code', $code)->firstOrFail();
+        $group->closeIfExpired();
+
+        abort_if($group->owner_id === auth()->id(), 422, 'Chủ phòng không thể rời phòng. Bạn có thể hủy phòng nếu không muốn tiếp tục.');
+        abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng nên không thể rời phòng.');
+
+        DB::transaction(function () use ($group) {
+            $member = GroupOrderMember::query()
+                ->where('group_order_id', $group->id)
+                ->where('user_id', auth()->id())
+                ->lockForUpdate()
+                ->first();
+
+            abort_unless($member, 404, 'Bạn không còn là thành viên của phòng này.');
+            $member->delete();
+        });
+
+        session()->forget("group_member_{$group->id}");
+
+        return redirect()->route('group-orders.index')
+            ->with('success', 'Bạn đã rời phòng. Món đã chọn và tin nhắn riêng liên quan của bạn đã được xóa; phòng vẫn tiếp tục cho các thành viên còn lại.');
     }
 
     public function messages(Request $request, string $code): JsonResponse
@@ -231,6 +262,7 @@ class GroupOrderController extends Controller
     {
         $group = GroupOrder::where('code', $code)->firstOrFail();
         abort_if($group->status === 'cancelled', 422, 'Phòng đã hủy nên không thể gửi tin nhắn.');
+        abort_if($group->status === 'closed', 422, 'Phòng đã đóng nên không thể gửi tin nhắn mới.');
         $sender = $this->currentMember($group);
         $data = $request->validate([
             'content' => ['nullable', 'string', 'max:1000', 'required_without:attachment'],
@@ -253,6 +285,8 @@ class GroupOrderController extends Controller
             'attachment_mime' => $attachment?->getMimeType(),
             'attachment_size' => $attachment?->getSize(),
         ])->load(['sender:id,name', 'recipient:id,name']);
+
+        broadcast(new GroupOrderGroupMessageSent($message))->toOthers();
 
         return response()->json(['message' => $this->messagePayload($message)], 201);
     }

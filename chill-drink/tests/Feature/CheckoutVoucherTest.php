@@ -54,6 +54,7 @@ class CheckoutVoucherTest extends TestCase
                 'payment_method' => 'momo',
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Test Street',
+                'shipping_phone_ui' => '0987654321',
             ])
             ->assertRedirect(route('checkout.index'))
             ->assertSessionHasErrors('payment_method');
@@ -83,6 +84,7 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Test Street',
                 'shipping_area_ui' => 'Test Area',
+                'shipping_phone_ui' => '0987654321',
             ]);
 
         $order = Order::latest()->first();
@@ -180,6 +182,7 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => $shippingAddress,
                 'shipping_area_ui' => $shippingArea,
+                'shipping_phone_ui' => '0987654321',
                 'voucher_code' => 'TESTCHILL10',
                 'note' => '',
             ]);
@@ -236,6 +239,7 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Test Street',
                 'shipping_area_ui' => 'Test Area',
+                'shipping_phone_ui' => '0987654321',
                 'voucher_code' => 'MIN200',
             ])
             ->assertRedirect(route('checkout.index'))
@@ -270,6 +274,7 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '',
                 'shipping_area_ui' => 'Hà Nội',
+                'shipping_phone_ui' => '0987654321',
                 'voucher_code' => '',
             ]);
 
@@ -316,6 +321,7 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => $shippingAddress,
                 'shipping_area_ui' => $shippingArea,
+                'shipping_phone_ui' => '0987654321',
                 'voucher_code' => 'DBPRICE',
             ]);
 

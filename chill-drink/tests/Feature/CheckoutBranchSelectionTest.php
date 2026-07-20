@@ -86,6 +86,7 @@ class CheckoutBranchSelectionTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Nguyễn Huệ',
                 'shipping_area_ui' => 'Quận 1, Thành phố Hồ Chí Minh',
+                'shipping_phone_ui' => '0987654321',
                 'branch_id' => $branch->id,
             ]);
 
@@ -118,6 +119,7 @@ class CheckoutBranchSelectionTest extends TestCase
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Nguyễn Huệ',
+                'shipping_phone_ui' => '0987654321',
                 'branch_id' => $branch->id,
             ])
             ->assertRedirect(route('checkout.index'))

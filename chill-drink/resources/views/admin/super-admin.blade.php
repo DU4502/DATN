@@ -168,6 +168,9 @@
             <p class="sa-subtitle">Quản trị tài khoản, quyền truy cập, bảo mật và tình trạng nền tảng Chill Drink.</p>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+            <a href="{{ route('admin.group-orders.index') }}" class="sa-btn">
+                <i class="bi bi-people-fill"></i> Quản lý đơn nhóm
+            </a>
             <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createAdminModal">
                 <i class="bi bi-person-plus"></i> Thêm Admin
             </button>

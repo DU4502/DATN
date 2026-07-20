@@ -1473,11 +1473,7 @@
     @endunless
 
     @auth
-        @if(auth()->user()->isCustomer())
-            @include('components.chatbox')
-
-
-        @endif
+        @include('components.chatbox')
     @endauth
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -1917,7 +1913,7 @@
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('{{ route('select-nearest-branch') }}', {
+                fetch('{{ route('select-nearest-branch', [], false) }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
