@@ -3,7 +3,7 @@
 
 Cảm ơn bạn đã đặt hàng tại **Chill Drink**!
 
-**Mã đơn:** #{{ $order->id }}  
+**Mã đơn:** {{ $order->displayCode() }}  
 **Tổng cộng:** {{ number_format((int) $order->total, 0, ',', '.') }}đ  
 **Thanh toán:** {{ $order->payment_method === 'vnpay' ? 'VNPay' : 'Thanh toán khi nhận hàng' }}  
 **Trạng thái:** {{ \App\Support\OrderStatus::label((string) $order->status) }}

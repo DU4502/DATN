@@ -52,14 +52,17 @@ class AdminChatController extends Controller
         return response()->json([
             'success' => true,
             'conversations' => $conversations->map(fn ($c) => [
-                'id'         => $c->id,
-                'user_id'    => $c->user_id,
-                'user_name'  => $c->user?->name ?? '—',
-                'user_email' => $c->user?->email ?? '',
-                'cskh_name'  => $c->cskh?->name,
-                'unread'     => (int) $c->unread_count,
-                'can_reply'  => $user->isAdmin() || !$c->cskh_id || $c->cskh_id === $user->id,
-                'last_at'    => $c->latestMessage?->created_at?->format('H:i'),
+                'id'          => $c->id,
+                'user_id'     => $c->user_id,
+                'is_guest'    => is_null($c->user_id) && !is_null($c->guest_token),
+                'user_name'   => is_null($c->user_id) ? ($c->guest_name ?? 'Khách vãng lai') : ($c->user?->name ?? '—'),
+                'user_email'  => is_null($c->user_id) ? ($c->guest_email ?? '') : ($c->user?->email ?? ''),
+                'guest_name'  => $c->guest_name,
+                'guest_email' => $c->guest_email,
+                'cskh_name'   => $c->cskh?->name,
+                'unread'      => (int) $c->unread_count,
+                'can_reply'   => $user->isAdmin() || !$c->cskh_id || $c->cskh_id === $user->id,
+                'last_at'     => $c->latestMessage?->created_at?->format('H:i'),
             ]),
             'total_unread' => $conversations->sum('unread_count'),
         ]);
@@ -94,14 +97,32 @@ class AdminChatController extends Controller
 
         $this->markMessagesAsRead($conversation);
 
-        $messages = $conversation->messages()
-            ->with(['sender', 'displayAsSender'])
-            ->get();
+        if ($conversation->branch_id) {
+            if ($conversation->user_id) {
+                // User conversation: lấy tất cả tin nhắn tại chi nhánh đó từ mọi conversation của user
+                $conversationIds = Conversation::where('user_id', $conversation->user_id)
+                    ->where('branch_id', $conversation->branch_id)
+                    ->pluck('id');
+            } else {
+                // Guest conversation: chỉ lấy conversation hiện tại
+                $conversationIds = collect([$conversation->id]);
+            }
+
+            $messages = Message::whereIn('conversation_id', $conversationIds)
+                ->with(['sender', 'displayAsSender'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+        } else {
+            $messages = Message::where('conversation_id', $conversation->id)
+                ->with(['sender', 'displayAsSender'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
 
         return response()->json([
-            'success' => true,
+            'success'   => true,
             'can_reply' => $this->canReply($conversation),
-            'messages' => $messages->map(
+            'messages'  => $messages->map(
                 fn (Message $message) => MessageResource::toStaffArray($message, auth()->user())
             ),
         ]);
@@ -139,6 +160,14 @@ class AdminChatController extends Controller
 
         $conversation->update(['status' => 'closed']);
 
+        try {
+            broadcast(new \App\Events\ConversationClosed($conversation, 'cskh'))->toOthers();
+        } catch (\Throwable) {}
+
+        if (request()->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return back()->with('success', 'Cuộc trò chuyện đã được đóng!');
     }
 
@@ -146,8 +175,20 @@ class AdminChatController extends Controller
     {
         $user = auth()->user();
 
+        // Lấy tất cả conversation (cả user đã đăng nhập và khách vãng lai)
+        // Điều kiện: (user_id có giá trị và là customer) HOẶC (user_id null và có guest_token)
         $query = Conversation::with(['user', 'cskh', 'latestMessage', 'branch'])
-            ->whereHas('user', fn ($customer) => $customer->customers())
+            ->where(function ($q) {
+                $q->where(function ($inner) {
+                    // Conversation của user đăng nhập với role customer
+                    $inner->whereNotNull('user_id')
+                        ->whereHas('user', fn ($u) => $u->customers());
+                })->orWhere(function ($inner) {
+                    // Conversation của khách vãng lai
+                    $inner->whereNull('user_id')
+                        ->whereNotNull('guest_token');
+                });
+            })
             ->where('status', 'open'); // Chỉ hiện các chat đang mở trên sidebar
 
         if ($user->isSuperAdmin()) {
@@ -158,7 +199,7 @@ class AdminChatController extends Controller
             if ($user->branch_id) {
                 $query->where('branch_id', $user->branch_id);
             }
-            
+
             // Also filter by assigned cskh if it's just CSKH (role 4)
             if ($user->isCskh() && !$user->isAdmin()) {
                 $query->where(function ($inner) use ($user) {
@@ -173,14 +214,20 @@ class AdminChatController extends Controller
 
     protected function authorizeView(Conversation $conversation): void
     {
-        $conversation->loadMissing('user');
         $user = auth()->user();
 
-        if (! $conversation->user?->isCustomer()) {
-            abort(403);
+        // Guest conversation (user_id = null, guest_token có giá trị) — cho phép admin/cskh xem
+        $isGuestConversation = is_null($conversation->user_id) && !is_null($conversation->guest_token);
+
+        if (!$isGuestConversation) {
+            // User conversation: kiểm tra có phải customer không
+            $conversation->loadMissing('user');
+            if (!$conversation->user?->isCustomer()) {
+                abort(403);
+            }
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isSuperAdmin()) {
             return;
         }
 
@@ -233,25 +280,41 @@ class AdminChatController extends Controller
     {
         $adminId = auth()->id();
 
-        // Chỉ đánh dấu đã đọc các tin nhắn do KHÁCH HÀNG (role_id = 1) gửi.
-        // Không được mark tin nhắn của admin/CSKH khác, vì điều đó sẽ làm mất
-        // thông báo chưa đọc bên phía user khi họ chưa tự mở chatbox.
-        $customerIds = \App\Models\User::where('role_id', 1)
-            ->whereIn('id',
-                $conversation->messages()
-                    ->where('is_read', false)
-                    ->where('sender_id', '!=', $adminId)
-                    ->pluck('sender_id')
-            )
-            ->pluck('id');
-
-        if ($customerIds->isEmpty()) {
-            return;
+        if ($conversation->branch_id && $conversation->user_id) {
+            $conversationIds = Conversation::where('user_id', $conversation->user_id)
+                ->where('branch_id', $conversation->branch_id)
+                ->pluck('id');
+        } else {
+            $conversationIds = collect([$conversation->id]);
         }
 
-        $conversation->messages()
-            ->where('is_read', false)
-            ->whereIn('sender_id', $customerIds)
-            ->update(['is_read' => true]);
+        if ($conversation->user_id) {
+            // User conversation: đánh dấu đã đọc tin nhắn từ customer
+            $customerIds = \App\Models\User::where('role_id', 1)
+                ->whereIn('id',
+                    Message::whereIn('conversation_id', $conversationIds)
+                        ->where('is_read', false)
+                        ->where('sender_id', '!=', $adminId)
+                        ->whereNotNull('sender_id')
+                        ->pluck('sender_id')
+                )
+                ->pluck('id');
+
+            if ($customerIds->isEmpty()) {
+                return;
+            }
+
+            Message::whereIn('conversation_id', $conversationIds)
+                ->where('is_read', false)
+                ->whereIn('sender_id', $customerIds)
+                ->update(['is_read' => true]);
+        } else {
+            // Guest conversation: đánh dấu đọc tin nhắn guest (sender_id = null, có guest_sender_name)
+            Message::whereIn('conversation_id', $conversationIds)
+                ->where('is_read', false)
+                ->whereNull('sender_id')
+                ->whereNotNull('guest_sender_name')
+                ->update(['is_read' => true]);
+        }
     }
 }

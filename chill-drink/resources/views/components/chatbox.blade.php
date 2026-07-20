@@ -33,6 +33,14 @@
         _activating: false,
         loadingConversation: true,
         loadingMessages: false,
+        isLoggedIn: {{ auth()->check() ? 'true' : 'false' }},
+        guestToken: null,
+        guestName: '',
+        showGuestModal: false,
+        guestFormName: '',
+        guestFormEmail: '',
+        guestFormLoading: false,
+        guestFormError: '',
 
         get hasUserSentMessage() {
             return this.messages.some(m => Number(m.sender_id) === Number(this.currentUserId));
@@ -43,6 +51,8 @@
             window.__groupChatHostReady = true;
             window.dispatchEvent(new CustomEvent('group-chat-host-ready'));
 
+            // Đọc guest_token từ localStorage
+            this.guestToken = localStorage.getItem('chat_guest_token') || null;
             window.addEventListener('group-chat-unread', (event) => {
                 this.groupUnread = Number(event.detail?.count || 0);
             });
@@ -87,6 +97,8 @@
                     this.stopUnreadPolling();
                     this.activateSupportChat();
                 } else {
+                    this.showEndSessionModal = false;
+                    this.showGuestModal = false;
                     this.stopPolling();
                     // Giữ Echo subscribe để nhận thông báo unread real-time khi chat đóng
                     this.startUnreadPolling();
@@ -102,6 +114,11 @@
                 this.subscribeEchoChannel();
                 this.startUnreadPolling();
             }
+            if (this.isLoggedIn) {
+                await this.fetchUnreadCount();
+                this.subscribeEchoChannel();
+            }
+            this.startUnreadPolling();
         },
 
         destroy() {
@@ -161,6 +178,14 @@
             this._activating = true;
 
             // Chỉ hiện spinner nếu chưa nạp conversation hoặc tin nhắn
+            if (document.hidden || !this.isOpen) return;
+
+            // Nếu chưa đăng nhập và chưa có guest_token -> hiện Modal nhập thông tin guest
+            if (!this.isLoggedIn && !this.guestToken) {
+                this.showGuestModal = true;
+                return;
+            }
+
             if (!this.conversationId) {
                 this.loadingConversation = true;
             }
@@ -187,6 +212,9 @@
                 this.loadingMessages = false;
                 this._activating = false;
             }
+            this.supportUnread = 0;
+            if (this.isLoggedIn) this.subscribeEchoChannel();
+            this.startPolling();
         },
 
         async requestLocationAndFetchBranches() {
@@ -249,17 +277,17 @@
             this.selectedBranchNameTemp = branch.name;
 
             try {
-                const res = await fetch('{{ route('chat.select-branch', [], false) }}', {
+                const body = { conversation_id: this.conversationId, branch_id: branch.id };
+                if (!this.isLoggedIn && this.guestToken) body.guest_token = this.guestToken;
+
+                const res = await fetch('{{ route('chat.select-branch') }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({
-                        conversation_id: this.conversationId,
-                        branch_id: branch.id,
-                    }),
+                    body: JSON.stringify(body),
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -268,9 +296,11 @@
                     if (data.message) {
                         this.messages = [data.message];
                     }
-                    await this.fetchMessages();
-                    this.subscribeEchoChannel();
+                    await this.fetchMessages(true);
+                    if (this.isLoggedIn) this.subscribeEchoChannel();
                     this.startPolling();
+                } else {
+                    alert(data.message || 'Không thể chọn chi nhánh. Vui lòng thử lại.');
                 }
             } catch (e) {
                 console.error('Error selecting branch', e);
@@ -291,6 +321,53 @@
             this.stopPolling();
             this.leaveEchoChannel();
             this.requestLocationAndFetchBranches();
+        },
+
+        async openEndSessionModal() {
+            this.showEndSessionModal = true;
+        },
+
+        async confirmEndSession() {
+            if (!this.conversationId) return;
+            this.endingSession = true;
+            try {
+                const body = { conversation_id: this.conversationId };
+                if (!this.isLoggedIn && this.guestToken) body.guest_token = this.guestToken;
+
+                const res = await fetch('{{ route('chat.end-session') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.leaveEchoChannel();
+                    this.showEndSessionModal = false;
+                    this.branchId = null;
+                    this.branchName = '';
+                    this.conversationId = null;
+                    this.messages = [];
+
+                    // Nếu là guest: xóa guest_token khỏi localStorage
+                    if (!this.isLoggedIn) {
+                        localStorage.removeItem('chat_guest_token');
+                        this.guestToken = null;
+                        this.guestName = '';
+                        this.showGuestModal = true;
+                    } else {
+                        await this.getOrCreateConversation();
+                        await this.requestLocationAndFetchBranches();
+                    }
+                }
+            } catch (e) {
+                console.error('End session error:', e);
+            } finally {
+                this.endingSession = false;
+            }
         },
 
         subscribeEchoChannel() {
@@ -336,6 +413,7 @@
                 this.supportUnread = 0;
                 return;
             }
+            if (!this.isLoggedIn) return; // Guest: không cần fetch unread count
             if (!this.conversationId) {
                 try {
                     const res = await fetch('{{ route('chat.index', [], false) }}');
@@ -354,8 +432,8 @@
                 const res  = await fetch('{{ route('chat.messages', [], false) }}?conversation_id=' + this.conversationId);
                 const data = await res.json();
                 if (data.success) {
-                    const uid = {{ auth()->id() }};
-                    this.supportUnread = data.messages.filter(m => m.sender_id !== uid && !m.is_read).length;
+                    const uid = {{ auth()->id() ?? 0 }};
+                    this.supportUnread = data.messages.filter(m => m.sender_id !== uid && !m.is_read && !m.is_guest_message).length;
                 }
             } catch (e) { /* silent */ }
         },
@@ -395,7 +473,11 @@
 
         async getOrCreateConversation() {
             try {
-                const res = await fetch('{{ route('chat.index', [], false) }}');
+                let url = '{{ route('chat.index') }}';
+                if (!this.isLoggedIn && this.guestToken) {
+                    url += '?guest_token=' + encodeURIComponent(this.guestToken);
+                }
+                const res = await fetch(url);
                 if (res.status === 401 || res.redirected) {
                     this.needLogin = true;
                     return;
@@ -404,8 +486,19 @@
                 if (data.success) {
                     this.needLogin = false;
                     this.conversationId = data.conversation_id;
-                    this.branchId = data.branch_id;
-                    this.branchName = data.branch_name || '';
+                    this.branchId       = data.branch_id;
+                    this.branchName     = data.branch_name || '';
+                    this.conversationStatus = data.status || 'open';
+                    if (data.guest_token) {
+                        this.guestToken = data.guest_token;
+                        localStorage.setItem('chat_guest_token', data.guest_token);
+                    }
+                    if (data.guest_name) this.guestName = data.guest_name;
+                } else if (data.requires_guest_init) {
+                    // Guest token invalid/expired - clear and show modal
+                    localStorage.removeItem('chat_guest_token');
+                    this.guestToken = null;
+                    this.showGuestModal = true;
                 }
             } catch (e) {
                 console.error('Error getting conversation', e);
@@ -418,8 +511,11 @@
                 this.loadingMessages = true;
             }
             try {
-                const url = '{{ route('chat.messages', [], false) }}?conversation_id=' + this.conversationId
+                let url = '{{ route('chat.messages') }}?conversation_id=' + this.conversationId
                     + (markRead ? '&mark_as_read=1' : '');
+                if (!this.isLoggedIn && this.guestToken) {
+                    url += '&guest_token=' + encodeURIComponent(this.guestToken);
+                }
                 const res = await fetch(url);
                 const data = await res.json();
                 if (data.success && Array.isArray(data.messages)) {
@@ -445,15 +541,42 @@
         },
 
         async sendMessage() {
-            if (!this.newMessage.trim() || !this.conversationId || !this.branchId) return;
+            if (!this.newMessage.trim() || !this.conversationId) return;
+
+            const text = this.newMessage.trim();
+            this.newMessage = '';
+
+            const tempId = 'tmp_' + Date.now();
+            const displayName = this.isLoggedIn
+                ? '{{ addslashes(auth()->user()->name ?? 'Khách hàng') }}'
+                : (this.guestName || 'Khách vãng lai');
+            const tempMsg = {
+                id: tempId,
+                conversation_id: this.conversationId,
+                sender_id: this.isLoggedIn ? {{ auth()->id() ?? 0 }} : null,
+                is_guest_message: !this.isLoggedIn,
+                guest_sender_name: !this.isLoggedIn ? displayName : null,
+                content: text,
+                attachment_path: null,
+                attachment_name: null,
+                is_read: false,
+                created_at: new Date().toISOString(),
+                sender: { id: this.isLoggedIn ? {{ auth()->id() ?? 0 }} : null, name: displayName },
+                _pending: true,
+            };
+            this.messages.push(tempMsg);
+            this.$nextTick(() => { this.scrollToBottom(); });
 
             this.loading = true;
             const formData = new FormData();
             formData.append('conversation_id', this.conversationId);
-            formData.append('content', this.newMessage);
+            formData.append('content', text);
+            if (!this.isLoggedIn && this.guestToken) {
+                formData.append('guest_token', this.guestToken);
+            }
 
             try {
-                const res = await fetch('{{ route('chat.send', [], false) }}', {
+                const res = await fetch('{{ route('chat.send') }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -463,20 +586,76 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    this.messages = this.messages.filter(m => m.id !== tempId);
                     this.messages.push(data.message);
-                    this.newMessage = '';
                     this.$nextTick(() => {
                         this.scrollToBottom();
                     });
                 } else {
                     console.error('Server error:', data.message);
+                    this.messages = this.messages.filter(m => m.id !== tempId);
+                    this.newMessage = text;
                     alert(data.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.');
                 }
             } catch (e) {
                 console.error('Error sending message', e);
+                this.messages = this.messages.filter(m => m.id !== tempId);
+                this.newMessage = text;
                 alert('Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.');
             } finally {
                 this.loading = false;
+            }
+        },
+
+        async submitGuestForm() {
+            if (!this.guestFormName.trim() || !this.guestFormEmail.trim()) {
+                this.guestFormError = 'Vui lòng nhập đủ Tên và Email.';
+                return;
+            }
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(this.guestFormEmail.trim())) {
+                this.guestFormError = 'Email không hợp lệ.';
+                return;
+            }
+            this.guestFormError = '';
+            this.guestFormLoading = true;
+            try {
+                const res = await fetch('{{ route('chat.guest-init') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        guest_name: this.guestFormName.trim(),
+                        guest_email: this.guestFormEmail.trim(),
+                        guest_token: this.guestToken,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    this.conversationId = data.conversation_id;
+                    this.branchId = data.branch_id;
+                    this.branchName = data.branch_name || '';
+                    this.guestToken = data.guest_token;
+                    this.guestName = data.guest_name;
+                    localStorage.setItem('chat_guest_token', data.guest_token);
+                    this.showGuestModal = false;
+                    // Tiếp tục luồng chọn chi nhánh
+                    if (!this.branchId) {
+                        await this.requestLocationAndFetchBranches();
+                    } else {
+                        await this.fetchMessages(true);
+                    }
+                    this.startPolling();
+                } else {
+                    this.guestFormError = data.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+                }
+            } catch (e) {
+                this.guestFormError = 'Lỗi kết nối. Vui lòng kiểm tra mạng.';
+            } finally {
+                this.guestFormLoading = false;
             }
         },
     }"
@@ -704,36 +883,35 @@
                             </div>
                         </div>
                     </template>
-                </div>
-            </template>
 
-            <!-- STEP 3: Connected Chat Message Stream -->
-            <template x-if="!loadingConversation && conversationId && branchId && !needLogin && (!loadingMessages || messages.length > 0)">
-                <div class="space-y-3">
-                    <!-- Message list -->
-                    <template x-for="message in messages" :key="message.id">
-                        <div
-                            :class="[
-                                'flex w-full mb-2',
-                                message.sender_id == currentUserId ? 'justify-end' : 'justify-start'
-                            ]">
-                            <div
-                                :class="[
-                                    'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm break-words',
-                                    message.sender_id == currentUserId ? 'rounded-tr-none' : 'rounded-tl-none'
-                                ]"
-                                :style="message.sender_id == currentUserId ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : (message.content && message.content.includes('🤖 Hệ thống') ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;')">
-                                <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
+                    <!-- STEP 3: Connected Chat Message Stream -->
+                    <template x-if="!loadingConversation && conversationId && branchId && !needLogin && (!loadingMessages || messages.length > 0)">
+                        <div class="space-y-3">
+                            <!-- Message list -->
+                            <template x-for="message in messages" :key="message.id">
                                 <div
-                                    x-text="message.created_at ? new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''"
-                                    class="text-[11px] opacity-70"
-                                    :title="message.created_at ? new Date(message.created_at).toLocaleString('vi-VN') : ''"></div>
-                            </div>
+                                    :class="[
+                                        'flex w-full mb-2',
+                                        (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'justify-end' : 'justify-start'
+                                    ]">
+                                    <div
+                                        :class="[
+                                            'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm break-words',
+                                            (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'rounded-tr-none' : 'rounded-tl-none'
+                                        ]"
+                                        :style="(isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : (message.content && message.content.includes('🤖 Hệ thống') ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;')">
+                                        <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
+                                        <div
+                                            x-text="message.created_at ? new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''"
+                                            class="text-[11px] opacity-70"
+                                            :title="message.created_at ? new Date(message.created_at).toLocaleString('vi-VN') : ''"></div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
             </template>
-        </div>
 
         <!-- Input Area (Only visible AFTER branch is selected & authenticated) -->
         <template x-if="conversationId && branchId && !needLogin">
@@ -760,5 +938,75 @@
                 </div>
             </div>
         </template>
+        </div>
+
+        <!-- Guest Info Modal — Hiện khi khách vãng lai mở chatbox lần đầu -->
+        <div
+            x-show="showGuestModal && !isLoggedIn"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.25rem; border-radius: 1.25rem;">
+            <div style="background: #ffffff; border-radius: 1rem; padding: 1.5rem 1.25rem; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);">
+                <!-- Icon & Title -->
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="width: 3.5rem; height: 3.5rem; border-radius: 50%; background: #edf9f5; color: #00a870; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.6rem auto; font-size: 1.7rem;">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 700; color: #111827;">Bắt đầu chat với chúng tôi</h4>
+                    <p style="margin: 0; font-size: 0.78rem; color: #6b7280; line-height: 1.4;">Vui lòng cho chúng tôi biết thông tin của bạn để hỗ trợ tốt hơn.</p>
+                </div>
+
+                <!-- Form -->
+                <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #374151; margin-bottom: 0.25rem;">Tên của bạn <span style="color: #dc2626;">*</span></label>
+                        <input
+                            type="text"
+                            x-model="guestFormName"
+                            @keydown.enter.prevent="submitGuestForm()"
+                            placeholder="Ví dụ: Nguyễn Văn A"
+                            :disabled="guestFormLoading"
+                            style="width: 100%; padding: 0.55rem 0.8rem; border-radius: 0.65rem; border: 1.5px solid #d1d5db; font-size: 0.82rem; outline: none; background: #f9fafb; box-sizing: border-box;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #374151; margin-bottom: 0.25rem;">Email <span style="color: #dc2626;">*</span></label>
+                        <input
+                            type="email"
+                            x-model="guestFormEmail"
+                            @keydown.enter.prevent="submitGuestForm()"
+                            placeholder="email@example.com"
+                            :disabled="guestFormLoading"
+                            style="width: 100%; padding: 0.55rem 0.8rem; border-radius: 0.65rem; border: 1.5px solid #d1d5db; font-size: 0.82rem; outline: none; background: #f9fafb; box-sizing: border-box;">
+                    </div>
+
+                    <!-- Error message -->
+                    <div x-show="guestFormError" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.5rem 0.7rem;">
+                        <p style="margin: 0; font-size: 0.75rem; color: #dc2626;" x-text="guestFormError"></p>
+                    </div>
+
+                    <!-- Submit button -->
+                    <button
+                        @click="submitGuestForm()"
+                        :disabled="guestFormLoading"
+                        type="button"
+                        style="width: 100%; background: #00a870; color: white; border: none; border-radius: 0.65rem; padding: 0.65rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 0.25rem;">
+                        <span x-show="!guestFormLoading">Bắt đầu chat ngay</span>
+                        <span x-show="guestFormLoading" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                            <span class="spinner-border spinner-border-sm" role="status"></span> Đang xử lý...
+                        </span>
+                    </button>
+
+                    <!-- Link đăng nhập -->
+                    <p style="margin: 0.25rem 0 0 0; text-align: center; font-size: 0.75rem; color: #6b7280;">
+                        Đã có tài khoản?
+                        <a href="{{ route('login') }}" style="color: #00a870; font-weight: 600; text-decoration: none;">Đăng nhập</a>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>

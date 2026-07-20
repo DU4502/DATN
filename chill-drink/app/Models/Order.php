@@ -16,6 +16,7 @@ class Order extends Model
      * @var array
      */
     protected $fillable = [
+        'order_code',
         'user_id',
         'guest_name',
         'guest_phone',
@@ -110,6 +111,15 @@ class Order extends Model
             OrderStatus::CANCELLED => 'danger',
             default => 'secondary',
         };
+    }
+
+    /**
+     * Trả về mã hiển thị của đơn hàng.
+     * Ưu tiên order_code nếu có, fallback về #id cho đơn cũ.
+     */
+    public function displayCode(): string
+    {
+        return $this->order_code ?? ('#' . $this->id);
     }
 
     public function isGuest(): bool
@@ -229,7 +239,7 @@ class Order extends Model
         $loyaltyPoint->addPoints(
             points: $points,
             type: 'earn',
-            description: "Hoàn thành đơn hàng #{$this->id}",
+            description: "Hoàn thành đơn hàng {$this->displayCode()}",
             referenceType: 'order',
             referenceId: $this->id
         );
