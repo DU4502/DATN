@@ -1254,9 +1254,6 @@
                     <li class="nav-item">
                         <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
                     </li>
-                    <li class="nav-item">
-                        <a href="{{ route('order-lookup.index') }}" class="nav-link {{ request()->routeIs('order-lookup.*') ? 'active' : '' }}">Tra Cứu Đơn Hàng</a>
-                    </li>
                 </ul>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
@@ -1476,9 +1473,7 @@
     @endunless
 
     @auth
-        @if(auth()->user()->isCustomer())
-            @include('components.chatbox')
-        @endif
+        @include('components.chatbox')
     @endauth
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -1918,7 +1913,7 @@
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('{{ route('select-nearest-branch') }}', {
+                fetch('{{ route('select-nearest-branch', [], false) }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1936,18 +1931,31 @@
                 .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
             }
 
-            // Kiểm tra và tự động gửi tọa độ nếu đã được cấp quyền trước đó
+            // Kiểm tra trạng thái quyền vị trí
             if (navigator.permissions) {
                 navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
                     if (result.state === 'granted') {
+                        // Đã cấp quyền trước đó → lấy ngay, không hỏi nữa
                         navigator.geolocation.getCurrentPosition(
                             pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
                             err => console.warn("Lỗi GPS:", err),
                             { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
                         );
+                    } else if (result.state === 'prompt') {
+                        // Chưa hỏi → không làm gì, để chatbox tự xin quyền khi user mở chat
                     }
+                    // 'denied' → không làm gì
                 });
+            } else {
+                // Browser không hỗ trợ Permissions API → thử lấy thẳng
+                navigator.geolocation.getCurrentPosition(
+                    pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
+                    err => console.warn("Lỗi GPS:", err),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+                );
             }
+
+
             @endauth
         });
     </script>
