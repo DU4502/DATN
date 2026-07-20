@@ -277,8 +277,7 @@
             this.selectedBranchNameTemp = branch.name;
 
             try {
-                const res = await fetch('{{ route('chat.select-branch', [], false) }}', {
-                const body = { conversation_id: this.conversationId, branch_id: branchId };
+                const body = { conversation_id: this.conversationId, branch_id: branch.id };
                 if (!this.isLoggedIn && this.guestToken) body.guest_token = this.guestToken;
 
                 const res = await fetch('{{ route('chat.select-branch') }}', {
@@ -288,10 +287,6 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                     },
-                    body: JSON.stringify({
-                        conversation_id: this.conversationId,
-                        branch_id: branch.id,
-                    }),
                     body: JSON.stringify(body),
                 });
                 const data = await res.json();
@@ -301,11 +296,9 @@
                     if (data.message) {
                         this.messages = [data.message];
                     }
-                    await this.fetchMessages();
-                    this.subscribeEchoChannel();
-                    this.startPolling();
                     await this.fetchMessages(true);
                     if (this.isLoggedIn) this.subscribeEchoChannel();
+                    this.startPolling();
                 } else {
                     alert(data.message || 'Không thể chọn chi nhánh. Vui lòng thử lại.');
                 }
@@ -321,6 +314,15 @@
             if (this.hasUserSentMessage) {
                 alert('Bạn đã gửi tin nhắn trong cuộc trò chuyện này. Vui lòng tiếp tục hỗ trợ với ' + this.branchName + '.');
                 return;
+            }
+            this.branchId = null;
+            this.branchName = '';
+            this.messages = [];
+            this.stopPolling();
+            this.leaveEchoChannel();
+            this.requestLocationAndFetchBranches();
+        },
+
         async openEndSessionModal() {
             this.showEndSessionModal = true;
         },
@@ -358,7 +360,7 @@
                         this.showGuestModal = true;
                     } else {
                         await this.getOrCreateConversation();
-                        await this.requestGpsLocation();
+                        await this.requestLocationAndFetchBranches();
                     }
                 }
             } catch (e) {
@@ -366,12 +368,6 @@
             } finally {
                 this.endingSession = false;
             }
-            this.branchId = null;
-            this.branchName = '';
-            this.messages = [];
-            this.stopPolling();
-            this.leaveEchoChannel();
-            this.requestLocationAndFetchBranches();
         },
 
         subscribeEchoChannel() {
@@ -436,8 +432,6 @@
                 const res  = await fetch('{{ route('chat.messages', [], false) }}?conversation_id=' + this.conversationId);
                 const data = await res.json();
                 if (data.success) {
-                    const uid = {{ auth()->id() }};
-                    this.supportUnread = data.messages.filter(m => m.sender_id !== uid && !m.is_read).length;
                     const uid = {{ auth()->id() ?? 0 }};
                     this.supportUnread = data.messages.filter(m => m.sender_id !== uid && !m.is_read && !m.is_guest_message).length;
                 }
@@ -479,22 +473,19 @@
 
         async getOrCreateConversation() {
             try {
-                const res = await fetch('{{ route('chat.index', [], false) }}');
-                if (res.status === 401 || res.redirected) {
-                    this.needLogin = true;
-                    return;
-                }
                 let url = '{{ route('chat.index') }}';
                 if (!this.isLoggedIn && this.guestToken) {
                     url += '?guest_token=' + encodeURIComponent(this.guestToken);
                 }
                 const res = await fetch(url);
+                if (res.status === 401 || res.redirected) {
+                    this.needLogin = true;
+                    return;
+                }
                 const data = await res.json();
                 if (data.success) {
                     this.needLogin = false;
                     this.conversationId = data.conversation_id;
-                    this.branchId = data.branch_id;
-                    this.branchName = data.branch_name || '';
                     this.branchId       = data.branch_id;
                     this.branchName     = data.branch_name || '';
                     this.conversationStatus = data.status || 'open';
@@ -520,7 +511,6 @@
                 this.loadingMessages = true;
             }
             try {
-                const url = '{{ route('chat.messages', [], false) }}?conversation_id=' + this.conversationId
                 let url = '{{ route('chat.messages') }}?conversation_id=' + this.conversationId
                     + (markRead ? '&mark_as_read=1' : '');
                 if (!this.isLoggedIn && this.guestToken) {
@@ -551,7 +541,6 @@
         },
 
         async sendMessage() {
-            if (!this.newMessage.trim() || !this.conversationId || !this.branchId) return;
             if (!this.newMessage.trim() || !this.conversationId) return;
 
             const text = this.newMessage.trim();
@@ -581,14 +570,13 @@
             this.loading = true;
             const formData = new FormData();
             formData.append('conversation_id', this.conversationId);
-            formData.append('content', this.newMessage);
             formData.append('content', text);
             if (!this.isLoggedIn && this.guestToken) {
                 formData.append('guest_token', this.guestToken);
             }
 
             try {
-                const res = await fetch('{{ route('chat.send', [], false) }}', {
+                const res = await fetch('{{ route('chat.send') }}', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -598,20 +586,21 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    this.messages = this.messages.filter(m => m.id !== tempId);
                     this.messages.push(data.message);
-                    this.newMessage = '';
                     this.$nextTick(() => {
                         this.scrollToBottom();
                     });
                 } else {
                     console.error('Server error:', data.message);
-                    alert(data.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.');
                     this.messages = this.messages.filter(m => m.id !== tempId);
                     this.newMessage = text;
-                    alert(data.message || 'Không thể gử tin nhắn. Vui lòng thử lại.');
+                    alert(data.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.');
                 }
             } catch (e) {
                 console.error('Error sending message', e);
+                this.messages = this.messages.filter(m => m.id !== tempId);
+                this.newMessage = text;
                 alert('Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.');
             } finally {
                 this.loading = false;
@@ -655,7 +644,7 @@
                     this.showGuestModal = false;
                     // Tiếp tục luồng chọn chi nhánh
                     if (!this.branchId) {
-                        await this.requestGpsLocation();
+                        await this.requestLocationAndFetchBranches();
                     } else {
                         await this.fetchMessages(true);
                     }
@@ -891,63 +880,38 @@
                                         </button>
                                     </div>
                                 </template>
-        <!-- STATE 2: Danh sách tin nhắn (cuộn trong khung cố định) -->
-        <div
-            x-show="branchId"
-            x-ref="messageList"
-            class="chatbox-scroll"
-            style="padding: 0.9rem; background: #ffffff;">
-            <template x-for="message in messages" :key="message.id">
-                <div
-                    :style="(isLoggedIn ? (message.sender_id == {{ auth()->id() ?? 0 }}) : message.is_guest_message) ? 'display: flex; justify-content: flex-end; margin-bottom: 0.75rem;' : 'display: flex; justify-content: flex-start; margin-bottom: 0.75rem;'">
-                    <!-- Tin nhắn từ Bot hệ thống -->
-                    <template x-if="message.content && message.content.startsWith('🤖 Hệ thống')">
-                        <div style="max-width: 90%; background: #edf9f5; border: 1px solid #c3ebd9; border-radius: 1rem; padding: 0.75rem 0.85rem; color: #0d684d; font-size: 0.82rem; line-height: 1.45;">
-                            <div style="font-weight: 700; color: #00a870; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.3rem;">
-                                <span>🤖</span> Hệ thống
                             </div>
                         </div>
                     </template>
-                </div>
-            </template>
 
-            <!-- STEP 3: Connected Chat Message Stream -->
-            <template x-if="!loadingConversation && conversationId && branchId && !needLogin && (!loadingMessages || messages.length > 0)">
-                <div class="space-y-3">
-                    <!-- Message list -->
-                    <template x-for="message in messages" :key="message.id">
-                        <div
-                            :class="[
-                                'flex w-full mb-2',
-                                message.sender_id == currentUserId ? 'justify-end' : 'justify-start'
-                            ]">
-                            <div
-                                :class="[
-                                    'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm break-words',
-                                    message.sender_id == currentUserId ? 'rounded-tr-none' : 'rounded-tl-none'
-                                ]"
-                                :style="message.sender_id == currentUserId ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : (message.content && message.content.includes('🤖 Hệ thống') ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;')">
-                                <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
+                    <!-- STEP 3: Connected Chat Message Stream -->
+                    <template x-if="!loadingConversation && conversationId && branchId && !needLogin && (!loadingMessages || messages.length > 0)">
+                        <div class="space-y-3">
+                            <!-- Message list -->
+                            <template x-for="message in messages" :key="message.id">
                                 <div
-                                    x-text="message.created_at ? new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''"
-                                    class="text-[11px] opacity-70"
-                                    :title="message.created_at ? new Date(message.created_at).toLocaleString('vi-VN') : ''"></div>
-                            </div>
-                    <!-- Tin nhắn thường (User/Guest hoặc Admin/CSKH) -->
-                    <template x-if="!message.content || !message.content.startsWith('🤖 Hệ thống')">
-                        <div
-                            :style="(isLoggedIn ? (message.sender_id == {{ auth()->id() ?? 0 }}) : message.is_guest_message)
-                                ? 'max-width: 82%; background: #00a870; color: white; border-radius: 1rem 1rem 0 1rem; padding: 0.6rem 0.8rem; font-size: 0.83rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);'
-                                : 'max-width: 82%; background: #f1f5f9; color: #1e293b; border-radius: 1rem 1rem 1rem 0; padding: 0.6rem 0.8rem; font-size: 0.83rem; border: 1px solid #e2e8f0;'">
-                            <div x-text="message.content" x-show="message.content" style="white-space: pre-line;"></div>
-                            <div
-                                x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
-                                :style="(isLoggedIn ? (message.sender_id == {{ auth()->id() ?? 0 }}) : message.is_guest_message) ? 'font-size: 0.68rem; opacity: 0.8; text-align: right; margin-top: 0.25rem;' : 'font-size: 0.68rem; opacity: 0.6; text-align: left; margin-top: 0.25rem;'"></div>
+                                    :class="[
+                                        'flex w-full mb-2',
+                                        (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'justify-end' : 'justify-start'
+                                    ]">
+                                    <div
+                                        :class="[
+                                            'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm break-words',
+                                            (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'rounded-tr-none' : 'rounded-tl-none'
+                                        ]"
+                                        :style="(isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : (message.content && message.content.includes('🤖 Hệ thống') ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;')">
+                                        <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
+                                        <div
+                                            x-text="message.created_at ? new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''"
+                                            class="text-[11px] opacity-70"
+                                            :title="message.created_at ? new Date(message.created_at).toLocaleString('vi-VN') : ''"></div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
             </template>
-        </div>
 
         <!-- Input Area (Only visible AFTER branch is selected & authenticated) -->
         <template x-if="conversationId && branchId && !needLogin">
