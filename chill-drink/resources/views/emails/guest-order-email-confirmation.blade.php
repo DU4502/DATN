@@ -230,7 +230,7 @@
         <p class="greeting">Xin chào, {{ $order->guest_name }}! 👋</p>
         <p class="intro-text">
             Cảm ơn bạn đã chọn <strong>Chill Drink</strong>. Chúng tôi đã nhận được đơn hàng
-            <strong>#{{ $order->id }}</strong> của bạn.<br><br>
+            <strong>{{ $order->displayCode() }}</strong> của bạn.<br><br>
             Để bảo vệ bạn, đơn hàng chưa được xử lý cho đến khi bạn <strong>xác nhận qua email</strong> này.
             Vui lòng nhấn nút bên dưới để xác nhận.
         </p>
@@ -246,7 +246,7 @@
         <div class="order-box">
             <div class="order-box-title">Thông tin đơn hàng</div>
 
-            <div class="order-meta">Mã đơn: <span>#{{ $order->id }}</span></div>
+            <div class="order-meta">Mã đơn: <span>{{ $order->displayCode() }}</span></div>
             <div class="order-meta">Email: <span>{{ $order->guest_email }}</span></div>
             <div class="order-meta">Số điện thoại: <span>{{ $order->guest_phone }}</span></div>
             <div class="order-meta">

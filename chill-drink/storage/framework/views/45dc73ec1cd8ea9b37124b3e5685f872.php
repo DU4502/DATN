@@ -1,9 +1,9 @@
-@auth
-@if(! auth()->user()->isAdmin())
+<?php if(auth()->guard()->check()): ?>
+<?php if(! auth()->user()->isAdmin()): ?>
 <script>
     (function () {
-        const feedUrl = @json(route('notifications.feed', [], false));
-        const ordersIndexUrl = @json(route('orders.index', [], false));
+        const feedUrl = <?php echo json_encode(route('notifications.feed', [], false)) ?>;
+        const ordersIndexUrl = <?php echo json_encode(route('orders.index', [], false)) ?>;
 
         function orderNotificationUrl(orderId) {
             if (!orderId) {
@@ -75,15 +75,15 @@
         }
 
         const notificationIconMap = {
-            'order_pending': '{{ \App\Support\OrderStatus::notificationIconByType('order_pending') }}',
-            'order_in_progress': '{{ \App\Support\OrderStatus::notificationIconByType('order_in_progress') }}',
-            'order_processing': '{{ \App\Support\OrderStatus::notificationIconByType('order_processing') }}',
-            'order_shipper_accepted': '{{ \App\Support\OrderStatus::notificationIconByType('order_shipper_accepted') }}',
-            'order_shipped': '{{ \App\Support\OrderStatus::notificationIconByType('order_shipped') }}',
-            'order_arrived': '{{ \App\Support\OrderStatus::notificationIconByType('order_arrived') }}',
-            'order_completed': '{{ \App\Support\OrderStatus::notificationIconByType('order_completed') }}',
-            'order_delivered': '{{ \App\Support\OrderStatus::notificationIconByType('order_delivered') }}',
-            'order_cancelled': '{{ \App\Support\OrderStatus::notificationIconByType('order_cancelled') }}'
+            'order_pending': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_pending')); ?>',
+            'order_in_progress': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_in_progress')); ?>',
+            'order_processing': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_processing')); ?>',
+            'order_shipper_accepted': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_shipper_accepted')); ?>',
+            'order_shipped': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_shipped')); ?>',
+            'order_arrived': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_arrived')); ?>',
+            'order_completed': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_completed')); ?>',
+            'order_delivered': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_delivered')); ?>',
+            'order_cancelled': '<?php echo e(\App\Support\OrderStatus::notificationIconByType('order_cancelled')); ?>'
         };
 
         function notificationIcon(type) {
@@ -245,7 +245,7 @@
             if (markAllReadBtn) {
                 markAllReadBtn.addEventListener('click', async function() {
                     try {
-                        const response = await fetch(@json(route('notifications.mark-all-read', [], false)), {
+                        const response = await fetch(<?php echo json_encode(route('notifications.mark-all-read', [], false)) ?>, {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
@@ -271,5 +271,6 @@
         });
     })();
 </script>
-@endif
-@endauth
+<?php endif; ?>
+<?php endif; ?>
+<?php /**PATH C:\xampp\htdocs\DATN\chill-drink\resources\views/partials/client-notifications.blade.php ENDPATH**/ ?>

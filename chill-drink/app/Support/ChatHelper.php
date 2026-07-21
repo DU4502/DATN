@@ -48,7 +48,7 @@ class ChatHelper
         // Tạo conversation mới gắn với đơn hàng và chi nhánh
         $conversation = Conversation::create([
             'user_id'   => $user->id,
-            'subject'   => "Đơn hàng #{$order->id}",
+            'subject'   => "Đơn hàng {$order->displayCode()}",
             'status'    => 'open',
             'branch_id' => $branch->id,
         ]);
@@ -62,7 +62,7 @@ class ChatHelper
 
         $message = $conversation->messages()->create([
             'sender_id' => $staffUser->id,
-            'content'   => "Xin chào! Bạn vừa đặt đơn hàng #{$order->id} tại Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.",
+            'content'   => "Xin chào! Bạn vừa đặt đơn hàng {$order->displayCode()} tại Chi nhánh {$branch->name}.\nNhân viên sẽ hỗ trợ bạn trong giây lát.",
         ]);
 
         DB::table('conversations')

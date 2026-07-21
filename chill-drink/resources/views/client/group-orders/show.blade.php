@@ -9,7 +9,7 @@
     $memberCount = $group->members->count();
     $isFull = $memberCount >= \App\Models\GroupOrder::MAX_MEMBERS;
 @endphp
-<section class="group-page" data-vue-group-order-room data-presence-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code) : '' }}" data-leave-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.leave', $group->code) : '' }}">
+<section class="group-page" data-vue-group-order-room data-presence-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code, false) : '' }}" data-leave-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.leave', $group->code, false) : '' }}">
     <div class="container group-shell">
         @if(session('success'))<div class="alert alert-success rounded-4 border-0 shadow-sm"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}</div>@endif
         @if(session('error'))<div class="alert alert-danger rounded-4 border-0 shadow-sm"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}</div>@endif
@@ -38,7 +38,7 @@
 
         <div data-group-participation>
         @if(!$currentMember && $isOpen && !$isFull)
-            <form method="POST" action="{{ route('group-orders.join', $group->code) }}" class="group-card p-4 mb-4" data-group-async-action data-group-join>@csrf
+            <form method="POST" action="{{ route('group-orders.join', $group->code, false) }}" class="group-card p-4 mb-4" data-group-async-action data-group-join>@csrf
                 <div class="row g-3 align-items-end"><div class="col-md"><div class="group-eyebrow mb-1">Bước đầu tiên</div><h2 class="group-section-title mb-2">Bạn muốn hiển thị tên gì?</h2><input name="name" value="{{ old('name', auth()->user()->name) }}" class="form-control group-input" required maxlength="100" placeholder="Tên của bạn"></div><div class="col-md-auto"><button class="btn btn-primary group-btn w-100"><i class="bi bi-box-arrow-in-right me-2"></i>Tham gia phòng</button></div></div>
             </form>
         @elseif(!$currentMember && $isOpen && $isFull)
@@ -46,7 +46,7 @@
         @endif
 
         @if($currentMember && $isOpen)
-            <form method="POST" action="{{ route('group-orders.items.store', $group->code) }}" class="group-card group-order-form mb-5" data-group-async-action>@csrf
+            <form method="POST" action="{{ route('group-orders.items.store', $group->code, false) }}" class="group-card group-order-form mb-5" data-group-async-action>@csrf
                 <div class="group-order-form-head"><div><div class="group-eyebrow mb-1">Món của bạn</div><h2 class="group-section-title mb-0">Chọn đồ uống cho {{ $currentMember->name }}</h2></div><span class="group-status is-open"><i class="bi bi-plus-circle"></i>Thêm nhiều món</span></div>
                 <div class="group-order-form-body">
                 <div class="row g-3 mb-3">
@@ -86,9 +86,10 @@
         @if($currentMember)
             <div class="mb-4" data-vue-group-chat
                  data-group-id="{{ $group->id }}"
-                 data-messages-url="{{ route('group-orders.messages', $group->code) }}"
-                 data-send-url="{{ route('group-orders.messages.send', $group->code) }}"
-                 data-read-url="{{ route('group-orders.messages.read', $group->code) }}"
+                 data-group-is-open="{{ $group->isOpen() ? '1' : '0' }}"
+                 data-messages-url="{{ route('group-orders.messages', $group->code, false) }}"
+                 data-send-url="{{ route('group-orders.messages.send', $group->code, false) }}"
+                 data-read-url="{{ route('group-orders.messages.read', $group->code, false) }}"
                  data-current-member-id="{{ $currentMember->id }}"
                  data-members='@json($group->members->map(fn($member) => ["id" => $member->id, "name" => $member->name])->values())'></div>
         @endif
@@ -99,7 +100,7 @@
             @forelse($group->members as $member)
                 <div class="col-lg-6"><article class="group-card member-card"><header class="member-head"><div class="d-flex align-items-center gap-2"><span class="member-avatar">{{ mb_strtoupper(mb_substr($member->name, 0, 1)) }}</span><div><h3 class="h6 fw-bold mb-0">{{ $member->name }}</h3><small class="text-secondary">{{ $member->items->sum('quantity') }} món</small></div></div><strong class="text-primary">{{ number_format($member->items->sum(fn($item) => $item->subtotal()), 0, ',', '.') }}đ</strong></header>
                     @forelse($member->items as $item)
-                        <div class="member-item"><x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div><small class="text-secondary">Kích cỡ {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>@if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif</div><div class="text-end"><strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>@if($currentMember?->id === $member->id && $isOpen)<div class="group-item-actions"><form method="POST" action="{{ route('group-orders.items.increment', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-item-action is-add" aria-label="Thêm một phần {{ $item->product->name }}" title="Thêm 1 phần"><i class="bi bi-plus-lg"></i></button></form><form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item]) }}" data-group-async-action>@csrf @method('DELETE')<button class="group-item-action is-remove" aria-label="Xóa món" title="Xóa món"><i class="bi bi-trash3"></i></button></form></div>@endif</div></div>
+                        <div class="member-item"><x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div><small class="text-secondary">Kích cỡ {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>@if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif</div><div class="text-end"><strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>@if($currentMember?->id === $member->id && $isOpen)<div class="group-item-actions"><form method="POST" action="{{ route('group-orders.items.increment', [$group->code, $item], false) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-item-action is-add" aria-label="Thêm một phần {{ $item->product->name }}" title="Thêm 1 phần"><i class="bi bi-plus-lg"></i></button></form><form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item], false) }}" data-group-async-action>@csrf @method('DELETE')<button class="group-item-action is-remove" aria-label="Xóa món" title="Xóa món"><i class="bi bi-trash3"></i></button></form></div>@endif</div></div>
                     @empty<div class="p-4 text-center text-secondary"><i class="bi bi-cup-straw d-block fs-3 mb-2"></i>Chưa chọn món</div>@endforelse
                 </article></div>
             @empty
@@ -111,11 +112,13 @@
             <div><small class="text-secondary d-block">Tổng tiền cả nhóm</small><strong class="h3 text-primary mb-0">{{ number_format($groupTotal, 0, ',', '.') }}đ</strong></div>
             <div class="d-flex flex-wrap gap-2">
                 @if(auth()->id() === $group->owner_id && $group->status === 'open')
-                    <form method="POST" action="{{ route('group-orders.cancel', $group->code) }}" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn nhóm này?')">@csrf<button class="btn btn-outline-danger group-btn"><i class="bi bi-x-circle me-2"></i>Hủy nhóm</button></form>
-                    <form method="POST" action="{{ route('group-orders.close', $group->code) }}">@csrf<button class="btn btn-primary group-btn"><i class="bi bi-bag-check me-2"></i>Chốt đơn & thanh toán</button></form>
+                    <form method="POST" action="{{ route('group-orders.cancel', $group->code, false) }}" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn nhóm này?')">@csrf<button class="btn btn-outline-danger group-btn"><i class="bi bi-x-circle me-2"></i>Hủy nhóm</button></form>
+                    <form method="POST" action="{{ route('group-orders.close', $group->code, false) }}">@csrf<button class="btn btn-primary group-btn"><i class="bi bi-bag-check me-2"></i>Chốt đơn & thanh toán</button></form>
+                @elseif($currentMember && $group->status === 'open')
+                    <form method="POST" action="{{ route('group-orders.leave-room', $group->code, false) }}" onsubmit="return confirm('Rời phòng? Món đã chọn và các tin nhắn riêng liên quan của bạn sẽ bị xóa.');">@csrf<button class="btn btn-outline-danger group-btn"><i class="bi bi-box-arrow-right me-2"></i>Rời phòng</button></form>
                 @elseif(auth()->id() === $group->owner_id && $group->status === 'closed' && !$group->order_id)
-                    <form method="POST" action="{{ route('group-orders.cancel', $group->code) }}" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn nhóm này?')">@csrf<button class="btn btn-outline-danger group-btn"><i class="bi bi-x-circle me-2"></i>Hủy nhóm</button></form>
-                    <form method="POST" action="{{ route('group-orders.resume', $group->code) }}">@csrf<button class="btn btn-primary group-btn"><i class="bi bi-credit-card me-2"></i>Tiếp tục thanh toán</button></form>
+                    <form method="POST" action="{{ route('group-orders.cancel', $group->code, false) }}" onsubmit="return confirm('Bạn chắc chắn muốn hủy đơn nhóm này?')">@csrf<button class="btn btn-outline-danger group-btn"><i class="bi bi-x-circle me-2"></i>Hủy nhóm</button></form>
+                    <form method="POST" action="{{ route('group-orders.resume', $group->code, false) }}">@csrf<button class="btn btn-primary group-btn"><i class="bi bi-credit-card me-2"></i>Tiếp tục thanh toán</button></form>
                 @elseif($group->status === 'ordered')
                     <span class="group-status is-open"><i class="bi bi-check-circle"></i>Đã tạo đơn #{{ $group->order_id }}</span>
                 @elseif($group->status === 'cancelled')
@@ -261,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
         window.setInterval(tick, 1000);
     }
 
-    const presenceUrl = @json($isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code) : null);
+    const presenceUrl = @json($isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code, false) : null);
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     if (presenceUrl && csrfToken) {
         let presenceTimer = null;

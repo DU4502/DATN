@@ -10,6 +10,9 @@
 <style>
     .admin-group-product { display: flex; align-items: center; gap: .85rem; min-width: 280px; }
     .admin-group-product-image { width: 58px; height: 58px; flex: 0 0 58px; border: 1px solid #e1ebe8; border-radius: 13px; object-fit: cover; background: #f1f7f5; }
+    .admin-group-chat { max-height: 440px; overflow-y: auto; background: #f7fbfa; }
+    .admin-group-chat-message { max-width: 760px; margin: 0 auto; padding: .8rem 1rem; border-bottom: 1px solid #e5efed; background: #fff; }
+    .admin-group-chat-message:last-child { border-bottom: 0; }
 </style>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div><a href="{{ route('admin.group-orders.index') }}" class="text-decoration-none text-secondary"><i class="bi bi-arrow-left me-1"></i>Danh sách đơn nhóm</a><h2 class="h4 fw-bold mt-2 mb-0">{{ $groupOrder->name }}</h2></div>
@@ -39,5 +42,29 @@
     @empty
         <div class="text-center text-secondary py-5">Chưa có thành viên tham gia.</div>
     @endforelse
+</section>
+
+<section class="admin-card mt-4">
+    <div class="p-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h3 class="h5 fw-bold mb-1"><i class="bi bi-chat-square-text me-2 text-primary"></i>Lịch sử trò chuyện</h3>
+            <small class="text-secondary">Chế độ giám sát: Super Admin chỉ xem, không thể gửi tin nhắn.</small>
+        </div>
+        <span class="badge bg-primary-subtle text-primary-emphasis">{{ $groupOrder->messages->count() }} tin nhắn</span>
+    </div>
+    <div class="admin-group-chat">
+        @forelse($groupOrder->messages->sortBy('id') as $message)
+            <article class="admin-group-chat-message">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                    <strong>{{ $message->sender?->name ?? 'Thành viên đã rời phòng' }}</strong>
+                    <small class="text-secondary">{{ $message->created_at->format('H:i · d/m/Y') }}</small>
+                </div>
+                <div class="small mb-2"><span class="badge {{ $message->recipient ? 'bg-warning-subtle text-warning-emphasis' : 'bg-success-subtle text-success-emphasis' }}">{{ $message->recipient ? 'Tin nhắn riêng tới '.$message->recipient->name : 'Chat chung' }}</span></div>
+                <p class="mb-0 text-dark">{{ $message->content }}</p>
+            </article>
+        @empty
+            <div class="text-center text-secondary py-5"><i class="bi bi-chat-dots d-block fs-3 mb-2"></i>Chưa có tin nhắn trong phòng.</div>
+        @endforelse
+    </div>
 </section>
 @endsection

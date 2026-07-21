@@ -266,11 +266,23 @@ class OrderController extends Controller
 
         // Kiểm tra yêu cầu lý do hủy
         if ($newStatus === OrderStatus::CANCELLED && empty($request->cancellation_reason)) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vui lòng nhập lý do hủy đơn hàng.',
+                ], 422);
+            }
             return redirect()->back()->with('error', 'Vui lòng nhập lý do hủy đơn hàng.');
         }
 
         // Kiểm tra logic chuyển trạng thái
         if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus, $fulfillmentType)) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không thể chuyển sang trạng thái này. Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn (nếu được phép).',
+                ], 422);
+            }
             return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này. Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn (nếu được phép).');
         }
 
@@ -278,6 +290,12 @@ class OrderController extends Controller
         if ($newStatus === OrderStatus::CONFIRMED && 
             $order->payment_method === 'vnpay' && 
             $order->payment_status !== 'paid') {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.',
+                ], 422);
+            }
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
         }
 
@@ -314,6 +332,18 @@ class OrderController extends Controller
         RealtimeOrderNotifier::orderStatusUpdated($order);
 
         $statusLabel = OrderStatus::label($newStatus);
+        
+        // Return JSON for AJAX requests
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Đã cập nhật trạng thái đơn hàng thành: {$statusLabel}",
+                'order_id' => $order->id,
+                'status' => $newStatus,
+                'status_label' => $statusLabel,
+            ]);
+        }
+        
         return redirect()->back()->with('success', "Đã cập nhật trạng thái đơn hàng thành: {$statusLabel}");
     }
 
