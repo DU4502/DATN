@@ -1102,14 +1102,13 @@
                                 @foreach(['M', 'L'] as $szName)
                                     @php
                                         $sizeObj = $productSizesMap->get($szName);
-                                        $extraPrice = $sizeObj ? (int) $sizeObj->pivot->price : 0;
+                                        $defaultExtra = $szName === 'M' ? 5000 : 10000;
+                                        $extraPrice = $sizeObj ? (int) $sizeObj->pivot->price : $defaultExtra;
                                     @endphp
-                                    @if($sizeObj)
-                                        <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
-                                            {{ $szName }}
-                                            <small>+{{ number_format($extraPrice, 0, ',', '.') }}đ</small>
-                                        </button>
-                                    @endif
+                                    <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
+                                        {{ $szName }}
+                                        <small>+{{ number_format($extraPrice, 0, ',', '.') }}đ</small>
+                                    </button>
                                 @endforeach
                             </div>
                         </div>

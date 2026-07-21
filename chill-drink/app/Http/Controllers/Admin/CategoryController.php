@@ -60,7 +60,7 @@ class CategoryController extends Controller
             'status' => 'nullable|in:0,1',
         ]);
 
-        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['slug'] = ($validated['slug'] ?? null) ?: Str::slug($validated['name']);
         $validated['status'] = $request->boolean('status');
 
         if ($request->hasFile('image')) {
@@ -105,7 +105,7 @@ class CategoryController extends Controller
             'status' => 'nullable|in:0,1',
         ]);
 
-        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['slug'] = ($validated['slug'] ?? null) ?: Str::slug($validated['name']);
         $validated['status'] = $request->boolean('status');
 
         if ($request->hasFile('image')) {
