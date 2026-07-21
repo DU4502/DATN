@@ -158,7 +158,7 @@ class AdminChatController extends Controller
             if ($user->branch_id) {
                 $query->where('branch_id', $user->branch_id);
             }
-            
+
             // Also filter by assigned cskh if it's just CSKH (role 4)
             if ($user->isCskh() && !$user->isAdmin()) {
                 $query->where(function ($inner) use ($user) {
