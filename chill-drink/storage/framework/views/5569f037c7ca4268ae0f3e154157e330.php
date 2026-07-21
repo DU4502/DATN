@@ -1,18 +1,18 @@
-@php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
+<?php extract(require resource_path('views/partials/ui-product-data.php')); ?>
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
-    <title>{{ config('app.name', 'Chill Drink') }} - @yield('title', 'Đồ Uống Online')</title>
+    <title><?php echo e(config('app.name', 'Chill Drink')); ?> - <?php echo $__env->yieldContent('title', 'Đồ Uống Online'); ?></title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <?php echo app('Illuminate\Foundation\Vite')(['resources/css/app.css', 'resources/js/app.js']); ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
@@ -1170,80 +1170,80 @@
 <body>
     <!-- Flash Notifications Container -->
     <div id="flashNotifications" style="position: fixed; top: 80px; right: 20px; z-index: 10000; width: 350px; max-width: calc(100vw - 40px);">
-        @if(session('success'))
+        <?php if(session('success')): ?>
             <div class="alert alert-success alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #10b981;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-check-circle-fill me-2 fs-5" style="color: #10b981;"></i>
                     <div class="flex-grow-1">
                         <strong class="d-block mb-1">Thành công!</strong>
-                        {{ session('success') }}
+                        <?php echo e(session('success')); ?>
+
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
 
-        @if(session('error'))
+        <?php if(session('error')): ?>
             <div class="alert alert-danger alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #ef4444;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-exclamation-triangle-fill me-2 fs-5" style="color: #ef4444;"></i>
                     <div class="flex-grow-1">
                         <strong class="d-block mb-1">Lỗi!</strong>
-                        {{ session('error') }}
+                        <?php echo e(session('error')); ?>
+
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
 
-        @if(session('warning'))
+        <?php if(session('warning')): ?>
             <div class="alert alert-warning alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #f59e0b;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-exclamation-circle-fill me-2 fs-5" style="color: #f59e0b;"></i>
                     <div class="flex-grow-1">
                         <strong class="d-block mb-1">Cảnh báo!</strong>
-                        {{ session('warning') }}
+                        <?php echo e(session('warning')); ?>
+
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
 
-        @if(session('info'))
+        <?php if(session('info')): ?>
             <div class="alert alert-info alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #3b82f6;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-info-circle-fill me-2 fs-5" style="color: #3b82f6;"></i>
                     <div class="flex-grow-1">
                         <strong class="d-block mb-1">Thông tin</strong>
-                        {{ session('info') }}
+                        <?php echo e(session('info')); ?>
+
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
 
-        @php
-            $flashStatus = session('status');
-            $flashStatusMessage = $flashStatus ? __((string) $flashStatus) : null;
-        @endphp
-
-        @if($flashStatusMessage)
+        <?php if(session('status')): ?>
             <div class="alert alert-primary alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #0d9373;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-info-circle-fill me-2 fs-5" style="color: #0d9373;"></i>
                     <div class="flex-grow-1">
-                        {{ $flashStatusMessage }}
+                        <?php echo e(session('status')); ?>
+
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
-        @endif
+        <?php endif; ?>
     </div>
 
     <header class="site-header sticky-top" id="siteHeader">
         <nav class="navbar navbar-expand-md container py-2">
-            <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
-                <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
+            <a href="<?php echo e(route('home')); ?>" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
+                <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                 <span class="brand-text">Chill Drink</span>
             </a>
 
@@ -1254,64 +1254,62 @@
             <div class="collapse navbar-collapse flex-grow-1" id="clientNavbar">
                 <ul class="navbar-nav ms-lg-4 gap-lg-1">
                     <li class="nav-item">
-                        <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Trang Chủ</a>
+                        <a href="<?php echo e(route('home')); ?>" class="nav-link <?php echo e(request()->routeIs('home') ? 'active' : ''); ?>">Trang Chủ</a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('order-lookup.index') }}" class="nav-link {{ request()->routeIs('order-lookup.*') ? 'active' : '' }}">Tra Cứu Đơn Hàng</a>
+                        <a href="<?php echo e(route('products.index')); ?>" class="nav-link <?php echo e(request()->routeIs('products.*') ? 'active' : ''); ?>">Sản Phẩm</a>
                     </li>
                 </ul>
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
-                    @if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*'))
-                        <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                    <?php if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*')): ?>
+                        <a href="<?php echo e(route('checkout.index')); ?>" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm <?php echo e($pendingCheckoutGroup->name); ?>">
                             <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
                             <span>Tiếp tục thanh toán</span>
                         </a>
-                    @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
-                        <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
+                    <?php elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show')): ?>
+                        <a href="<?php echo e(route('group-orders.show', $activeOwnedGroup->code)); ?>" class="active-group-return" title="Quay lại phòng <?php echo e($activeOwnedGroup->name); ?>">
                             <i class="bi bi-people-fill" aria-hidden="true"></i>
-                            <span class="d-none d-xl-inline">{{ $activeOwnedGroup->owner_id === auth()->id() ? 'Phòng đang mở' : 'Phòng đang tham gia' }}</span>
-                            <span class="active-group-return__time" data-active-group-countdown data-closes-at="{{ $activeOwnedGroup->closes_at->toIso8601String() }}">--:--</span>
-                            <span class="active-group-return__members" title="{{ $activeOwnedGroup->members_count }} thành viên"><i class="bi bi-person-fill" aria-hidden="true"></i>{{ $activeOwnedGroup->members_count }}</span>
+                            <span class="d-none d-xl-inline"><?php echo e($activeOwnedGroup->owner_id === auth()->id() ? 'Phòng đang mở' : 'Phòng đang tham gia'); ?></span>
+                            <span class="active-group-return__time" data-active-group-countdown data-closes-at="<?php echo e($activeOwnedGroup->closes_at->toIso8601String()); ?>">--:--</span>
+                            <span class="active-group-return__members" title="<?php echo e($activeOwnedGroup->members_count); ?> thành viên"><i class="bi bi-person-fill" aria-hidden="true"></i><?php echo e($activeOwnedGroup->members_count); ?></span>
                         </a>
-                    @endif
-                    <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
+                    <?php endif; ?>
+                    <form action="<?php echo e(route('products.index')); ?>" method="GET" class="d-flex client-search gap-2" role="search">
                         <div class="position-relative flex-grow-1">
                             <i class="bi bi-search position-absolute" style="left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--c-subtle); font-size: 0.85rem;"></i>
-                            <input type="search" name="search" class="form-control" placeholder="Tìm đồ uống..." aria-label="Tìm kiếm sản phẩm" value="{{ request('search') }}" style="padding-left: 2.4rem; border-radius: var(--radius-md);">
+                            <input type="search" name="search" class="form-control" placeholder="Tìm đồ uống..." aria-label="Tìm kiếm sản phẩm" value="<?php echo e(request('search')); ?>" style="padding-left: 2.4rem; border-radius: var(--radius-md);">
                         </div>
                         <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">Tìm</button>
                     </form>
 
-                    <a href="{{ auth()->check() ? route('favorites.index') : route('login') }}" class="btn btn-outline-secondary cart-button favorite-nav-button {{ request()->routeIs('favorites.*') ? 'active' : '' }}" aria-label="Món yêu thích" title="Món yêu thích">
-                        <i class="bi {{ request()->routeIs('favorites.*') ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
+                    <a href="<?php echo e(auth()->check() ? route('favorites.index') : route('login')); ?>" class="btn btn-outline-secondary cart-button favorite-nav-button <?php echo e(request()->routeIs('favorites.*') ? 'active' : ''); ?>" aria-label="Món yêu thích" title="Món yêu thích">
+                        <i class="bi <?php echo e(request()->routeIs('favorites.*') ? 'bi-heart-fill' : 'bi-heart'); ?>" aria-hidden="true"></i>
                     </a>
 
-                    <a href="{{ route('cart.index') }}" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng" data-cart-button>
+                    <a href="<?php echo e(route('cart.index')); ?>" class="btn btn-outline-secondary cart-button position-relative" aria-label="Giỏ hàng" data-cart-button>
                         <i class="bi bi-cart-plus" aria-hidden="true"></i>
-                        <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger {{ session('cart') ? '' : 'd-none' }}">
-                            {{ session('cart') ? count(session('cart')) : 0 }}
+                        <span data-cart-badge class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger <?php echo e(session('cart') ? '' : 'd-none'); ?>">
+                            <?php echo e(session('cart') ? count(session('cart')) : 0); ?>
+
                         </span>
                     </a>
 
-                    @auth
-                    @php
+                    <?php if(auth()->guard()->check()): ?>
+                    <?php
                     $avatar = Auth::user()->avatar;
                     $avatarIsPreset = is_string($avatar) && str_starts_with($avatar, 'preset-');
                     $avatarClass = $avatarIsPreset ? 'avatar-' . $avatar : 'avatar-preset-mint';
                     $avatarUrl = $avatar && ! $avatarIsPreset ? asset('storage/' . $avatar) : null;
-                    @endphp
+                    ?>
                     <div class="dropdown">
                         <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng" id="clientNotificationButton">
                             <i class="bi bi-bell" style="font-size: 1.05rem;"></i>
-                            @if(Auth::user()->unreadNotifications->count() > 0)
+                            <?php if(Auth::user()->unreadNotifications->count() > 0): ?>
                                 <span class="notification-dot" id="clientNotificationDot" aria-hidden="true"></span>
-                            @else
+                            <?php else: ?>
                                 <span class="notification-dot d-none" id="clientNotificationDot" aria-hidden="true"></span>
-                            @endif
+                            <?php endif; ?>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end notification-menu">
                             <div class="notification-head">
@@ -1320,118 +1318,123 @@
                                         <div class="fw-bold" style="font-size: 0.9rem;">Thông báo</div>
                                         <div class="text-secondary" style="font-size: 0.8rem;">Cập nhật đơn hàng của bạn</div>
                                     </div>
-                                    <span class="badge rounded-pill {{ Auth::user()->unreadNotifications->count() > 0 ? '' : 'd-none' }}" id="clientNotificationBadge" style="background: var(--c-primary-light); color: var(--c-primary); font-size: 0.7rem;">
-                                        {{ Auth::user()->unreadNotifications->count() }} mới
+                                    <span class="badge rounded-pill <?php echo e(Auth::user()->unreadNotifications->count() > 0 ? '' : 'd-none'); ?>" id="clientNotificationBadge" style="background: var(--c-primary-light); color: var(--c-primary); font-size: 0.7rem;">
+                                        <?php echo e(Auth::user()->unreadNotifications->count()); ?> mới
                                     </span>
                                 </div>
-                                @if(Auth::user()->unreadNotifications->count() > 0)
+                                <?php if(Auth::user()->unreadNotifications->count() > 0): ?>
                                 <button type="button" 
                                         class="btn btn-sm btn-outline-primary w-100" 
                                         id="markAllReadBtn"
                                         style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                     <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
                                 </button>
-                                @endif
+                                <?php endif; ?>
                             </div>
                             <div class="notification-list" id="clientNotificationList">
-                                @forelse(Auth::user()->notifications->take(10) as $notification)
-                                    @php
+                                <?php $__empty_1 = true; $__currentLoopData = Auth::user()->notifications->take(10); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $notification): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                                    <?php
                                         $notificationOrderId = $notification->data['order_id'] ?? null;
                                         $notificationUrl = is_numeric($notificationOrderId)
                                             ? route('orders.index', ['order' => (int) $notificationOrderId])
                                             : route('orders.index');
-                                    @endphp
-                                    <a href="{{ $notificationUrl }}"
-                                       class="notification-item is-clickable {{ is_null($notification->read_at) ? 'unread' : '' }}"
-                                       data-notification-id="{{ $notification->id }}"
-                                       @if(is_numeric($notificationOrderId)) data-order-id="{{ (int) $notificationOrderId }}" @endif>
+                                    ?>
+                                    <a href="<?php echo e($notificationUrl); ?>"
+                                       class="notification-item is-clickable <?php echo e(is_null($notification->read_at) ? 'unread' : ''); ?>"
+                                       data-notification-id="<?php echo e($notification->id); ?>"
+                                       <?php if(is_numeric($notificationOrderId)): ?> data-order-id="<?php echo e((int) $notificationOrderId); ?>" <?php endif; ?>>
                                         <span class="notification-icon">
-                                            @include('partials.notification-icon', ['type' => $notification->data['type'] ?? null])
+                                            <?php echo $__env->make('partials.notification-icon', ['type' => $notification->data['type'] ?? null], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                                         </span>
                                         <div>
                                             <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
                                                 <div class="fw-semibold" style="font-size: 0.85rem;">
-                                                    {{ $notification->data['title'] ?? 'Thông báo' }}
+                                                    <?php echo e($notification->data['title'] ?? 'Thông báo'); ?>
+
                                                 </div>
-                                                @if(!empty($notification->data['status_label']))
+                                                <?php if(!empty($notification->data['status_label'])): ?>
                                                     <span class="badge rounded-pill" style="background: var(--c-primary-light); color: var(--c-primary); font-size: 0.68rem;">
-                                                        {{ $notification->data['status_label'] }}
+                                                        <?php echo e($notification->data['status_label']); ?>
+
                                                     </span>
-                                                @endif
+                                                <?php endif; ?>
                                             </div>
                                             <div class="text-secondary" style="font-size: 0.8rem;">
-                                                {{ $notification->data['message'] ?? '' }}
+                                                <?php echo e($notification->data['message'] ?? ''); ?>
+
                                             </div>
                                             <div class="notification-time mt-1">
-                                                {{ $notification->created_at->diffForHumans() }}
+                                                <?php echo e($notification->created_at->diffForHumans()); ?>
+
                                             </div>
                                         </div>
                                     </a>
-                                @empty
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                     <div class="text-center py-4 text-secondary">
                                         <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>
                                         <div style="font-size: 0.85rem;">Chưa có thông báo mới</div>
                                     </div>
-                                @endforelse
+                                <?php endif; ?>
                             </div>
                             <div class="p-3 border-top">
-                                <a href="{{ route('orders.index') }}" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
+                                <a href="<?php echo e(route('orders.index')); ?>" class="btn btn-primary w-100 btn-sm">Xem đơn hàng</a>
                             </div>
                         </div>
                     </div>
 
                     <div class="dropdown text-center">
-                        <button class="user-avatar dropdown-toggle {{ $avatarClass }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản">
-                            @if($avatarUrl)
-                            <img src="{{ $avatarUrl }}" alt="{{ Auth::user()->name }}">
-                            @else
-                            {{ mb_substr(Auth::user()->name, 0, 1) }}
-                            @endif
+                        <button class="user-avatar dropdown-toggle <?php echo e($avatarClass); ?>" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản">
+                            <?php if($avatarUrl): ?>
+                            <img src="<?php echo e($avatarUrl); ?>" alt="<?php echo e(Auth::user()->name); ?>">
+                            <?php else: ?>
+                            <?php echo e(mb_substr(Auth::user()->name, 0, 1)); ?>
+
+                            <?php endif; ?>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">
-                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
-                            <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
-                            <li><a class="dropdown-item" href="{{ route('loyalty.index') }}"><i class="bi bi-star-fill me-2 text-warning"></i>Điểm thưởng</a></li>
-                            @if(auth()->user()->isStaff())
-                                <li><a class="dropdown-item" href="{{ auth()->user()->isSuperAdmin() ? route('admin.super-admin') : (auth()->user()->isCskh() ? route('admin.chat.index') : route('admin.dashboard')) }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
-                            @endif
+                            <li><a class="dropdown-item" href="<?php echo e(route('profile.edit')); ?>"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
+                            <li><a class="dropdown-item" href="<?php echo e(route('orders.index')); ?>"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                            <li><a class="dropdown-item" href="<?php echo e(route('loyalty.index')); ?>"><i class="bi bi-star-fill me-2 text-warning"></i>Điểm thưởng</a></li>
+                            <?php if(auth()->user()->isStaff()): ?>
+                                <li><a class="dropdown-item" href="<?php echo e(auth()->user()->isSuperAdmin() ? route('admin.super-admin') : (auth()->user()->isCskh() ? route('admin.chat.index') : route('admin.dashboard'))); ?>"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
+                            <?php endif; ?>
                             <li>
                                 <hr class="dropdown-divider" style="margin: 0.25rem 0;">
                             </li>
                             <li>
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
+                                <form method="POST" action="<?php echo e(route('logout')); ?>">
+                                    <?php echo csrf_field(); ?>
                                     <button type="submit" class="dropdown-item"><i class="bi bi-box-arrow-right me-2"></i>Đăng Xuất</button>
                                 </form>
                             </li>
                         </ul>
                     </div>
-                    @else
-                    <a href="{{ route('login') }}" class="btn btn-outline-primary {{ request()->routeIs('login') ? 'active' : '' }}">Đăng Nhập</a>
-                    <a href="{{ route('register') }}" class="btn btn-primary {{ request()->routeIs('register') ? 'active' : '' }}">Đăng Ký</a>
-                    @endauth
+                    <?php else: ?>
+                    <a href="<?php echo e(route('login')); ?>" class="btn btn-outline-primary <?php echo e(request()->routeIs('login') ? 'active' : ''); ?>">Đăng Nhập</a>
+                    <a href="<?php echo e(route('register')); ?>" class="btn btn-primary <?php echo e(request()->routeIs('register') ? 'active' : ''); ?>">Đăng Ký</a>
+                    <?php endif; ?>
                 </div>
             </div>
         </nav>
     </header>
 
     <main style="min-height: 100vh;">
-        @if(session('error'))
+        <?php if(session('error')): ?>
         <div class="container mt-4">
-            <div class="alert alert-danger mb-0" style="border-radius: var(--radius-md);">{{ session('error') }}</div>
+            <div class="alert alert-danger mb-0" style="border-radius: var(--radius-md);"><?php echo e(session('error')); ?></div>
         </div>
-        @endif
+        <?php endif; ?>
 
-        @yield('content')
+        <?php echo $__env->yieldContent('content'); ?>
     </main>
 
-    @unless(request()->routeIs('login', 'register', 'password.*', 'verification.*'))
+    <?php if (! (request()->routeIs('login', 'register', 'password.*', 'verification.*'))): ?>
     <footer class="site-footer mt-5">
         <div class="container py-5">
             <div class="row g-4 g-lg-5">
                 <div class="col-lg-4">
                     <div class="d-flex align-items-center gap-2 mb-3">
-                        <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
+                        <img src="<?php echo e(asset('images/logo.png')); ?>" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                         <span class="brand-text">Chill Drink</span>
                     </div>
                     <p class="text-secondary mb-4" style="font-size: 0.875rem; max-width: 300px;">Đồ uống tươi mát, giao nhanh tận nơi. Đặt hàng dễ dàng mỗi ngày với Chill Drink.</p>
@@ -1444,7 +1447,7 @@
                 <div class="col-6 col-lg-2">
                     <h3 class="footer-heading">Sản phẩm</h3>
                     <div class="d-flex flex-column gap-2">
-                        <a href="{{ route('products.index') }}" class="footer-link">Tất cả</a>
+                        <a href="<?php echo e(route('products.index')); ?>" class="footer-link">Tất cả</a>
                         <a href="#" class="footer-link">Trà sữa</a>
                         <a href="#" class="footer-link">Cà phê</a>
                         <a href="#" class="footer-link">Nước ép</a>
@@ -1478,15 +1481,13 @@
             </div>
         </div>
     </footer>
-    @endunless
+    <?php endif; ?>
 
-    @auth
-        @if(auth()->user()->isCustomer())
-            @include('components.chatbox')
-
-
-        @endif
-    @endauth
+    <?php if(auth()->guard()->check()): ?>
+        <?php if(auth()->user()->isCustomer()): ?>
+            <?php echo $__env->make('components.chatbox', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+        <?php endif; ?>
+    <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -1784,7 +1785,7 @@
                                     <span class="checkout-step mx-auto mb-3"><i class="bi bi-bag"></i></span>
                                     <h2 class="h3 fw-bold">Giỏ hàng trống</h2>
                                     <p class="text-secondary">Bạn chưa có sản phẩm nào trong giỏ hàng.</p>
-                                    <a href="{{ route('products.index') }}" class="btn btn-primary rounded-pill px-4">Mua sắm ngay</a>
+                                    <a href="<?php echo e(route('products.index')); ?>" class="btn btn-primary rounded-pill px-4">Mua sắm ngay</a>
                                 </div>
                             `;
                         }
@@ -1919,18 +1920,18 @@
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            @auth
+            <?php if(auth()->guard()->check()): ?>
             // Chỉ chạy khi user đã đăng nhập
             if (!navigator.geolocation) return;
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('{{ route('select-nearest-branch') }}', {
+                fetch('<?php echo e(route('select-nearest-branch', [], false)); ?>', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        'X-CSRF-TOKEN': '<?php echo e(csrf_token()); ?>'
                     },
                     body: JSON.stringify({ latitude: lat, longitude: lng })
                 })
@@ -1968,11 +1969,12 @@
             }
 
 
-            @endauth
+            <?php endif; ?>
         });
     </script>
-    @include('partials.realtime')
-    @include('partials.client-notifications')
+    <?php echo $__env->make('partials.realtime', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php echo $__env->make('partials.client-notifications', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 </body>
 
 </html>
+<?php /**PATH C:\xampp\htdocs\DATN\chill-drink\resources\views/layouts/client.blade.php ENDPATH**/ ?>

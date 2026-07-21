@@ -30,7 +30,7 @@
             <p>Đơn hàng thức uống của bạn đang được chúng tôi chuẩn bị bằng tất cả sự tận tâm.</p>
             
             <div class="order-details">
-                <h3>THÔNG TIN ĐƠN HÀNG #CD-{{ $order->id }}</h3>
+                <h3>THÔNG TIN ĐƠN HÀNG {{ $order->displayCode() }}</h3>
                 <ul class="item-list">
                     @foreach($order->orderItems ?? [] as $item)
                         <li>

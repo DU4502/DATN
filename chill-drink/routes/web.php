@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\OrderLookupController;
 use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
@@ -41,6 +42,11 @@ Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBran
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [ClientProductController::class, 'show'])->name('products.show');
+
+// Order Lookup
+Route::get('/tra-cuu-don-hang', [OrderLookupController::class, 'index'])->name('order-lookup.index');
+Route::post('/tra-cuu-don-hang', [OrderLookupController::class, 'search'])->name('order-lookup.search');
+Route::get('/tra-cuu-don-hang/{order}/status', [OrderLookupController::class, 'status'])->name('order-lookup.status');
 
 // Cart
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -86,6 +92,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
     Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
     Route::post('/group-orders/join/{code}/leave', [GroupOrderController::class, 'leave'])->name('group-orders.leave');
+    Route::post('/group-orders/join/{code}/leave-room', [GroupOrderController::class, 'leaveRoom'])->name('group-orders.leave-room');
     Route::get('/group-orders/join/{code}/messages', [GroupOrderController::class, 'messages'])->name('group-orders.messages');
     Route::post('/group-orders/join/{code}/messages', [GroupOrderController::class, 'sendMessage'])->name('group-orders.messages.send');
     Route::post('/group-orders/join/{code}/messages/read', [GroupOrderController::class, 'readMessages'])->name('group-orders.messages.read');
@@ -106,13 +113,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/taste-profile', [QuickOrderController::class, 'saveTaste'])->name('taste-profiles.store');
 });
 
-// Chat routes (client)
-Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
+// Chat routes (client) — không yêu cầu auth, dùng guest_token để xác thực
+Route::prefix('chat')->name('chat.')->group(function () {
     Route::get('/', [ChatController::class, 'getOrCreateConversation'])->name('index');
     Route::get('/nearest-branches', [ChatController::class, 'nearestBranches'])->name('nearest-branches');
+    Route::post('/guest-init', [ChatController::class, 'guestInit'])->name('guest-init');
     Route::post('/select-branch', [ChatController::class, 'selectBranch'])->name('select-branch');
     Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
     Route::post('/send', [ChatController::class, 'send'])->name('send');
+    Route::post('/end-session', [ChatController::class, 'endSession'])->name('end-session');
 });
 
 // Chat routes (admin/cskh)

@@ -92,7 +92,7 @@
             @if ($status === 'success')
                 <div class="bg-light border rounded-3 p-3 mb-4 text-start" style="font-size:0.9rem; color:#374151;">
                     <div class="fw-semibold mb-2" style="color:#0d9373;"><i class="bi bi-receipt me-1"></i>Thông tin đơn hàng</div>
-                    <div>Mã đơn: <strong>#{{ $order->id }}</strong></div>
+                    <div>Mã đơn: <strong>{{ $order->displayCode() }}</strong></div>
                     <div>Khách: <strong>{{ $order->guest_name }}</strong></div>
                     <div>Tổng tiền: <strong class="text-primary">{{ number_format((int)($order->total ?? $order->total_price ?? 0), 0, ',', '.') }}đ</strong></div>
                     <div>Thanh toán: <strong>{{ $order->payment_method === 'vnpay' ? 'VNPay' : 'COD' }}</strong></div>
