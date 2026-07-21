@@ -35,15 +35,6 @@
         </div>
     </div>
 
-    <div class="location-picker-search mb-2">
-        <label class="location-picker-search-label" for="{{ $pickerId }}-search">Tìm địa chỉ</label>
-        <div class="location-picker-search-box">
-            <i class="bi bi-search"></i>
-            <input id="{{ $pickerId }}-search" type="search" class="form-control" placeholder="Nhập số nhà, đường, phường/xã, tỉnh..." autocomplete="off" data-location-search>
-        </div>
-        <div class="location-picker-suggestions d-none" data-location-suggestions></div>
-    </div>
-
     <div class="location-picker-map" data-location-map></div>
 
     <div class="location-picker-status form-text mt-2" data-location-status>{{ $hint }}</div>
