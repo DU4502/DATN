@@ -166,14 +166,14 @@
                         </td>
                         <td>
                             <div class="d-flex gap-2">
-                                <form method="POST" action="{{ route('admin.branches.toggle-status', ['branch' => $branch->id], false) }}" style="display: inline;">
+                                <form method="POST" action="{{ route('admin.branches.toggle-status', $branch) }}" style="display: inline;">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-sm btn-outline-{{ $branch->status ? 'warning' : 'success' }}" title="{{ $branch->status ? 'Vô hiệu hóa' : 'Kích hoạt' }}">
                                         <i class="bi bi-{{ $branch->status ? 'lock' : 'unlock' }}"></i>
                                     </button>
                                 </form>
-                                <form method="POST" action="{{ route('admin.branches.destroy', ['branch' => $branch->id], false) }}" style="display: inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa chi nhánh này?');">
+                                <form method="POST" action="{{ route('admin.branches.destroy', $branch) }}" style="display: inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa chi nhánh này?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
@@ -233,54 +233,41 @@
                 <h5 class="modal-title fw-bold" id="createBranchModalLabel">Thêm chi nhánh mới</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <form method="POST" action="{{ route('admin.branches.store', [], false) }}">
+            <form method="POST" action="{{ route('admin.branches.store') }}">
                 @csrf
                 <input type="hidden" name="form_type" value="branch">
                 <div class="modal-body">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Tên chi nhánh <span class="text-danger">*</span></label>
-                            <input class="admin-input @error('name', 'createBranch') is-invalid @enderror" type="text" name="name" value="{{ old('name') }}" placeholder="Nhập tên chi nhánh" required>
-                            @error('name', 'createBranch')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Mã chi nhánh <span class="text-danger">*</span></label>
-                            <input class="admin-input @error('code', 'createBranch') is-invalid @enderror" type="text" name="code" value="{{ old('code') }}" placeholder="VD: CN1, CN2" required>
-                            @error('code', 'createBranch')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Điện thoại</label>
-                        <input class="admin-input @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123 456 789">
-                        @error('phone', 'createBranch')
+                        <label class="admin-kicker mb-2 d-block">Tên chi nhánh <span class="text-danger">*</span></label>
+                        <input class="admin-input @error('name', 'createBranch') is-invalid @enderror" type="text" name="name" value="{{ old('name') }}" placeholder="Nhập tên chi nhánh" required>
+                        @error('name', 'createBranch')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                     </div>
 
-                    <div class="p-3 mb-3 rounded-3" style="background: #f0fdf4; border: 1px solid #dcfce7;">
-                        <div class="d-flex align-items-center gap-2 mb-1" style="color: #166534; font-weight: 700; font-size: 0.85rem;">
-                            <i class="bi bi-person-badge-fill"></i>
-                            <span>Tài khoản Admin chi nhánh</span>
-                        </div>
-                        <p class="text-secondary mb-3" style="font-size: 0.78rem;">Dùng để đăng nhập giao diện quản lý chi nhánh.</p>
+                    <div class="mb-3">
+                        <label class="admin-kicker mb-2 d-block">Mã chi nhánh <span class="text-danger">*</span></label>
+                        <input class="admin-input @error('code', 'createBranch') is-invalid @enderror" type="text" name="code" value="{{ old('code') }}" placeholder="Ví dụ: HN01, HCM01" required>
+                        @error('code', 'createBranch')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Email đăng nhập <span class="text-danger">*</span></label>
-                                <input class="admin-input @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="admin@chinhanh.com">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="admin-kicker mb-2 d-block">Email</label>
+                                <input class="admin-input @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="branch@example.com">
                                 @error('email', 'createBranch')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Mật khẩu <span class="text-danger">*</span></label>
-                                <input class="admin-input @error('password', 'createBranch') is-invalid @enderror" type="password" name="password" placeholder="Ít nhất 8 ký tự">
-                                @error('password', 'createBranch')
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="admin-kicker mb-2 d-block">Điện thoại</label>
+                                <input class="admin-input @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123456789">
+                                @error('phone', 'createBranch')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -288,7 +275,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Địa chỉ</label>
+                        <label class="admin-kicker mb-2 d-block">Địa chỉ</label>
                         <textarea class="admin-input @error('address', 'createBranch') is-invalid @enderror" name="address" rows="2" placeholder="Nhập địa chỉ chi nhánh">{{ old('address') }}</textarea>
                         @error('address', 'createBranch')
                             <div class="invalid-feedback d-block">{{ $message }}</div>
