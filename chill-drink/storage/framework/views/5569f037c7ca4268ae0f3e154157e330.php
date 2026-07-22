@@ -1226,12 +1226,17 @@
             </div>
         <?php endif; ?>
 
-        <?php if(session('status')): ?>
+        <?php
+            $flashStatus = session('status');
+            $flashStatusMessage = $flashStatus ? __((string) $flashStatus) : null;
+        ?>
+
+        <?php if($flashStatusMessage): ?>
             <div class="alert alert-primary alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #0d9373;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-info-circle-fill me-2 fs-5" style="color: #0d9373;"></i>
                     <div class="flex-grow-1">
-                        <?php echo e(session('status')); ?>
+                        <?php echo e($flashStatusMessage); ?>
 
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
@@ -1258,6 +1263,9 @@
                     </li>
                     <li class="nav-item">
                         <a href="<?php echo e(route('products.index')); ?>" class="nav-link <?php echo e(request()->routeIs('products.*') ? 'active' : ''); ?>">Sản Phẩm</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?php echo e(route('order-lookup.index')); ?>" class="nav-link <?php echo e(request()->routeIs('order-lookup.*') ? 'active' : ''); ?>">Tra Cứu Đơn Hàng</a>
                     </li>
                 </ul>
 
@@ -1486,6 +1494,8 @@
     <?php if(auth()->guard()->check()): ?>
         <?php if(auth()->user()->isCustomer()): ?>
             <?php echo $__env->make('components.chatbox', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+
         <?php endif; ?>
     <?php endif; ?>
 
@@ -1926,7 +1936,7 @@
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('<?php echo e(route('select-nearest-branch', [], false)); ?>', {
+                fetch('<?php echo e(route('select-nearest-branch')); ?>', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

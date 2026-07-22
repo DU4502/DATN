@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AddressObservation;
 use App\Models\Landmark;
 use App\Models\VerifiedAddressPoint;
 use Illuminate\Http\JsonResponse;
@@ -50,9 +51,45 @@ class AddressLookupController extends Controller
                     'road_name' => $point->road_name,
                     'latitude' => $point->latitude,
                     'longitude' => $point->longitude,
+                    'normalized_key' => $point->normalized_key,
                     'confidence' => $point->confidence,
                     'verification_level' => $point->verification_level,
                     'successful_delivery_count' => $point->successful_delivery_count,
+                ], $parsedQuery))
+            : collect();
+
+        $observations = Schema::hasTable('address_observations')
+            ? AddressObservation::query()
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->when($query !== '', fn ($builder) => $builder->where(function ($subQuery) use ($query, $parsedQuery) {
+                    $subQuery->where('full_address', 'like', "%{$query}%")
+                        ->orWhere('road_name', 'like', "%{$query}%")
+                        ->orWhere('house_number', 'like', "{$query}%")
+                        ->orWhere('normalized_key', 'like', "%{$parsedQuery['normalized']}%");
+
+                    foreach ($parsedQuery['terms'] as $term) {
+                        $subQuery->orWhere('full_address', 'like', "%{$term}%")
+                            ->orWhere('road_name', 'like', "%{$term}%")
+                            ->orWhere('normalized_key', 'like', "%{$term}%");
+                    }
+                }))
+                ->latest('id')
+                ->limit(50)
+                ->get()
+                ->map(fn (AddressObservation $observation) => $this->rankResult([
+                    'source' => 'address_observation',
+                    'id' => $observation->id,
+                    'name' => $observation->full_address,
+                    'full_address' => $observation->full_address,
+                    'house_number' => $observation->house_number,
+                    'road_name' => $observation->road_name,
+                    'latitude' => $observation->latitude,
+                    'longitude' => $observation->longitude,
+                    'normalized_key' => $observation->normalized_key,
+                    'confidence' => $observation->confidence,
+                    'verification_level' => $observation->status,
+                    'successful_delivery_count' => $observation->status === 'delivery_success' ? 1 : 0,
                 ], $parsedQuery))
             : collect();
 
@@ -80,6 +117,7 @@ class AddressLookupController extends Controller
                     'road_name' => null,
                     'latitude' => $landmark->latitude,
                     'longitude' => $landmark->longitude,
+                    'normalized_key' => null,
                     'confidence' => $landmark->verification_level === 'needs_manual_review' ? 0.20 : 0.50,
                     'verification_level' => $landmark->verification_level,
                     'successful_delivery_count' => $landmark->successful_delivery_count,
@@ -87,21 +125,30 @@ class AddressLookupController extends Controller
             : collect();
 
         $results = $verified
+            ->concat($observations)
             ->concat($landmarks)
+            ->filter(fn (array $item) => $this->passesQueryThreshold($item, $query, $parsedQuery))
             ->map(function (array $item) use ($latitude, $longitude) {
                 $item['distance_m'] = ($latitude !== null && $longitude !== null)
                     ? round($this->distanceMeters($latitude, $longitude, (float) $item['latitude'], (float) $item['longitude']))
                     : null;
-                $item['source_rank'] = $item['source'] === 'verified_address' ? 0 : 1;
+                $item['source_rank'] = match ($item['source']) {
+                    'verified_address' => 0,
+                    'address_observation' => 1,
+                    default => 2,
+                };
 
                 return $item;
             })
             ->sortBy([
                 ['score', 'desc'],
                 ['source_rank', 'asc'],
-                ['distance_m', 'asc'],
+                ['successful_delivery_count', 'desc'],
                 ['confidence', 'desc'],
+                ['distance_m', 'asc'],
             ])
+            ->values()
+            ->unique(fn (array $item) => $this->duplicateKey($item))
             ->values()
             ->take($limit)
             ->map(function (array $item) {
@@ -151,12 +198,14 @@ class AddressLookupController extends Controller
         $score = 0;
         $matchedTerms = 0;
 
-        if ($parsedQuery['normalized'] !== '' && Str::contains($haystack, $parsedQuery['normalized'])) {
+        $exactPhraseMatch = $parsedQuery['normalized'] !== '' && Str::contains($haystack, $parsedQuery['normalized']);
+
+        if ($exactPhraseMatch) {
             $score += 80;
         }
 
         foreach ($parsedQuery['terms'] as $term) {
-            if (Str::contains($haystack, $term)) {
+            if ($this->containsNormalizedToken($haystack, $term)) {
                 $score += 18;
                 $matchedTerms++;
             }
@@ -176,16 +225,61 @@ class AddressLookupController extends Controller
             $item['match_type'] = $matchedTerms > 0 ? 'route_match' : 'nearby_anchor';
         }
 
-        if (($item['source'] ?? '') === 'verified_address') {
-            $score += 30;
+        if ($score > 0) {
+            if (($item['source'] ?? '') === 'verified_address') {
+                $score += 30;
+            } elseif (($item['source'] ?? '') === 'address_observation') {
+                $score += 18;
+            }
         }
 
         $item['requested_house_number'] = $parsedQuery['house_number'];
         $item['matched_terms'] = $matchedTerms;
+        $item['exact_phrase_match'] = $exactPhraseMatch;
         $item['score'] = $score;
         $item['can_autofill_coordinates'] = $score >= 18 && ! $parsedQuery['number_only'];
 
         return $item;
+    }
+
+    private function passesQueryThreshold(array $item, string $query, array $parsedQuery): bool
+    {
+        if ($query === '') {
+            return true;
+        }
+
+        if ((int) ($item['score'] ?? 0) <= 0) {
+            return false;
+        }
+
+        if (($item['exact_phrase_match'] ?? false) || ($item['match_type'] ?? '') === 'exact_house_number') {
+            return true;
+        }
+
+        $termCount = count($parsedQuery['terms']);
+        if ($termCount <= 1) {
+            return (int) ($item['matched_terms'] ?? 0) >= 1;
+        }
+
+        return (int) ($item['matched_terms'] ?? 0) >= min(2, $termCount);
+    }
+
+    private function duplicateKey(array $item): string
+    {
+        if (! empty($item['normalized_key'])) {
+            return 'address:'.$item['normalized_key'];
+        }
+
+        $label = $this->normalizeText(implode(' ', array_filter([
+            $item['full_address'] ?? null,
+            $item['name'] ?? null,
+        ])));
+
+        if ($label !== '') {
+            return ($item['source'] ?? 'unknown').':'.$label;
+        }
+
+        return ($item['source'] ?? 'unknown').':'.round((float) ($item['latitude'] ?? 0), 5).','.round((float) ($item['longitude'] ?? 0), 5);
     }
 
     private function normalizeText(?string $value): string
@@ -208,6 +302,11 @@ class AddressLookupController extends Controller
         ]);
 
         return trim(preg_replace('/[^a-z0-9\/]+/u', ' ', $value));
+    }
+
+    private function containsNormalizedToken(string $haystack, string $term): bool
+    {
+        return preg_match('/(?:^|\s)'.preg_quote($term, '/').'(?=\s|$)/u', $haystack) === 1;
     }
 
     private function distanceMeters(float $lat1, float $lng1, float $lat2, float $lng2): float

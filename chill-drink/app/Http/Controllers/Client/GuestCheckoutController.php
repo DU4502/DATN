@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Support\ScheduledDelivery;
 use Throwable;
 
@@ -140,6 +141,17 @@ class GuestCheckoutController extends CheckoutController
         ]);
 
         $validated['guest_phone'] = $this->normalizeVietnamesePhoneNumber($validated['guest_phone']);
+
+        if (
+            ($validated['fulfillment_type'] ?? null) === 'delivery'
+            && ! $this->hasHouseNumber($validated['shipping_address_ui'] ?? '')
+            && blank($validated['note'] ?? null)
+        ) {
+            throw ValidationException::withMessages([
+                'note' => 'Nếu khu vực chưa có số nhà, vui lòng ghi rõ mốc nhận hàng trong ghi chú.',
+            ]);
+        }
+
         $this->validateOrderServiceRadius(
             $validated['fulfillment_type'],
             $validated['branch_id'],
@@ -601,5 +613,12 @@ class GuestCheckoutController extends CheckoutController
         $phone = $this->normalizeVietnamesePhoneNumber($value) ?? '';
 
         return (bool) preg_match('/^(?:0(?:3|5|7|8|9)\d{8}|84(?:3|5|7|8|9)\d{8})$/', $phone);
+    }
+
+    protected function hasHouseNumber(mixed $value): bool
+    {
+        $address = trim((string) $value);
+
+        return (bool) preg_match('/(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b)/iu', $address);
     }
 }

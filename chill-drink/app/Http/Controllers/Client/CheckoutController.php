@@ -278,6 +278,16 @@ class CheckoutController extends Controller
             'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
         ]);
 
+        if (
+            $request->input('fulfillment_type') === 'delivery'
+            && ! $this->hasHouseNumber($request->input('shipping_address_ui'))
+            && blank($request->input('note'))
+        ) {
+            throw ValidationException::withMessages([
+                'note' => 'Nếu khu vực chưa có số nhà, vui lòng ghi rõ mốc nhận hàng trong ghi chú đơn hàng.',
+            ]);
+        }
+
         $serviceDistance = $this->validateOrderServiceRadius(
             $request->input('fulfillment_type'),
             $request->input('branch_id'),
@@ -1291,5 +1301,12 @@ class CheckoutController extends Controller
         }
 
         return $invalidKeys;
+    }
+
+    protected function hasHouseNumber(mixed $value): bool
+    {
+        $address = trim((string) $value);
+
+        return (bool) preg_match('/(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b)/iu', $address);
     }
 }

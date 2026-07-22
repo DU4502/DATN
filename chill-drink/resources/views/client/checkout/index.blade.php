@@ -961,6 +961,7 @@
                                 </div>
                                 <button type="button" class="btn-address-link" data-open-address-edit>Cập nhật</button>
                             </div>
+                            <div class="text-warning small mt-2 d-none" data-address-house-number-warning></div>
 
                             @if($errors->has('shipping_address_ui'))
                                 <div class="text-danger small mt-3">
@@ -1157,7 +1158,7 @@
                             <span class="checkout-step"><i class="bi bi-chat-left-text"></i></span>
                             <div>
                                 <h2 class="h4 fw-bold mb-1">Ghi chú đơn hàng</h2>
-                                <p class="text-secondary mb-0">Thêm yêu cầu về đường, đá hoặc thời gian nhận hàng nếu cần.</p>
+                                <p class="text-secondary mb-0">Thêm yêu cầu về đường, đá hoặc mốc nhận hàng nếu cần.</p>
                             </div>
                         </div>
 
@@ -1178,8 +1179,9 @@
                             name="note"
                             rows="5"
                             class="form-control checkout-input @error('note') is-invalid @enderror"
-                            placeholder="Ví dụ: ít đá, giao trước 15 phút, gọi trước khi giao..."
+                            placeholder="Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh..."
                         >{{ old('note') }}</textarea>
+                        <div class="form-text">Không bắt buộc, nhưng cần ghi rõ mốc nhận hàng nếu địa chỉ chưa có số nhà.</div>
                         @error('note')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -1643,6 +1645,7 @@
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
         const shippingPhoneInput = document.getElementById('shipping_phone_ui');
+        const fulfillmentDeliveryInput = document.getElementById('deliveryTypeDelivery');
         const selectedReceiver = document.getElementById('selectedReceiver');
         const selectedPhone = document.getElementById('selectedPhone');
         const selectedPhoneDivider = document.getElementById('selectedPhoneDivider');
@@ -1650,6 +1653,8 @@
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
         const placeOrderButton = document.getElementById('placeOrderButton');
+        const noteInput = document.getElementById('note');
+        const addressHouseNumberWarning = document.querySelector('[data-address-house-number-warning]');
         const editAddressPhone = document.getElementById('editAddressPhone');
         const newAddressPhone = document.getElementById('newAddressPhone');
         const saveEditedAddressButton = document.getElementById('saveEditedAddress');
@@ -1709,6 +1714,55 @@
 
         document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', syncScheduledPaymentRule));
         syncScheduledPaymentRule();
+
+        function hasHouseNumber(value) {
+            const text = String(value || '').trim();
+
+            return /(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b)/iu.test(text);
+        }
+
+        function showAddressHouseNumberWarning(message, shouldScroll = false) {
+            if (addressHouseNumberWarning) {
+                addressHouseNumberWarning.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${message}`;
+                addressHouseNumberWarning.classList.remove('d-none');
+
+                if (shouldScroll) {
+                    addressHouseNumberWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        function hideAddressHouseNumberWarning() {
+            addressHouseNumberWarning?.classList.add('d-none');
+            if (addressHouseNumberWarning) {
+                addressHouseNumberWarning.textContent = '';
+            }
+        }
+
+        function syncAddressHouseNumberNotice(shouldScroll = false) {
+            if (!fulfillmentDeliveryInput?.checked) {
+                hideAddressHouseNumberWarning();
+                return;
+            }
+
+            const addressText = String(shippingAddressInput?.value || selectedAddressText?.textContent || '').trim();
+
+            if (addressText && !hasHouseNumber(addressText)) {
+                showAddressHouseNumberWarning(
+                    'Địa chỉ chưa có số nhà. Nếu khu vực không có số nhà, hãy ghi rõ mốc nhận hàng trong ghi chú đơn hàng.',
+                    shouldScroll
+                );
+                return;
+            }
+
+            hideAddressHouseNumberWarning();
+        }
+        window.syncAddressHouseNumberNotice = syncAddressHouseNumberNotice;
+
+        function clearAddressHouseNumberWarning() {
+            noteInput?.setCustomValidity('');
+            noteInput?.classList.remove('is-invalid');
+        }
         document.addEventListener('click', async function (event) {
             const button = event.target.closest('[data-checkout-cart-action]');
             if (!button || button.disabled) return;
@@ -2286,6 +2340,8 @@
             selectedDefaultBadge.classList.toggle('d-none', !address.isDefault);
             shippingAddressInput.value = address.street || '';
             shippingAreaInput.value = address.area || '';
+            clearAddressHouseNumberWarning();
+            syncAddressHouseNumberNotice();
             if (shippingPhoneInput) {
                 shippingPhoneInput.value = address.phone || '';
             }
@@ -2591,6 +2647,8 @@
 
         let knownAddressLookupTimer = null;
         shippingAddressInput?.addEventListener('input', () => {
+            clearAddressHouseNumberWarning();
+            syncAddressHouseNumberNotice();
             const latInput = document.getElementById('checkout_latitude');
             const lngInput = document.getElementById('checkout_longitude');
             if (latInput) latInput.value = '';
@@ -2603,7 +2661,39 @@
         });
 
         shippingAddressInput?.addEventListener('blur', () => {
+            syncAddressHouseNumberNotice();
             resolveKnownAddressIfMissing(shippingAddressInput.value, shippingAreaInput?.value || '');
+        });
+
+        noteInput?.addEventListener('input', () => {
+            if (String(noteInput.value || '').trim()) {
+                clearAddressHouseNumberWarning();
+            }
+        });
+
+        placeOrderButton?.closest('form')?.addEventListener('submit', function (event) {
+            if (!fulfillmentDeliveryInput?.checked || hasHouseNumber(shippingAddressInput?.value || '')) {
+                clearAddressHouseNumberWarning();
+                hideAddressHouseNumberWarning();
+                return;
+            }
+
+            if (!String(noteInput?.value || '').trim()) {
+                event.preventDefault();
+                clearAddressHouseNumberWarning();
+                syncAddressHouseNumberNotice(true);
+                if (noteInput) {
+                    noteInput.setCustomValidity('Vui lòng ghi rõ mốc giao hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
+                    noteInput.classList.add('is-invalid');
+                    noteInput.placeholder = 'Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...';
+                    noteInput.focus();
+                    noteInput.reportValidity();
+                }
+                return;
+            }
+
+            clearAddressHouseNumberWarning();
+            syncAddressHouseNumberNotice();
         });
 
         document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {
@@ -2921,6 +3011,10 @@
 
             if (typeof window.updateBranchSelectorState === 'function') {
                 window.updateBranchSelectorState();
+            }
+
+            if (typeof window.syncAddressHouseNumberNotice === 'function') {
+                window.syncAddressHouseNumberNotice();
             }
         }
 

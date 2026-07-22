@@ -180,6 +180,18 @@
         };
     }
 
+    function distanceMeters(lat1, lng1, lat2, lng2) {
+        const earthRadius = 6371000;
+        const latDelta = (lat2 - lat1) * Math.PI / 180;
+        const lngDelta = (lng2 - lng1) * Math.PI / 180;
+        const startLat = lat1 * Math.PI / 180;
+        const endLat = lat2 * Math.PI / 180;
+        const a = Math.sin(latDelta / 2) ** 2
+            + Math.cos(startLat) * Math.cos(endLat) * Math.sin(lngDelta / 2) ** 2;
+
+        return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
     function normalizePhotonSuggestion(feature) {
         const properties = feature?.properties || {};
         const coordinates = feature?.geometry?.coordinates || [];
@@ -423,6 +435,9 @@
                     ? (photonResult.value.features || [])
                         .map(normalizePhotonSuggestion)
                         .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+                        .filter((item) => !internalItems.some((internalItem) => (
+                            distanceMeters(item.latitude, item.longitude, internalItem.latitude, internalItem.longitude) <= 80
+                        )))
                     : [];
                 const seen = new Set();
                 const items = internalItems.concat(photonItems).filter((item) => {
