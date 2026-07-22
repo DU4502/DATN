@@ -108,15 +108,9 @@ class GuestCheckoutTest extends TestCase
         Mail::fake();
 
         [$product, $productSize] = $this->sellableProduct();
-        $branchId = Branch::query()->updateOrCreate(
+        $branchId = Branch::query()->firstOrCreate(
             ['code' => 'HN'],
-            [
-                'name' => 'Chi nhánh Hà Nội',
-                'address' => 'Hà Nội',
-                'latitude' => 21.0278,
-                'longitude' => 105.8342,
-                'status' => 1,
-            ]
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
         )->id;
 
         $this->withSession([
@@ -183,15 +177,9 @@ class GuestCheckoutTest extends TestCase
     {
         Mail::fake();
 
-        $branchId = Branch::query()->updateOrCreate(
+        $branchId = Branch::query()->firstOrCreate(
             ['code' => 'HN'],
-            [
-                'name' => 'Chi nhánh Hà Nội',
-                'address' => 'Hà Nội',
-                'latitude' => 21.0278,
-                'longitude' => 105.8342,
-                'status' => 1,
-            ]
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
         )->id;
 
         $this->withSession([
@@ -214,8 +202,6 @@ class GuestCheckoutTest extends TestCase
                 'branch_id' => $branchId,
                 'shipping_address_ui' => '123 Nguyễn Văn Cừ',
                 'shipping_area_ui' => 'Quận 5',
-                'latitude' => 21.0278,
-                'longitude' => 105.8342,
             ])
             ->assertRedirect(route('checkout.guest.payment'));
 
@@ -230,45 +216,6 @@ class GuestCheckoutTest extends TestCase
         $this->assertNotNull($createdProduct);
         $this->assertSame($createdProduct->id, $order->orderItems()->first()->product_id);
         $response->assertRedirect(route('checkout.guest.pending-confirmation', $order));
-    }
-
-    public function test_guest_checkout_rejects_delivery_branch_outside_15_km(): void
-    {
-        [$product, $productSize] = $this->sellableProduct();
-        $branchId = Branch::query()->create([
-            'code' => 'HCM-FAR',
-            'name' => 'Chi nhánh xa',
-            'address' => 'Thành phố Hồ Chí Minh',
-            'latitude' => 10.7769,
-            'longitude' => 106.7009,
-            'status' => 1,
-        ])->id;
-
-        $this->withSession([
-            'cart' => [
-                'cart-1' => [
-                    'product_id' => $product->id,
-                    'product_size_id' => $productSize->id,
-                    'name' => $product->name,
-                    'price' => 100000,
-                    'quantity' => 1,
-                    'size' => 'M',
-                ],
-            ],
-            'checkout_cart_keys' => ['cart-1'],
-        ])
-            ->post(route('checkout.guest.info.store'), [
-                'guest_name' => 'Khách Vãng Lai',
-                'guest_phone' => '0912345678',
-                'guest_email' => 'guest@example.com',
-                'delivery_type' => 'delivery',
-                'branch_id' => $branchId,
-                'shipping_address_ui' => 'Hà Nội',
-                'shipping_area_ui' => 'Hà Nội',
-                'latitude' => 21.0278,
-                'longitude' => 105.8342,
-            ])
-            ->assertSessionHasErrors('branch_id');
     }
 
     private function sellableProduct(): array

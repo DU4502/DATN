@@ -178,6 +178,25 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame('Tên mới', $group->members()->where('user_id', $member->id)->value('name'));
     }
 
+    public function test_member_can_leave_an_open_group_order(): void
+    {
+        [$group] = $this->openGroup();
+        $memberUser = User::factory()->create();
+        $member = GroupOrderMember::create([
+            'group_order_id' => $group->id,
+            'user_id' => $memberUser->id,
+            'name' => 'Thành viên',
+            'member_token' => 'leave-room-member',
+        ]);
+
+        $this->actingAs($memberUser)
+            ->post(route('group-orders.leave-room', $group->code))
+            ->assertRedirect(route('group-orders.index'));
+
+        $this->assertDatabaseMissing('group_order_members', ['id' => $member->id]);
+        $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'open']);
+    }
+
     public function test_group_item_cannot_exceed_product_stock(): void
     {
         [$group] = $this->openGroup();
@@ -258,7 +277,7 @@ class QuickOrderFeaturesTest extends TestCase
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
         $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
-        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 10.7769, 'longitude' => 106.7009, 'status' => true]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
@@ -271,9 +290,7 @@ class QuickOrderFeaturesTest extends TestCase
             'fulfillment_type' => 'delivery',
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
-            'shipping_phone_ui' => '0912345678',
-            'latitude' => 10.7769,
-            'longitude' => 106.7009,
+            'shipping_phone_ui' => '0987654321',
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
 
@@ -291,7 +308,7 @@ class QuickOrderFeaturesTest extends TestCase
     {
         $user = User::factory()->create();
         $product = Product::factory()->create(['status' => true, 'stock' => 5, 'price' => 40000]);
-        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 10.7769, 'longitude' => 106.7009, 'status' => true]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
         $cart = [
             'scheduled-cart-item' => [
                 'product_id' => $product->id,
@@ -316,9 +333,7 @@ class QuickOrderFeaturesTest extends TestCase
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ',
             'shipping_area_ui' => 'Quận 1',
-            'shipping_phone_ui' => '0912345678',
-            'latitude' => 10.7769,
-            'longitude' => 106.7009,
+            'shipping_phone_ui' => '0987654321',
             'delivery_type' => 'scheduled',
             'scheduled_delivery_time' => now()->addDay()->setTime(10, 0)->format('Y-m-d H:i:s'),
         ])->assertSessionHasErrors('payment_method');
@@ -379,6 +394,23 @@ class QuickOrderFeaturesTest extends TestCase
             ->assertOk()->assertJsonPath('group_id', $newGroup->id)->assertJsonCount(0, 'messages');
     }
 
+    public function test_group_members_can_view_chat_after_group_is_closed(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $group->update(['status' => 'closed']);
+
+        $this->actingAs($owner)
+            ->get(route('group-orders.show', $group->code))
+            ->assertOk()
+            ->assertSee('Đã đóng')
+            ->assertSee('data-vue-group-chat');
+
+        $this->actingAs($owner)
+            ->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Nội dung thử'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Phòng đã đóng nên không thể gửi tin nhắn mới.');
+    }
+
     private function openGroup(): array
     {
         $owner = User::factory()->create();
@@ -393,13 +425,7 @@ class QuickOrderFeaturesTest extends TestCase
     {
         return Branch::firstOrCreate(
             ['code' => 'GROUP-TEST'],
-            [
-                'name' => 'Chi nhánh kiểm thử',
-                'address' => '123 Đường kiểm thử',
-                'latitude' => 10.7769,
-                'longitude' => 106.7009,
-                'status' => true,
-            ]
+            ['name' => 'Chi nhánh kiểm thử', 'address' => '123 Đường kiểm thử', 'status' => true]
         );
     }
 }

@@ -86,11 +86,8 @@ class CheckoutBranchSelectionTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Nguyễn Huệ',
                 'shipping_area_ui' => 'Quận 1, Thành phố Hồ Chí Minh',
-                'shipping_phone_ui' => '0912345678',
-                'fulfillment_type' => 'delivery',
+                'shipping_phone_ui' => '0987654321',
                 'branch_id' => $branch->id,
-                'latitude' => 10.7769,
-                'longitude' => 106.7009,
             ]);
 
         $order = Order::latest('id')->firstOrFail();
@@ -121,76 +118,11 @@ class CheckoutBranchSelectionTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
-                'shipping_phone_ui' => '0912345678',
-                'fulfillment_type' => 'pickup',
+                'shipping_address_ui' => '123 Nguyễn Huệ',
+                'shipping_phone_ui' => '0987654321',
                 'branch_id' => $branch->id,
             ])
             ->assertRedirect(route('checkout.index'))
             ->assertSessionHasErrors('branch_id');
-    }
-
-    public function test_checkout_rejects_delivery_branch_outside_15_km(): void
-    {
-        $user = User::create([
-            'name' => 'Khách hàng kiểm thử',
-            'email' => 'far-branch@example.com',
-            'password' => Hash::make('password'),
-            'role_id' => 1,
-            'is_active' => true,
-        ]);
-
-        $branch = Branch::create([
-            'name' => 'Chi nhánh xa',
-            'code' => 'FAR-01',
-            'address' => 'Quận 1, Thành phố Hồ Chí Minh',
-            'latitude' => 10.7769,
-            'longitude' => 106.7009,
-            'status' => true,
-        ]);
-
-        $category = Category::create([
-            'name' => 'Trà kiểm thử xa',
-            'slug' => 'tra-kiem-thu-xa',
-            'status' => true,
-        ]);
-
-        $product = Product::create([
-            'category_id' => $category->id,
-            'name' => 'Trà kiểm thử xa',
-            'slug' => 'tra-kiem-thu-xa',
-            'price' => 50000,
-            'stock' => 10,
-            'status' => true,
-        ]);
-
-        $cart = [
-            'cart-1' => [
-                'product_id' => $product->id,
-                'name' => $product->name,
-                'price' => 50000,
-                'quantity' => 1,
-                'size' => 'M',
-            ],
-        ];
-
-        $this
-            ->actingAs($user)
-            ->withSession(['cart' => $cart])
-            ->from(route('checkout.index'))
-            ->post(route('checkout.process'), [
-                'payment_method' => 'cod',
-                'shipping_method_ui' => 'standard',
-                'shipping_address_ui' => 'Hà Nội',
-                'shipping_area_ui' => 'Hà Nội',
-                'shipping_phone_ui' => '0912345678',
-                'fulfillment_type' => 'delivery',
-                'branch_id' => $branch->id,
-                'latitude' => 21.0278,
-                'longitude' => 105.8342,
-            ])
-            ->assertRedirect(route('checkout.index'))
-            ->assertSessionHasErrors('branch_id');
-
-        $this->assertDatabaseCount('orders', 0);
     }
 }

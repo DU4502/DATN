@@ -88,22 +88,6 @@ class NearestBranchApiTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('data.0.name', 'Chi nhánh Hà Nội')
-            ->assertJsonCount(1, 'data');
-    }
-
-    public function test_it_does_not_return_a_nearest_branch_outside_15_km(): void
-    {
-        Branch::query()->create([
-            'name' => 'Chi nhánh TP.HCM',
-            'code' => 'HCM',
-            'address' => 'TP.HCM',
-            'latitude' => 10.823099,
-            'longitude' => 106.629664,
-            'status' => true,
-        ]);
-
-        $this->getJson('/api/branches/nearest?latitude=21.03&longitude=105.85')
-            ->assertStatus(422)
-            ->assertJsonPath('success', false);
+            ->assertJsonPath('data.1.name', 'Chi nhánh Đà Nẵng');
     }
 }

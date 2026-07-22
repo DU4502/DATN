@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Branch;
 use App\Models\Order;
 use App\Models\User;
 use App\Jobs\ProcessGuestOrderEmail;
-use App\Support\OrderDistancePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,8 +25,6 @@ class GuestCheckoutController extends Controller
             'guest_email' => 'required|email|max:255',
             'guest_phone' => 'required|string|max:20',
             'branch_id' => 'required|integer|exists:branches,id',
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
             'items' => 'required|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -38,20 +34,6 @@ class GuestCheckoutController extends Controller
             return response()->json([
                 'status' => 'error',
                 'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $branch = Branch::availableForLocation()->find($request->branch_id);
-        $distance = $branch
-            ? OrderDistancePolicy::distanceFromBranch($branch, $request->latitude, $request->longitude)
-            : null;
-
-        if (! $branch || $distance === null || ! OrderDistancePolicy::isInsideServiceRadius($distance)) {
-            return response()->json([
-                'status' => 'error',
-                'errors' => [
-                    'branch_id' => [OrderDistancePolicy::message()],
-                ],
             ], 422);
         }
 
