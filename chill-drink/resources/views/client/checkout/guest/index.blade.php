@@ -228,6 +228,32 @@
                             <input type="hidden" name="delivery_type" value="now">
                         </div>
 
+                        <div class="delivery-fields {{ $deliveryType === 'pickup' ? 'is-hidden' : '' }}" data-delivery-fields>
+                            <div class="mb-3">
+                                <label for="shipping_address_ui" class="form-label fw-semibold">Địa chỉ giao hàng *</label>
+                                <div class="d-flex gap-2 align-items-stretch">
+                                    <input type="text" id="shipping_address_ui" name="shipping_address_ui" class="form-control guest-input @error('shipping_address_ui') is-invalid @enderror flex-grow-1" value="{{ old('shipping_address_ui', $guestInfo['shipping_address_ui'] ?? '') }}">
+                                    <button type="button" class="btn btn-outline-primary location-search-btn" data-address-picker-open title="Tìm địa chỉ trên bản đồ">
+                                        <i class="bi bi-search"></i><span class="d-none d-sm-inline ms-1">Tìm địa chỉ</span>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary location-refresh-btn" data-location-refresh title="Lấy lại tọa độ vị trí" aria-label="Lấy lại tọa độ vị trí">
+                                        <i class="bi bi-crosshair"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text" data-location-hint>
+                                    <i class="bi bi-geo-alt me-1"></i>Nếu bạn cho phép vị trí, hệ thống sẽ tự điền địa chỉ giao hàng giúp bạn.
+                                </div>
+                                <div class="form-text text-warning d-none" data-address-house-number-warning>
+                                    <i class="bi bi-exclamation-circle me-1"></i>Nếu khu vực có số nhà, bạn nên nhập thêm số nhà để giao hàng chính xác hơn.
+                                </div>
+                                @error('shipping_address_ui')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <input type="hidden" id="shipping_area_ui" name="shipping_area_ui" value="{{ old('shipping_area_ui', $guestInfo['shipping_area_ui'] ?? '') }}">
+                            <input type="hidden" id="guest_latitude" name="latitude" value="{{ old('latitude', $guestInfo['latitude'] ?? '') }}">
+                            <input type="hidden" id="guest_longitude" name="longitude" value="{{ old('longitude', $guestInfo['longitude'] ?? '') }}">
+
+                        </div>
+
                         <div class="mb-4">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                                 <label for="branch_id" class="form-label fw-semibold mb-0">Chọn chi nhánh *</label>
@@ -245,32 +271,10 @@
                             @error('branch_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
-                        <div class="delivery-fields {{ $deliveryType === 'pickup' ? 'is-hidden' : '' }}" data-delivery-fields>
-                            <div class="mb-3">
-                                <label for="shipping_address_ui" class="form-label fw-semibold">Địa chỉ giao hàng *</label>
-                                <div class="d-flex gap-2 align-items-stretch">
-                                    <input type="text" id="shipping_address_ui" name="shipping_address_ui" class="form-control guest-input @error('shipping_address_ui') is-invalid @enderror flex-grow-1" value="{{ old('shipping_address_ui', $guestInfo['shipping_address_ui'] ?? '') }}">
-                                    <button type="button" class="btn btn-outline-primary location-search-btn" data-address-picker-open title="Tìm địa chỉ trên bản đồ">
-                                        <i class="bi bi-search"></i><span class="d-none d-sm-inline ms-1">Tìm địa chỉ</span>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary location-refresh-btn" data-location-refresh title="Lấy lại tọa độ vị trí" aria-label="Lấy lại tọa độ vị trí">
-                                        <i class="bi bi-crosshair"></i>
-                                    </button>
-                                </div>
-                                <div class="form-text" data-location-hint>
-                                    <i class="bi bi-geo-alt me-1"></i>Nếu bạn cho phép vị trí, hệ thống sẽ tự điền địa chỉ giao hàng giúp bạn.
-                                </div>
-                                @error('shipping_address_ui')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                            <input type="hidden" id="shipping_area_ui" name="shipping_area_ui" value="{{ old('shipping_area_ui', $guestInfo['shipping_area_ui'] ?? '') }}">
-                            <input type="hidden" id="guest_latitude" name="latitude" value="{{ old('latitude', $guestInfo['latitude'] ?? '') }}">
-                            <input type="hidden" id="guest_longitude" name="longitude" value="{{ old('longitude', $guestInfo['longitude'] ?? '') }}">
-
-                        </div>
-
                         <div class="mb-4">
-                            <label for="note" class="form-label fw-semibold">Ghi chú (tuỳ chọn)</label>
-                            <textarea id="note" name="note" rows="3" class="form-control guest-input @error('note') is-invalid @enderror" placeholder="Ít đá, gọi trước 5 phút...">{{ old('note', $guestInfo['note'] ?? '') }}</textarea>
+                            <label for="note" class="form-label fw-semibold">Ghi chú giao hàng</label>
+                            <textarea id="note" name="note" rows="3" class="form-control guest-input @error('note') is-invalid @enderror" placeholder="Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...">{{ old('note', $guestInfo['note'] ?? '') }}</textarea>
+                            <div class="form-text">Không bắt buộc, nhưng cần ghi rõ mốc nhận hàng nếu địa chỉ chưa có số nhà.</div>
                             @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
@@ -350,6 +354,8 @@
         const guestPhoneInput = document.getElementById('guest_phone');
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
+        const noteInput = document.getElementById('note');
+        const addressHouseNumberWarning = document.querySelector('[data-address-house-number-warning]');
         const locationRefreshButton = document.querySelector('[data-location-refresh]');
         const findNearestBranchButton = document.querySelector('[data-find-nearest-branch]');
         const locationHint = document.querySelector('[data-location-hint]');
@@ -406,6 +412,52 @@
 
         function isValidVietnameseMobilePhone(value) {
             return /^(?:0(?:3|5|7|8|9)\d{8}|84(?:3|5|7|8|9)\d{8})$/.test(String(value || ''));
+        }
+
+        function hasHouseNumber(value) {
+            const text = String(value || '').trim();
+
+            return /(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b)/iu.test(text);
+        }
+
+        function showAddressHouseNumberWarning(message, shouldScroll = false) {
+            if (!addressHouseNumberWarning) {
+                return;
+            }
+
+            addressHouseNumberWarning.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${message}`;
+            addressHouseNumberWarning.classList.remove('d-none');
+
+            if (shouldScroll) {
+                addressHouseNumberWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function syncAddressHouseNumberNotice(shouldScroll = false) {
+            if (!addressHouseNumberWarning || !deliveryInput?.checked) {
+                addressHouseNumberWarning?.classList.add('d-none');
+                return;
+            }
+
+            const addressText = String(shippingAddressInput?.value || '').trim();
+
+            if (addressText && !hasHouseNumber(addressText)) {
+                showAddressHouseNumberWarning(
+                    'Địa chỉ chưa có số nhà. Nếu khu vực không có số nhà, hãy ghi rõ mốc nhận hàng trong ghi chú.',
+                    shouldScroll
+                );
+                return;
+            }
+
+            addressHouseNumberWarning.classList.add('d-none');
+            addressHouseNumberWarning.textContent = '';
+        }
+
+        function clearAddressHouseNumberWarning() {
+            if (noteInput) {
+                noteInput.setCustomValidity('');
+                noteInput.classList.remove('is-invalid');
+            }
         }
 
         function syncGuestPhoneInput(touched = false) {
@@ -745,6 +797,8 @@
             if (guestLongitudeInput) guestLongitudeInput.value = String(guestLongitude);
             if (shippingAddressInput && draftAddress) shippingAddressInput.value = draftAddress;
             if (shippingAreaInput && draftArea) shippingAreaInput.value = draftArea;
+            clearAddressHouseNumberWarning();
+            syncAddressHouseNumberNotice();
             renderBranchOptions(guestLatitude, guestLongitude);
             setLocationHint('Đã cập nhật địa chỉ theo vị trí bạn chọn.');
             bootstrap.Modal.getOrCreateInstance(addressModalElement).hide();
@@ -937,6 +991,8 @@
 
                         if (shippingAddressInput) {
                             shippingAddressInput.value = addressText;
+                            clearAddressHouseNumberWarning();
+                            syncAddressHouseNumberNotice();
                         }
 
                         if (shippingAreaInput) {
@@ -962,6 +1018,8 @@
                         }
                         if (shippingAddressInput && !shippingAddressInput.value.trim()) {
                             shippingAddressInput.value = `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                            clearAddressHouseNumberWarning();
+                            syncAddressHouseNumberNotice();
                         }
                         setDraftLocation(
                             position.coords.latitude,
@@ -986,6 +1044,7 @@
 
         deliveryInput?.addEventListener('change', function () {
             syncDeliveryMode();
+            syncAddressHouseNumberNotice();
 
             if (shouldPromptLocation && !pickupInput?.checked) {
                 requestCurrentLocation();
@@ -993,6 +1052,7 @@
         });
         pickupInput?.addEventListener('change', function () {
             syncDeliveryMode();
+            syncAddressHouseNumberNotice();
             if (!pickupInput.checked && shouldPromptLocation) {
                 requestCurrentLocation();
             }
@@ -1012,12 +1072,51 @@
         guestPhoneInput?.addEventListener('blur', function () {
             syncGuestPhoneInput(true);
         });
+        shippingAddressInput?.addEventListener('input', function () {
+            clearAddressHouseNumberWarning();
+            syncAddressHouseNumberNotice();
+        });
+        shippingAddressInput?.addEventListener('blur', function () {
+            syncAddressHouseNumberNotice();
+        });
+        noteInput?.addEventListener('input', function () {
+            if (String(noteInput.value || '').trim()) {
+                clearAddressHouseNumberWarning();
+                return;
+            }
+
+            noteInput.setCustomValidity('');
+            noteInput.classList.remove('is-invalid');
+        });
         document.getElementById('guestInfoForm')?.addEventListener('submit', function (event) {
             if (!syncGuestPhoneInput(true)) {
                 event.preventDefault();
                 guestPhoneInput?.reportValidity();
+                return;
+            }
+
+            if (deliveryInput?.checked && shippingAddressInput && !hasHouseNumber(shippingAddressInput.value)) {
+                const noteValue = String(noteInput?.value || '').trim();
+
+                if (!noteValue) {
+                    event.preventDefault();
+                    clearAddressHouseNumberWarning();
+                    if (noteInput) {
+                        noteInput.setCustomValidity('Vui lòng ghi rõ mốc giao hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
+                        noteInput.classList.add('is-invalid');
+                        noteInput.placeholder = 'Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...';
+                        noteInput.focus();
+                        noteInput.reportValidity();
+                    }
+                    syncAddressHouseNumberNotice(true);
+                    return;
+                }
+
+                clearAddressHouseNumberWarning();
+                syncAddressHouseNumberNotice();
             }
         });
+        syncAddressHouseNumberNotice();
         syncGuestPhoneInput(false);
         findNearestBranchButton?.addEventListener('click', function () {
             const originalText = this.innerHTML;
