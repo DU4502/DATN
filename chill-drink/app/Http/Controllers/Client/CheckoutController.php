@@ -17,7 +17,6 @@ use App\Models\Size;
 use App\Models\Voucher;
 use App\Services\OrderCodeGenerator;
 use App\Support\ShippingFee;
-use App\Support\AddressLearning;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -237,7 +236,7 @@ class CheckoutController extends Controller
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
             'shipping_address_ui' => ['nullable', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
-            'shipping_phone_ui' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
+            'shipping_phone_ui' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
@@ -263,7 +262,6 @@ class CheckoutController extends Controller
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ nhận hàng.',
             'shipping_phone_ui.required' => 'Vui lòng nhập số điện thoại.',
             'shipping_phone_ui.not_in' => 'Vui lòng nhập số điện thoại.',
-            'shipping_phone_ui.regex' => 'Số điện thoại không đúng.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
@@ -364,18 +362,6 @@ class CheckoutController extends Controller
                 'delivery_note'  => $request->input('delivery_note'),
             ];
 
-            if (Schema::hasColumn('orders', 'shipping_address_text')) {
-                $orderData['shipping_address_text'] = $addressText ?: null;
-            }
-
-            if (Schema::hasColumn('orders', 'shipping_latitude')) {
-                $orderData['shipping_latitude'] = $request->input('latitude');
-            }
-
-            if (Schema::hasColumn('orders', 'shipping_longitude')) {
-                $orderData['shipping_longitude'] = $request->input('longitude');
-            }
-
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
             }
@@ -418,7 +404,6 @@ class CheckoutController extends Controller
             }
 
             $order = Order::create($orderData);
-            app(AddressLearning::class)->recordOrderSubmitted($order);
 
             if ($groupOrderId) {
                 $groupOrder->update(['order_id' => $order->id, 'status' => 'ordered']);
@@ -573,7 +558,7 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
             'street' => ['required', 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -582,7 +567,6 @@ class CheckoutController extends Controller
         ], [
             'phone.required' => 'Vui lòng nhập số điện thoại.',
             'phone.not_in' => 'Vui lòng nhập số điện thoại.',
-            'phone.regex' => 'Số điện thoại không đúng.',
             'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
         ]);
 
@@ -617,7 +601,7 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
             'street' => ['required', 'string', 'max:255'],
             'label' => ['nullable', 'string', 'max:100'],
@@ -627,7 +611,6 @@ class CheckoutController extends Controller
         ], [
             'phone.required' => 'Vui lòng nhập số điện thoại.',
             'phone.not_in' => 'Vui lòng nhập số điện thoại.',
-            'phone.regex' => 'Số điện thoại không đúng.',
             'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
         ]);
 
@@ -654,8 +637,6 @@ class CheckoutController extends Controller
             'longitude' => $validated['longitude'] ?? null,
             'is_default' => $isDefault,
         ]);
-
-        app(AddressLearning::class)->recordAddressBookEntry($address);
 
         if ($isDefault) {
             $user->forceFill([
@@ -685,7 +666,7 @@ class CheckoutController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
             'street' => ['required', 'string', 'max:255'],
             'label' => ['nullable', 'string', 'max:100'],
@@ -695,7 +676,6 @@ class CheckoutController extends Controller
         ], [
             'phone.required' => 'Vui lòng nhập số điện thoại.',
             'phone.not_in' => 'Vui lòng nhập số điện thoại.',
-            'phone.regex' => 'Số điện thoại không đúng.',
             'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
         ]);
 
@@ -720,8 +700,6 @@ class CheckoutController extends Controller
             'longitude' => $validated['longitude'] ?? null,
             'is_default' => $isDefault,
         ])->save();
-
-        app(AddressLearning::class)->recordAddressBookEntry($address, 'address_book_update');
 
         if ($isDefault) {
             $request->user()->forceFill([

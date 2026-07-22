@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Api\CategoryApiController;
-use App\Http\Controllers\Api\AddressLookupController;
 use App\Http\Controllers\Api\NearestBranchController;
 use App\Http\Controllers\Api\ResolveMapLinkController;
 use App\Http\Controllers\Api\ReverseGeocodeController;
@@ -16,7 +15,6 @@ Route::get('/branches/nearest', [NearestBranchController::class, 'nearest'])->na
 Route::get('/branches', [NearestBranchController::class, 'list'])->name('api.branches.list');
 Route::get('/map-link/resolve', ResolveMapLinkController::class)->name('api.map-link.resolve');
 Route::get('/reverse-geocode', ReverseGeocodeController::class)->name('api.reverse-geocode');
-Route::get('/address-lookup', AddressLookupController::class)->name('api.address-lookup');
 
 // Voucher routes
 Route::post('/vouchers/receive', [VoucherController::class, 'receive'])->name('api.vouchers.receive');

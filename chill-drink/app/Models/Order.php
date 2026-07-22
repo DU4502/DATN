@@ -29,9 +29,6 @@ class Order extends Model
         'fulfillment_type',
         'scheduled_delivery_time',
         'delivery_note',
-        'shipping_address_text',
-        'shipping_latitude',
-        'shipping_longitude',
         'branch_id',
         'coupon_id',
         'subtotal',
@@ -64,8 +61,6 @@ class Order extends Model
         'scheduled_at'                   => 'datetime',
         'scheduled_delivery_time'        => 'datetime',
         'delivered_at'                   => 'datetime',
-        'shipping_latitude'              => 'float',
-        'shipping_longitude'             => 'float',
     ];
 
     /**
