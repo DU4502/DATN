@@ -57,7 +57,7 @@
                     x-transition
                     x-init="setTimeout(() => show = false, 2000)"
                     class="text-sm text-gray-600"
-                >{{ __('profile-updated') }}</p>
+                >{{ __('Saved.') }}</p>
             @endif
         </div>
     </form>
