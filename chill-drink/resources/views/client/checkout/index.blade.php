@@ -1322,6 +1322,8 @@
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
                             'addressTarget' => '#editAddressStreet,#editAddressArea',
+                            'showSearch' => true,
+                            'searchPlaceholder' => 'Tìm số nhà, tên đường, phường/xã...',
                         ])
                     </div>
                     <div class="col-12">
@@ -1384,6 +1386,8 @@
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
                             'addressTarget' => '#newAddressStreet,#newAddressArea',
+                            'showSearch' => true,
+                            'searchPlaceholder' => 'Tìm số nhà, tên đường, phường/xã...',
                         ])
                     </div>
                     <div class="col-12">
@@ -2358,6 +2362,10 @@
             document.getElementById('editAddressPhone').value = isValidCheckoutPhone(address.phone) ? address.phone : '';
             document.getElementById('editAddressArea').value = address.area || '';
             document.getElementById('editAddressStreet').value = address.street || '';
+            const searchInput = document.querySelector('[data-location-picker="checkout-edit-location-picker"] [data-location-search-input]');
+            if (searchInput) {
+                searchInput.value = '';
+            }
             document.getElementById('editAddressDefault').checked = !!address.isDefault;
             setTypeActive('edit', address.type || 'Nhà Riêng');
             syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, !isValidCheckoutPhone(address.phone));
@@ -2395,6 +2403,10 @@
             document.getElementById('newAddressPhone').value = @json($checkoutPhoneReady ? $selectedCheckoutPhone : '');
             document.getElementById('newAddressArea').value = '';
             document.getElementById('newAddressStreet').value = '';
+            const searchInput = document.querySelector('[data-location-picker="checkout-new-location-picker"] [data-location-search-input]');
+            if (searchInput) {
+                searchInput.value = '';
+            }
             document.getElementById('newAddressDefault').checked = false;
             setTypeActive('new', 'Nhà Riêng');
             syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, !isValidCheckoutPhone(newAddressPhone?.value));
