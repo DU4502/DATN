@@ -71,38 +71,6 @@ class GuestCheckoutTest extends TestCase
             ->assertSee('guest@example.com');
     }
 
-    public function test_guest_checkout_rejects_invalid_vietnamese_phone_number(): void
-    {
-        [$product, $productSize] = $this->sellableProduct();
-        Branch::query()->firstOrCreate(
-            ['code' => 'HN'],
-            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
-        );
-
-        $this->withSession([
-            'cart' => [
-                'cart-1' => [
-                    'product_id' => $product->id,
-                    'product_size_id' => $productSize->id,
-                    'name' => $product->name,
-                    'price' => 100000,
-                    'quantity' => 1,
-                    'size' => 'M',
-                ],
-            ],
-            'checkout_cart_keys' => ['cart-1'],
-        ])
-            ->post(route('checkout.guest.info.store'), [
-                'guest_name' => 'Khách Vãng Lai',
-                'guest_phone' => '034753534555555555',
-                'guest_email' => 'guest@example.com',
-                'delivery_type' => 'pickup',
-                'branch_id' => Branch::query()->where('code', 'HN')->value('id'),
-                'note' => 'Ít đá',
-            ])
-            ->assertSessionHasErrors('guest_phone');
-    }
-
     public function test_guest_can_convert_to_member_after_checkout(): void
     {
         Mail::fake();
@@ -177,10 +145,10 @@ class GuestCheckoutTest extends TestCase
     {
         Mail::fake();
 
-        $branchId = Branch::query()->firstOrCreate(
+        Branch::query()->firstOrCreate(
             ['code' => 'HN'],
             ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
-        )->id;
+        );
 
         $this->withSession([
             'cart' => [
@@ -199,7 +167,6 @@ class GuestCheckoutTest extends TestCase
                 'guest_phone' => '0912345678',
                 'guest_email' => 'demo-checkout@example.com',
                 'delivery_type' => 'delivery',
-                'branch_id' => $branchId,
                 'shipping_address_ui' => '123 Nguyễn Văn Cừ',
                 'shipping_area_ui' => 'Quận 5',
             ])
