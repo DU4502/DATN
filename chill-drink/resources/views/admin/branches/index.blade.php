@@ -166,14 +166,14 @@
                         </td>
                         <td>
                             <div class="d-flex gap-2">
-                                <form method="POST" action="{{ route('admin.branches.toggle-status', ['branch' => $branch->id], false) }}" style="display: inline;">
+                                <form method="POST" action="{{ route('admin.branches.toggle-status', $branch) }}" style="display: inline;">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-sm btn-outline-{{ $branch->status ? 'warning' : 'success' }}" title="{{ $branch->status ? 'Vô hiệu hóa' : 'Kích hoạt' }}">
                                         <i class="bi bi-{{ $branch->status ? 'lock' : 'unlock' }}"></i>
                                     </button>
                                 </form>
-                                <form method="POST" action="{{ route('admin.branches.destroy', ['branch' => $branch->id], false) }}" style="display: inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa chi nhánh này?');">
+                                <form method="POST" action="{{ route('admin.branches.destroy', $branch) }}" style="display: inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa chi nhánh này?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
@@ -233,7 +233,7 @@
                 <h5 class="modal-title fw-bold" id="createBranchModalLabel">Thêm chi nhánh mới</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
-            <form method="POST" action="{{ route('admin.branches.store', [], false) }}">
+            <form method="POST" action="{{ route('admin.branches.store') }}">
                 @csrf
                 <input type="hidden" name="form_type" value="branch">
                 <div class="modal-body">

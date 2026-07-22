@@ -211,11 +211,6 @@ class CartController extends Controller
 
         if ($request->boolean('buy_now')) {
             $route = auth()->check() ? 'checkout.index' : 'checkout.guest.index';
-
-            if (! auth()->check()) {
-                session(['guest_checkout_require_location' => true]);
-            }
-
             return redirect()->route($route, ['items' => [$cartKey]]);
         }
         

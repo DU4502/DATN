@@ -1222,17 +1222,12 @@
             </div>
         @endif
 
-        @php
-            $flashStatus = session('status');
-            $flashStatusMessage = $flashStatus ? __((string) $flashStatus) : null;
-        @endphp
-
-        @if($flashStatusMessage)
+        @if(session('status'))
             <div class="alert alert-primary alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #0d9373;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-info-circle-fill me-2 fs-5" style="color: #0d9373;"></i>
                     <div class="flex-grow-1">
-                        {{ $flashStatusMessage }}
+                        {{ session('status') }}
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
