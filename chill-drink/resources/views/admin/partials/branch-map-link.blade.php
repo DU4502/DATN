@@ -42,6 +42,7 @@
     </div>
 
     <div class="form-text mt-2">{{ $hint }}</div>
+    <div class="form-text mt-2 d-none" data-branch-map-link-status></div>
 
     @if($mapLinkError)
         <div class="invalid-feedback d-block mt-1">{{ $mapLinkError }}</div>

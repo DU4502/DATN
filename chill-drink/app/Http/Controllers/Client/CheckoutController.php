@@ -284,7 +284,7 @@ class CheckoutController extends Controller
             && blank($request->input('note'))
         ) {
             throw ValidationException::withMessages([
-                'note' => 'Nếu khu vực chưa có số nhà, vui lòng ghi rõ mốc nhận hàng trong ghi chú đơn hàng.',
+                'note' => 'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng để shipper dễ tìm.',
             ]);
         }
 

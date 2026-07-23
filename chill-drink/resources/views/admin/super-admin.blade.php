@@ -518,15 +518,17 @@
                                     <textarea id="branch_address_{{ $branch['branch_id'] }}" class="form-control @error('address', 'editBranch') is-invalid @enderror" name="address" rows="2" placeholder="Nhập địa chỉ chi nhánh">{{ $isEditingThisBranch ? old('address', $branch['branch_address']) : $branch['branch_address'] }}</textarea>
                                     @error('address', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-                                @include('admin.partials.location-picker', [
-                                    'pickerId' => 'super-admin-edit-branch-picker-'.$branch['branch_id'],
-                                    'label' => 'Vị trí chi nhánh',
-                                    'hint' => 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.',
+                                @include('admin.partials.branch-map-link', [
+                                    'pickerId' => 'super-admin-edit-branch-map-link-'.$branch['branch_id'],
+                                    'label' => 'Link Google Maps',
+                                    'hint' => 'Dán link Google Maps có chứa tọa độ để cập nhật latitude/longitude cho chi nhánh.',
                                     'addressTarget' => '#branch_address_'.$branch['branch_id'],
                                     'latName' => 'latitude',
                                     'lngName' => 'longitude',
                                     'latValue' => $isEditingThisBranch ? old('latitude', $branch['branch_latitude']) : $branch['branch_latitude'],
                                     'lngValue' => $isEditingThisBranch ? old('longitude', $branch['branch_longitude']) : $branch['branch_longitude'],
+                                    'mapLinkValue' => ($branch['branch_latitude'] !== null && $branch['branch_longitude'] !== null) ? 'https://www.google.com/maps?q='.$branch['branch_latitude'].','.$branch['branch_longitude'] : '',
+                                    'errorBag' => 'editBranch',
                                 ])
                                 <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
                                     <input type="hidden" name="status" value="{{ $branchStatusValue ? 1 : 0 }}" data-branch-status-input="{{ $branch['branch_id'] }}">
@@ -587,30 +589,16 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold" for="branch_create_phone">Điện thoại</label>
-                        <input id="branch_create_phone" class="form-control @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123 456 789">
-                        @error('phone', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-
-                    <div class="p-3 mb-3 rounded-3" style="background: #f0fdf4; border: 1px solid #dcfce7;">
-                        <div class="d-flex align-items-center gap-2 mb-1" style="color: #166534; font-weight: 700; font-size: 0.85rem;">
-                            <i class="bi bi-person-badge-fill"></i>
-                            <span>Tài khoản Admin chi nhánh</span>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" for="branch_create_email">Email</label>
+                            <input id="branch_create_email" class="form-control @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="branch@example.com">
+                            @error('email', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        <p class="text-secondary mb-3" style="font-size: 0.78rem;">Dùng để đăng nhập giao diện quản lý chi nhánh.</p>
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold" for="branch_create_email">Email đăng nhập <span class="text-danger">*</span></label>
-                                <input id="branch_create_email" class="form-control @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="admin@chinhanh.com">
-                                @error('email', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold" for="branch_create_password">Mật khẩu <span class="text-danger">*</span></label>
-                                <input id="branch_create_password" class="form-control @error('password', 'createBranch') is-invalid @enderror" type="password" name="password" placeholder="Ít nhất 8 ký tự">
-                                @error('password', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold" for="branch_create_phone">Điện thoại</label>
+                            <input id="branch_create_phone" class="form-control @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123456789">
+                            @error('phone', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                     </div>
 
@@ -619,15 +607,16 @@
                         <textarea id="branch_create_address" class="form-control @error('address', 'createBranch') is-invalid @enderror" name="address" rows="2" placeholder="Nhập địa chỉ chi nhánh">{{ old('address') }}</textarea>
                         @error('address', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
-                    @include('admin.partials.location-picker', [
-                        'pickerId' => 'super-admin-create-branch-picker',
-                        'label' => 'Vị trí chi nhánh',
-                        'hint' => 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.',
+                    @include('admin.partials.branch-map-link', [
+                        'pickerId' => 'super-admin-create-branch-map-link',
+                        'label' => 'Link Google Maps',
+                        'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
                         'addressTarget' => '#branch_create_address',
                         'latName' => 'latitude',
                         'lngName' => 'longitude',
                         'latValue' => old('latitude'),
                         'lngValue' => old('longitude'),
+                        'errorBag' => 'createBranch',
                     ])
                     <div class="form-check mb-3 mt-3">
                         <input class="form-check-input" type="checkbox" name="status" value="1" id="branch_create_status" checked>
@@ -1025,7 +1014,7 @@
     </div>
 </div>
 
-@include('admin.partials.location-picker-script')
+@include('admin.partials.branch-map-link-script')
 
 @php
     $modalToOpen = old('form_type') === 'admin'

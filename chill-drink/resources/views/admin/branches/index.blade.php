@@ -282,13 +282,14 @@
                         @enderror
                     </div>
 
-                    @include('admin.partials.location-picker', [
-                        'pickerId' => 'create-branch-location-picker',
-                        'label' => 'Vị trí chi nhánh',
-                        'hint' => 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.',
+                    @include('admin.partials.branch-map-link', [
+                        'pickerId' => 'create-branch-map-link',
+                        'label' => 'Link Google Maps',
+                        'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
                         'latValue' => old('latitude'),
                         'lngValue' => old('longitude'),
                         'addressTarget' => 'textarea[name="address"]',
+                        'errorBag' => 'createBranch',
                     ])
 
                     <div class="form-check my-3">
@@ -317,6 +318,6 @@
 </script>
 @endif
 
-@include('admin.partials.location-picker-script')
+@include('admin.partials.branch-map-link-script')
 
 @endsection

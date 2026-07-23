@@ -6,12 +6,22 @@
 @php
     $guestInfo = $guestInfo ?? [];
     $deliveryType = old('fulfillment_type', $guestInfo['fulfillment_type'] ?? 'delivery');
+    $cartQuantity = collect($cart)->sum(fn ($item) => (int) ($item['quantity'] ?? 1));
 @endphp
 
 <style>
     .guest-checkout-page {
         background: linear-gradient(180deg, #effcf9 0%, #f7fffd 48%, #ffffff 100%);
-        padding: 2.5rem 0 4rem;
+        padding: 1.25rem 0 2rem;
+    }
+
+    .guest-checkout-page .display-6 {
+        font-size: clamp(2rem, 3vw, 2.55rem);
+    }
+
+    .guest-checkout-page .form-label {
+        margin-bottom: 0.35rem;
+        font-size: 0.9rem;
     }
 
     .guest-panel,
@@ -20,6 +30,137 @@
         border-radius: 28px;
         background: rgba(255, 255, 255, 0.94);
         box-shadow: 0 24px 60px rgba(8, 42, 38, 0.07);
+    }
+
+    @media (min-width: 768px) {
+        .guest-panel.p-md-5,
+        .guest-summary.p-md-5 {
+            padding: 2rem !important;
+        }
+    }
+
+    .guest-panel .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+
+    .guest-panel .mb-3 {
+        margin-bottom: 0.8rem !important;
+    }
+
+    .guest-summary {
+        position: sticky;
+        top: 105px;
+        overflow: hidden;
+    }
+
+    .guest-summary::before {
+        content: '';
+        display: block;
+        height: 6px;
+        margin: -1.5rem -1.5rem 1rem;
+        background: linear-gradient(90deg, #0d9373, #1fba8a, #f59e0b);
+    }
+
+    @media (min-width: 768px) {
+        .guest-summary::before {
+            margin: -2rem -2rem 1rem;
+        }
+    }
+
+    .guest-summary-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.38rem 0.65rem;
+        border-radius: 999px;
+        background: #ecfdf5;
+        color: #047857;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .guest-summary-item {
+        padding: 0.7rem 0;
+        border-bottom: 1px solid #e5f3ef;
+    }
+
+    .guest-summary-item:last-child {
+        border-bottom: 0;
+    }
+
+    .guest-item-thumb {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        background: linear-gradient(135deg, #e8fff7, #fef7df);
+        color: #0d9373;
+        box-shadow: inset 0 0 0 1px rgba(13, 147, 115, 0.10);
+    }
+
+    .guest-summary-line {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.55rem 0;
+        border-top: 1px dashed #d5eee8;
+        color: #64748b;
+        font-size: 0.94rem;
+    }
+
+    .guest-summary-total {
+        margin-top: 0.75rem;
+        padding: 0.85rem 1rem;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #053f36, #0d9373);
+        color: #fff;
+        box-shadow: 0 16px 34px rgba(13, 147, 115, 0.22);
+    }
+
+    .guest-summary-total .amount {
+        font-size: 1.35rem;
+        font-weight: 900;
+    }
+
+    .guest-summary-note {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 16px;
+        background: #fffbeb;
+        color: #92400e;
+        font-size: 0.82rem;
+        line-height: 1.45;
+    }
+
+    .guest-summary-status {
+        margin-top: 0.75rem;
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    .guest-summary-status-row {
+        display: flex;
+        gap: 0.7rem;
+        align-items: flex-start;
+        padding: 0.65rem 0.75rem;
+        border-radius: 14px;
+        background: #f8fffd;
+        border: 1px solid #dff5ef;
+    }
+
+    .guest-summary-status-row i {
+        color: #0d9373;
+        margin-top: 0.1rem;
+    }
+
+    @media (max-width: 991.98px) {
+        .guest-summary {
+            position: static;
+        }
     }
 
     .guest-step {
@@ -45,15 +186,17 @@
     .guest-input {
         border-radius: 16px;
         border-color: #d5eee8;
-        padding: 0.85rem 1rem;
+        padding: 0.65rem 0.9rem;
+        min-height: 44px;
     }
 
     .delivery-toggle .btn {
         border-radius: 999px;
+        padding: 0.55rem 0.75rem;
     }
 
     .location-refresh-btn {
-        min-width: 48px;
+        min-width: 44px;
         border-radius: 16px;
         display: inline-flex;
         align-items: center;
@@ -64,6 +207,7 @@
     .location-search-btn {
         border-radius: 16px;
         white-space: nowrap;
+        padding: 0.55rem 0.75rem;
     }
 
     .guest-address-modal .modal-content {
@@ -166,7 +310,6 @@
     <div class="container">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
             <div>
-                <p class="section-kicker mb-2">Guest Checkout</p>
                 <h1 class="display-6 fw-bold mb-0">Thanh toán nhanh</h1>
             </div>
             <div class="guest-step">
@@ -181,40 +324,41 @@
                     <form method="POST" action="{{ route('checkout.guest.info.store') }}" id="guestInfoForm">
                         @csrf
 
-                        <div class="mb-3">
-                            <label for="guest_name" class="form-label fw-semibold">Họ và tên *</label>
-                            <input type="text" id="guest_name" name="guest_name" class="form-control guest-input @error('guest_name') is-invalid @enderror" value="{{ old('guest_name', $guestInfo['guest_name'] ?? '') }}" required autocomplete="name">
-                            @error('guest_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="guest_phone" class="form-label fw-semibold">Số điện thoại *</label>
-                            <input
-                                type="tel"
-                                id="guest_phone"
-                                name="guest_phone"
-                                class="form-control guest-input @error('guest_phone') is-invalid @enderror"
-                                value="{{ old('guest_phone', $guestInfo['guest_phone'] ?? '') }}"
-                                required
-                                autocomplete="tel-national"
-                                inputmode="numeric"
-                                maxlength="11"
-                                pattern="^(?:0(?:3|5|7|8|9)[0-9]{8}|84(?:3|5|7|8|9)[0-9]{8})$"
-                                placeholder="0912345678"
-                                title="Nhập số di động Việt Nam hợp lệ, ví dụ 0912345678 hoặc 84912345678."
-                                data-server-error="{{ $errors->has('guest_phone') ? '1' : '0' }}"
-                            >
-                            <div class="form-text">Chỉ nhận số di động Việt Nam hợp lệ.</div>
-                            <div class="invalid-feedback" data-guest-phone-feedback>
-                                @error('guest_phone'){{ $message }}@else Số điện thoại phải là số di động Việt Nam hợp lệ.@enderror
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="guest_name" class="form-label fw-semibold">Họ và tên *</label>
+                                <input type="text" id="guest_name" name="guest_name" class="form-control guest-input @error('guest_name') is-invalid @enderror" value="{{ old('guest_name', $guestInfo['guest_name'] ?? '') }}" required autocomplete="name">
+                                @error('guest_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                        </div>
 
-                        <div class="mb-4">
-                            <label for="guest_email" class="form-label fw-semibold">Địa chỉ email *</label>
-                            <input type="email" id="guest_email" name="guest_email" class="form-control guest-input @error('guest_email') is-invalid @enderror" value="{{ old('guest_email', $guestInfo['guest_email'] ?? '') }}" required autocomplete="email">
-                            <div class="form-text"><i class="bi bi-envelope-check me-1"></i>Nhận hóa đơn & cập nhật trạng thái đơn hàng qua email.</div>
-                            @error('guest_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="col-md-6">
+                                <label for="guest_phone" class="form-label fw-semibold">Số điện thoại *</label>
+                                <input
+                                    type="tel"
+                                    id="guest_phone"
+                                    name="guest_phone"
+                                    class="form-control guest-input @error('guest_phone') is-invalid @enderror"
+                                    value="{{ old('guest_phone', $guestInfo['guest_phone'] ?? '') }}"
+                                    required
+                                    autocomplete="tel-national"
+                                    inputmode="numeric"
+                                    maxlength="11"
+                                    pattern="^(?:0(?:3|5|7|8|9)[0-9]{8}|84(?:3|5|7|8|9)[0-9]{8})$"
+                                    placeholder="0912345678"
+                                    title="Nhập số di động Việt Nam hợp lệ, ví dụ 0912345678 hoặc 84912345678."
+                                    data-server-error="{{ $errors->has('guest_phone') ? '1' : '0' }}"
+                                >
+                                <div class="invalid-feedback" data-guest-phone-feedback>
+                                    @error('guest_phone'){{ $message }}@else Số điện thoại phải là số di động Việt Nam hợp lệ.@enderror
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="guest_email" class="form-label fw-semibold">Địa chỉ email *</label>
+                                <input type="email" id="guest_email" name="guest_email" class="form-control guest-input @error('guest_email') is-invalid @enderror" value="{{ old('guest_email', $guestInfo['guest_email'] ?? '') }}" required autocomplete="email">
+                                <div class="form-text"><i class="bi bi-envelope-check me-1"></i>Nhận hóa đơn & cập nhật trạng thái đơn hàng qua email.</div>
+                                @error('guest_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -240,9 +384,7 @@
                                         <i class="bi bi-crosshair"></i>
                                     </button>
                                 </div>
-                                <div class="form-text" data-location-hint>
-                                    <i class="bi bi-geo-alt me-1"></i>Nếu bạn cho phép vị trí, hệ thống sẽ tự điền địa chỉ giao hàng giúp bạn.
-                                </div>
+                                <div class="form-text d-none" data-location-hint></div>
                                 <div class="form-text text-warning d-none" data-address-house-number-warning>
                                     <i class="bi bi-exclamation-circle me-1"></i>Nếu khu vực có số nhà, bạn nên nhập thêm số nhà để giao hàng chính xác hơn.
                                 </div>
@@ -272,9 +414,10 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="note" class="form-label fw-semibold">Ghi chú giao hàng</label>
-                            <textarea id="note" name="note" rows="3" class="form-control guest-input @error('note') is-invalid @enderror" placeholder="Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...">{{ old('note', $guestInfo['note'] ?? '') }}</textarea>
-                            <div class="form-text">Không bắt buộc, nhưng cần ghi rõ mốc nhận hàng nếu địa chỉ chưa có số nhà.</div>
+                            <label for="note" class="form-label fw-semibold">
+                                Ghi chú giao hàng <span class="text-danger d-none" data-note-required-indicator>*</span>
+                            </label>
+                            <textarea id="note" name="note" rows="2" class="form-control guest-input @error('note') is-invalid @enderror" placeholder="Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...">{{ old('note', $guestInfo['note'] ?? '') }}</textarea>
                             @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
@@ -287,23 +430,75 @@
 
             <div class="col-lg-5">
                 <div class="guest-summary p-4 p-md-5">
-                    <h2 class="h4 fw-bold mb-4">Tóm tắt đơn</h2>
-                    <div class="d-flex flex-column gap-3 mb-4">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+                        <div>
+                            <p class="section-kicker mb-2">Đơn hàng của bạn</p>
+                            <h2 class="h4 fw-bold mb-0">Tóm tắt đơn</h2>
+                        </div>
+                        <span class="guest-summary-badge">
+                            <i class="bi bi-bag-check"></i>{{ $cartQuantity }} món
+                        </span>
+                    </div>
+
+                    <div class="mb-3">
                         @foreach($cart as $item)
-                            <div class="d-flex justify-content-between gap-3">
-                                <div>
-                                    <strong>{{ $item['name'] ?? 'Sản phẩm' }}</strong>
-                                    <div class="small text-secondary">× {{ $item['quantity'] ?? 1 }}</div>
+                            <div class="guest-summary-item d-flex justify-content-between gap-3">
+                                <div class="d-flex gap-3">
+                                    <span class="guest-item-thumb"><i class="bi bi-cup-straw"></i></span>
+                                    <div>
+                                        <strong class="d-block">{{ $item['name'] ?? 'Sản phẩm' }}</strong>
+                                        <div class="small text-secondary">
+                                            {{ number_format($item['price'] ?? 0, 0, ',', '.') }}đ × {{ $item['quantity'] ?? 1 }}
+                                        </div>
+                                    </div>
                                 </div>
-                                <strong>{{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 1), 0, ',', '.') }}đ</strong>
+                                <strong class="text-nowrap">{{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 1), 0, ',', '.') }}đ</strong>
                             </div>
                         @endforeach
                     </div>
-                    <div class="d-flex justify-content-between h5 fw-bold">
-                        <span>Tạm tính</span>
-                        <span class="text-primary">{{ number_format($subtotal, 0, ',', '.') }}đ</span>
+
+                    <div class="guest-summary-line">
+                        <span>Tạm tính món</span>
+                        <strong class="text-dark">{{ number_format($subtotal, 0, ',', '.') }}đ</strong>
                     </div>
-                    <p class="small text-secondary mt-3 mb-0">Phí giao hàng sẽ được tính ở bước thanh toán.</p>
+                    <div class="guest-summary-line">
+                        <span>Phí giao hàng</span>
+                        <strong class="text-dark">Tính ở bước sau</strong>
+                    </div>
+                    <div class="guest-summary-line">
+                        <span>Nhận hàng</span>
+                        <strong class="text-dark" data-summary-fulfillment>{{ $deliveryType === 'pickup' ? 'Lấy tại chi nhánh' : 'Giao đến địa chỉ' }}</strong>
+                    </div>
+
+                    <div class="guest-summary-total d-flex justify-content-between align-items-end gap-3">
+                        <div>
+                            <div class="small opacity-75">Tạm tính hiện tại</div>
+                            <div class="fw-semibold">Chưa gồm phí giao hàng</div>
+                        </div>
+                        <div class="amount text-nowrap">{{ number_format($subtotal, 0, ',', '.') }}đ</div>
+                    </div>
+
+                    <div class="guest-summary-status">
+                        <div class="guest-summary-status-row">
+                            <i class="bi bi-geo-alt-fill"></i>
+                            <div>
+                                <strong class="d-block">Địa chỉ</strong>
+                                <span class="small text-secondary" data-summary-address>Chưa xác nhận địa chỉ giao hàng.</span>
+                            </div>
+                        </div>
+                        <div class="guest-summary-status-row">
+                            <i class="bi bi-shop"></i>
+                            <div>
+                                <strong class="d-block">Chi nhánh xử lý</strong>
+                                <span class="small text-secondary" data-summary-branch>Chọn chi nhánh dưới 15 km để tiếp tục.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guest-summary-note">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Sau khi xác nhận thông tin, bạn sẽ chọn phương thức thanh toán và kiểm tra phí giao hàng cuối cùng.
+                    </div>
                 </div>
             </div>
         </div>
@@ -356,6 +551,10 @@
         const shippingAreaInput = document.getElementById('shipping_area_ui');
         const noteInput = document.getElementById('note');
         const addressHouseNumberWarning = document.querySelector('[data-address-house-number-warning]');
+        const noteRequiredIndicator = document.querySelector('[data-note-required-indicator]');
+        const summaryFulfillment = document.querySelector('[data-summary-fulfillment]');
+        const summaryAddress = document.querySelector('[data-summary-address]');
+        const summaryBranch = document.querySelector('[data-summary-branch]');
         const locationRefreshButton = document.querySelector('[data-location-refresh]');
         const findNearestBranchButton = document.querySelector('[data-find-nearest-branch]');
         const locationHint = document.querySelector('[data-location-hint]');
@@ -433,30 +632,65 @@
             }
         }
 
+        function syncNoteRequirement(isRequired) {
+            noteRequiredIndicator?.classList.toggle('d-none', !isRequired);
+        }
+
         function syncAddressHouseNumberNotice(shouldScroll = false) {
             if (!addressHouseNumberWarning || !deliveryInput?.checked) {
                 addressHouseNumberWarning?.classList.add('d-none');
+                syncNoteRequirement(false);
                 return;
             }
 
             const addressText = String(shippingAddressInput?.value || '').trim();
+            const noteValue = String(noteInput?.value || '').trim();
 
             if (addressText && !hasHouseNumber(addressText)) {
-                showAddressHouseNumberWarning(
-                    'Địa chỉ chưa có số nhà. Nếu khu vực không có số nhà, hãy ghi rõ mốc nhận hàng trong ghi chú.',
-                    shouldScroll
-                );
+                syncNoteRequirement(true);
+                if (shouldScroll && !noteValue) {
+                    showAddressHouseNumberWarning(
+                        'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Hãy ghi mốc nhận hàng để shipper dễ tìm.',
+                        true
+                    );
+                    return;
+                }
+
+                addressHouseNumberWarning.classList.add('d-none');
+                addressHouseNumberWarning.textContent = '';
                 return;
             }
 
             addressHouseNumberWarning.classList.add('d-none');
             addressHouseNumberWarning.textContent = '';
+            syncNoteRequirement(false);
         }
 
         function clearAddressHouseNumberWarning() {
             if (noteInput) {
                 noteInput.setCustomValidity('');
                 noteInput.classList.remove('is-invalid');
+            }
+        }
+
+        function syncGuestSummary() {
+            const isPickup = pickupInput?.checked;
+            const addressText = String(shippingAddressInput?.value || '').trim();
+            const selectedBranch = branchSelect?.selectedOptions?.[0];
+            const selectedBranchText = selectedBranch?.value ? selectedBranch.textContent.trim() : '';
+
+            if (summaryFulfillment) {
+                summaryFulfillment.textContent = isPickup ? 'Lấy tại chi nhánh' : 'Giao đến địa chỉ';
+            }
+
+            if (summaryAddress) {
+                summaryAddress.textContent = isPickup
+                    ? 'Bạn sẽ nhận đơn trực tiếp tại chi nhánh đã chọn.'
+                    : (addressText || 'Chưa xác nhận địa chỉ giao hàng.');
+            }
+
+            if (summaryBranch) {
+                summaryBranch.textContent = selectedBranchText || 'Chọn chi nhánh dưới 15 km để tiếp tục.';
             }
         }
 
@@ -907,10 +1141,13 @@
                     ? 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng dưới 15 km.'
                     : 'Bạn phải xác định vị trí giao hàng để kiểm tra chi nhánh dưới 15 km.';
             }
+
+            syncGuestSummary();
         }
 
         function setLocationHint(message) {
             if (locationHint) {
+                locationHint.classList.toggle('d-none', !message);
                 locationHint.innerHTML = `<i class="bi bi-geo-alt me-1"></i>${message}`;
             }
         }
@@ -1045,6 +1282,7 @@
         deliveryInput?.addEventListener('change', function () {
             syncDeliveryMode();
             syncAddressHouseNumberNotice();
+            syncGuestSummary();
 
             if (shouldPromptLocation && !pickupInput?.checked) {
                 requestCurrentLocation();
@@ -1053,6 +1291,7 @@
         pickupInput?.addEventListener('change', function () {
             syncDeliveryMode();
             syncAddressHouseNumberNotice();
+            syncGuestSummary();
             if (!pickupInput.checked && shouldPromptLocation) {
                 requestCurrentLocation();
             }
@@ -1063,7 +1302,10 @@
             };
 
             branchSelect.addEventListener('invalid', validateBranchSelect);
-            branchSelect.addEventListener('change', validateBranchSelect);
+            branchSelect.addEventListener('change', function () {
+                validateBranchSelect();
+                syncGuestSummary();
+            });
             validateBranchSelect();
         }
         guestPhoneInput?.addEventListener('input', function () {
@@ -1075,13 +1317,16 @@
         shippingAddressInput?.addEventListener('input', function () {
             clearAddressHouseNumberWarning();
             syncAddressHouseNumberNotice();
+            syncGuestSummary();
         });
         shippingAddressInput?.addEventListener('blur', function () {
             syncAddressHouseNumberNotice();
+            syncGuestSummary();
         });
         noteInput?.addEventListener('input', function () {
             if (String(noteInput.value || '').trim()) {
                 clearAddressHouseNumberWarning();
+                addressHouseNumberWarning?.classList.add('d-none');
                 return;
             }
 
@@ -1102,7 +1347,7 @@
                     event.preventDefault();
                     clearAddressHouseNumberWarning();
                     if (noteInput) {
-                        noteInput.setCustomValidity('Vui lòng ghi rõ mốc giao hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
+                        noteInput.setCustomValidity('Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
                         noteInput.classList.add('is-invalid');
                         noteInput.placeholder = 'Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...';
                         noteInput.focus();
@@ -1117,6 +1362,7 @@
             }
         });
         syncAddressHouseNumberNotice();
+        syncGuestSummary();
         syncGuestPhoneInput(false);
         findNearestBranchButton?.addEventListener('click', function () {
             const originalText = this.innerHTML;

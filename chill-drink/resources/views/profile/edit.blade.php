@@ -5,9 +5,20 @@
 @section('content')
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 @php
-    $avatarValue = old('avatar', $user->avatar ?: 'preset-mint');
-    $avatarIsImage = $user->avatar && ! str_starts_with($user->avatar, 'preset-');
-    $avatarUrl = $avatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar) : null;
+    $storedAvatar = $user->avatar;
+    $selectedAvatar = old('avatar', $storedAvatar ?: 'preset-mint');
+    $avatarIsPreset = is_string($selectedAvatar) && str_starts_with($selectedAvatar, 'preset-');
+    $avatarIsRemoteImage = is_string($selectedAvatar) && preg_match('/^https?:\/\//i', $selectedAvatar);
+    $avatarIsLocalImage = is_string($selectedAvatar)
+        && $selectedAvatar !== ''
+        && ! $avatarIsPreset
+        && ! $avatarIsRemoteImage
+        && \Illuminate\Support\Facades\Storage::disk('public')->exists($selectedAvatar);
+    $avatarIsImage = $avatarIsRemoteImage || $avatarIsLocalImage;
+    $avatarValue = $avatarIsImage || $avatarIsPreset ? $selectedAvatar : 'preset-mint';
+    $avatarUrl = $avatarIsRemoteImage
+        ? $selectedAvatar
+        : ($avatarIsLocalImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($selectedAvatar) : null);
     $avatarOptions = [
         'preset-mint' => ['label' => 'Mint', 'class' => 'avatar-preset-mint'],
         'preset-sky' => ['label' => 'Sky', 'class' => 'avatar-preset-sky'],
@@ -233,7 +244,7 @@
                         <input type="hidden" id="avatar" name="avatar" value="{{ $avatarValue }}">
 
                         <div class="profile-preview mb-4">
-                            <div id="avatarPreview" class="profile-avatar-large {{ $avatarIsImage ? '' : ($avatarOptions[$avatarValue]['class'] ?? 'avatar-preset-mint') }}">
+                            <div id="avatarPreview" class="profile-avatar-large {{ $avatarIsImage ? '' : ($avatarOptions[$avatarValue]['class'] ?? 'avatar-preset-mint') }}" data-avatar-initial="{{ mb_substr($user->name, 0, 1) }}">
                                 @if($avatarIsImage)
                                     <img src="{{ $avatarUrl }}" alt="{{ $user->name }}">
                                 @else
@@ -418,8 +429,20 @@
 
 <script>
     const avatarPreview = document.getElementById('avatarPreview');
-    const avatarInitial = @json(mb_substr($user->name, 0, 1));
+    const avatarInitial = avatarPreview?.dataset.avatarInitial || @json(mb_substr($user->name, 0, 1));
     const presetClasses = ['avatar-preset-mint', 'avatar-preset-sky', 'avatar-preset-berry', 'avatar-preset-orange'];
+
+    const renderAvatarFallback = () => {
+        if (!avatarPreview) {
+            return;
+        }
+
+        avatarPreview.classList.remove(...presetClasses);
+        avatarPreview.classList.add('avatar-preset-mint');
+        avatarPreview.innerHTML = `<span>${avatarInitial}</span>`;
+    };
+
+    avatarPreview?.querySelector('img')?.addEventListener('error', renderAvatarFallback, { once: true });
 
     document.querySelectorAll('[data-avatar-value]').forEach((button) => {
         button.addEventListener('click', () => {

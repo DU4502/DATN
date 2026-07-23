@@ -1301,8 +1301,17 @@
                     @php
                     $avatar = Auth::user()->avatar;
                     $avatarIsPreset = is_string($avatar) && str_starts_with($avatar, 'preset-');
+                    $avatarIsRemoteImage = is_string($avatar) && preg_match('/^https?:\/\//i', $avatar);
+                    $avatarIsLocalImage = is_string($avatar)
+                        && $avatar !== ''
+                        && ! $avatarIsPreset
+                        && ! $avatarIsRemoteImage
+                        && \Illuminate\Support\Facades\Storage::disk('public')->exists($avatar);
                     $avatarClass = $avatarIsPreset ? 'avatar-' . $avatar : 'avatar-preset-mint';
-                    $avatarUrl = $avatar && ! $avatarIsPreset ? asset('storage/' . $avatar) : null;
+                    $avatarUrl = $avatarIsRemoteImage
+                        ? $avatar
+                        : ($avatarIsLocalImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null);
+                    $avatarInitial = mb_substr(Auth::user()->name, 0, 1);
                     @endphp
                     <div class="dropdown">
                         <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng" id="clientNotificationButton">
@@ -1383,9 +1392,9 @@
                     <div class="dropdown text-center">
                         <button class="user-avatar dropdown-toggle {{ $avatarClass }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản">
                             @if($avatarUrl)
-                            <img src="{{ $avatarUrl }}" alt="{{ Auth::user()->name }}">
+                            <img src="{{ $avatarUrl }}" alt="{{ Auth::user()->name }}" onerror="this.remove(); this.parentElement.textContent = '{{ e($avatarInitial) }}'; this.parentElement.classList.add('avatar-preset-mint');">
                             @else
-                            {{ mb_substr(Auth::user()->name, 0, 1) }}
+                            {{ $avatarInitial }}
                             @endif
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">

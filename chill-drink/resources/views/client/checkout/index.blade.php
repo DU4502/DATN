@@ -1171,9 +1171,12 @@
                             <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ today()->setTime(22, 0)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
                             @error('scheduled_delivery_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <div class="form-text">Chuẩn bị tối thiểu 30 phút · Nhận trong giờ mở cửa 07:00–22:00 · Tối đa 7 ngày.</div>
-                            <label for="delivery_note" class="form-label fw-semibold mt-3">Ghi chú giao hàng</label>
+                            <label for="delivery_note" class="form-label fw-semibold mt-3">Ghi chú thời gian giao</label>
                             <input id="delivery_note" name="delivery_note" maxlength="1000" value="{{ old('delivery_note') }}" class="form-control checkout-input" placeholder="Ví dụ: Giao đúng 10:30 giúp mình">
                         </div>
+                        <label for="note" class="form-label fw-semibold">
+                            Ghi chú giao hàng <span class="text-danger d-none" data-note-required-indicator>*</span>
+                        </label>
                         <textarea
                             id="note"
                             name="note"
@@ -1181,7 +1184,6 @@
                             class="form-control checkout-input @error('note') is-invalid @enderror"
                             placeholder="Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh..."
                         >{{ old('note') }}</textarea>
-                        <div class="form-text">Không bắt buộc, nhưng cần ghi rõ mốc nhận hàng nếu địa chỉ chưa có số nhà.</div>
                         @error('note')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -1655,6 +1657,7 @@
         const placeOrderButton = document.getElementById('placeOrderButton');
         const noteInput = document.getElementById('note');
         const addressHouseNumberWarning = document.querySelector('[data-address-house-number-warning]');
+        const noteRequiredIndicator = document.querySelector('[data-note-required-indicator]');
         const editAddressPhone = document.getElementById('editAddressPhone');
         const newAddressPhone = document.getElementById('newAddressPhone');
         const saveEditedAddressButton = document.getElementById('saveEditedAddress');
@@ -1739,23 +1742,36 @@
             }
         }
 
+        function syncNoteRequirement(isRequired) {
+            noteRequiredIndicator?.classList.toggle('d-none', !isRequired);
+        }
+
         function syncAddressHouseNumberNotice(shouldScroll = false) {
             if (!fulfillmentDeliveryInput?.checked) {
                 hideAddressHouseNumberWarning();
+                syncNoteRequirement(false);
                 return;
             }
 
             const addressText = String(shippingAddressInput?.value || selectedAddressText?.textContent || '').trim();
+            const noteValue = String(noteInput?.value || '').trim();
 
             if (addressText && !hasHouseNumber(addressText)) {
-                showAddressHouseNumberWarning(
-                    'Địa chỉ chưa có số nhà. Nếu khu vực không có số nhà, hãy ghi rõ mốc nhận hàng trong ghi chú đơn hàng.',
-                    shouldScroll
-                );
+                syncNoteRequirement(true);
+                if (shouldScroll && !noteValue) {
+                    showAddressHouseNumberWarning(
+                        'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Hãy ghi mốc nhận hàng để shipper dễ tìm.',
+                        true
+                    );
+                    return;
+                }
+
+                hideAddressHouseNumberWarning();
                 return;
             }
 
             hideAddressHouseNumberWarning();
+            syncNoteRequirement(false);
         }
         window.syncAddressHouseNumberNotice = syncAddressHouseNumberNotice;
 
@@ -2668,6 +2684,7 @@
         noteInput?.addEventListener('input', () => {
             if (String(noteInput.value || '').trim()) {
                 clearAddressHouseNumberWarning();
+                hideAddressHouseNumberWarning();
             }
         });
 
@@ -2683,7 +2700,7 @@
                 clearAddressHouseNumberWarning();
                 syncAddressHouseNumberNotice(true);
                 if (noteInput) {
-                    noteInput.setCustomValidity('Vui lòng ghi rõ mốc giao hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
+                    noteInput.setCustomValidity('Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
                     noteInput.classList.add('is-invalid');
                     noteInput.placeholder = 'Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...';
                     noteInput.focus();
