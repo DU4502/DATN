@@ -366,6 +366,15 @@
                     </div>
                     
                     <p class="text-secondary mb-4 text-sm">Để đảm bảo an toàn, hãy sử dụng mật khẩu dài, ngẫu nhiên chứa các chữ cái, số và ký tự đặc biệt.</p>
+
+                    @if ($errors->updatePassword->any())
+                        <div class="alert alert-danger py-2 px-3 mb-3 small" role="alert">
+                            <div class="fw-bold mb-1">Chưa đổi được mật khẩu</div>
+                            @foreach ($errors->updatePassword->all() as $message)
+                                <div>{{ $message }}</div>
+                            @endforeach
+                        </div>
+                    @endif
                     
                     <form method="POST" action="{{ route('password.update') }}" data-password-update-form novalidate>
                         @csrf
@@ -415,8 +424,9 @@
 
                         <div class="mt-4 pt-3 border-top d-flex align-items-center gap-3">
                             <button type="submit" class="btn btn-warning px-4 rounded-pill fw-semibold text-dark" data-password-submit disabled>Lưu mật khẩu mới</button>
+                            <span class="text-danger small fw-semibold d-none" data-password-form-message></span>
                             @if (session('status') === 'password-updated')
-                                <span class="text-success fw-medium"><i class="bi bi-check-circle me-1"></i>{{ __('password-updated') }}</span>
+                                <span class="text-success fw-medium"><i class="bi bi-check-circle me-1"></i>Đã đổi mật khẩu thành công.</span>
                             @endif
                         </div>
                     </form>
@@ -505,6 +515,16 @@
     const confirmPasswordInput = document.getElementById('update_password_password_confirmation');
     const passwordSubmit = document.querySelector('[data-password-submit]');
     const passwordStrengthBar = document.querySelector('[data-password-strength-bar]');
+    const passwordFormMessage = document.querySelector('[data-password-form-message]');
+
+    function setPasswordFormMessage(message = '') {
+        if (!passwordFormMessage) {
+            return;
+        }
+
+        passwordFormMessage.textContent = message;
+        passwordFormMessage.classList.toggle('d-none', !message);
+    }
 
     function setPasswordRuleState(rule, isValid) {
         const item = document.querySelector(`[data-password-rule="${rule}"]`);
@@ -553,6 +573,16 @@
         if (passwordSubmit) {
             passwordSubmit.disabled = !currentPassword || !checks.length || !checks.letter || !checks.number || !checks.match;
         }
+
+        if (!currentPassword && (password || confirmation)) {
+            setPasswordFormMessage('Vui lòng nhập mật khẩu hiện tại để xác minh.');
+        } else if (password && (!checks.length || !checks.letter || !checks.number)) {
+            setPasswordFormMessage('Mật khẩu mới cần ít nhất 8 ký tự, có chữ cái và chữ số.');
+        } else if (confirmation && !checks.match) {
+            setPasswordFormMessage('Xác nhận mật khẩu mới chưa khớp.');
+        } else {
+            setPasswordFormMessage('');
+        }
     }
 
     [currentPasswordInput, newPasswordInput, confirmPasswordInput].forEach((input) => {
@@ -565,6 +595,13 @@
 
         if (passwordSubmit?.disabled) {
             event.preventDefault();
+            if (!currentPasswordInput?.value) {
+                setPasswordFormMessage('Vui lòng nhập mật khẩu hiện tại để xác minh.');
+            } else if (!newPasswordInput?.value) {
+                setPasswordFormMessage('Vui lòng nhập mật khẩu mới.');
+            } else if (!confirmPasswordInput?.value) {
+                setPasswordFormMessage('Vui lòng xác nhận mật khẩu mới.');
+            }
             (currentPasswordInput?.value ? newPasswordInput : currentPasswordInput)?.focus();
         }
     });
