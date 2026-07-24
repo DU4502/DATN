@@ -372,7 +372,6 @@ class CheckoutController extends Controller
 
             // Create order
             $orderData = [
-                'order_code'     => OrderCodeGenerator::generate($branchId, $fulfillmentType),
                 'user_id'        => auth()->id(),
                 'payment_method' => $request->payment_method,
                 'fulfillment_type' => $fulfillmentType,
@@ -384,6 +383,10 @@ class CheckoutController extends Controller
                 'scheduled_at'   => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
                 'delivery_note'  => $request->input('delivery_note'),
             ];
+
+            if (Schema::hasColumn('orders', 'order_code')) {
+                $orderData['order_code'] = OrderCodeGenerator::generate($branchId, $fulfillmentType);
+            }
 
             if (Schema::hasColumn('orders', 'shipping_address_text')) {
                 $orderData['shipping_address_text'] = $addressText ?: null;

@@ -365,17 +365,8 @@
                         <h2 class="h4 fw-bold mb-0">Đổi mật khẩu</h2>
                     </div>
                     
-                    <p class="text-secondary mb-4 text-sm">Để đảm bảo an toàn, hãy sử dụng mật khẩu dài, ngẫu nhiên chứa các chữ cái, số và ký tự đặc biệt.</p>
+                    <p class="text-secondary mb-4 text-sm">Mật khẩu cần trên 6 ký tự, có chữ in hoa, số và ký tự đặc biệt.</p>
 
-                    @if ($errors->updatePassword->any())
-                        <div class="alert alert-danger py-2 px-3 mb-3 small" role="alert">
-                            <div class="fw-bold mb-1">Chưa đổi được mật khẩu</div>
-                            @foreach ($errors->updatePassword->all() as $message)
-                                <div>{{ $message }}</div>
-                            @endforeach
-                        </div>
-                    @endif
-                    
                     <form method="POST" action="{{ route('password.update') }}" data-password-update-form novalidate>
                         @csrf
                         @method('PUT')
@@ -405,9 +396,10 @@
                             <div class="password-strength-bar" data-password-strength-bar></div>
                         </div>
                         <ul class="password-requirements" data-password-requirements>
-                            <li data-password-rule="length"><i class="bi bi-circle"></i>Ít nhất 8 ký tự</li>
-                            <li data-password-rule="letter"><i class="bi bi-circle"></i>Có chữ cái</li>
+                            <li data-password-rule="length"><i class="bi bi-circle"></i>Trên 6 ký tự</li>
+                            <li data-password-rule="uppercase"><i class="bi bi-circle"></i>Có chữ in hoa</li>
                             <li data-password-rule="number"><i class="bi bi-circle"></i>Có chữ số</li>
+                            <li data-password-rule="special"><i class="bi bi-circle"></i>Có ký tự đặc biệt</li>
                             <li data-password-rule="match"><i class="bi bi-circle"></i>Xác nhận mật khẩu khớp</li>
                         </ul>
 
@@ -423,7 +415,7 @@
                         </div>
 
                         <div class="mt-4 pt-3 border-top d-flex align-items-center gap-3">
-                            <button type="submit" class="btn btn-warning px-4 rounded-pill fw-semibold text-dark" data-password-submit disabled>Lưu mật khẩu mới</button>
+                            <button type="submit" class="btn btn-warning px-4 rounded-pill fw-semibold text-dark" data-password-submit>Lưu mật khẩu mới</button>
                             <span class="text-danger small fw-semibold d-none" data-password-form-message></span>
                             @if (session('status') === 'password-updated')
                                 <span class="text-success fw-medium"><i class="bi bi-check-circle me-1"></i>Đã đổi mật khẩu thành công.</span>
@@ -544,9 +536,10 @@
         const password = newPasswordInput?.value || '';
         const confirmation = confirmPasswordInput?.value || '';
         const checks = {
-            length: password.length >= 8,
-            letter: /[A-Za-zÀ-ỹ]/u.test(password),
+            length: password.length > 6,
+            uppercase: /[A-Z]/u.test(password),
             number: /\d/.test(password),
+            special: /[^A-Za-z0-9]/u.test(password),
             match: password !== '' && password === confirmation,
         };
         const score = Object.values(checks).filter(Boolean).length;
@@ -554,8 +547,8 @@
         Object.entries(checks).forEach(([rule, isValid]) => setPasswordRuleState(rule, isValid));
 
         if (passwordStrengthBar) {
-            passwordStrengthBar.style.width = `${score * 25}%`;
-            passwordStrengthBar.style.backgroundColor = score <= 1 ? '#ef4444' : (score <= 3 ? '#f59e0b' : '#0d9373');
+            passwordStrengthBar.style.width = `${score * 20}%`;
+            passwordStrengthBar.style.backgroundColor = score <= 1 ? '#ef4444' : (score <= 4 ? '#f59e0b' : '#0d9373');
         }
 
         if (confirmPasswordInput) {
@@ -565,19 +558,19 @@
         }
 
         if (newPasswordInput) {
-            const basicPasswordValid = checks.length && checks.letter && checks.number;
+            const basicPasswordValid = checks.length && checks.uppercase && checks.number && checks.special;
             newPasswordInput.classList.toggle('is-invalid', password.length > 0 && !basicPasswordValid);
-            newPasswordInput.setCustomValidity(basicPasswordValid || password.length === 0 ? '' : 'Mật khẩu mới cần ít nhất 8 ký tự, có chữ cái và chữ số.');
+            newPasswordInput.setCustomValidity(basicPasswordValid || password.length === 0 ? '' : 'Mật khẩu mới cần trên 6 ký tự, có chữ in hoa, số và ký tự đặc biệt.');
         }
 
         if (passwordSubmit) {
-            passwordSubmit.disabled = !currentPassword || !checks.length || !checks.letter || !checks.number || !checks.match;
+            passwordSubmit.dataset.ready = currentPassword && checks.length && checks.uppercase && checks.number && checks.special && checks.match ? '1' : '0';
         }
 
         if (!currentPassword && (password || confirmation)) {
             setPasswordFormMessage('Vui lòng nhập mật khẩu hiện tại để xác minh.');
-        } else if (password && (!checks.length || !checks.letter || !checks.number)) {
-            setPasswordFormMessage('Mật khẩu mới cần ít nhất 8 ký tự, có chữ cái và chữ số.');
+        } else if (password && (!checks.length || !checks.uppercase || !checks.number || !checks.special)) {
+            setPasswordFormMessage('Mật khẩu mới cần trên 6 ký tự, có chữ in hoa, số và ký tự đặc biệt.');
         } else if (confirmation && !checks.match) {
             setPasswordFormMessage('Xác nhận mật khẩu mới chưa khớp.');
         } else {
@@ -593,7 +586,7 @@
     passwordUpdateForm?.addEventListener('submit', (event) => {
         syncPasswordFormState();
 
-        if (passwordSubmit?.disabled) {
+        if (passwordSubmit?.dataset.ready !== '1') {
             event.preventDefault();
             if (!currentPasswordInput?.value) {
                 setPasswordFormMessage('Vui lòng nhập mật khẩu hiện tại để xác minh.');
@@ -603,7 +596,14 @@
                 setPasswordFormMessage('Vui lòng xác nhận mật khẩu mới.');
             }
             (currentPasswordInput?.value ? newPasswordInput : currentPasswordInput)?.focus();
+            return;
         }
+
+        if (passwordSubmit) {
+            passwordSubmit.disabled = true;
+            passwordSubmit.textContent = 'Đang lưu...';
+        }
+        setPasswordFormMessage('');
     });
 
     syncPasswordFormState();

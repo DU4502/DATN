@@ -312,7 +312,6 @@ class GuestCheckoutController extends CheckoutController
             }
 
             $orderData = [
-                'order_code'     => OrderCodeGenerator::generate($branchId, $deliveryType),
                 'user_id'        => null,
                 'guest_name'     => $guestInfo['guest_name'],
                 'guest_phone'    => $guestInfo['guest_phone'],
@@ -331,6 +330,10 @@ class GuestCheckoutController extends CheckoutController
                 'confirmation_token_expires_at'  => now()->addMinutes(15),
                 'note' => $note,
             ];
+
+            if (Schema::hasColumn('orders', 'order_code')) {
+                $orderData['order_code'] = OrderCodeGenerator::generate($branchId, $deliveryType);
+            }
 
             if (Schema::hasColumn('orders', 'shipping_address_text')) {
                 $orderData['shipping_address_text'] = $addressText ?: null;

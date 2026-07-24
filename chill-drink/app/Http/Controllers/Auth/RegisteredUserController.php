@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
+use App\Services\EmailVerificationCodeService;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -25,31 +26,41 @@ class RegisteredUserController extends Controller
     /**
      * Handle an incoming registration request.
      */
-    public function store(RegisterRequest $request): RedirectResponse
+    public function store(RegisterRequest $request, EmailVerificationCodeService $verificationCodes): RedirectResponse
     {
+        $validated = $request->validated();
+
+        if (! $verificationCodes->hasVerifiedEmail($validated['email'])) {
+            return back()
+                ->withErrors(['email_verification_code' => 'Vui lòng bấm xác minh Gmail trước khi đăng ký.'])
+                ->withInput($request->except(['password', 'password_confirmation']));
+        }
+
         $userData = [
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
             'role_id' => 1,
             'is_active' => 1,
         ];
 
         foreach (['phone', 'address', 'area'] as $field) {
             if (Schema::hasColumn('users', $field)) {
-                $userData[$field] = $request->input($field);
+                $userData[$field] = $validated[$field] ?? null;
             }
         }
 
         $user = User::create($userData);
 
-        event(new Registered($user));
+        if ($user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
+
+        $verificationCodes->forgetVerifiedEmail($validated['email']);
 
         Auth::login($user);
-
         $request->session()->forget('url.intended');
 
-        // Sau khi đăng ký, chuyển đến trang nhắc xác nhận email
-        return redirect()->route('verification.notice');
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 }

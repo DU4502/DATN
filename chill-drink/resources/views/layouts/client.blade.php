@@ -1222,17 +1222,12 @@
             </div>
         @endif
 
-        @php
-            $flashStatus = session('status');
-            $flashStatusMessage = $flashStatus ? __((string) $flashStatus) : null;
-        @endphp
-
-        @if($flashStatusMessage)
+        @if(session('status'))
             <div class="alert alert-primary alert-dismissible fade show shadow-lg mb-3" role="alert" style="border-radius: 12px; border-left: 4px solid #0d9373;">
                 <div class="d-flex align-items-start">
                     <i class="bi bi-info-circle-fill me-2 fs-5" style="color: #0d9373;"></i>
                     <div class="flex-grow-1">
-                        {{ $flashStatusMessage }}
+                        {{ session('status') }}
                     </div>
                     <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
@@ -1301,17 +1296,8 @@
                     @php
                     $avatar = Auth::user()->avatar;
                     $avatarIsPreset = is_string($avatar) && str_starts_with($avatar, 'preset-');
-                    $avatarIsRemoteImage = is_string($avatar) && preg_match('/^https?:\/\//i', $avatar);
-                    $avatarIsLocalImage = is_string($avatar)
-                        && $avatar !== ''
-                        && ! $avatarIsPreset
-                        && ! $avatarIsRemoteImage
-                        && \Illuminate\Support\Facades\Storage::disk('public')->exists($avatar);
                     $avatarClass = $avatarIsPreset ? 'avatar-' . $avatar : 'avatar-preset-mint';
-                    $avatarUrl = $avatarIsRemoteImage
-                        ? $avatar
-                        : ($avatarIsLocalImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null);
-                    $avatarInitial = mb_substr(Auth::user()->name, 0, 1);
+                    $avatarUrl = $avatar && ! $avatarIsPreset ? asset('storage/' . $avatar) : null;
                     @endphp
                     <div class="dropdown">
                         <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng" id="clientNotificationButton">
@@ -1392,9 +1378,9 @@
                     <div class="dropdown text-center">
                         <button class="user-avatar dropdown-toggle {{ $avatarClass }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản">
                             @if($avatarUrl)
-                            <img src="{{ $avatarUrl }}" alt="{{ Auth::user()->name }}" onerror="this.remove(); this.parentElement.textContent = '{{ e($avatarInitial) }}'; this.parentElement.classList.add('avatar-preset-mint');">
+                            <img src="{{ $avatarUrl }}" alt="{{ Auth::user()->name }}">
                             @else
-                            {{ $avatarInitial }}
+                            {{ mb_substr(Auth::user()->name, 0, 1) }}
                             @endif
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">
@@ -1489,13 +1475,9 @@
     </footer>
     @endunless
 
-    @auth
-        @if(auth()->user()->isCustomer())
-            @include('components.chatbox')
-
-
-        @endif
-    @endauth
+    @if(!auth()->check() || auth()->user()?->isCustomer())
+        @include('components.chatbox')
+    @endif
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -1926,60 +1908,8 @@
             startTimer();
         });
     </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            @auth
-            // Chỉ chạy khi user đã đăng nhập
-            if (!navigator.geolocation) return;
-
-            // Hàm gửi tọa độ lên server
-            function submitLocation(lat, lng) {
-                fetch('{{ route('select-nearest-branch') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({ latitude: lat, longitude: lng })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success && data.changed) {
-                        window.location.reload();
-                    }
-                })
-                .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
-            }
-
-            // Kiểm tra trạng thái quyền vị trí
-            if (navigator.permissions) {
-                navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
-                    if (result.state === 'granted') {
-                        // Đã cấp quyền trước đó → lấy ngay, không hỏi nữa
-                        navigator.geolocation.getCurrentPosition(
-                            pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
-                            err => console.warn("Lỗi GPS:", err),
-                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-                        );
-                    } else if (result.state === 'prompt') {
-                        // Chưa hỏi → không làm gì, để chatbox tự xin quyền khi user mở chat
-                    }
-                    // 'denied' → không làm gì
-                });
-            } else {
-                // Browser không hỗ trợ Permissions API → thử lấy thẳng
-                navigator.geolocation.getCurrentPosition(
-                    pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
-                    err => console.warn("Lỗi GPS:", err),
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-                );
-            }
-
-
-            @endauth
-        });
-    </script>
+    {{-- Disabled automatic branch switching on page load.
+         Branch selection now only happens when the user explicitly chooses it. --}}
     @include('partials.realtime')
     @include('partials.client-notifications')
 </body>
