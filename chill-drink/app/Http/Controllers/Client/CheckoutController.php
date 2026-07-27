@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
+use App\Models\UserVoucher;
 use App\Services\OrderCodeGenerator;
 use App\Support\ShippingFee;
 use Illuminate\Http\JsonResponse;
@@ -163,7 +164,7 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->map(fn ($uv) => $uv->voucher)
+                ->sortByDesc(fn ($userVoucher) => str_starts_with(strtoupper((string) $userVoucher->voucher?->code), 'HT'))
                 ->values();
         } else {
             // For guest users
@@ -177,7 +178,7 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->map(fn ($uv) => $uv->voucher)
+                ->sortByDesc(fn ($userVoucher) => str_starts_with(strtoupper((string) $userVoucher->voucher?->code), 'HT'))
                 ->values();
         }
 
@@ -762,6 +763,17 @@ class CheckoutController extends Controller
             throw new \RuntimeException('Mã voucher đã hết lượt sử dụng.');
         }
 
+        if (Str::startsWith(Str::upper((string) $voucher->code), 'HT')) {
+            $ownedVoucher = UserVoucher::query()
+                ->where('coupon_id', $voucher->id)
+                ->where('is_used', false)
+                ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()), fn ($query) => $query->where('guest_identifier', session()->getId()))
+                ->exists();
+            if (! $ownedVoucher) {
+                throw new \RuntimeException('Voucher hỗ trợ này không thuộc tài khoản của bạn.');
+            }
+        }
+
         if (! $voucher->meetsMinimumOrder($subtotal)) {
             throw new \RuntimeException(
                 'Mã voucher chỉ áp dụng cho đơn từ '
@@ -807,6 +819,14 @@ class CheckoutController extends Controller
     protected function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
     {
         $voucher->increment('used_count');
+
+        if (Str::startsWith(Str::upper((string) $voucher->code), 'HT')) {
+            UserVoucher::query()
+                ->where('coupon_id', $voucher->id)
+                ->where('is_used', false)
+                ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()), fn ($query) => $query->where('guest_identifier', session()->getId()))
+                ->update(['is_used' => true, 'used_at' => now()]);
+        }
 
         if (Schema::hasTable('user_coupon_usage')) {
             DB::table('user_coupon_usage')->insert([

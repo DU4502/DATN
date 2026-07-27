@@ -179,7 +179,8 @@ class ChatController extends Controller
 
         $conversation = $user->conversations()
             ->where('status', 'open')
-            ->latest()
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('created_at')
             ->first();
 
         if (!$conversation) {

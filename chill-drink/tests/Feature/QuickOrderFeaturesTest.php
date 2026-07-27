@@ -416,6 +416,20 @@ class QuickOrderFeaturesTest extends TestCase
             ->assertJsonPath('message', 'Phòng đã đóng nên không thể gửi tin nhắn mới.');
     }
 
+    public function test_group_chat_blocks_prohibited_words_only(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'filter-owner']);
+
+        $this->actingAs($owner)
+            ->postJson(route('group-orders.messages.send', $group->code), ['content' => 'd.m'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('content');
+
+        $this->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Mọi người chọn món nhé'])
+            ->assertCreated();
+    }
+
     private function openGroup(): array
     {
         $owner = User::factory()->create();

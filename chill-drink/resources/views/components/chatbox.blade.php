@@ -462,7 +462,7 @@
             if (!this.isOpen || document.hidden || !this.conversationId || !this.branchId) return;
             this.pollInterval = window.setInterval(() => {
                 if (this.isOpen && !document.hidden) this.fetchMessages();
-            }, 15000);
+            }, 3000);
         },
 
         stopPolling() {

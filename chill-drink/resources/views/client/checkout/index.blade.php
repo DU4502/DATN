@@ -1444,6 +1444,7 @@
                             @php
                                 $voucher = $userVoucher->voucher;
                                 if (!$voucher) continue;
+                                $isSupportVoucher = \Illuminate\Support\Str::startsWith(\Illuminate\Support\Str::upper((string) $voucher->code), 'HT');
                                 
                                 $voucherIsShipping = $isShippingVoucher($voucher);
                                 $voucherDiscount = $voucher->discountFor((int) $total);
@@ -1477,6 +1478,9 @@
                                 <div class="voucher-ticket-brand" style="position: relative;">
                                     <span class="brand-circle"><i class="bi {{ $voucherIcon }}"></i></span>
                                     <strong>{{ $voucher->code }}</strong>
+                                    @if($isSupportVoucher)
+                                        <span style="position: absolute; bottom: .35rem; left: .45rem; background: #d1fae5; color: #047857; font-size: .62rem; padding: .12rem .35rem; border-radius: 4px; font-weight: 800;">HỖ TRỢ ĐƠN HÀNG</span>
+                                    @endif
                                     <!-- Badge "Đã nhận" -->
                                     <span style="position: absolute; top: 0.5rem; right: -0.25rem; background: #fbbf24; color: #78350f; font-size: 0.65rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: 800; transform: rotate(8deg); box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);">
                                         ĐÃ NHẬN
@@ -1485,7 +1489,7 @@
                                 <div class="voucher-ticket-body">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                         <span class="voucher-limit">{{ $voucher->usage_limit > 0 ? 'Số lượng có hạn' : 'Không giới hạn' }}</span>
-                                        <span class="voucher-kind">{{ $voucherIsShipping ? 'Freeship' : 'Giảm giá' }}</span>
+                                        <span class="voucher-kind">{{ $isSupportVoucher ? 'Voucher hỗ trợ' : ($voucherIsShipping ? 'Freeship' : 'Giảm giá') }}</span>
                                         <span class="fw-semibold text-secondary">{{ $voucherValueText }}</span>
                                         @if($voucher->max_discount)
                                             <span class="fw-semibold text-secondary">tối đa {{ number_format($voucher->max_discount, 0, ',', '.') }}đ</span>

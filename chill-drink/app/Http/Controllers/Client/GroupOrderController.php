@@ -265,7 +265,17 @@ class GroupOrderController extends Controller
         abort_if($group->status === 'closed', 422, 'Phòng đã đóng nên không thể gửi tin nhắn mới.');
         $sender = $this->currentMember($group);
         $data = $request->validate([
-            'content' => ['nullable', 'string', 'max:1000', 'required_without:attachment'],
+            'content' => [
+                'nullable',
+                'string',
+                'max:1000',
+                'required_without:attachment',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && $this->containsProhibitedGroupChatWord($value)) {
+                        $fail('Tin nhắn chứa từ ngữ không phù hợp. Vui lòng điều chỉnh trước khi gửi.');
+                    }
+                },
+            ],
             'recipient_id' => ['nullable', 'integer'],
             'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip'],
         ]);
@@ -322,6 +332,23 @@ class GroupOrderController extends Controller
             'read_at' => $message->read_at?->toIso8601String(),
             'created_at' => $message->created_at->toIso8601String(),
         ];
+    }
+
+    /**
+     * Bộ lọc này chỉ áp dụng cho chat trong đơn nhóm. Nội dung được chuẩn hóa
+     * để nhận diện cả chữ không dấu, viết xen ký tự và một số kiểu viết leet.
+     */
+    private function containsProhibitedGroupChatWord(string $content): bool
+    {
+        $normalized = Str::lower(Str::ascii($content));
+        $normalized = strtr($normalized, ['0' => 'o', '1' => 'i', '3' => 'e', '4' => 'a', '5' => 's', '7' => 't', '@' => 'a', '$' => 's']);
+        $normalized = preg_replace('/[^a-z]+/', ' ', $normalized) ?? '';
+
+        $wordPattern = '/(?:^| )(?:dm+|dcm+|vcl|vl|cc|cac|lon|dit|deo|concho|ngu|fuck|shit|bitch)(?= |$)/';
+        $obfuscatedAbbreviationPattern = '/(?:^| )d\s*(?:m+|c\s*m?)(?= |$)/';
+
+        return preg_match($wordPattern, $normalized) === 1
+            || preg_match($obfuscatedAbbreviationPattern, $normalized) === 1;
     }
 
     public function join(Request $request, string $code)

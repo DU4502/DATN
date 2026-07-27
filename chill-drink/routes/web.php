@@ -135,6 +135,12 @@ Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->
     Route::patch('/{conversation}/close', [AdminChatController::class, 'close'])->name('close');
 });
 
+Route::prefix('admin/order-issues')->name('admin.order-issues.')->middleware(['auth', 'cskh'])->group(function () {
+    Route::get('/', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'index'])->name('index');
+    Route::get('/{issue}/evidence', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'evidence'])->name('evidence');
+    Route::patch('/{issue}', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'update'])->name('update');
+});
+
 /*
 |--------------------------------------------------------------------------
 | User Profile Routes
@@ -162,16 +168,25 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
     Route::post('/orders/{order}/cancel', [ProfileController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{order}/confirm-received', [ProfileController::class, 'confirmReceived'])->name('orders.confirm-received');
+    Route::get('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'create'])->name('orders.issues.create');
+    Route::get('/orders/{order}/support/status', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'status'])->name('orders.issues.status');
+    Route::post('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'store'])->name('orders.issues.store');
+    Route::post('/orders/{order}/support/{issue}/confirm', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'confirmResolution'])->name('orders.issues.confirm');
     Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
     Route::post('/notifications/mark-all-read', [ProfileController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile/data-export', [ProfileController::class, 'exportData'])->name('profile.data-export');
     
     // Loyalty Points
     Route::get('/loyalty-points', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'index'])->name('loyalty.index');
     Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
 });
+
+Route::view('/dieu-khoan', 'legal.page', ['page' => 'terms'])->name('legal.terms');
+Route::view('/doi-tra', 'legal.page', ['page' => 'returns'])->name('legal.returns');
+Route::view('/quyen-rieng-tu', 'legal.page', ['page' => 'privacy'])->name('legal.privacy');
 
 /*
 |--------------------------------------------------------------------------

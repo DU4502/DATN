@@ -48,7 +48,6 @@ class GroupOrderManagementTest extends TestCase
             ->assertSee('1 / 20 thành viên')
             ->assertSee('Lịch sử trò chuyện')
             ->assertSee('Tin nhắn để Super Admin giám sát');
-<<<<<<< HEAD
     }
 
     public function test_regular_admin_cannot_view_group_orders(): void
@@ -58,7 +57,5 @@ class GroupOrderManagementTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.group-orders.index'))
             ->assertRedirect(route('admin.dashboard'));
-=======
->>>>>>> dev
     }
 }
