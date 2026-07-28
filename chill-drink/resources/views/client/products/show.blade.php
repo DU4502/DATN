@@ -347,12 +347,18 @@
     .detail-favorite-btn {
         width: 50px;
         height: 50px;
-        padding: 0;
+        min-width: 50px;
+        min-height: 50px;
+        padding: 0 !important;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50% !important;
+        border-radius: 100% !important;
         font-size: 1.15rem;
+        flex-shrink: 0;
+        aspect-ratio: 1;
+        line-height: 1;
+        box-sizing: border-box;
     }
 
     .product-detail-actions {
@@ -836,6 +842,8 @@
         .detail-favorite-btn {
             width: 46px;
             height: 46px;
+            min-width: 46px;
+            min-height: 46px;
         }
 
         .detail-action-content {
