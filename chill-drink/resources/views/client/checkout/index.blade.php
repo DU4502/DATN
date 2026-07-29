@@ -26,24 +26,24 @@
     );
     $shippingFee = $fulfillmentType === 'pickup' ? 0 : $shippingQuote['total_fee'];
     $availableVouchers = collect($availableVouchers ?? []);
-    $loyaltyContext = $loyaltyContext ?? ['rank' => 'bronze', 'points' => 0];
-    $rankOrder = ['bronze' => 1, 'silver' => 2, 'gold' => 3, 'diamond' => 4];
-    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext, $rankOrder) {
+    $loyaltyContext = $loyaltyContext ?? ['points' => 0];
+    $selectedCheckoutAddress = collect($addressBook ?? [])->firstWhere('id', $selectedAddressId ?? 'primary');
+    $selectedCheckoutPhone = trim((string) ($selectedCheckoutAddress['phone'] ?? $user->phone ?? ''));
+    $checkoutPhoneReady = $selectedCheckoutPhone !== '' && $selectedCheckoutPhone !== 'Chưa cập nhật';
+    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext) {
         $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-        $hasRank = ! $voucher->required_rank
-            || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
         $hasPoints = ! $voucher->is_redeemable
             || (int) $voucher->point_cost <= 0
             || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
 
-        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
+        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasPoints;
     };
     $isShippingVoucher = fn ($voucher) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::upper((string) $voucher->code), ['SHIP', 'FREE']);
     $shippingVouchers = $availableVouchers->filter($isShippingVoucher)->values();
     $discountVouchers = $availableVouchers->reject($isShippingVoucher)->values();
     $voucherDisplayGroups = collect([
-        'Voucher freeship' => $shippingVouchers,
-        'Voucher giảm giá' => $discountVouchers,
+        'Phiếu miễn phí vận chuyển' => $shippingVouchers,
+        'Phiếu giảm giá' => $discountVouchers,
     ]);
     $selectedVoucherCode = strtoupper(trim((string) old('voucher_code', '')));
     $selectedShippingVoucherCode = strtoupper(trim((string) old('shipping_voucher_code', '')));
@@ -939,6 +939,12 @@
                                 type="hidden"
                                 value="{{ old('longitude', $userLongitude) }}"
                             >
+                            <input
+                                id="shipping_phone_ui"
+                                name="shipping_phone_ui"
+                                type="hidden"
+                                value="{{ old('shipping_phone_ui', $checkoutPhoneReady ? $selectedCheckoutPhone : '') }}"
+                            >
 
                             <div class="selected-address-row">
                                 <span class="address-selected-mark"><i class="bi bi-check-lg"></i></span>
@@ -946,7 +952,7 @@
                                     <div class="address-person mb-1">
                                         <span id="selectedReceiver">{{ $user->name }}</span>
                                         <span class="address-phone-divider"></span>
-                                        <span id="selectedPhone">{{ $user->phone ?: 'Chưa cập nhật' }}</span>
+                                        <span id="selectedPhone">{{ $checkoutPhoneReady ? $selectedCheckoutPhone : 'Chưa cập nhật' }}</span>
                                     </div>
                                     <div class="address-line" id="selectedAddressText">
                                         {{ $primaryAddressText ?: 'Chưa có địa chỉ. Bấm Thay đổi để thêm địa chỉ nhận hàng.' }}
@@ -962,11 +968,9 @@
                                 </div>
                             @endif
 
-                            @if(empty($user->phone))
-                                <div class="alert alert-warning border-0 rounded-4 mt-4 mb-0">
-                                    Bạn chưa có số điện thoại. Có thể cập nhật trong mục địa chỉ để đơn hàng rõ ràng hơn.
-                                </div>
-                            @endif
+                            <div class="alert alert-warning border-0 rounded-4 mt-4 mb-0 {{ $checkoutPhoneReady ? 'd-none' : '' }}" data-checkout-phone-warning>
+                                Bạn cần thêm số điện thoại cho địa chỉ đang chọn trước khi đặt đơn.
+                            </div>
                         </div>
                     </div>
 
@@ -975,13 +979,18 @@
                         <div class="d-flex align-items-center gap-3 mb-4">
                             <span class="checkout-step"><i class="bi bi-shop"></i></span>
                             <div>
-                                <h2 class="h4 fw-bold mb-1">Chọn chi nhánh</h2>
-                                <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn.</p>
+                                <h2 class="h4 fw-bold mb-1">Chi nhánh phục vụ gần bạn</h2>
+                                <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn hoặc để hệ thống gợi ý chi nhánh gần nhất.</p>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="branch_id" class="form-label fw-semibold">Chi nhánh <span class="text-danger">*</span></label>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                <label for="branch_id" class="form-label fw-semibold mb-0">Chi nhánh <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" data-find-nearest-branch>
+                                    <i class="bi bi-crosshair me-1"></i>Tìm chi nhánh gần nhất
+                                </button>
+                            </div>
                             <div class="branch-select-shell">
                                 <select id="branch_id" name="branch_id" class="form-select checkout-input @error('branch_id') is-invalid @enderror"
                                     data-branches='{{ json_encode($branchesJson ?? []) }}'
@@ -1008,7 +1017,7 @@
                                             }
                                         @endphp
                                         <option value="{{ $branch->id }}"
-                                            @selected((string) old('branch_id') === (string) $branch->id)
+                                            @selected((string) old('branch_id', session('group_branch_id')) === (string) $branch->id)
                                             data-latitude="{{ $branch->latitude ?? '' }}"
                                             data-longitude="{{ $branch->longitude ?? '' }}"
                                             data-distance="{{ $branchDistance ?? '' }}">
@@ -1082,9 +1091,9 @@
                             <div class="d-flex align-items-center gap-3">
                                 <span class="voucher-icon"><i class="bi bi-ticket-perforated"></i></span>
                                 <div>
-                                    <h2 class="h5 fw-bold mb-1">Chill Drink Voucher</h2>
+                                    <h2 class="h5 fw-bold mb-1">Phiếu ưu đãi Chill Drink</h2>
                                     <div class="voucher-selected-text" id="selectedVoucherText">
-                                        {{ $selectedVoucherLabels ? 'Đã chọn: ' . $selectedVoucherLabels : 'Chưa chọn voucher' }}
+                                        {{ $selectedVoucherLabels ? 'Đã chọn: ' . $selectedVoucherLabels : 'Chưa chọn phiếu ưu đãi' }}
                                     </div>
                                 </div>
                             </div>
@@ -1106,6 +1115,14 @@
                             </div>
                         </div>
 
+                        @php
+                            $deliveryType = old('delivery_type', 'now');
+                            $selectedPaymentMethod = old('payment_method', $deliveryType === 'scheduled' ? 'vnpay' : 'cod');
+                            if ($deliveryType === 'scheduled' && $selectedPaymentMethod === 'cod') {
+                                $selectedPaymentMethod = 'vnpay';
+                            }
+                        @endphp
+
                         <div class="row g-3">
                             @foreach($paymentOptions as $value => $option)
                                 <div class="col-md-6">
@@ -1114,7 +1131,8 @@
                                             type="radio"
                                             name="payment_method"
                                             value="{{ $value }}"
-                                            {{ old('payment_method', 'cod') === $value ? 'checked' : '' }}
+                                            {{ $selectedPaymentMethod === $value ? 'checked' : '' }}
+                                            data-payment-method="{{ $value }}"
                                             required
                                         >
                                         <div class="payment-card p-3 d-flex gap-3 h-100">
@@ -1132,6 +1150,10 @@
                         @error('payment_method')
                             <div class="text-danger small mt-2">{{ $message }}</div>
                         @enderror
+                        <div class="alert alert-info small mt-3 mb-0 {{ $deliveryType === 'scheduled' ? '' : 'd-none' }}" data-scheduled-payment-notice>
+                            <i class="bi bi-info-circle me-1"></i>
+                            Đơn đặt giao sau cần thanh toán trước, nên hệ thống sẽ dùng VNPay thay cho thanh toán khi nhận hàng.
+                        </div>
                     </div>
 
                     <div class="checkout-panel p-4 p-md-5">
@@ -1143,16 +1165,13 @@
                             </div>
                         </div>
 
-                        @php
-                            $deliveryType = old('delivery_type', 'now');
-                        @endphp
                         <div class="row g-3 mb-3">
                             <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="now" @checked($deliveryType === 'now')><strong>Giao ngay</strong><span class="d-block text-secondary small ms-4">Xử lý ngay sau khi đặt hàng.</span></label></div>
-                            <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="scheduled" @checked($deliveryType === 'scheduled')><strong>Đặt giao sau</strong><span class="d-block text-secondary small ms-4">Chọn ngày giờ muốn nhận.</span></label></div>
+                            <div class="col-md-6"><label class="delivery-choice"><input class="form-check-input me-2" type="radio" name="delivery_type" value="scheduled" @checked($deliveryType === 'scheduled')><strong>Đặt giao sau</strong><span class="d-block text-secondary small ms-4">Chọn giờ nhận trong hôm nay.</span></label></div>
                         </div>
                         <div class="scheduled-delivery-fields {{ $deliveryType === 'scheduled' ? 'is-visible' : '' }} mb-3" data-scheduled-delivery-fields>
                             <label for="scheduled_delivery_time" class="form-label fw-semibold">Ngày và giờ nhận hàng</label>
-                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ now()->addDays(7)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
+                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ today()->setTime(22, 0)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
                             @error('scheduled_delivery_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <div class="form-text">Chuẩn bị tối thiểu 30 phút · Nhận trong giờ mở cửa 07:00–22:00 · Tối đa 7 ngày.</div>
                             <label for="delivery_note" class="form-label fw-semibold mt-3">Ghi chú giao hàng</label>
@@ -1217,7 +1236,7 @@
                                 <span id="summaryShippingDistance">Phí giao hàng cố định</span>
                             </div>
                             <div class="d-flex justify-content-between mb-3">
-                                <span class="text-secondary">Voucher</span>
+                                <span class="text-secondary">Phiếu ưu đãi</span>
                                 <span id="summaryVoucherText">{{ $discount > 0 ? '-' . number_format($discount, 0, ',', '.') . 'đ' : 'Chưa áp dụng' }}</span>
                             </div>
                             <div class="d-flex justify-content-between h4 fw-bold mb-4">
@@ -1226,7 +1245,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <button type="submit" class="btn btn-primary btn-lg w-100" id="placeOrderButton" @disabled(! $checkoutPhoneReady)>
                             <i class="bi bi-check2-circle me-2"></i>Đặt hàng
                         </button>
                         <a href="{{ route('cart.index') }}" class="btn btn-outline-primary w-100 mt-3">Quay lại giỏ hàng</a>
@@ -1396,7 +1415,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header border-bottom">
-                <h2 class="address-modal-title mb-0" id="voucherModalTitle">Chọn Chill Drink Voucher</h2>
+                <h2 class="address-modal-title mb-0" id="voucherModalTitle">Chọn phiếu ưu đãi Chill Drink</h2>
                 <div class="ms-auto d-flex align-items-center gap-2 text-secondary">
                     <span>Hỗ trợ</span>
                     <i class="bi bi-question-circle"></i>
@@ -1405,8 +1424,8 @@
             </div>
             <div class="modal-body">
                 <div class="voucher-search-box d-flex flex-column flex-md-row align-items-md-center gap-3 mb-3">
-                    <label for="voucherCodeInput" class="fw-semibold text-secondary flex-shrink-0">Mã Voucher</label>
-                    <input id="voucherCodeInput" type="text" class="form-control" placeholder="Mã Chill Drink Voucher" value="{{ $selectedVoucherCode }}">
+                    <label for="voucherCodeInput" class="fw-semibold text-secondary flex-shrink-0">Mã ưu đãi</label>
+                    <input id="voucherCodeInput" type="text" class="form-control" placeholder="Nhập mã ưu đãi Chill Drink" value="{{ $selectedVoucherCode }}">
                     <button type="button" class="btn voucher-apply-btn" id="voucherManualApply">Áp dụng</button>
                 </div>
 
@@ -1415,7 +1434,7 @@
                 <div class="mb-4" id="receivedVouchersSection">
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <span class="voucher-kind" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fbbf24;">
-                            <i class="bi bi-star-fill me-1"></i>Voucher đã nhận
+                            <i class="bi bi-star-fill me-1"></i>Phiếu ưu đãi đã nhận
                         </span>
                         <span class="small text-secondary">{{ $receivedVouchers->count() }} mã</span>
                     </div>
@@ -1438,14 +1457,11 @@
                                     ? 'bi-truck'
                                     : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                 $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                $hasRank = ! $voucher->required_rank || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
                                 $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
+                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
                                 $disabledReason = ! $hasMinimumOrder
                                     ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                    : (! $hasRank
-                                        ? 'Cần rank ' . $voucher->rankLabel()
-                                        : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null));
+                                    : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
                             @endphp
                             <div
                                 class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
@@ -1477,9 +1493,6 @@
                                     </div>
                                     <div class="text-secondary mb-2">
                                         Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
-                                        @if($voucher->required_rank)
-                                            · Rank {{ $voucher->rankLabel() }}
-                                        @endif
                                         @if($voucher->is_redeemable && $voucher->point_cost > 0)
                                             · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
                                         @endif
@@ -1513,7 +1526,7 @@
 
                 <div class="mb-3">
                     <div class="voucher-group-title">Mã có thể áp dụng</div>
-                    <div class="text-secondary">Có thể chọn 1 voucher freeship và 1 voucher giảm giá</div>
+                    <div class="text-secondary">Có thể chọn 1 phiếu miễn phí vận chuyển và 1 phiếu giảm giá</div>
                 </div>
 
                 <div class="vstack gap-4">
@@ -1540,14 +1553,11 @@
                                                 ? 'bi-truck'
                                                 : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                             $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                            $hasRank = ! $voucher->required_rank || (($rankOrder[$loyaltyContext['rank'] ?? 'bronze'] ?? 1) >= ($rankOrder[$voucher->required_rank] ?? 1));
                                             $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasRank && $hasPoints;
+                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
                                             $disabledReason = ! $hasMinimumOrder
                                                 ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                                : (! $hasRank
-                                                    ? 'Cần rank ' . $voucher->rankLabel()
-                                                    : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null));
+                                                : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
                                         @endphp
                                         <div
                                             class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
@@ -1573,9 +1583,6 @@
                                                 </div>
                                                 <div class="text-secondary mb-2">
                                                     Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
-                                                    @if($voucher->required_rank)
-                                                        · Rank {{ $voucher->rankLabel() }}
-                                                    @endif
                                                     @if($voucher->is_redeemable && $voucher->point_cost > 0)
                                                         · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
                                                     @endif
@@ -1633,11 +1640,14 @@
     document.addEventListener('DOMContentLoaded', function () {
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
+        const shippingPhoneInput = document.getElementById('shipping_phone_ui');
         const selectedReceiver = document.getElementById('selectedReceiver');
         const selectedPhone = document.getElementById('selectedPhone');
         const selectedAddressText = document.getElementById('selectedAddressText');
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
+        const placeOrderButton = document.getElementById('placeOrderButton');
+        const phoneWarning = document.querySelector('[data-checkout-phone-warning]');
 
         const addressListModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressListModal'));
         const addressEditModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addressEditModal'));
@@ -1664,7 +1674,114 @@
         const branchSelectShell = document.querySelector('.branch-select-shell');
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
 
+        const addressStoreEndpoint = @json(route('checkout.addresses.store'));
+        const addressUpdateEndpoint = @json(url('/checkout/addresses'));
+        const nearestBranchEndpoint = @json(route('api.branches.nearest'));
+        const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
+        const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
+        const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
+        const prepaidPaymentInput = document.querySelector('input[name="payment_method"][value="vnpay"]');
+
+        function syncScheduledPaymentRule() {
+            const scheduledInput = document.querySelector('input[name="delivery_type"][value="scheduled"]');
+            const isScheduled = Boolean(scheduledInput?.checked);
+
+            scheduledDeliveryFields?.classList.toggle('is-visible', isScheduled);
+            scheduledPaymentNotice?.classList.toggle('d-none', !isScheduled);
+
+            if (codPaymentInput) {
+                codPaymentInput.disabled = isScheduled;
+                codPaymentInput.closest('.payment-option')?.classList.toggle('opacity-50', isScheduled);
+            }
+
+            if (isScheduled && codPaymentInput?.checked && prepaidPaymentInput) {
+                prepaidPaymentInput.checked = true;
+            }
+        }
+
+        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', syncScheduledPaymentRule));
+        syncScheduledPaymentRule();
+        document.addEventListener('click', async function (event) {
+            const button = event.target.closest('[data-checkout-cart-action]');
+            if (!button || button.disabled) return;
+            if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) return;
+
+            button.disabled = true;
+            try {
+                const row = button.closest('[data-checkout-item]');
+                const cartKey = row?.dataset.checkoutItem || '';
+                const method = button.dataset.method || 'PATCH';
+                const body = new FormData();
+                body.append('_token', csrfToken);
+                body.append('_method', method);
+                if (button.dataset.quantity) body.append('quantity', button.dataset.quantity);
+                const response = await fetch(button.dataset.checkoutCartAction, {
+                    method: 'POST', body,
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                if (!response.ok) throw new Error('cart_update_failed');
+                const payload = await response.json();
+
+                if (method === 'DELETE') {
+                    row?.remove();
+                    const visibleItems = document.querySelectorAll('[data-checkout-item]:not(.d-none)').length;
+                    const hiddenItems = Array.from(document.querySelectorAll('[data-checkout-item].d-none'));
+                    hiddenItems.slice(0, Math.max(0, 3 - visibleItems)).forEach(item => item.classList.remove('d-none'));
+                } else {
+                    const item = payload.items?.[cartKey];
+                    if (row && item) {
+                        row.querySelector('[data-checkout-item-quantity]').textContent = item.quantity;
+                        row.querySelector('[data-checkout-item-quantity-text]').textContent = item.quantity;
+                        row.querySelector('[data-checkout-item-subtotal]').textContent = item.subtotal_formatted;
+                        const quantityButtons = row.querySelectorAll('[data-method="PATCH"]');
+                        if (quantityButtons[0]) {
+                            quantityButtons[0].dataset.quantity = String(Math.max(1, item.quantity - 1));
+                            quantityButtons[0].disabled = item.quantity <= 1;
+                        }
+                        if (quantityButtons[1]) {
+                            quantityButtons[1].dataset.quantity = String(Math.min(99, item.quantity + 1));
+                            quantityButtons[1].disabled = item.quantity >= 99;
+                        }
+                    }
+                }
+
+                document.querySelector('[data-checkout-item-count]').textContent = payload.count;
+                document.querySelector('[data-checkout-subtotal]').textContent = payload.total_formatted;
+                shippingConfig.subtotal = Number(payload.total || 0);
+
+                // Giá trị voucher phụ thuộc tạm tính, yêu cầu chọn lại để tổng tiền luôn chính xác.
+                selectedVoucherCode.value = '';
+                selectedShippingVoucherCode.value = '';
+                pendingVouchers = { shipping: voucherState(null), discount: voucherState(null) };
+                document.querySelectorAll('[data-voucher-card].active').forEach(card => {
+                    card.classList.remove('active');
+                    card.querySelector('.voucher-radio')?.classList.remove('active');
+                });
+                selectedVoucherText.textContent = 'Giỏ hàng đã thay đổi · vui lòng chọn lại phiếu ưu đãi';
+                shippingConfig.discount = 0;
+                summaryVoucherText.textContent = 'Chưa áp dụng';
+                updateShippingSummary();
+
+                const toggleItems = document.querySelector('[data-toggle-checkout-items]');
+                if (toggleItems) {
+                    toggleItems.dataset.totalItems = payload.count;
+                    if (payload.count <= 3) toggleItems.remove();
+                    else if (!document.querySelector('[data-checkout-extra-item]:not(.d-none)')) toggleItems.textContent = `Xem tất cả ${payload.count} món`;
+                }
+
+                if (payload.count === 0) window.location.href = @json(route('cart.index'));
+            } catch (error) {
+                button.disabled = false;
+                window.alert('Không thể cập nhật món. Vui lòng thử lại.');
+            }
+        });
         let selectedAddressId = @json($selectedAddressId ?? 'primary');
+        const voucherState = card => ({
+            code: card?.dataset.voucherCode || '',
+            label: card?.dataset.voucherLabel || '',
+            discount: Number(card?.dataset.voucherDiscount || 0),
+        });
         let pendingVouchers = {
             shipping: {
                 code: document.querySelector('[data-voucher-card][data-voucher-type="shipping"].active')?.dataset.voucherCode || '',
@@ -1691,6 +1808,19 @@
 
         function compactAddress(parts) {
             return parts.filter(Boolean).join(', ');
+        }
+
+        function syncCheckoutPhoneState() {
+            const phoneValue = String(shippingPhoneInput?.value || '').trim();
+            const hasPhone = phoneValue !== '' && phoneValue !== 'Chưa cập nhật';
+
+            if (placeOrderButton) {
+                placeOrderButton.disabled = !hasPhone;
+            }
+
+            if (phoneWarning) {
+                phoneWarning.classList.toggle('d-none', hasPhone);
+            }
         }
 
         function escapeHtml(value) {
@@ -1923,6 +2053,47 @@
             }
         }
 
+        document.querySelector('[data-find-nearest-branch]')?.addEventListener('click', function () {
+            const button = this;
+            const branchSelect = document.getElementById('branch_id');
+
+            if (!branchSelect || !navigator.geolocation) {
+                showAddressToast('Trình duyệt không hỗ trợ lấy vị trí hiện tại.', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang tìm';
+
+            navigator.geolocation.getCurrentPosition((position) => {
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                confirmedLocation = { latitude, longitude };
+                renderBranchOptions(latitude, longitude);
+
+                if (!branchSelect.value) {
+                    const firstBranch = Array.from(branchSelect.options).find((option) => option.value);
+                    if (firstBranch) {
+                        branchSelect.value = firstBranch.value;
+                    }
+                }
+
+                updateShippingSummary();
+                showAddressToast('Đã gợi ý chi nhánh gần nhất.');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }, () => {
+                showAddressToast('Không thể lấy vị trí hiện tại. Vui lòng cho phép quyền vị trí hoặc chọn chi nhánh thủ công.', 'error');
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000,
+            });
+        });
+
         function syncAddressBook(payload) {
             if (Array.isArray(payload?.address_book)) {
                 addressBook = payload.address_book;
@@ -1984,6 +2155,9 @@
             selectedDefaultBadge.classList.toggle('d-none', !address.isDefault);
             shippingAddressInput.value = address.street || '';
             shippingAreaInput.value = address.area || '';
+            if (shippingPhoneInput) {
+                shippingPhoneInput.value = address.phone || '';
+            }
             const addressLatitude = Number.parseFloat(address.latitude);
             const addressLongitude = Number.parseFloat(address.longitude);
             if (Number.isFinite(addressLatitude) && Number.isFinite(addressLongitude)) {
@@ -2009,6 +2183,7 @@
             }
             renderAddressList();
             updateShippingSummary();
+            syncCheckoutPhoneState();
             updateBranchSelectorState();
         }
 
@@ -2147,7 +2322,7 @@
             selectedVoucherCode.value = pendingVouchers.discount.code || '';
             selectedShippingVoucherCode.value = pendingVouchers.shipping.code || '';
             const labels = [pendingVouchers.shipping.label, pendingVouchers.discount.label].filter(Boolean);
-            selectedVoucherText.textContent = labels.length ? `Đã chọn: ${labels.join(' + ')}` : 'Chưa chọn voucher';
+            selectedVoucherText.textContent = labels.length ? `Đã chọn: ${labels.join(' + ')}` : 'Chưa chọn phiếu ưu đãi';
             shippingConfig.discount = Number(pendingVouchers.discount.discount || 0) + Math.min(shippingConfig.fixedShippingFee, Number(pendingVouchers.shipping.discount || 0));
             summaryVoucherText.textContent = shippingConfig.discount > 0
                 ? `-${formatVnd(shippingConfig.discount)}`
@@ -2468,7 +2643,7 @@
                                         <span class="fw-semibold text-secondary">${escapeHtml(voucher.value)}</span>
                                     </div>
                                     <div class="text-secondary small">
-                                        ${escapeHtml(voucher.description || 'Voucher')}
+                                        ${escapeHtml(voucher.description || 'Phiếu ưu đãi')}
                                     </div>
                                     <span class="voucher-only mt-2 mb-2">
                                         Bạn đã nhận voucher này
@@ -2506,6 +2681,7 @@
         applyAddress(getAddressById(selectedAddressId));
         renderBranchOptions(confirmedLocation.latitude, confirmedLocation.longitude);
         updateShippingSummary();
+        syncCheckoutPhoneState();
     });
 
     // Delivery type toggle

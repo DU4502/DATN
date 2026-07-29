@@ -2,9 +2,9 @@
     <img src="{{ $item['image'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80' }}" alt="{{ $item['name'] }}" class="checkout-item-img">
     <div class="flex-grow-1 min-w-0">
         <div class="fw-bold">{{ $item['name'] }}</div>
-        <div class="text-secondary small">{{ $item['size_label'] ?? 'Size M' }} · Số lượng: <span data-checkout-item-quantity-text>{{ $item['quantity'] }}</span></div>
+        <div class="text-secondary small">{{ $item['size_label'] ?? 'Kích cỡ M' }} · Số lượng: <span data-checkout-item-quantity-text>{{ $item['quantity'] }}</span></div>
         @if(!empty($item['toppings']))
-            <div class="text-primary small fw-semibold">Topping: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}</div>
+            <div class="text-primary small fw-semibold">Món thêm: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}</div>
         @endif
         <div class="text-secondary small">Đường {{ $item['sugar_level'] ?? 100 }}% · Đá {{ $item['ice_level'] ?? 100 }}%</div>
         <div class="checkout-item-actions mt-2">

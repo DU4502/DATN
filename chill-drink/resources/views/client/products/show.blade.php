@@ -44,8 +44,16 @@
         height: 100%;
         object-fit: contain !important;
         object-position: center;
-        padding: 0.65rem;
-        transition: opacity 0.18s ease;
+        padding: clamp(1.5rem, 2.5vw, 2.5rem);
+        opacity: 1;
+        transform: scale(1);
+        transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1), transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: opacity, transform;
+    }
+
+    .detail-photo-card img.is-changing {
+        opacity: 0.62;
+        transform: scale(0.992);
     }
 
     .detail-gallery-nav {
@@ -141,7 +149,7 @@
         display: grid;
         grid-template-columns: minmax(420px, 0.92fr) minmax(0, 1.08fr);
         gap: clamp(2rem, 3.5vw, 3.75rem);
-        align-items: stretch;
+        align-items: start;
         overflow: visible;
     }
 
@@ -151,13 +159,14 @@
     }
 
     .detail-media-panel {
-        height: 100%;
+        height: auto;
+        align-self: start;
     }
 
     .detail-summary {
         max-width: 760px;
         width: 100%;
-        height: 100%;
+        height: auto;
         min-height: 0;
     }
 
@@ -186,13 +195,51 @@
         min-height: 0;
     }
 
+    .product-preferences-panel {
+        width: 100%;
+        margin-top: -1rem;
+        padding: 0.6rem 0.85rem 0.68rem !important;
+        border: 1px solid #e1ece8;
+        border-top: 0;
+        border-radius: 0 0 18px 18px;
+        background: #ffffff;
+        box-shadow: 0 14px 32px rgba(17, 62, 52, .07);
+    }
+
+    .persistent-size-panel {
+        width: 100%;
+        padding: 0.6rem 0.85rem 0.52rem !important;
+        border: 1px solid #e1ece8;
+        border-bottom: 0;
+        border-radius: 18px 18px 0 0;
+        background: #ffffff;
+        box-shadow: 0 -5px 24px rgba(17, 62, 52, .035);
+    }
+
     .option-block {
-        margin-bottom: 0.9rem;
+        margin-bottom: 0.52rem;
+    }
+
+    .product-preferences-panel .option-block:last-child { margin-bottom: 0; }
+
+    .persistent-size-panel .option-label,
+    .product-preferences-panel .option-label {
+        margin-bottom: 0.32rem !important;
+    }
+
+    .persistent-size-panel [data-size-group] {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.4rem !important;
+        padding: 0.35rem;
+        border: 1px solid #e6eeeb;
+        border-radius: 15px;
+        background: #f4f8f7;
     }
 
     .option-label {
         color: var(--c-ink, #111827);
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 800;
         letter-spacing: 0;
         text-transform: none;
@@ -231,9 +278,27 @@
     }
 
     .size-choice {
+        min-height: 46px;
         min-width: 0;
         flex: 1 1 0;
         text-align: center;
+        border-color: transparent;
+        border-radius: 11px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .size-choice:hover {
+        border-color: #c9ded8;
+        background: rgba(255, 255, 255, .8);
+        box-shadow: none;
+    }
+
+    .size-choice.active {
+        border-color: var(--c-primary, #0d9373);
+        background: #ffffff;
+        box-shadow: 0 5px 14px rgba(13, 147, 115, .12), inset 0 0 0 1px var(--c-primary, #0d9373);
+        transform: none;
     }
 
     .size-choice small {
@@ -249,7 +314,8 @@
         border: 1px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-full, 999px);
         background: #ffffff;
-        padding: 0.38rem 0.7rem;
+        padding: 0.42rem 0.75rem;
+        box-shadow: 0 8px 22px rgba(17, 62, 52, .06);
     }
 
     .detail-action-row {
@@ -281,30 +347,101 @@
     .detail-favorite-btn {
         width: 50px;
         height: 50px;
-        padding: 0;
+        min-width: 50px;
+        min-height: 50px;
+        padding: 0 !important;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50% !important;
+        border-radius: 100% !important;
         font-size: 1.15rem;
+        flex-shrink: 0;
+        aspect-ratio: 1;
+        line-height: 1;
+        box-sizing: border-box;
     }
 
     .product-detail-actions {
         order: 5;
-        margin-top: auto;
-        border-top: 1px solid var(--c-border, #e5e7eb);
-        padding-top: 0.85rem;
-        background: #fff;
+        margin-top: 0.35rem;
+        border-top: 0;
+        padding-top: 0;
+        padding: .2rem 0;
+        background: transparent;
     }
 
     .product-detail-actions .btn-primary {
-        min-height: 50px;
+        min-height: 54px;
+    }
+
+    .detail-action-row.is-choosing {
+        grid-template-columns: 1fr;
+        margin-top: 0;
+    }
+
+    .detail-action-row.is-choosing .qty-control {
+        justify-self: start;
+    }
+
+    .detail-action-content.is-hidden { display: none; }
+
+    .product-option-panel[hidden] { display: none !important; }
+
+    .product-option-panel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 1061;
+        width: min(640px, calc(100vw - 2rem));
+        max-height: calc(100vh - 2rem);
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 1.25rem !important;
+        border: 1px solid #dce9e5;
+        border-radius: 20px;
+        background: #ffffff;
+        box-shadow: 0 28px 80px rgba(7, 30, 28, 0.28);
+        transform: translate(-50%, -50%);
+        animation: optionPanelIn .22s ease-out;
+    }
+
+    body.product-options-open { overflow: hidden; }
+
+    body.product-options-open::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 1060;
+        background: rgba(9, 24, 22, 0.48);
+        backdrop-filter: blur(2px);
+    }
+
+    .option-panel-head,
+    .option-confirm-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .option-panel-head { margin-bottom: .9rem; }
+    .option-confirm-row { padding-top: 1rem; border-top: 1px solid var(--c-border, #e5e7eb); }
+    .option-confirm-row .btn-primary { min-width: min(100%, 300px); min-height: 50px; }
+
+    @keyframes optionPanelIn {
+        from { opacity: 0; transform: translate(-50%, calc(-50% - 10px)) scale(.98); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
 
     .detail-buy-btn {
-        min-height: 50px;
+        min-height: 54px;
         border-radius: var(--radius-full, 999px);
         font-weight: 800;
+    }
+
+    .product-detail-actions .qty-control,
+    .product-detail-actions .detail-favorite-btn {
+        min-height: 54px;
     }
 
     .detail-quick-actions {
@@ -372,12 +509,36 @@
     }
 
     .topping-choice {
-        flex: 1 1 calc(33.333% - 0.5rem);
-        min-width: 150px;
+        width: 100%;
+        min-width: 0;
+        min-height: 46px;
         display: flex;
         align-items: center;
         gap: 0.55rem;
         text-align: left;
+        padding: 0.38rem 0.62rem;
+        border-color: #e2ebe8;
+        border-radius: 12px;
+        background: #f9fbfa;
+        box-shadow: none;
+    }
+
+    [data-topping-group] {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.55rem !important;
+    }
+
+    .topping-choice:hover {
+        border-color: #b9d8cf;
+        background: #f1faf7;
+        box-shadow: none;
+    }
+
+    .topping-choice.active {
+        background: #eaf8f4;
+        box-shadow: inset 0 0 0 1px var(--c-primary, #0d9373);
+        transform: none;
     }
 
     .topping-choice::before {
@@ -410,17 +571,17 @@
 
     .compact-select-toggle {
         width: 100%;
-        min-height: 48px;
+        min-height: 43px;
         border: 1.5px solid var(--c-border, #e5e7eb);
-        border-radius: var(--radius-sm, 8px);
-        padding: 0.55rem 0.9rem;
+        border-radius: 12px;
+        padding: 0.45rem 0.75rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
         color: var(--c-ink, #111827);
         font-weight: 800;
-        background: var(--c-surface, #fff);
+        background: #f9fbfa;
         cursor: pointer;
         transition: border-color 0.16s ease, box-shadow 0.16s ease;
     }
@@ -433,16 +594,12 @@
     }
 
     .compact-select-title {
-        color: var(--c-primary-dark, #067a5f);
-        font-size: 0.68rem;
-        font-weight: 800;
-        line-height: 1;
-        text-transform: uppercase;
+        display: none;
     }
 
     .compact-select-value {
         color: var(--c-ink, #111827);
-        font-size: 0.94rem;
+        font-size: 0.9rem;
         font-weight: 850;
         line-height: 1.2;
     }
@@ -608,8 +765,8 @@
         }
 
         .detail-layout {
-            height: clamp(500px, calc(100vh - 190px), 690px);
-            min-height: 0;
+            height: auto;
+            min-height: 600px;
         }
 
         .detail-summary {
@@ -665,12 +822,16 @@
             padding: 0.4rem 0.75rem;
         }
 
+        .size-choice { min-height: 52px; }
+
+        .compact-select-toggle { min-height: 50px; }
+
         .topping-choice {
-            min-height: 44px;
+            min-height: 50px;
         }
 
         .product-detail-actions {
-            padding-top: 0.55rem;
+            padding-top: 0;
         }
 
         .detail-buy-btn,
@@ -681,11 +842,22 @@
         .detail-favorite-btn {
             width: 46px;
             height: 46px;
+            min-width: 46px;
+            min-height: 46px;
         }
 
         .detail-action-content {
             grid-template-columns: minmax(0, 1fr) 46px;
         }
+
+        .product-option-panel {
+            width: calc(100vw - 1.25rem);
+            max-height: calc(100vh - 1.25rem);
+            padding: 1rem !important;
+            border-radius: 18px;
+        }
+        .option-confirm-row { align-items: stretch; flex-direction: column-reverse; }
+        .option-confirm-row .btn { width: 100%; }
 
         .detail-thumb {
             width: 76px;
@@ -698,6 +870,9 @@
     }
 
     @media (max-width: 991.98px) {
+        .detail-gallery,
+        .detail-media-panel { height: auto; }
+
         .detail-layout {
             grid-template-columns: 1fr;
             gap: 1.75rem;
@@ -722,6 +897,18 @@
 
         .detail-summary {
             height: auto;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        [data-topping-group] {
+            grid-template-columns: 1fr;
+        }
+
+        .persistent-size-panel,
+        .product-preferences-panel {
+            padding-left: 0.85rem !important;
+            padding-right: 0.85rem !important;
         }
     }
 
@@ -905,6 +1092,36 @@
                     </div>
                     @endif
 
+                    <div class="option-card persistent-size-panel">
+                        <div class="option-block mb-0">
+                            <label class="option-label d-block mb-3">Chọn kích cỡ</label>
+                            <div class="d-flex flex-wrap gap-2" data-size-group>
+                                @php
+                                    $productSizesMap = isset($product) && $product->relationLoaded('sizes')
+                                        ? $product->sizes->keyBy(fn($s) => strtoupper(trim($s->name)))
+                                        : collect();
+                                @endphp
+
+                                <button type="button" class="choice-btn size-choice active" data-size-option="S" data-size-extra="0">
+                                    S
+                                    <small>Giá gốc</small>
+                                </button>
+
+                                @foreach(['M', 'L'] as $szName)
+                                    @php
+                                        $sizeObj = $productSizesMap->get($szName);
+                                        $defaultExtra = $szName === 'M' ? 5000 : 10000;
+                                        $extraPrice = $sizeObj ? (int) $sizeObj->pivot->price : $defaultExtra;
+                                    @endphp
+                                    <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
+                                        {{ $szName }}
+                                        <small>+{{ number_format($extraPrice, 0, ',', '.') }}đ</small>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="product-detail-actions detail-action-row">
                         <div class="qty-control d-flex align-items-center justify-content-between">
                             <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
@@ -942,25 +1159,7 @@
                         @endif
                     </div>
 
-                    <div class="option-card p-4">
-                        <div class="option-block">
-                            <label class="option-label d-block mb-3">Size</label>
-                            <div class="d-flex flex-wrap gap-2" data-size-group>
-                                <button type="button" class="choice-btn size-choice active" data-size-option="S" data-size-extra="0">
-                                    S
-                                    <small>Giá gốc</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="M" data-size-extra="5000">
-                                    M
-                                    <small>+5.000đ</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
-                                    L
-                                    <small>+10.000đ</small>
-                                </button>
-                            </div>
-                        </div>
-
+                    <div class="option-card product-preferences-panel">
                         <div class="row g-3 option-block">
                             <div class="col-md-6">
                                 <label class="option-label d-block mb-3">Mức đường</label>
@@ -1001,7 +1200,7 @@
                         </div>
 
                         <div class="option-block">
-                            <label class="option-label d-block mb-3">Thêm topping</label>
+                            <label class="option-label d-block mb-3">Thêm món kèm</label>
                             <div class="d-flex flex-wrap gap-2" data-topping-group>
                                 @foreach($detailToppings as $topping)
                                     <button type="button" class="choice-btn topping-choice" data-topping-name="{{ $topping[0] }}" data-topping-price="{{ $topping[1] }}">
@@ -1219,7 +1418,7 @@
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
                         <form action="{{ route('cart.add', 'demo-'.$item[3]) }}" method="POST" class="related-add-form" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="related-add-btn" aria-label="Thêm {{ $item[0] }} vào giỏ" title="Thêm vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
                         <a href="{{ route('products.show', $item[3]) }}">
-                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
+                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top" loading="lazy" decoding="async">
                         </a>
                         <div class="card-body">
                             <h3 class="h5">
@@ -1324,6 +1523,55 @@
             });
         }
 
+        const optionPanel = document.querySelector('[data-product-option-panel]');
+        const actionRow = document.querySelector('.detail-action-row');
+        const actionContent = actionRow?.querySelector('.detail-action-content');
+        const optionConfirm = optionPanel?.querySelector('[data-option-confirm]');
+
+        function openProductOptions(mode) {
+            if (!optionPanel || !optionConfirm) return;
+            optionPanel.hidden = false;
+            document.body.classList.add('product-options-open');
+            actionRow?.classList.add('is-choosing');
+            actionContent?.classList.add('is-hidden');
+
+            if (mode === 'buy') {
+                optionConfirm.name = 'buy_now';
+                optionConfirm.value = '1';
+                optionConfirm.innerHTML = '<i class="bi bi-bag-check me-2"></i>Xác nhận mua ngay';
+            } else {
+                optionConfirm.removeAttribute('name');
+                optionConfirm.removeAttribute('value');
+                optionConfirm.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Xác nhận thêm vào giỏ';
+            }
+
+            optionPanel.scrollTop = 0;
+        }
+
+        function closeProductOptions() {
+            if (!optionPanel) return;
+            optionPanel.hidden = true;
+            document.body.classList.remove('product-options-open');
+            actionRow?.classList.remove('is-choosing');
+            actionContent?.classList.remove('is-hidden');
+        }
+
+        document.querySelectorAll('[data-open-product-options]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openProductOptions(button.dataset.openProductOptions || 'cart');
+            });
+        });
+
+        document.querySelectorAll('[data-close-product-options]').forEach(function (button) {
+            button.addEventListener('click', closeProductOptions);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && optionPanel && !optionPanel.hidden) {
+                closeProductOptions();
+            }
+        });
+
         // If user navigated with #reviews, scroll to review form and focus
         if (window.location.hash === '#reviews') {
             const reviewPanel = document.querySelector('.review-form-panel');
@@ -1415,20 +1663,40 @@
         }
 
         const mainImage = document.getElementById('detailMainImage');
+        const detailGallery = document.querySelector('.detail-gallery');
+        const detailPhotoCard = document.querySelector('.detail-photo-card');
+        const detailThumbs = document.querySelector('.detail-thumbs');
+        const detailSummary = document.querySelector('.detail-summary');
         const thumbs = document.querySelectorAll('[data-detail-thumb]');
         const prevButton = document.querySelector('[data-gallery-prev]');
         const nextButton = document.querySelector('[data-gallery-next]');
         let activeImageIndex = 0;
-        let autoSlideInterval = null;
-        let isUserInteracting = false;
-        let isTransitioning = false;
+        let galleryTimer = null;
+        let galleryTransitionTimer = null;
 
-        const setActiveImage = function(index, direction = 'next') {
-            if (!mainImage || !thumbs.length || isTransitioning) {
+        const balanceDetailColumns = function () {
+            if (!detailPhotoCard || !detailSummary) return;
+            if (window.matchMedia('(max-width: 991.98px)').matches) {
+                detailPhotoCard.style.height = '';
                 return;
             }
 
-            isTransitioning = true;
+            const thumbsHeight = detailThumbs ? detailThumbs.getBoundingClientRect().height + 14 : 0;
+            const targetHeight = Math.max(420, detailSummary.getBoundingClientRect().height - thumbsHeight);
+            detailPhotoCard.style.height = `${Math.round(targetHeight)}px`;
+        };
+
+        balanceDetailColumns();
+        window.addEventListener('resize', balanceDetailColumns);
+        if (window.ResizeObserver && detailSummary) {
+            new ResizeObserver(balanceDetailColumns).observe(detailSummary);
+        }
+
+        const setActiveImage = function(index) {
+            if (!mainImage || !thumbs.length) {
+                return;
+            }
+
             activeImageIndex = (index + thumbs.length) % thumbs.length;
 
             thumbs.forEach(function(item) {
@@ -1437,156 +1705,73 @@
 
             const activeThumb = thumbs[activeImageIndex];
             activeThumb.classList.add('active');
+            mainImage.classList.add('is-changing');
 
-            // Create new image for swipe effect
-            const newImage = document.createElement('img');
-            newImage.src = activeThumb.dataset.detailThumb;
-            newImage.alt = mainImage.alt;
-            newImage.style.cssText = `
-                position: absolute;
-                inset: 0;
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                transform: translateX(${direction === 'next' ? '100%' : '-100%'});
-                transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-                z-index: 2;
-            `;
+            if (galleryTransitionTimer) {
+                window.clearTimeout(galleryTransitionTimer);
+            }
 
-            newImage.onerror = function() {
-                newImage.onerror = null;
-                newImage.src = mainImage.dataset.detailFallback || '';
-            };
-
-            mainImage.parentElement.style.position = 'relative';
-            mainImage.parentElement.style.overflow = 'hidden';
-            mainImage.parentElement.appendChild(newImage);
-
-            // Swipe animation
-            requestAnimationFrame(function() {
-                // New image: slide in from right/left
-                newImage.style.transform = 'translateX(0)';
-
-                // Old image: slide out to left/right
-                mainImage.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-                mainImage.style.transform = `translateX(${direction === 'next' ? '-100%' : '100%'})`;
-            });
-
-            setTimeout(function() {
-                mainImage.src = newImage.src;
-                mainImage.style.transform = 'translateX(0)';
-                mainImage.style.transition = '';
-                
-                if (newImage.parentElement) {
-                    newImage.parentElement.removeChild(newImage);
-                }
-                
-                isTransitioning = false;
-            }, 450);
+            galleryTransitionTimer = window.setTimeout(function() {
+                mainImage.onerror = function() {
+                    mainImage.onerror = null;
+                    mainImage.src = mainImage.dataset.detailFallback || '';
+                };
+                mainImage.src = activeThumb.dataset.detailThumb;
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        mainImage.classList.remove('is-changing');
+                    });
+                });
+            }, 220);
         };
 
-        // Auto-slide function
-        const startAutoSlide = function() {
-            if (thumbs.length <= 1) return;
-            
-            autoSlideInterval = setInterval(function() {
-                if (!isUserInteracting && !isTransitioning) {
-                    setActiveImage(activeImageIndex + 1, 'next');
-                }
-            }, 4000);
-        };
-
-        const stopAutoSlide = function() {
-            if (autoSlideInterval) {
-                clearInterval(autoSlideInterval);
-                autoSlideInterval = null;
+        const stopGalleryAutoPlay = function () {
+            if (galleryTimer) {
+                window.clearInterval(galleryTimer);
+                galleryTimer = null;
             }
         };
 
-        const resetAutoSlide = function() {
-            stopAutoSlide();
-            isUserInteracting = true;
-            
-            setTimeout(function() {
-                isUserInteracting = false;
-                startAutoSlide();
-            }, 5000);
+        const startGalleryAutoPlay = function () {
+            stopGalleryAutoPlay();
+            if (thumbs.length < 2 || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            galleryTimer = window.setInterval(function () {
+                setActiveImage(activeImageIndex + 1);
+            }, 3500);
+        };
+
+        const restartGalleryAutoPlay = function () {
+            stopGalleryAutoPlay();
+            startGalleryAutoPlay();
         };
 
         if (mainImage && thumbs.length) {
-            mainImage.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-
             thumbs.forEach(function(thumb, index) {
                 thumb.addEventListener('click', function() {
-                    const direction = index > activeImageIndex ? 'next' : 'prev';
-                    setActiveImage(index, direction);
-                    resetAutoSlide();
+                    setActiveImage(index);
+                    restartGalleryAutoPlay();
                 });
             });
 
             prevButton?.addEventListener('click', function() {
-                setActiveImage(activeImageIndex - 1, 'prev');
-                resetAutoSlide();
+                setActiveImage(activeImageIndex - 1);
+                restartGalleryAutoPlay();
             });
 
             nextButton?.addEventListener('click', function() {
-                setActiveImage(activeImageIndex + 1, 'next');
-                resetAutoSlide();
+                setActiveImage(activeImageIndex + 1);
+                restartGalleryAutoPlay();
             });
 
-            // Pause on hover
-            const galleryContainer = document.querySelector('.detail-gallery');
-            if (galleryContainer) {
-                galleryContainer.addEventListener('mouseenter', function() {
-                    isUserInteracting = true;
-                });
-                
-                galleryContainer.addEventListener('mouseleave', function() {
-                    isUserInteracting = false;
-                });
-            }
-
-            // Keyboard navigation
-            document.addEventListener('keydown', function(e) {
-                if (!mainImage || !thumbs.length) return;
-                
-                if (e.key === 'ArrowLeft') {
-                    setActiveImage(activeImageIndex - 1, 'prev');
-                    resetAutoSlide();
-                } else if (e.key === 'ArrowRight') {
-                    setActiveImage(activeImageIndex + 1, 'next');
-                    resetAutoSlide();
-                }
+            detailGallery?.addEventListener('mouseenter', stopGalleryAutoPlay);
+            detailGallery?.addEventListener('mouseleave', startGalleryAutoPlay);
+            detailGallery?.addEventListener('focusin', stopGalleryAutoPlay);
+            detailGallery?.addEventListener('focusout', startGalleryAutoPlay);
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) stopGalleryAutoPlay();
+                else startGalleryAutoPlay();
             });
-
-            // Start auto-slide
-            startAutoSlide();
-
-            // Stop auto-slide when page is hidden
-            document.addEventListener('visibilitychange', function() {
-                if (document.hidden) {
-                    stopAutoSlide();
-                } else {
-                    if (!isUserInteracting) {
-                        startAutoSlide();
-                    }
-                }
-            });
-
-            // Preload next image
-            const preloadImage = function(index) {
-                const nextIndex = (index + 1) % thumbs.length;
-                const nextThumb = thumbs[nextIndex];
-                if (nextThumb) {
-                    const img = new Image();
-                    img.src = nextThumb.dataset.detailThumb;
-                }
-            };
-            
-            preloadImage(activeImageIndex);
-            setInterval(function() {
-                preloadImage(activeImageIndex);
-            }, 3500);
+            startGalleryAutoPlay();
         }
 
         const reviewForm = document.querySelector('[data-review-form]');

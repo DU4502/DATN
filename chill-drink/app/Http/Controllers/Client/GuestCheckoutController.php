@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Models\Branch;
 use App\Models\Order;
+use App\Services\OrderCodeGenerator;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\ShippingFee;
@@ -85,7 +86,12 @@ class GuestCheckoutController extends CheckoutController
             'guest_email' => ['required', 'string', 'email', 'max:255'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
-            'branch_id' => ['required', 'integer', 'exists:branches,id'],
+            'branch_id' => [
+                'nullable',
+                'required_if:fulfillment_type,pickup',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
             'delivery_type' => ['required', Rule::in(['now', 'scheduled'])],
             'scheduled_delivery_time' => [
                 'nullable', 'date', 'required_if:delivery_type,scheduled',
@@ -103,7 +109,7 @@ class GuestCheckoutController extends CheckoutController
             'guest_email.required' => 'Vui lòng nhập email.',
             'guest_email.email' => 'Email không đúng định dạng.',
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
-            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.required_if' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
             'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
         ]);
@@ -180,7 +186,15 @@ class GuestCheckoutController extends CheckoutController
         }
 
         $request->validate([
-            'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
+            'payment_method' => [
+                'required',
+                Rule::in(array_keys($this->paymentOptions())),
+                function ($attribute, $value, $fail) use ($guestInfo) {
+                    if (($guestInfo['delivery_type'] ?? 'now') === 'scheduled' && $value === 'cod') {
+                        $fail('Đơn đặt giao sau phải thanh toán trước. Vui lòng chọn VNPay để tiếp tục.');
+                    }
+                },
+            ],
         ], [
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
@@ -236,21 +250,24 @@ class GuestCheckoutController extends CheckoutController
             $note = mb_substr($note, 0, 500);
             $guestToken = Str::random(48);
 
-            // Branch_id is always required and comes from guest_checkout session
             $branchId = $guestInfo['branch_id'] ?? null;
-            if (!$branchId) {
+            if (! $branchId && $deliveryType === 'delivery') {
+                $branchId = Branch::query()->where('status', true)->orderBy('id')->value('id');
+            }
+            if (! $branchId && $deliveryType === 'pickup') {
                 throw new \RuntimeException('Vui lòng chọn chi nhánh trước khi đặt hàng.');
             }
 
             $orderData = [
-                'user_id'       => null,
-                'guest_name'    => $guestInfo['guest_name'],
-                'guest_phone'   => $guestInfo['guest_phone'],
-                'guest_email'   => strtolower($guestInfo['guest_email']),
-                'guest_token'   => $guestToken,
+                'order_code'     => OrderCodeGenerator::generate($branchId, $deliveryType),
+                'user_id'        => null,
+                'guest_name'     => $guestInfo['guest_name'],
+                'guest_phone'    => $guestInfo['guest_phone'],
+                'guest_email'    => strtolower($guestInfo['guest_email']),
+                'guest_token'    => $guestToken,
                 'fulfillment_type' => $deliveryType,
-                'branch_id'     => $branchId,
-                'delivery_type' => $guestInfo['delivery_type'] ?? 'now',
+                'branch_id'      => $branchId,
+                'delivery_type'  => $guestInfo['delivery_type'] ?? 'now',
                 'scheduled_delivery_time' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
                 'scheduled_at' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
                 'delivery_note' => $guestInfo['delivery_note'] ?? null,

@@ -152,6 +152,11 @@ class VnpayController extends Controller
                 RealtimeOrderNotifier::orderCreated($order);
             }
 
+            // Tạo conversation chat với chi nhánh nhận đơn (chỉ user đã đăng nhập)
+            if (auth()->check() && $order->branch_id) {
+                \App\Support\ChatHelper::ensureChatWithOrderBranch($order);
+            }
+
             return $this->resultView(
                 $order->fresh(),
                 'success',

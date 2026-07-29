@@ -1,19 +1,16 @@
 @extends('layouts.super-admin')
 
-@section('page-title', 'Dashboard')
+@section('page-title', 'Tổng quan')
 
 @section('content')
 <style>
-    :root {
+    .sa-page {
         --sa-green: #0d9373;
         --sa-green-dark: #067a5f;
         --sa-green-soft: #e7f7f2;
         --sa-ink: #111827;
         --sa-muted: #6b7280;
         --sa-border: #e1e6e4;
-    }
-
-    .sa-page {
         display: grid;
         gap: 1rem;
     }
@@ -167,7 +164,7 @@
     <header class="sa-header">
         <div>
             <p class="sa-kicker">Tổng quan hệ thống</p>
-            <h1 class="sa-title">Super Admin Dashboard</h1>
+            <h1 class="sa-title">Tổng quan quản trị cấp cao</h1>
             <p class="sa-subtitle">Quản trị tài khoản, quyền truy cập, bảo mật và tình trạng nền tảng Chill Drink.</p>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
@@ -407,7 +404,7 @@
                     <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'month'])) }}#branch-ranking" data-ranking-period="month" class="sa-btn {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
                     <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'year'])) }}#branch-ranking" data-ranking-period="year" class="sa-btn {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
                 </div>
-                <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal" style="min-height:32px; padding:0.28rem 0.7rem; border-radius:999px; white-space:nowrap; font-size:0.75rem;"><i class="bi bi-plus-lg"></i> Thêm chi nhánh</button>
+                <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal" style="min-height:32px; padding:0.28rem 0.7rem; border-radius:999px; white-space:nowrap; font-size:0.75rem;"><i class="bi bi-plus-circle"></i> Thêm chi nhánh</button>
             </div>
         </div>
 
@@ -418,7 +415,7 @@
                         <tr>
                             <th>Hạng</th>
                             <th>Chi nhánh</th>
-                            <th>Admin</th>
+                            <th>Quản trị viên</th>
                             <th>Trạng thái</th>
                             <th>Nhân viên</th>
                             <th>Đơn hàng</th>
@@ -483,87 +480,56 @@
                             @method('PUT')
                             <input type="hidden" name="form_type" value="branch-edit">
                             <input type="hidden" name="branch_modal_id" value="{{ $branch['branch_id'] }}">
-                            <input type="hidden" name="return_to" value="super-admin">
                             <div class="modal-header">
                                 <h2 class="modal-title fs-6 fw-bold" id="branchEditModalLabel{{ $branch['branch_id'] }}">Sửa chi nhánh</h2>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                             </div>
                             <div class="modal-body">
                                 <div class="alert alert-danger d-none" role="alert" data-branch-edit-errors="{{ $branch['branch_id'] }}" style="font-size: 0.8rem;"></div>
-                                
-                                {{-- Row 1: Tên + Mã --}}
-                                <div class="row g-3 mb-3">
-                                    <div class="col-sm-7">
-                                        <label class="form-label small fw-bold" for="branch_name_{{ $branch['branch_id'] }}">Tên chi nhánh <span class="text-danger">*</span></label>
-                                        <input id="branch_name_{{ $branch['branch_id'] }}" class="form-control @error('name', 'editBranch') is-invalid @enderror" name="name" value="{{ $isEditingThisBranch ? old('name', $branch['branch_name']) : $branch['branch_name'] }}" placeholder="Nhập tên chi nhánh" required>
-                                        @error('name', 'editBranch')
-                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                    <div class="col-sm-5">
-                                        <label class="form-label small fw-bold" for="branch_code_{{ $branch['branch_id'] }}">Mã chi nhánh <span class="text-danger">*</span></label>
-                                        <input id="branch_code_{{ $branch['branch_id'] }}" class="form-control @error('code', 'editBranch') is-invalid @enderror" name="code" value="{{ $isEditingThisBranch ? old('code', $branch['branch_code']) : $branch['branch_code'] }}" placeholder="VD: CN1, CN2" required>
-                                        @error('code', 'editBranch')
-                                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                                        @enderror
-                                    </div>
-                                </div>
-
-                                {{-- Row 2: Điện thoại --}}
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold" for="branch_phone_{{ $branch['branch_id'] }}">Điện thoại</label>
-                                    <input id="branch_phone_{{ $branch['branch_id'] }}" class="form-control @error('phone', 'editBranch') is-invalid @enderror" type="text" name="phone" value="{{ $isEditingThisBranch ? old('phone', $branch['branch_phone']) : $branch['branch_phone'] }}" placeholder="0123 456 789">
-                                    @error('phone', 'editBranch')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
+                                    <label class="form-label small fw-bold" for="branch_name_{{ $branch['branch_id'] }}">Tên chi nhánh</label>
+                                    <input id="branch_name_{{ $branch['branch_id'] }}" class="form-control @error('name', 'editBranch') is-invalid @enderror" name="name" value="{{ $isEditingThisBranch ? old('name', $branch['branch_name']) : $branch['branch_name'] }}" required>
+                                    @error('name', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-
-                                {{-- Admin account section --}}
-                                <div class="p-3 mb-3" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-                                    <p class="small fw-bold mb-1" style="color: #15803d;"><i class="bi bi-person-badge me-1"></i> Tài khoản Admin chi nhánh</p>
-                                    <p class="small text-muted mb-3" style="font-size: 0.72rem;">Dùng để đăng nhập giao diện quản lý chi nhánh.</p>
-                                    <div class="row g-3">
-                                        <div class="col-sm-7">
-                                            <label class="form-label small fw-bold" for="branch_admin_email_{{ $branch['branch_id'] }}">Email đăng nhập <span class="text-danger">*</span></label>
-                                            <input id="branch_admin_email_{{ $branch['branch_id'] }}" class="form-control @error('admin_email', 'editBranch') is-invalid @enderror" type="email" name="admin_email" value="{{ $isEditingThisBranch ? old('admin_email', $branch['admin_email']) : $branch['admin_email'] }}" placeholder="admin@chinhanh.com" required>
-                                            @error('admin_email', 'editBranch')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        <div class="col-sm-5">
-                                            <label class="form-label small fw-bold" for="branch_admin_password_{{ $branch['branch_id'] }}">Mật khẩu</label>
-                                            <input id="branch_admin_password_{{ $branch['branch_id'] }}" class="form-control @error('admin_password', 'editBranch') is-invalid @enderror" type="text" name="admin_password" value="{{ $isEditingThisBranch ? old('admin_password', $branch['admin_password']) : $branch['admin_password'] }}" placeholder="Nhập để đổi mật khẩu hoặc giữ mặc định">
-                                            @error('admin_password', 'editBranch')
-                                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold" for="branch_code_{{ $branch['branch_id'] }}">Mã chi nhánh</label>
+                                    <input id="branch_code_{{ $branch['branch_id'] }}" class="form-control @error('code', 'editBranch') is-invalid @enderror" name="code" value="{{ $isEditingThisBranch ? old('code', $branch['branch_code']) : $branch['branch_code'] }}" required>
+                                    @error('code', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <label class="form-label small fw-bold" for="branch_email_{{ $branch['branch_id'] }}">Email</label>
+                                        <input id="branch_email_{{ $branch['branch_id'] }}" class="form-control @error('email', 'editBranch') is-invalid @enderror" type="email" name="email" value="{{ $isEditingThisBranch ? old('email', $branch['branch_email']) : $branch['branch_email'] }}" placeholder="branch@example.com">
+                                        @error('email', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label small fw-bold" for="branch_phone_{{ $branch['branch_id'] }}">Điện thoại</label>
+                                        <input id="branch_phone_{{ $branch['branch_id'] }}" class="form-control @error('phone', 'editBranch') is-invalid @enderror" type="text" name="phone" value="{{ $isEditingThisBranch ? old('phone', $branch['branch_phone']) : $branch['branch_phone'] }}" placeholder="0123456789">
+                                        @error('phone', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
                                 </div>
-
-                                <div class="mb-3">
+                                <div class="mb-3 mt-3">
                                     <label class="form-label small fw-bold" for="branch_address_{{ $branch['branch_id'] }}">Địa chỉ</label>
                                     <textarea id="branch_address_{{ $branch['branch_id'] }}" class="form-control @error('address', 'editBranch') is-invalid @enderror" name="address" rows="3" placeholder="Nhập địa chỉ chi nhánh">{{ $isEditingThisBranch ? old('address', $branch['branch_address']) : $branch['branch_address'] }}</textarea>
-                                    @error('address', 'editBranch')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
+                                    @error('address', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 </div>
-
-                                <div class="mb-3">
-                                    @include('admin.partials.location-picker', [
-                                        'pickerId' => 'branch-location-picker-'.$branch['branch_id'],
-                                        'label' => 'Vị trí chi nhánh',
-                                        'hint' => 'Nhấn chọn hoặc kéo thả pin trên bản đồ, sau đó bấm "Lấy địa chỉ" để tự động điền.',
-                                        'latName' => 'latitude',
-                                        'lngName' => 'longitude',
-                                        'latValue' => $isEditingThisBranch ? old('latitude', $branch['branch_latitude']) : $branch['branch_latitude'],
-                                        'lngValue' => $isEditingThisBranch ? old('longitude', $branch['branch_longitude']) : $branch['branch_longitude'],
-                                        'addressTarget' => '#branch_address_'.$branch['branch_id'],
-                                        'defaultLat' => 19.625017,
-                                        'defaultLng' => 105.643070,
-                                        'defaultZoom' => 13,
-                                    ])
-                                </div>
-
+                                @php
+                                    $branchMapLink = is_numeric($branch['branch_latitude']) && is_numeric($branch['branch_longitude'])
+                                        ? 'https://www.google.com/maps?q='.$branch['branch_latitude'].','.$branch['branch_longitude']
+                                        : '';
+                                @endphp
+                                @include('admin.partials.branch-map-link', [
+                                    'pickerId' => 'branch-map-link-'.$branch['branch_id'],
+                                    'label' => 'Link Google Maps',
+                                    'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
+                                    'mapLinkValue' => $isEditingThisBranch ? old('map_link', $branchMapLink) : $branchMapLink,
+                                    'addressTarget' => '#branch_address_'.$branch['branch_id'],
+                                    'latName' => 'latitude',
+                                    'lngName' => 'longitude',
+                                    'latValue' => $isEditingThisBranch ? old('latitude', $branch['branch_latitude']) : $branch['branch_latitude'],
+                                    'lngValue' => $isEditingThisBranch ? old('longitude', $branch['branch_longitude']) : $branch['branch_longitude'],
+                                    'errorBag' => 'editBranch',
+                                ])
                                 <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
                                     <input type="hidden" name="status" value="{{ $branchStatusValue ? 1 : 0 }}" data-branch-status-input="{{ $branch['branch_id'] }}">
                                     <button
@@ -596,6 +562,74 @@
         @endif
     </section>
 
+    <div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true" data-auto-open="{{ old('form_type') === 'branch' ? 'true' : 'false' }}">
+        <div class="modal-dialog modal-lg">
+            <form class="modal-content" method="POST" action="{{ route('admin.branches.store') }}" style="border:0;border-radius:8px;">
+                @csrf
+                <input type="hidden" name="form_type" value="branch">
+                <input type="hidden" name="return_to" value="super-admin">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-6 fw-bold" id="createBranchModalLabel">Thêm chi nhánh mới</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info" role="alert" style="font-size: 0.75rem; margin-bottom: 1rem;">
+                        <i class="bi bi-info-circle me-2"></i>Thêm chi nhánh trực tiếp từ trang quản trị cấp cao để quản lý tập trung.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold" for="branch_create_name">Tên chi nhánh</label>
+                        <input id="branch_create_name" class="form-control @error('name', 'createBranch') is-invalid @enderror" name="name" value="{{ old('name') }}" required>
+                        @error('name', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold" for="branch_create_code">Mã chi nhánh</label>
+                        <input id="branch_create_code" class="form-control @error('code', 'createBranch') is-invalid @enderror" name="code" value="{{ old('code') }}" required>
+                        @error('code', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-bold" for="branch_create_email">Email</label>
+                            <input id="branch_create_email" class="form-control @error('email', 'createBranch') is-invalid @enderror" type="email" name="email" value="{{ old('email') }}" placeholder="branch@example.com">
+                            @error('email', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-bold" for="branch_create_phone">Điện thoại</label>
+                            <input id="branch_create_phone" class="form-control @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123456789">
+                            @error('phone', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label small fw-bold" for="branch_create_address">Địa chỉ</label>
+                        <textarea id="branch_create_address" class="form-control @error('address', 'createBranch') is-invalid @enderror" name="address" rows="3" placeholder="Nhập địa chỉ chi nhánh">{{ old('address') }}</textarea>
+                        @error('address', 'createBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    @include('admin.partials.branch-map-link', [
+                        'pickerId' => 'super-admin-create-branch-map-link',
+                        'label' => 'Link Google Maps',
+                        'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
+                        'mapLinkValue' => old('map_link'),
+                        'addressTarget' => '#branch_create_address',
+                        'latValue' => old('latitude'),
+                        'lngValue' => old('longitude'),
+                        'errorBag' => 'createBranch',
+                    ])
+                    <div class="form-check mb-3 mt-3">
+                        <input class="form-check-input" type="checkbox" name="status" value="1" id="branch_create_status" checked>
+                        <label class="form-check-label" for="branch_create_status">
+                            Kích hoạt chi nhánh này
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer" style="gap: 0.75rem;">
+                    <button type="button" class="sa-btn" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="sa-btn sa-btn-primary" style="min-width: 160px; background: var(--sa-green); color: #fff; border-color: var(--sa-green);">
+                        <i class="bi bi-check-circle me-1"></i>Thêm chi nhánh
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="admins-region" data-admins-region>
     <section class="sa-panel" id="admins">
         <div class="sa-panel-header">
@@ -605,8 +639,8 @@
             <input class="sa-control" type="search" name="q" value="{{ $filters['search'] }}" placeholder="Tìm theo tên hoặc email" aria-label="Tìm theo tên hoặc email">
             <select class="sa-control" name="role" aria-label="Lọc vai trò">
                 <option value="all">Tất cả vai trò</option>
-                <option value="super" @selected($filters['role'] === 'super')>Super Admin</option>
-                <option value="admin" @selected($filters['role'] === 'admin')>Admin hệ thống</option>
+                <option value="super" @selected($filters['role'] === 'super')>Quản trị cấp cao</option>
+                <option value="admin" @selected($filters['role'] === 'admin')>Quản trị hệ thống</option>
             </select>
             <select class="sa-control" name="status" aria-label="Lọc trạng thái">
                 <option value="all">Tất cả trạng thái</option>
@@ -651,7 +685,7 @@
                                     <div><div class="sa-admin-name">{{ $adminUser->name }}</div><div class="sa-admin-email">{{ $adminUser->email }}</div></div>
                                 </div>
                             </td>
-                            <td><span class="sa-role {{ $isSuper ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $isSuper ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $isSuper ? 'Super Admin' : 'Admin hệ thống' }}</span></td>
+                            <td><span class="sa-role {{ $isSuper ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $isSuper ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $isSuper ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span></td>
                             <td data-admin-branch-cell="{{ $adminUser->id }}">
                                 @if($adminUser->branch)
                                     <div style="font-size: 0.69rem; line-height: 1.4;" data-admin-branch-display>
@@ -664,13 +698,13 @@
                             </td>
                             <td>{{ $adminUser->last_login_at?->format('d/m/Y H:i') ?? ($isCurrentAccount ? 'Phiên hiện tại' : 'Chưa đăng nhập') }}</td>
                             <td><span class="sa-presence sa-presence-{{ $presence }}">{{ $presenceLabel }}</span></td>
-                            <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}">{{ $adminUser->is_active ? 'Active' : 'Locked' }}</span></td>
+                            <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}">{{ $adminUser->is_active ? 'Hoạt động' : 'Đã khóa' }}</span></td>
                             <td>
                                 <div class="sa-actions">
                                     @if($adminUser->isSuperAdmin())
                                         <a class="sa-action-btn" href="{{ route('admin.super-admin', ['q' => $adminUser->email]) }}" title="Xem trang quản trị"><i class="bi bi-eye"></i></a>
                                     @elseif($adminUser->branch_id)
-                                        <a class="sa-action-btn" href="{{ route('admin.dashboard', ['branch_id' => $adminUser->branch_id]) }}" title="Xem dashboard chi nhánh"><i class="bi bi-eye"></i></a>
+                                        <a class="sa-action-btn" href="{{ route('admin.dashboard', ['branch_id' => $adminUser->branch_id]) }}" title="Xem tổng quan chi nhánh"><i class="bi bi-eye"></i></a>
                                     @else
                                         <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                     @endif
@@ -704,7 +738,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="adminActionsLabel{{ $adminUser->id }}">Thao tác quản trị viên</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                     </div>
                     <div class="modal-body">
                         <!-- Admin Info -->
@@ -724,7 +758,7 @@
                                     <div style="color: #111827; font-weight: 700; font-size: 0.95rem;">{{ $adminUser->name }}</div>
                                     <div style="color: #6b7280; font-size: 0.85rem;">{{ $adminUser->email }}</div>
                                     <div style="margin-top: 0.3rem;">
-                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Super Admin' : 'Admin hệ thống' }}</span>
+                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -769,7 +803,7 @@
                                 <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
                                     <div style="font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Vai trò hiện tại</div>
                                     <div data-current-role>
-                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}" style="font-size: 0.75rem;"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Super Admin' : 'Admin hệ thống' }}</span>
+                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}" style="font-size: 0.75rem;"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span>
                                     </div>
                                 </div>
 
@@ -781,8 +815,8 @@
                                         <label style="display: block; font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Chọn vai trò mới</label>
                                         <select name="role_id" class="form-select" style="font-size: 0.85rem;">
                                             <option value="">-- Chọn vai trò --</option>
-                                            <option value="2" @selected($adminUser->role_id === 2)>Admin hệ thống</option>
-                                            <option value="3" @selected($adminUser->role_id === 3)>Super Admin</option>
+                                            <option value="2" @selected($adminUser->role_id === 2)>Quản trị hệ thống</option>
+                                            <option value="3" @selected($adminUser->role_id === 3)>Quản trị cấp cao</option>
                                         </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">
@@ -817,8 +851,15 @@
                                         <select name="branch_id" class="form-select" style="font-size: 0.85rem;">
                                             <option value="">-- Không gán --</option>
                                             @forelse($branches ?? [] as $branch)
-                                                <option value="{{ $branch->id }}" @selected($adminUser->branch_id === $branch->id)>
+                                                @php
+                                                    $branchOwner = $branch->users->first();
+                                                    $isOwnedByOtherAdmin = $branchOwner && $branchOwner->id !== $adminUser->id;
+                                                @endphp
+                                                <option value="{{ $branch->id }}" @selected($adminUser->branch_id === $branch->id) @disabled($isOwnedByOtherAdmin)>
                                                     {{ $branch->name }} ({{ $branch->code }})
+                                                    @if($isOwnedByOtherAdmin)
+                                                        - Đã gán cho {{ $branchOwner->name }}
+                                                    @endif
                                                 </option>
                                             @empty
                                                 <option disabled>Không có chi nhánh</option>
@@ -927,7 +968,7 @@
         </article>
 
         <aside class="sa-panel" id="health">
-            <div class="sa-panel-header"><div><h2 class="sa-panel-title">System Health</h2><p class="sa-panel-note">Trạng thái dịch vụ có thể kiểm tra</p></div><i class="bi bi-heart-pulse text-success"></i></div>
+            <div class="sa-panel-header"><div><h2 class="sa-panel-title">Tình trạng hệ thống</h2><p class="sa-panel-note">Trạng thái dịch vụ có thể kiểm tra</p></div><i class="bi bi-heart-pulse text-success"></i></div>
             <div class="sa-health-list">
                 <div class="sa-health-row"><span class="sa-health-name"><i class="bi bi-database"></i>Database</span><span class="sa-health-value {{ $systemHealth['database']['tone'] }}">{{ $systemHealth['database']['label'] }}</span></div>
                 <div class="sa-health-row"><span class="sa-health-name"><i class="bi bi-device-ssd"></i>Storage</span><span class="sa-health-value">{{ $systemHealth['storage'] }}</span></div>
@@ -937,28 +978,7 @@
         </aside>
     </section>
 
-    <section class="sa-panel" id="security">
-        <div class="sa-panel-header"><div><h2 class="sa-panel-title">Bảo mật hệ thống</h2><p class="sa-panel-note">Chỉ số được ghi nhận trong ngày</p></div><i class="bi bi-shield-check text-success"></i></div>
-        <div class="sa-security-grid">
-            @foreach([
-                ['bi-person-x', $securityStats['failed_logins'], 'Đăng nhập thất bại'],
-                ['bi-lock', $securityStats['locked_admins'], 'Admin đang khóa'],
-                ['bi-key', $securityStats['pending_resets'], 'Yêu cầu đặt lại mật khẩu'],
-                ['bi-bell', $securityStats['unread_notifications'], 'Thông báo chưa đọc'],
-            ] as [$icon, $value, $label])
-                <div class="sa-security-item"><i class="bi {{ $icon }}"></i><div><div class="sa-security-value">{{ $value }}</div><div class="sa-security-label">{{ $label }}</div></div></div>
-            @endforeach
-        </div>
-    </section>
 
-    <section class="sa-panel" id="permissions">
-        <div class="sa-panel-header"><div><h2 class="sa-panel-title">Phạm vi quyền hiện tại</h2><p class="sa-panel-note">Hai cấp tài khoản đang có trong bảng roles</p></div><span class="sa-role sa-role-super"><i class="bi bi-shield-check"></i>Super Admin</span></div>
-        <div class="sa-permissions">
-            @foreach(['Dashboard hệ thống', 'Quản trị Admin', 'Vai trò và phân quyền', 'Bảo mật và nhật ký', 'Dashboard vận hành', 'Sản phẩm và danh mục', 'Đơn hàng và khách hàng', 'Voucher và đánh giá'] as $permission)
-                <div class="sa-permission"><i class="bi bi-check-circle-fill"></i>{{ $permission }}</div>
-            @endforeach
-        </div>
-    </section>
 </div>
 
 <div class="modal fade" id="createAdminModal" tabindex="-1" aria-labelledby="createAdminModalLabel" aria-hidden="true" data-auto-open="{{ $errors->any() ? 'true' : 'false' }}">
@@ -966,7 +986,7 @@
         <form class="modal-content" method="POST" action="{{ route('admin.super-admin.admins.store') }}" style="border:0;border-radius:8px;">
             @csrf
             <input type="hidden" name="form_type" value="admin">
-            <div class="modal-header"><h2 class="modal-title fs-6 fw-bold" id="createAdminModalLabel">Thêm tài khoản Admin</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+            <div class="modal-header"><h2 class="modal-title fs-6 fw-bold" id="createAdminModalLabel">Thêm tài khoản quản trị viên</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
             <div class="modal-body">
                 <div class="alert alert-info" role="alert" style="font-size: 0.75rem; margin-bottom: 1rem;">
                     <i class="bi bi-info-circle me-2"></i>Tạo admin sẽ tự tạo một nhánh quản lý tương ứng.
@@ -989,110 +1009,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form class="modal-content" method="POST" action="{{ route('admin.branches.store') }}" style="border:0;border-radius:8px;">
-            @csrf
-            <input type="hidden" name="form_type" value="branch">
-            <input type="hidden" name="return_to" value="super-admin">
-            
-            <div class="modal-header">
-                <h2 class="modal-title fs-6 fw-bold" id="createBranchModalLabel">Thêm chi nhánh mới</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            
-            <div class="modal-body">
-                {{-- Row 1: Tên + Mã --}}
-                <div class="row g-3 mb-3">
-                    <div class="col-sm-7">
-                        <label class="form-label small fw-bold" for="new_branch_name">Tên chi nhánh <span class="text-danger">*</span></label>
-                        <input id="new_branch_name" class="form-control @error('name', 'createBranch') is-invalid @enderror" name="name" value="{{ old('name') }}" placeholder="Nhập tên chi nhánh" required>
-                        @error('name', 'createBranch')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
-                    <div class="col-sm-5">
-                        <label class="form-label small fw-bold" for="new_branch_code">Mã chi nhánh <span class="text-danger">*</span></label>
-                        <input id="new_branch_code" class="form-control @error('code', 'createBranch') is-invalid @enderror" name="code" value="{{ old('code') }}" placeholder="VD: CN1, CN2" required>
-                        @error('code', 'createBranch')
-                            <div class="invalid-feedback d-block">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-
-                {{-- Row 2: Điện thoại --}}
-                <div class="mb-3">
-                    <label class="form-label small fw-bold" for="new_branch_phone">Điện thoại</label>
-                    <input id="new_branch_phone" class="form-control @error('phone', 'createBranch') is-invalid @enderror" type="text" name="phone" value="{{ old('phone') }}" placeholder="0123 456 789">
-                    @error('phone', 'createBranch')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                {{-- Admin account section --}}
-                <div class="p-3 mb-3" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-                    <p class="small fw-bold mb-1" style="color: #15803d;"><i class="bi bi-person-badge me-1"></i> Tài khoản Admin chi nhánh</p>
-                    <p class="small text-muted mb-3" style="font-size: 0.72rem;">Dùng để đăng nhập giao diện quản lý chi nhánh.</p>
-                    <div class="row g-3">
-                        <div class="col-sm-7">
-                            <label class="form-label small fw-bold" for="new_branch_admin_email">Email đăng nhập <span class="text-danger">*</span></label>
-                            <input id="new_branch_admin_email" class="form-control @error('admin_email', 'createBranch') is-invalid @enderror" type="email" name="admin_email" value="{{ old('admin_email') }}" placeholder="admin@chinhanh.com" required>
-                            @error('admin_email', 'createBranch')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="col-sm-5">
-                            <label class="form-label small fw-bold" for="new_branch_admin_password">Mật khẩu <span class="text-danger">*</span></label>
-                            <input id="new_branch_admin_password" class="form-control @error('admin_password', 'createBranch') is-invalid @enderror" type="password" name="admin_password" placeholder="Ít nhất 8 ký tự" required>
-                            @error('admin_password', 'createBranch')
-                                <div class="invalid-feedback d-block">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label small fw-bold" for="new_branch_address">Địa chỉ</label>
-                    <textarea id="new_branch_address" class="form-control @error('address', 'createBranch') is-invalid @enderror" name="address" rows="3" placeholder="Nhập địa chỉ chi nhánh">{{ old('address') }}</textarea>
-                    @error('address', 'createBranch')
-                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="mb-3">
-                    @include('admin.partials.location-picker', [
-                        'pickerId' => 'create-branch-location-picker',
-                        'label' => 'Vị trí chi nhánh',
-                        'hint' => 'Nhấn chọn hoặc kéo thả pin trên bản đồ, sau đó bấm "Lấy địa chỉ" để tự động điền.',
-                        'latName' => 'latitude',
-                        'lngName' => 'longitude',
-                        'latValue' => old('latitude'),
-                        'lngValue' => old('longitude'),
-                        'addressTarget' => '#new_branch_address',
-                        'defaultLat' => 19.625017,
-                        'defaultLng' => 105.643070,
-                        'defaultZoom' => 13,
-                    ])
-                </div>
-
-                <div class="form-check form-switch mt-3">
-                    <input type="hidden" name="status" value="0">
-                    <input id="new_branch_status" class="form-check-input" type="checkbox" name="status" value="1" @checked(old('status', '1') === '1')>
-                    <label class="form-check-label small fw-semibold" for="new_branch_status">Kích hoạt chi nhánh ngay</label>
-                </div>
-            </div>
-            
-            <div class="modal-footer" style="gap: 0.75rem;">
-                <button type="button" class="sa-btn" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" class="sa-btn sa-btn-primary" style="min-width: 160px; background: var(--sa-green); color: #fff; border-color: var(--sa-green);">
-                    <i class="bi bi-shop"></i>Thêm chi nhánh
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-@include('admin.partials.location-picker-script')
+@include('admin.partials.branch-map-link-script')
 
 @php
     $modalToOpen = old('form_type') === 'admin'

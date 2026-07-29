@@ -41,7 +41,6 @@ class VoucherManagementTest extends TestCase
             'max_discount' => 25000,
             'min_order' => 50000,
             'usage_limit' => 100,
-            'required_rank' => '',
             'point_cost' => 0,
             'is_redeemable' => 0,
             'starts_at' => '',
@@ -131,7 +130,6 @@ class VoucherManagementTest extends TestCase
             'value' => 12000,
             'min_order' => 30000,
             'usage_limit' => 20,
-            'required_rank' => 'silver',
             'point_cost' => 10,
             'is_redeemable' => 1,
             'starts_at' => now()->format('Y-m-d H:i:s'),
@@ -143,7 +141,6 @@ class VoucherManagementTest extends TestCase
         $voucher->refresh();
         $this->assertSame('NEW10', $voucher->code);
         $this->assertSame(12000, (int) $voucher->value);
-        $this->assertSame('silver', $voucher->required_rank);
         $this->assertTrue($voucher->is_redeemable);
 
         $this->actingAs($admin)

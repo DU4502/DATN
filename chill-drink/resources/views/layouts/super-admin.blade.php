@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Super Admin - {{ config('app.name', 'Chill Drink') }}</title>
+    <title>Quản trị cấp cao - {{ config('app.name', 'Chill Drink') }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,11 +28,7 @@
             --root-sidebar-width: 272px;
         }
 
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
 
         html {
             scroll-behavior: smooth;
@@ -57,9 +52,7 @@
             font-size: 14px;
         }
 
-        .root-shell {
-            min-height: 100vh;
-        }
+        .root-shell { min-height: 100vh; }
 
         .root-sidebar {
             position: fixed;
@@ -76,7 +69,7 @@
         .root-brand {
             min-height: 68px;
             padding: 0.55rem 0.6rem 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -111,12 +104,12 @@
         .root-access {
             margin: 0.9rem 0.4rem 0.5rem;
             padding: 0.65rem 0.7rem;
-            border: 1px solid rgba(32, 180, 134, 0.28);
+            border: 1px solid rgba(32,180,134,0.28);
             border-radius: 7px;
             display: flex;
             align-items: center;
             gap: 0.55rem;
-            background: rgba(32, 180, 134, 0.1);
+            background: rgba(32,180,134,0.1);
         }
 
         .root-access-icon {
@@ -130,32 +123,28 @@
             color: #10241e;
         }
 
-        .root-access strong {
-            display: block;
-            font-size: 0.72rem;
-        }
-
-        .root-access span {
-            color: #aeb7b3;
-            font-size: 0.62rem;
-        }
+        .root-access strong { display: block; font-size: 0.72rem; }
+        .root-access span { color: #aeb7b3; font-size: 0.62rem; }
 
         .root-nav {
             flex: 1 1 auto;
             min-height: 0;
             margin-top: 0.45rem;
             overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+            overflow-x: hidden;
         }
 
         .root-nav::-webkit-scrollbar {
-            width: 4px;
+            width: 3px;
+        }
+
+        .root-nav::-webkit-scrollbar-track {
+            background: transparent;
         }
 
         .root-nav::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 0.15);
-            border-radius: 4px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 999px;
         }
 
         .root-nav-label {
@@ -198,9 +187,7 @@
             color: #10241e;
         }
 
-        .root-nav-link.active i {
-            color: #10241e;
-        }
+        .root-nav-link.active i { color: #10241e; }
 
         .root-nav-badge {
             margin-left: auto;
@@ -219,20 +206,20 @@
         .root-sidebar-footer {
             margin-top: auto;
             padding-top: 0.85rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255,255,255,0.1);
             flex: 0 0 auto;
         }
 
         .root-logout {
             width: 100%;
             min-height: 40px;
-            border: 1px solid rgba(249, 115, 96, 0.3);
+            border: 1px solid rgba(249,115,96,0.3);
             border-radius: 7px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.55rem;
-            background: rgba(249, 115, 96, 0.08);
+            background: rgba(249,115,96,0.08);
             color: #ffb0a4;
             font-size: 0.72rem;
             font-weight: 750;
@@ -264,17 +251,8 @@
             font-weight: 800;
         }
 
-        .root-session strong {
-            display: block;
-            color: #fff;
-            font-size: 0.7rem;
-        }
-
-        .root-session span {
-            display: block;
-            color: #8f9995;
-            font-size: 0.6rem;
-        }
+        .root-session strong { display: block; color: #fff; font-size: 0.7rem; }
+        .root-session span { display: block; color: #8f9995; font-size: 0.6rem; }
 
         .root-content {
             min-height: 100vh;
@@ -294,7 +272,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255,255,255,0.96);
         }
 
         .root-topbar-left,
@@ -321,9 +299,7 @@
             font-weight: 600;
         }
 
-        .root-breadcrumb strong {
-            color: var(--root-ink);
-        }
+        .root-breadcrumb strong { color: var(--root-ink); }
 
         .root-live {
             min-height: 30px;
@@ -370,11 +346,7 @@
             overflow: hidden;
         }
 
-        .root-topbar-search i {
-            margin-left: 0.75rem;
-            color: #8a9490;
-        }
-
+        .root-topbar-search i { margin-left: 0.75rem; color: #8a9490; }
         .root-topbar-search input {
             min-width: 0;
             flex: 1;
@@ -411,25 +383,10 @@
             font-weight: 800;
         }
 
-        .root-user-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .root-user-copy strong,
-        .root-user-copy span {
-            display: block;
-        }
-
-        .root-user-copy strong {
-            font-size: 0.68rem;
-        }
-
-        .root-user-copy span {
-            color: var(--root-muted);
-            font-size: 0.58rem;
-        }
+        .root-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .root-user-copy strong, .root-user-copy span { display: block; }
+        .root-user-copy strong { font-size: 0.68rem; }
+        .root-user-copy span { color: var(--root-muted); font-size: 0.58rem; }
 
         .root-notification-count {
             position: absolute;
@@ -456,34 +413,11 @@
             box-shadow: 0 14px 35px rgba(20, 29, 26, 0.14);
         }
 
-        .root-dropdown-title {
-            padding: 0.45rem 0.65rem;
-            font-size: 0.72rem;
-            font-weight: 800;
-        }
-
-        .root-dropdown-empty {
-            padding: 0.8rem 0.65rem;
-            color: var(--root-muted);
-            font-size: 0.68rem;
-        }
-
-        .root-dropdown .dropdown-item {
-            border-radius: 6px;
-            padding: 0.55rem 0.65rem;
-            font-size: 0.68rem;
-        }
-
-        .root-notification-item strong,
-        .root-notification-item span {
-            display: block;
-        }
-
-        .root-notification-item span {
-            margin-top: 0.12rem;
-            color: var(--root-muted);
-            font-size: 0.58rem;
-        }
+        .root-dropdown-title { padding: 0.45rem 0.65rem; font-size: 0.72rem; font-weight: 800; }
+        .root-dropdown-empty { padding: 0.8rem 0.65rem; color: var(--root-muted); font-size: 0.68rem; }
+        .root-dropdown .dropdown-item { border-radius: 6px; padding: 0.55rem 0.65rem; font-size: 0.68rem; }
+        .root-notification-item strong, .root-notification-item span { display: block; }
+        .root-notification-item span { margin-top: 0.12rem; color: var(--root-muted); font-size: 0.58rem; }
 
         .root-page {
             width: 100%;
@@ -506,76 +440,38 @@
             font-size: 0.62rem;
         }
 
-        .root-sidebar-backdrop {
-            display: none;
-        }
+        .root-sidebar-backdrop { display: none; }
 
         @media (max-width: 991.98px) {
-            .root-sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.22s ease;
-            }
-
-            .root-sidebar.open {
-                transform: translateX(0);
-            }
-
-            .root-content {
-                margin-left: 0;
-            }
-
-            .root-mobile-toggle {
-                display: inline-flex;
-            }
-
+            .root-sidebar { transform: translateX(-100%); transition: transform 0.22s ease; }
+            .root-sidebar.open { transform: translateX(0); }
+            .root-content { margin-left: 0; }
+            .root-mobile-toggle { display: inline-flex; }
             .root-sidebar-backdrop {
                 position: fixed;
                 inset: 0;
                 z-index: 1025;
-                background: rgba(15, 18, 17, 0.45);
+                background: rgba(15,18,17,0.45);
             }
-
-            .root-sidebar-backdrop.show {
-                display: block;
-            }
-
-            .root-user-copy {
-                display: none;
-            }
+            .root-sidebar-backdrop.show { display: block; }
+            .root-user-copy { display: none; }
         }
 
         @media (max-width: 575.98px) {
-            .root-topbar {
-                padding: 0 0.85rem;
-            }
-
-            .root-page {
-                padding: 1rem 0.85rem 1.5rem;
-            }
-
-            .root-live,
-            .root-breadcrumb span,
-            .root-topbar-search {
-                display: none;
-            }
-
-            .root-footer {
-                align-items: flex-start;
-                flex-direction: column;
-                padding: 0.75rem 0.85rem;
-            }
+            .root-topbar { padding: 0 0.85rem; }
+            .root-page { padding: 1rem 0.85rem 1.5rem; }
+            .root-live, .root-breadcrumb span, .root-topbar-search { display: none; }
+            .root-footer { align-items: flex-start; flex-direction: column; padding: 0.75rem 0.85rem; }
         }
-
-        @include('partials.admin-styles')
     </style>
+    @include('admin.partials.styles')
 </head>
-
 <body>
     <div class="root-shell">
         <aside class="root-sidebar" data-root-sidebar>
             <a href="{{ route('admin.super-admin') }}" class="root-brand">
                 <img src="{{ asset('images/logo.png') }}" alt="Chill Drink" class="root-brand-mark">
-                <span><span class="root-brand-name">Chill Control</span><span class="root-brand-mode">Super Admin Workspace</span></span>
+                <span><span class="root-brand-name">Trung tâm Chill Drink</span><span class="root-brand-mode">Không gian quản trị cấp cao</span></span>
             </a>
 
             <div class="root-access">
@@ -585,38 +481,33 @@
 
             <nav class="root-nav">
                 <p class="root-nav-label">Điều hành</p>
-                <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Dashboard</a>
-                <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên <span class="root-nav-badge">{{ \App\Models\User::admins()->count() }}</span></a>
-                <a href="{{ route('admin.super-admin') . '#branch-ranking' }}" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh <span class="root-nav-badge">{{ \App\Models\Branch::count() }}</span></a>
-                <a href="{{ route('admin.super-admin') . '#permissions' }}" class="root-nav-link" data-root-section="permissions"><i class="bi bi-key"></i> Vai trò và phân quyền</a>
+                <a href="{{ route('admin.super-admin') }}" class="root-nav-link" data-root-section="top"><i class="bi bi-grid-1x2"></i> Tổng quan</a>
+                <a href="{{ route('admin.super-admin') . '#branch-ranking' }}" class="root-nav-link" data-root-section="branch-ranking"><i class="bi bi-shop"></i> Chi nhánh</a>
+                <a href="{{ route('admin.super-admin') . '#admins' }}" class="root-nav-link" data-root-section="admins"><i class="bi bi-person-badge"></i> Quản trị viên</a>
                 <a href="{{ route('admin.chat.index') }}" class="root-nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}">
                     <i class="bi bi-chat-dots"></i> Chat khách hàng
                     @php
                         $unreadChatMessages = auth()->user()?->unreadConversationMessagesCount() ?? 0;
                     @endphp
-                    @if($unreadChatMessages > 0)
-                        <span class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
-                    @endif
+                    <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>
-                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
+                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
+                <a href="{{ route('admin.toppings.index') }}" class="root-nav-link {{ request()->routeIs('admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
                 <a href="{{ route('admin.products.index') }}" class="root-nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Slideshow</a>
+                <a href="{{ route('admin.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
                 <a href="{{ route('admin.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
                 <a href="{{ route('admin.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.reviews.index') }}" class="root-nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
 
                 <p class="root-nav-label">Hệ thống</p>
-                <a href="{{ route('admin.super-admin') . '#security' }}" class="root-nav-link" data-root-section="security"><i class="bi bi-shield-check"></i> Bảo mật</a>
-                <a href="{{ route('admin.super-admin') . '#health' }}" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Tình trạng hệ thống</a>
-                <a href="{{ route('admin.super-admin') . '#audit' }}" class="root-nav-link" data-root-section="audit"><i class="bi bi-journal-text"></i> Nhật ký hệ thống</a>
+                <a href="{{ route('admin.super-admin') }}#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Hệ thống</a>
             </nav>
 
             <div class="root-sidebar-footer">
-                <a href="{{ route('admin.dashboard') }}" class="root-nav-link"><i class="bi bi-speedometer2"></i> Quản lý cửa hàng</a>
                 <a href="{{ route('home') }}" class="root-nav-link"><i class="bi bi-house-door"></i> Về trang chủ</a>
             </div>
         </aside>
@@ -627,7 +518,7 @@
             <header class="root-topbar">
                 <div class="root-topbar-left">
                     <button type="button" class="root-mobile-toggle" data-root-toggle aria-label="Mở menu"><i class="bi bi-list"></i></button>
-                    <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Super Admin')</strong></div>
+                    <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Quản trị cấp cao')</strong></div>
                 </div>
                 <div class="root-topbar-right">
                     <form class="root-topbar-search" method="GET" action="{{ route('admin.super-admin') }}" role="search">
@@ -638,31 +529,31 @@
                         <button type="button" class="root-topbar-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo">
                             <i class="bi bi-bell"></i>
                             @if(($unreadNotificationCount ?? 0) > 0)
-                            <span class="root-notification-count">{{ min(99, $unreadNotificationCount) }}</span>
+                                <span class="root-notification-count">{{ min(99, $unreadNotificationCount) }}</span>
                             @endif
                         </button>
                         <div class="dropdown-menu dropdown-menu-end root-dropdown">
                             <div class="root-dropdown-title">Thông báo</div>
                             @forelse(($notifications ?? collect()) as $notification)
-                            <div class="dropdown-item-text root-notification-item">
-                                <strong>{{ data_get($notification->data, 'title', 'Thông báo hệ thống') }}</strong>
-                                <span>{{ data_get($notification->data, 'message', $notification->created_at?->diffForHumans()) }}</span>
-                            </div>
+                                <div class="dropdown-item-text root-notification-item">
+                                    <strong>{{ data_get($notification->data, 'title', 'Thông báo hệ thống') }}</strong>
+                                    <span>{{ data_get($notification->data, 'message', $notification->created_at?->diffForHumans()) }}</span>
+                                </div>
                             @empty
-                            <div class="root-dropdown-empty">Chưa có thông báo mới.</div>
+                                <div class="root-dropdown-empty">Chưa có thông báo mới.</div>
                             @endforelse
                         </div>
                     </div>
                     <div class="dropdown">
-                        <button type="button" class="root-user-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản Super Admin">
+                        <button type="button" class="root-user-button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản quản trị cấp cao">
                             <span class="root-user-avatar">
                                 @if(Auth::user()->avatar)
-                                <img src="{{ str_starts_with(Auth::user()->avatar, 'http') ? Auth::user()->avatar : asset('storage/'.ltrim(Auth::user()->avatar, '/')) }}" alt="{{ Auth::user()->name }}">
+                                    <img src="{{ str_starts_with(Auth::user()->avatar, 'http') ? Auth::user()->avatar : asset('storage/'.ltrim(Auth::user()->avatar, '/')) }}" alt="{{ Auth::user()->name }}">
                                 @else
-                                {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
+                                    {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
                                 @endif
                             </span>
-                            <span class="root-user-copy"><strong>{{ Auth::user()->name }}</strong><span>Super Admin</span></span>
+                            <span class="root-user-copy"><strong>{{ Auth::user()->name }}</strong><span>Quản trị cấp cao</span></span>
                             <i class="bi bi-chevron-down small"></i>
                         </button>
                         <div class="dropdown-menu dropdown-menu-end root-dropdown">
@@ -682,13 +573,14 @@
             </main>
 
             <footer class="root-footer">
-                <span>© 2026 Chill Drink · Super Admin</span>
+                <span>© 2026 Chill Drink · Quản trị cấp cao</span>
                 <span>Phiên bản 1.0.0 · Cập nhật {{ now()->format('d/m/Y') }}</span>
             </footer>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @include('partials.realtime')
     <script>
         const rootSidebar = document.querySelector('[data-root-sidebar]');
         const rootBackdrop = document.querySelector('[data-root-backdrop]');
@@ -704,17 +596,176 @@
         rootBackdrop?.addEventListener('click', closeRootSidebar);
         document.querySelectorAll('.root-nav-link').forEach((link) => link.addEventListener('click', closeRootSidebar));
 
-        const updateRootNavigation = () => {
-            const isDashboardPage = window.location.pathname.includes('/super-admin');
-            const section = isDashboardPage ? (window.location.hash.replace('#', '') || 'top') : 'none';
-            document.querySelectorAll('[data-root-section]').forEach((link) => {
-                link.classList.toggle('active', link.dataset.rootSection === section);
+        const superAdminPath = '{{ parse_url(route("admin.super-admin"), PHP_URL_PATH) }}';
+        const currentPath = window.location.pathname;
+        const isSuperAdminPage = currentPath === superAdminPath;
+
+        // Cập nhật active cho các link route thật (không phải hash)
+        const updateRouteLinks = () => {
+            document.querySelectorAll('.root-nav-link').forEach((link) => {
+                const section = link.dataset.rootSection;
+                if (section) return; // bỏ qua, scrollspy xử lý
+                const href = link.getAttribute('href') || '';
+                try {
+                    const linkPath = new URL(href, window.location.origin).pathname;
+                    link.classList.toggle('active', currentPath.startsWith(linkPath) && linkPath !== '/');
+                } catch { /* giữ nguyên */ }
             });
         };
 
-        window.addEventListener('hashchange', updateRootNavigation);
-        updateRootNavigation();
+        // Scrollspy: chỉ chạy trên trang super-admin
+        if (isSuperAdminPage) {
+            const sectionLinks = [...document.querySelectorAll('.root-nav-link[data-root-section]')];
+
+            const setActiveSection = (sectionId) => {
+                sectionLinks.forEach((link) => {
+                    const s = link.dataset.rootSection;
+                    const match = sectionId === null
+                        ? s === 'top'
+                        : s === sectionId;
+                    link.classList.toggle('active', match);
+                });
+            };
+
+            // Lấy tất cả section có id tương ứng với data-root-section
+            const sections = sectionLinks
+                .map((link) => {
+                    const s = link.dataset.rootSection;
+                    return s === 'top' ? null : document.getElementById(s);
+                })
+                .filter(Boolean);
+
+            // Dùng IntersectionObserver để detect section nào đang visible
+            let visibleSections = new Set();
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        visibleSections.add(entry.target.id);
+                    } else {
+                        visibleSections.delete(entry.target.id);
+                    }
+                });
+
+                // Tìm section gần đầu trang nhất trong các section đang visible
+                if (visibleSections.size > 0) {
+                    let topSection = null;
+                    let topOffset = Infinity;
+                    visibleSections.forEach((id) => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            if (rect.top < topOffset) {
+                                topOffset = rect.top;
+                                topSection = id;
+                            }
+                        }
+                    });
+                    setActiveSection(topSection);
+                } else {
+                    // Không có section nào visible → dựa vào scroll position
+                    const scrollY = window.scrollY;
+                    if (scrollY < 100) {
+                        setActiveSection(null); // top
+                    } else {
+                        // Tìm section cuối cùng đã scroll qua
+                        let lastPassed = null;
+                        sections.forEach((el) => {
+                            if (el && el.offsetTop <= scrollY + 120) {
+                                lastPassed = el.id;
+                            }
+                        });
+                        setActiveSection(lastPassed);
+                    }
+                }
+            }, {
+                rootMargin: '-80px 0px -40% 0px',
+                threshold: 0
+            });
+
+            sections.forEach((el) => el && observer.observe(el));
+
+            // Nếu scroll lên đầu trang → active "Tổng quan"
+            window.addEventListener('scroll', () => {
+                if (window.scrollY < 80) setActiveSection(null);
+            }, { passive: true });
+
+            // Click link hash → scroll smooth, không reload trang, active ngay lập tức
+            const rootNav = document.querySelector('.root-nav');
+            sectionLinks.forEach((link) => {
+                link.addEventListener('click', (e) => {
+                    const s = link.dataset.rootSection;
+                    if (s === 'top') {
+                        e.preventDefault();
+                        setActiveSection(null);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        history.replaceState(null, '', superAdminPath);
+                        return;
+                    }
+                    const target = document.getElementById(s);
+                    if (target) {
+                        e.preventDefault();
+                        // Lưu vị trí scroll của sidebar trước
+                        const navScrollTop = rootNav ? rootNav.scrollTop : 0;
+                        // Active ngay, không chờ observer
+                        setActiveSection(s);
+                        // Scroll trang đến section (dùng window.scrollTo để tránh browser cuộn sidebar)
+                        const topbarHeight = document.querySelector('.root-topbar')?.offsetHeight ?? 68;
+                        const targetTop = target.getBoundingClientRect().top + window.scrollY - topbarHeight - 16;
+                        window.scrollTo({ top: targetTop, behavior: 'smooth' });
+                        // Restore scroll sidebar ngay sau (tránh browser tự reset)
+                        if (rootNav) {
+                            requestAnimationFrame(() => { rootNav.scrollTop = navScrollTop; });
+                        }
+                        history.replaceState(null, '', superAdminPath + '#' + s);
+                    }
+                });
+            });
+
+            // Khởi tạo active dựa vào hash hiện tại khi load
+            const initHash = window.location.hash.replace('#', '');
+            if (initHash && document.getElementById(initHash)) {
+                setTimeout(() => {
+                    document.getElementById(initHash)?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+
+        updateRouteLinks();
+
+        // Cập nhật badge chat sidebar mỗi 5 giây
+        (function () {
+            const badge = document.getElementById('sidebar-chat-badge');
+            if (!badge) return;
+
+            const unreadUrl = '{{ route('admin.chat.unread-count') }}';
+
+            const updateChatBadge = async () => {
+                try {
+                    const res = await fetch(unreadUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const count = data.count ?? 0;
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.style.display = '';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                } catch (e) {
+                    // Bỏ qua lỗi mạng
+                }
+            };
+
+            // Cập nhật ngay khi admin vừa đọc tin
+            document.addEventListener('chat:messages-read', updateChatBadge);
+
+            // Chạy ngay và poll mỗi 5 giây khi tab đang active
+            updateChatBadge();
+            setInterval(() => {
+                if (!document.hidden) updateChatBadge();
+            }, 5000);
+        })();
     </script>
 </body>
-
 </html>

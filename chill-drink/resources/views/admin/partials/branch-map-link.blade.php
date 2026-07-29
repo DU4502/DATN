@@ -3,6 +3,7 @@
     $label = $label ?? 'Link Google Maps';
     $hint = $hint ?? 'Dán link Google Maps có chứa tọa độ rồi bấm lấy tọa độ.';
     $mapLinkName = $mapLinkName ?? 'map_link';
+    $addressTarget = $addressTarget ?? null;
     $mapLinkValue = old($mapLinkName, $mapLinkValue ?? '');
     $latName = $latName ?? 'latitude';
     $lngName = $lngName ?? 'longitude';
@@ -12,7 +13,7 @@
     $mapLinkError = $errorBag ? $errors->getBag($errorBag)->first($mapLinkName) : $errors->first($mapLinkName);
 @endphp
 
-<div class="branch-map-link-picker border rounded-3 p-3 bg-light" data-branch-map-link-picker="{{ $pickerId }}">
+<div class="branch-map-link-picker border rounded-3 p-3 bg-light" data-branch-map-link-picker="{{ $pickerId }}" @if($addressTarget) data-address-target="{{ $addressTarget }}" @endif>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <div>
             <div class="fw-bold text-dark small">{{ $label }}</div>
@@ -24,9 +25,6 @@
                 @endif
             </div>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-primary" data-branch-map-link-apply>
-            <i class="bi bi-geo-alt me-1"></i>Lấy tọa độ
-        </button>
     </div>
 
     <div class="input-group">
@@ -38,7 +36,7 @@
             placeholder="Dán link Google Maps ở đây"
             data-branch-map-link-input
         >
-        <button type="button" class="btn btn-outline-secondary" data-branch-map-link-apply>
+        <button type="button" class="btn btn-outline-secondary" data-branch-map-link-apply data-branch-map-link-analyze>
             Phân tích link
         </button>
     </div>

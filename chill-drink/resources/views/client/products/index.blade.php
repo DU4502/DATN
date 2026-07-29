@@ -751,8 +751,75 @@
 
     .quick-add-modal .modal-content {
         border: 0;
-        border-radius: 22px;
+        border-radius: 30px;
         box-shadow: 0 26px 70px rgba(8, 42, 38, 0.24);
+        overflow: hidden;
+    }
+
+    .quick-add-modal .modal-dialog { max-width: 780px; }
+    .quick-add-modal .modal-header { padding: 1.5rem 1.75rem 0.75rem; }
+    .quick-add-modal .modal-body { padding: 0 1.75rem 1.25rem; }
+    .quick-add-modal .modal-title { font-size: 1.85rem; }
+
+    .quick-product-summary {
+        display: flex;
+        gap: 1.25rem;
+        align-items: center;
+        padding: 1rem;
+        margin-bottom: 1.1rem;
+        border: 1px solid #d6ebe5;
+        border-radius: 22px;
+        background: #effbf8;
+    }
+
+    .quick-section {
+        padding: 1rem 0;
+        border-top: 1px solid #edf1f0;
+    }
+
+    .quick-section-label {
+        display: flex;
+        align-items: center;
+        gap: .55rem;
+        margin-bottom: .75rem;
+        font-weight: 800;
+    }
+
+    .quick-section-label i { color: var(--drink-primary); }
+    .quick-section-label small { color: #7b858f; font-weight: 500; }
+
+    .quick-size-grid,
+    .quick-topping-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; }
+    .quick-levels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 1rem;
+        padding-top: .75rem;
+    }
+
+    .quick-quantity {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-height: 58px;
+        padding: 0 1rem;
+        border: 1px solid var(--drink-border);
+        border-radius: 999px;
+    }
+
+    .quick-quantity button { border: 0; background: transparent; color: var(--drink-primary); font-size: 1.35rem; }
+    .quick-submit { min-height: 58px; box-shadow: 0 8px 18px rgba(13, 147, 115, .2); }
+
+    @media (max-width: 767.98px) {
+        .quick-add-modal .modal-dialog { margin: .65rem; }
+        .quick-add-modal .modal-header { padding: 1.2rem 1.1rem .7rem; }
+        .quick-add-modal .modal-body { padding: 0 1.1rem 1.1rem; }
+        .quick-levels-grid { grid-template-columns: 1fr; gap: 0; }
+        .quick-topping-grid { grid-template-columns: 1fr; }
+        .quick-actions { grid-template-columns: 1fr; }
     }
 
     .quick-add-thumb {
@@ -768,7 +835,7 @@
     }
 
     .quick-topping-choice {
-        min-width: 150px;
+        min-width: 0;
         border-radius: 14px;
         text-align: left;
     }
@@ -781,9 +848,9 @@
     }
 
     .quick-choice {
-        min-width: 64px;
+        min-width: 0;
         border: 1.5px solid var(--c-border, #e5e7eb) !important;
-        border-radius: 999px;
+        border-radius: 14px;
         background: #ffffff !important;
         color: var(--c-ink, #111827) !important;
         font-weight: 800;
@@ -801,16 +868,16 @@
 
     .quick-choice.active {
         border-color: var(--c-primary, #0d9373) !important;
-        background: var(--c-primary, #0d9373) !important;
-        color: #ffffff !important;
-        box-shadow: 0 8px 18px rgba(13, 147, 115, 0.24);
+        background: var(--c-primary-light, #e6f7f2) !important;
+        color: var(--c-primary-dark, #067a5f) !important;
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.12);
         transform: translateY(-1px);
     }
 
     .quick-choice.active:hover {
-        background: var(--c-primary-dark, #067a5f) !important;
-        border-color: var(--c-primary-dark, #067a5f) !important;
-        color: #ffffff !important;
+        background: var(--c-primary-light, #e6f7f2) !important;
+        border-color: var(--c-primary, #0d9373) !important;
+        color: var(--c-primary-dark, #067a5f) !important;
     }
 
     .pager-dot {
@@ -1056,7 +1123,7 @@
                                     </button>
                                 </div>
                                 <p class="voucher-card__info">
-                                    {{ $voucher->description ?? 'Voucher giảm giá' }}
+                                    {{ $voucher->description ?? 'Phiếu giảm giá' }}
                                     <span class="voucher-card__highlight">
                                         @if($voucher->type === 'percent')
                                             Giảm {{ $voucher->value }}%
@@ -1178,6 +1245,8 @@
                                             data-action="{{ route('cart.add', $product->id) }}"
                                             data-name="{{ $product->name }}"
                                             data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
+                                            data-base-price="{{ (int) ($product->price ?? 0) }}"
+                                            data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
                                             data-image="{{ $product->image_url }}"
                                             data-category="{{ $product->category?->name }}"
                                         >
@@ -1226,6 +1295,7 @@
                                                 data-action="{{ route('cart.add', 'demo-' . $item[5]) }}"
                                                 data-name="{{ $item[0] }}"
                                                 data-price="{{ $item[2] }}"
+                                                data-base-price="{{ (int) preg_replace('/\D/', '', $item[2]) }}"
                                                 data-image="{{ $item[3] }}"
                                             >
                                                 <i class="bi bi-cart-plus" aria-hidden="true"></i>
@@ -1264,7 +1334,7 @@
         <div class="modal-content">
             <form id="quickAddForm" method="POST" data-ajax-cart>
                 @csrf
-                <input type="hidden" name="size" value="M" data-quick-size-input>
+                <input type="hidden" name="size" value="S" data-quick-size-input>
                 <input type="hidden" name="sugar_level" value="50" data-quick-sugar-input>
                 <input type="hidden" name="ice_level" value="100" data-quick-ice-input>
                 <input type="hidden" name="toppings" value="[]" data-quick-toppings-input>
@@ -1276,66 +1346,57 @@
                 </div>
 
                 <div class="modal-body">
-                    <div class="d-flex gap-3 align-items-center mb-4">
+                    <div class="quick-product-summary">
                         <img src="" alt="" class="quick-add-thumb" data-quick-image>
                         <div>
-                            <div class="fw-bold fs-5" data-quick-name></div>
+                            <div class="fw-bold fs-4" data-quick-name></div>
                             <div class="text-primary fw-bold" data-quick-price></div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="fw-bold mb-2">Size</div>
-                        <div class="d-flex flex-wrap gap-2" data-quick-group="size">
-                            <button type="button" class="quick-choice" data-value="S">S</button>
-                            <button type="button" class="quick-choice active" data-value="M">M</button>
-                            <button type="button" class="quick-choice" data-value="L">L</button>
+                    <div class="quick-section">
+                        <div class="quick-section-label"><i class="bi bi-cup-straw"></i> Chọn kích cỡ</div>
+                        <div class="quick-size-grid" data-quick-group="size">
+                            <button type="button" class="quick-choice active" data-value="S" data-extra-price="0">S<small class="d-block text-secondary">Giá gốc</small></button>
+                            <button type="button" class="quick-choice" data-value="M" data-extra-price="5000">M<small class="d-block text-secondary">+5.000đ</small></button>
+                            <button type="button" class="quick-choice" data-value="L" data-extra-price="10000">L<small class="d-block text-secondary">+10.000đ</small></button>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="fw-bold mb-2">Mức đường</div>
-                        <div class="d-flex flex-wrap gap-2" data-quick-group="sugar">
-                            <button type="button" class="quick-choice" data-value="0">0%</button>
-                            <button type="button" class="quick-choice" data-value="30">30%</button>
-                            <button type="button" class="quick-choice active" data-value="50">50%</button>
-                            <button type="button" class="quick-choice" data-value="70">70%</button>
-                            <button type="button" class="quick-choice" data-value="100">100%</button>
+                    <div class="quick-section quick-levels-grid">
+                        <div>
+                            <div class="quick-section-label"><i class="bi bi-droplet"></i> Mức đường</div>
+                            <div class="d-flex flex-wrap gap-2" data-quick-group="sugar">
+                                <button type="button" class="quick-choice" data-value="0">0%</button>
+                                <button type="button" class="quick-choice active" data-value="50">50%</button>
+                                <button type="button" class="quick-choice" data-value="100">100%</button>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="quick-section-label"><i class="bi bi-snow"></i> Mức đá</div>
+                            <div class="d-flex flex-wrap gap-2" data-quick-group="ice">
+                                <button type="button" class="quick-choice" data-value="0">Không đá</button>
+                                <button type="button" class="quick-choice" data-value="50">Ít đá</button>
+                                <button type="button" class="quick-choice active" data-value="100">Thường</button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <div class="fw-bold mb-2">Mức đá</div>
-                        <div class="d-flex flex-wrap gap-2" data-quick-group="ice">
-                            <button type="button" class="quick-choice" data-value="0">Không đá</button>
-                            <button type="button" class="quick-choice" data-value="50">Ít đá</button>
-                            <button type="button" class="quick-choice active" data-value="100">Bình thường</button>
-                        </div>
+                    <div class="quick-section">
+                        <div class="quick-section-label"><i class="bi bi-plus-circle"></i> Thêm món kèm <small>(có thể chọn nhiều)</small></div>
+                        <div class="quick-topping-grid" data-quick-topping-group></div>
                     </div>
 
-                    <div>
-                        <div class="fw-bold mb-2">Topping</div>
-                        <div class="d-flex flex-wrap gap-2" data-quick-topping-group></div>
-                    </div>
-
-                    <div class="mt-4 pt-3 border-top d-flex align-items-center justify-content-between">
-                        <div class="fw-bold">Số lượng</div>
-                        <div class="d-flex align-items-center gap-3">
-                            <button type="button" class="btn btn-outline-secondary rounded-circle p-0 d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 36px; height: 36px;" data-quick-qty-minus>
-                                -
-                            </button>
+                    <div class="quick-actions">
+                        <div class="quick-quantity" aria-label="Số lượng">
+                            <button type="button" data-quick-qty-minus aria-label="Giảm số lượng">−</button>
                             <span class="fw-bold fs-5" data-quick-qty-display>1</span>
-                            <button type="button" class="btn btn-outline-secondary rounded-circle p-0 d-flex align-items-center justify-content-center fw-bold fs-5" style="width: 36px; height: 36px;" data-quick-qty-plus>
-                                +
-                            </button>
+                            <button type="button" data-quick-qty-plus aria-label="Tăng số lượng">+</button>
                         </div>
+                        <button type="submit" class="btn btn-primary rounded-pill fw-bold quick-submit">
+                            Thêm vào giỏ · <span data-quick-total>0đ</span>
+                        </button>
                     </div>
-                </div>
-
-                <div class="modal-footer border-0 pt-0">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-3 fw-bold">
-                        Thêm vào giỏ
-                    </button>
                 </div>
             </form>
         </div>
@@ -1441,7 +1502,18 @@
             qtyDisplay: modalElement.querySelector('[data-quick-qty-display]'),
             qtyMinus: modalElement.querySelector('[data-quick-qty-minus]'),
             qtyPlus: modalElement.querySelector('[data-quick-qty-plus]'),
+            total: modalElement.querySelector('[data-quick-total]'),
         };
+        let currentBasePrice = 0;
+
+        function updateQuickTotal() {
+            const sizeExtra = Number(modalElement.querySelector('[data-quick-group="size"] .quick-choice.active')?.dataset.extraPrice || 0);
+            const toppingTotal = Array.from(fields.toppingGroup?.querySelectorAll('.quick-topping-choice.active') || [])
+                .reduce((sum, button) => sum + Number(button.dataset.toppingPrice || 0), 0);
+            const quantity = Math.max(1, Number(fields.qtyInput?.value || 1));
+            const total = (currentBasePrice + sizeExtra + toppingTotal) * quantity;
+            if (fields.total) fields.total.textContent = `${total.toLocaleString('vi-VN')}đ`;
+        }
 
         function setGroupValue(group, value) {
             modalElement.querySelectorAll(`[data-quick-group="${group}"] .quick-choice`).forEach((button) => {
@@ -1496,6 +1568,7 @@
             if (fields.toppings) {
                 fields.toppings.value = JSON.stringify(toppings);
             }
+            updateQuickTotal();
         }
 
         function renderQuickToppings(name, category) {
@@ -1520,16 +1593,35 @@
                 fields.price.textContent = button.dataset.price || '';
                 fields.image.src = button.dataset.image || '';
                 fields.image.alt = button.dataset.name || 'Đồ uống';
-                fields.size.value = 'M';
+                currentBasePrice = Number(button.dataset.basePrice || 0);
+                fields.size.value = 'S';
                 fields.sugar.value = '50';
                 fields.ice.value = '100';
-                fields.toppings.value = '[]';
                 if (fields.qtyInput) fields.qtyInput.value = '1';
                 if (fields.qtyDisplay) fields.qtyDisplay.textContent = '1';
-                setGroupValue('size', 'M');
+
+                let sizesMap = {};
+                try {
+                    sizesMap = JSON.parse(button.dataset.sizes || '{}');
+                } catch(e) {}
+
+                modalElement.querySelectorAll('.quick-size-grid .quick-choice').forEach((sizeBtn) => {
+                    const sz = sizeBtn.dataset.value;
+                    if (sz === 'S') {
+                        sizeBtn.dataset.extraPrice = '0';
+                    } else if (sizesMap[sz] !== undefined) {
+                        const extraPrice = Number(sizesMap[sz]);
+                        sizeBtn.dataset.extraPrice = extraPrice;
+                        const small = sizeBtn.querySelector('small');
+                        if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
+                    }
+                });
+
+                setGroupValue('size', 'S');
                 setGroupValue('sugar', '50');
                 setGroupValue('ice', '100');
                 renderQuickToppings(button.dataset.name || '', button.dataset.category || '');
+                updateQuickTotal();
                 modal.show();
             });
         });
@@ -1556,6 +1648,7 @@
                 if (group.dataset.quickGroup === 'ice') {
                     fields.ice.value = button.dataset.value;
                 }
+                updateQuickTotal();
             });
         });
 
@@ -1576,6 +1669,7 @@
                     val--;
                     fields.qtyInput.value = val;
                     fields.qtyDisplay.textContent = val;
+                    updateQuickTotal();
                 }
             });
             fields.qtyPlus.addEventListener('click', () => {
@@ -1583,6 +1677,7 @@
                 val++;
                 fields.qtyInput.value = val;
                 fields.qtyDisplay.textContent = val;
+                updateQuickTotal();
             });
         }
 

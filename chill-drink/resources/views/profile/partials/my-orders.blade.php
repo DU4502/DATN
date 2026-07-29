@@ -202,6 +202,7 @@ $paymentLabels = $paymentLabels ?? [
             <h2 class="h4 fw-bold mb-0">Lịch sử mua hàng</h2>
         </div>
         <div class="d-flex flex-wrap gap-2">
+            <a href="{{ route('loyalty.index') }}" class="btn btn-outline-warning"><i class="bi bi-star-fill me-1"></i>Điểm thưởng</a>
             <a href="{{ route('favorites.index') }}" class="btn btn-outline-danger"><i class="bi bi-heart me-1"></i>Món yêu thích</a>
             <a href="{{ route('group-orders.index') }}" class="btn btn-outline-primary"><i class="bi bi-people me-1"></i>Đơn nhóm</a>
             <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Tiếp tục mua sắm</a>
@@ -214,7 +215,7 @@ $paymentLabels = $paymentLabels ?? [
     <article class="order-card mb-4" id="order-{{ $order->id }}" data-order-id="{{ $order->id }}">
         <div class="order-card-header">
             <div>
-                <div class="fw-bold text-primary">#{{ str_pad((string) $order->id, 5, '0', STR_PAD_LEFT) }}</div>
+                <div class="fw-bold text-primary">{{ $order->displayCode() }}</div>
                 <div class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</div>
                 @if($order->scheduled_at)
                 <div class="small fw-semibold text-primary mt-1"><i class="bi bi-calendar-check me-1"></i>Nhận lúc {{ $order->scheduled_at->format('H:i · d/m/Y') }}</div>
@@ -345,18 +346,86 @@ $paymentLabels = $paymentLabels ?? [
 
         <div class="order-card-footer">
             <div class="text-secondary small">
-                Thanh toán: <strong class="text-dark">{{ $paymentLabels[$order->payment_method] ?? strtoupper($order->payment_method) }}</strong>
-                @if($order->note)
-                <span class="d-block mt-1">Ghi chú: {{ $order->note }}</span>
+                <div class="mb-2">
+                    <strong class="text-dark">Thông tin giao hàng:</strong>
+                </div>
+                <div class="d-flex align-items-start gap-2 mb-1">
+                    <i class="bi bi-person text-primary"></i>
+                    <span>{{ $order->customerName() ?: 'Khách hàng' }}</span>
+                </div>
+                <div class="d-flex align-items-start gap-2 mb-1">
+                    <i class="bi bi-telephone text-primary"></i>
+                    <span>{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</span>
+                </div>
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <i class="bi bi-geo-alt text-primary"></i>
+                    <span>{{ $order->getShippingAddress() }}</span>
+                </div>
+                
+                <div class="border-top pt-2 mt-2">
+                    <div class="mb-1">Thanh toán: <strong class="text-dark">{{ $paymentLabels[$order->payment_method] ?? strtoupper($order->payment_method) }}</strong></div>
+                    @if($order->note)
+                    <div class="mt-1">
+                        @php
+                            // Split note into customer note and delivery info
+                            $noteText = $order->note;
+                            $customerNote = '';
+                            $deliveryInfo = '';
+                            
+                            // Check if note contains "Giao hàng:"
+                            if (preg_match('/^(.*?)(Giao hàng:.*)$/uis', $noteText, $matches)) {
+                                $customerNote = trim($matches[1]);
+                                $deliveryInfo = trim($matches[2]);
+                            } else {
+                                $customerNote = $noteText;
+                            }
+                        @endphp
+                        
+                        @if($customerNote)
+                        <div class="mb-1">Ghi chú: {{ $customerNote }}</div>
+                        @endif
+                        
+                        @if($deliveryInfo)
+                        <div>{{ $deliveryInfo }}</div>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+                @if($order->status === 'cancelled' && $order->cancellation_reason)
+                <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
+                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold mb-1">Lý do hủy đơn:</div>
+                        <div>{{ $order->cancellation_reason }}</div>
+                    </div>
+                </div>
                 @endif
             </div>
             <div class="text-end">
                 <div class="text-secondary small">Tổng thanh toán</div>
                 <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
-                <form method="POST" action="{{ route('orders.reorder', $order) }}" class="mt-2">
-                    @csrf
-                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
-                </form>
+                
+                <div class="d-flex flex-column gap-2 mt-2">
+                    <form method="POST" action="{{ route('orders.reorder', $order) }}">
+                        @csrf
+                        <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
+                    </form>
+                    
+                    @if($statusKey === 'pending' || $order->status === 'pending')
+                        <button type="button" class="btn btn-sm btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#customerCancelOrderModal" data-order-id="{{ $order->id }}">
+                            <i class="bi bi-x-circle me-1"></i>Hủy đơn hàng
+                        </button>
+                    @endif
+                    
+                    @if($statusKey === 'delivered' || $order->status === 'delivered')
+                        <form method="POST" action="{{ route('orders.confirm-received', $order) }}" onsubmit="return confirm('Xác nhận bạn đã nhận được đơn hàng này?');">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-success w-100">
+                                <i class="bi bi-check-circle me-1"></i>Xác nhận đã nhận
+                            </button>
+                        </form>
+                    @endif
+                </div>
                 
                 @if($order->payment_method === 'vnpay' && in_array($order->payment_status, ['pending', 'failed']) && $order->status !== 'cancelled')
                     <div class="mt-2">
@@ -398,6 +467,64 @@ $paymentLabels = $paymentLabels ?? [
     </div>
     @endforelse
 </div>
+
+<!-- Modal Hủy đơn hàng (Customer) -->
+<div class="modal fade" id="customerCancelOrderModal" tabindex="-1" aria-labelledby="customerCancelOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);">
+            <div class="modal-header" style="border-bottom: 1px solid #e9ecef;">
+                <h5 class="modal-title fw-bold" id="customerCancelOrderModalLabel">
+                    <i class="bi bi-x-circle text-danger me-2"></i>Xác nhận hủy đơn hàng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="customerCancelOrderForm" method="POST">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" style="border-radius: 12px;">
+                        <i class="bi bi-info-circle-fill" style="font-size: 1.2rem;"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold mb-1">Lưu ý quan trọng:</div>
+                            <small>Bạn chỉ có thể hủy đơn hàng khi đơn đang ở trạng thái <strong>"Chờ xác nhận"</strong>. Sau khi quán xác nhận, đơn hàng không thể hủy.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="customerCancellationReason" class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="customerCancellationReason" name="cancellation_reason" rows="4" placeholder="Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng..." required style="border-radius: 12px;"></textarea>
+                        <div class="form-text">Lý do của bạn giúp chúng tôi cải thiện dịch vụ tốt hơn.</div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #e9ecef;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 12px;">Đóng</button>
+                    <button type="submit" class="btn btn-danger" style="border-radius: 12px;">
+                        <i class="bi bi-x-circle me-1"></i>Xác nhận hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Handle customer cancel order modal
+    document.addEventListener('DOMContentLoaded', function() {
+        const customerCancelModal = document.getElementById('customerCancelOrderModal');
+        const customerCancelForm = document.getElementById('customerCancelOrderForm');
+        const customerCancelReasonTextarea = document.getElementById('customerCancellationReason');
+        
+        if (customerCancelModal) {
+            customerCancelModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const orderId = button.getAttribute('data-order-id');
+                const cancelUrl = '{{ route("orders.cancel", ":id") }}'.replace(':id', orderId);
+                
+                customerCancelForm.setAttribute('action', cancelUrl);
+                customerCancelReasonTextarea.value = '';
+            });
+        }
+    });
+</script>
 
 <script>
     function highlightOrderCard(orderCard) {
@@ -459,6 +586,42 @@ $paymentLabels = $paymentLabels ?? [
         badge.dataset.status = payload.status;
         badge.textContent = payload.status_label || payload.status;
         badge.className = `order-status-badge ${statusClassMap[payload.status] || 'order-status-pending'}`;
+        
+        // If order is cancelled and has a reason, display it in the footer
+        if (payload.status === 'cancelled' && payload.cancellation_reason) {
+            const footer = orderCard.querySelector('.order-card-footer > div:first-child');
+            if (footer) {
+                // Remove existing cancellation reason if any
+                const existingReason = footer.querySelector('.cancellation-reason-alert');
+                if (existingReason) {
+                    existingReason.remove();
+                }
+                
+                // Add new cancellation reason
+                const reasonHtml = `
+                    <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2 cancellation-reason-alert" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold mb-1">Lý do hủy đơn:</div>
+                            <div>${escapeHtml(payload.cancellation_reason)}</div>
+                        </div>
+                    </div>
+                `;
+                footer.insertAdjacentHTML('beforeend', reasonHtml);
+            }
+        }
+        
         highlightOrderCard(orderCard);
     });
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text ? String(text).replace(/[&<>"']/g, m => map[m]) : '';
+    }
 </script>

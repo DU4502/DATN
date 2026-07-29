@@ -21,7 +21,7 @@ class GuestOrderEmailConfirmationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '[Chill Drink] Xác nhận đơn hàng #' . $this->order->id . ' của bạn',
+            subject: '[Chill Drink] Xác nhận đơn hàng ' . $this->order->displayCode() . ' của bạn',
         );
     }
 

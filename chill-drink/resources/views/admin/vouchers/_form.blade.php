@@ -58,18 +58,9 @@
     </div>
 
     <div class="col-lg-6">
-        <label for="required_rank" class="form-label fw-semibold">Rank yêu cầu</label>
-        <select id="required_rank" name="required_rank" class="admin-filter">
-            <option value="">Tất cả</option>
-            @foreach($rankOptions as $value => $label)
-                <option value="{{ $value }}" @selected(old('required_rank', $voucher->required_rank ?? '') === $value)>{{ $label }}</option>
-            @endforeach
-        </select>
-    </div>
-
-    <div class="col-lg-6">
         <label for="point_cost" class="form-label fw-semibold">Điểm đổi</label>
         <input id="point_cost" type="number" min="0" name="point_cost" value="{{ old('point_cost', $voucher->point_cost ?? 0) }}" class="admin-input">
+        <small class="text-secondary">Số điểm cần để đổi voucher này.</small>
     </div>
 
     <div class="col-lg-6 d-flex align-items-end">
@@ -110,7 +101,7 @@
             <input type="checkbox" name="show_on_products" value="1" @checked(old('show_on_products', $voucher->show_on_products ?? false))>
             Hiển thị trên trang sản phẩm
         </label>
-        <small class="text-secondary d-block ms-4">Tối đa 4 voucher sẽ hiển thị. Voucher mới nhất sẽ được ưu tiên.</small>
+        <small class="text-secondary d-block ms-4">Tối đa 4 phiếu ưu đãi sẽ hiển thị. Phiếu mới nhất sẽ được ưu tiên.</small>
     </div>
 
     @if($isEdit)

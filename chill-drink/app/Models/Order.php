@@ -16,11 +16,13 @@ class Order extends Model
      * @var array
      */
     protected $fillable = [
+        'order_code',
         'user_id',
         'guest_name',
         'guest_phone',
         'guest_email',
         'guest_token',
+        'contact_phone',
         'confirmation_token',
         'confirmation_token_expires_at',
         'delivery_type',
@@ -38,6 +40,8 @@ class Order extends Model
         'payment_status',
         'vnpay_transaction_id',
         'status',
+        'cancellation_reason',
+        'delivered_at',
         'note',
         'scheduled_at',
     ];
@@ -56,6 +60,7 @@ class Order extends Model
         'confirmation_token_expires_at'  => 'datetime',
         'scheduled_at'                   => 'datetime',
         'scheduled_delivery_time'        => 'datetime',
+        'delivered_at'                   => 'datetime',
     ];
 
     /**
@@ -95,14 +100,26 @@ class Order extends Model
     public function getStatusBadgeColor()
     {
         return match (OrderStatus::normalize((string) $this->status)) {
-            OrderStatus::PENDING => 'yellow',
-            OrderStatus::IN_PROGRESS => 'blue',
-            OrderStatus::SHIPPER_ACCEPTED => 'purple',
-            OrderStatus::ARRIVED => 'indigo',
-            OrderStatus::COMPLETED => 'green',
-            OrderStatus::CANCELLED => 'red',
-            default => 'gray',
+            OrderStatus::PENDING => 'warning',
+            OrderStatus::CONFIRMED => 'info',
+            OrderStatus::PREPARING => 'primary',
+            OrderStatus::READY_FOR_DELIVERY, OrderStatus::READY_FOR_PICKUP => 'cyan',
+            OrderStatus::SHIPPER_PICKED_UP => 'indigo',
+            OrderStatus::DELIVERING => 'purple',
+            OrderStatus::DELIVERED => 'teal',
+            OrderStatus::COMPLETED => 'success',
+            OrderStatus::CANCELLED => 'danger',
+            default => 'secondary',
         };
+    }
+
+    /**
+     * Trả về mã hiển thị của đơn hàng.
+     * Ưu tiên order_code nếu có, fallback về #id cho đơn cũ.
+     */
+    public function displayCode(): string
+    {
+        return $this->order_code ?? ('#' . $this->id);
     }
 
     public function isGuest(): bool
@@ -162,7 +179,7 @@ class Order extends Model
             return $this->guest_phone;
         }
 
-        return $this->user?->phone;
+        return $this->contact_phone ?: $this->user?->phone;
     }
 
     public function getShippingAddress(): string
@@ -195,6 +212,36 @@ class Order extends Model
 
     public function pointsEarnable(): int
     {
-        return max(0, (int) floor(((int) $this->total) / 1000));
+        // 1 point per 10,000 VND spent
+        return LoyaltyPoint::calculatePointsFromAmount((int) $this->total);
+    }
+
+    /**
+     * Award loyalty points to user when order is completed
+     */
+    public function awardLoyaltyPoints(): void
+    {
+        // Only award points to registered users
+        if (!$this->user_id) {
+            return;
+        }
+
+        $points = $this->pointsEarnable();
+        
+        if ($points <= 0) {
+            return;
+        }
+
+        // Get or create loyalty point record
+        $loyaltyPoint = LoyaltyPoint::getOrCreateForUser($this->user_id);
+        
+        // Add points with transaction record
+        $loyaltyPoint->addPoints(
+            points: $points,
+            type: 'earn',
+            description: "Hoàn thành đơn hàng {$this->displayCode()}",
+            referenceType: 'order',
+            referenceId: $this->id
+        );
     }
 }

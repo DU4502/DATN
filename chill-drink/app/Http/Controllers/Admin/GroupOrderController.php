@@ -52,7 +52,7 @@ class GroupOrderController extends Controller
         
         $user = auth()->user();
         if (!$user->isSuperAdmin()) {
-            if (!$groupOrder->order || $groupOrder->order->branch_id !== $user->branch_id) {
+            if ($groupOrder->order && $user->branch_id && $groupOrder->order->branch_id !== $user->branch_id) {
                 abort(403, 'Bạn không có quyền xem đơn nhóm này.');
             }
         }
@@ -74,8 +74,14 @@ class GroupOrderController extends Controller
             return $query;
         }
 
-        return $query->whereHas('order', function ($q) use ($user) {
-            $q->where('branch_id', $user->branch_id);
+        if (! $user->branch_id) {
+            return $query;
+        }
+
+        return $query->where(function ($scopedQuery) use ($user) {
+            $scopedQuery
+                ->whereDoesntHave('order')
+                ->orWhereHas('order', fn ($order) => $order->where('branch_id', $user->branch_id));
         });
     }
 }

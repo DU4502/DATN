@@ -1,6 +1,6 @@
 @extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
 
-@section('page-title', 'Quản lý Slideshow')
+@section('page-title', 'Quản lý trình chiếu')
 
 @section('content')
 @php
@@ -9,7 +9,7 @@
 
 <section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
     <div>
-        <h2 class="h2 fw-bold mb-1">Quản lý Slideshow Chi Nhánh</h2>
+        <h2 class="h2 fw-bold mb-1">Quản lý trình chiếu chi nhánh</h2>
         @if($branch)
             <p class="text-secondary mb-0">Đang quản lý slide cho chi nhánh: <strong class="text-dark">{{ $branch->name }}</strong></p>
         @else
@@ -44,7 +44,7 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 @endif
 
@@ -54,7 +54,7 @@
         <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
             <div class="modal-header border-bottom-0 pb-0">
                 <h4 class="modal-title fw-bold text-dark match-modal-title">Tạo Slide mới</h4>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <form action="{{ route('admin.slides.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -115,7 +115,7 @@
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 @endif
 
@@ -194,7 +194,7 @@
                                     <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
                                         <div class="modal-header border-bottom-0 pb-0">
                                             <h4 class="modal-title fw-bold text-dark match-modal-title">Sửa Slide sản phẩm</h4>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                                         </div>
                                         <form action="{{ route('admin.slides.update', $slide) }}" method="POST" enctype="multipart/form-data">
                                             @csrf

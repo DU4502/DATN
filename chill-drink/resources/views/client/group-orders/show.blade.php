@@ -9,7 +9,7 @@
     $memberCount = $group->members->count();
     $isFull = $memberCount >= \App\Models\GroupOrder::MAX_MEMBERS;
 @endphp
-<section class="group-page">
+<section class="group-page" data-vue-group-order-room data-presence-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code) : '' }}" data-leave-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.leave', $group->code) : '' }}">
     <div class="container group-shell">
         @if(session('success'))<div class="alert alert-success rounded-4 border-0 shadow-sm"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}</div>@endif
         @if(session('error'))<div class="alert alert-danger rounded-4 border-0 shadow-sm"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}</div>@endif
@@ -21,6 +21,7 @@
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-3"><span class="group-code">{{ $group->code }}</span><span class="group-status {{ $isOpen ? 'is-open' : 'is-closed' }}"><span class="group-status-dot"></span>{{ $isOpen ? 'Đang nhận món' : 'Đã đóng' }}</span></div>
                     <h1 class="display-6 fw-bold mb-2">{{ $group->name }}</h1>
                     <p class="text-white-50 mb-1"><i class="bi bi-person me-1"></i>Chủ nhóm: {{ $group->owner->name }}</p>
+                    @if($group->branch)<p class="text-white-50 mb-1"><i class="bi bi-shop me-1"></i>Chi nhánh: <strong class="text-white">{{ $group->branch->name }}</strong></p>@endif
                     <p class="text-white-50 mb-0"><i class="bi bi-clock me-1"></i>@if($isOpen)Còn <strong class="text-white" data-group-countdown data-closes-at="{{ $group->closes_at->toIso8601String() }}">30:00</strong> để chọn món · Kết thúc lúc <strong class="text-white">{{ $group->closes_at->format('H:i · d/m/Y') }}</strong> @else Đã đóng lúc {{ $group->closes_at->format('H:i · d/m/Y') }} @endif</p>
                     @if($group->note)<p class="mt-3 mb-0"><i class="bi bi-chat-left-text me-2"></i>{{ $group->note }}</p>@endif
                 </div>
@@ -33,17 +34,11 @@
         </div>
 
         @if($isOpen && auth()->id() !== $group->owner_id)
-            <div class="group-owner-away mb-4 {{ $group->ownerIsPresent() ? '' : 'is-visible' }}" data-owner-away-notice data-presence-url="{{ route('group-orders.presence', $group->code) }}" data-closes-at="{{ $group->closes_at->toIso8601String() }}">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="group-owner-away-icon"><i class="bi bi-person-exclamation"></i></span>
-                    <div><strong class="d-block">Chủ nhóm đã rời khỏi phòng</strong><span class="small">Bạn vẫn có thể chọn món. Phòng sẽ tự kết thúc khi hết thời gian.</span></div>
-                </div>
-                <span class="group-owner-away-time" data-owner-away-countdown>--:--</span>
-            </div>
         @endif
 
+        <div data-group-participation>
         @if(!$currentMember && $isOpen && !$isFull)
-            <form method="POST" action="{{ route('group-orders.join', $group->code) }}" class="group-card p-4 mb-4">@csrf
+            <form method="POST" action="{{ route('group-orders.join', $group->code) }}" class="group-card p-4 mb-4" data-group-async-action data-group-join>@csrf
                 <div class="row g-3 align-items-end"><div class="col-md"><div class="group-eyebrow mb-1">Bước đầu tiên</div><h2 class="group-section-title mb-2">Bạn muốn hiển thị tên gì?</h2><input name="name" value="{{ old('name', auth()->user()->name) }}" class="form-control group-input" required maxlength="100" placeholder="Tên của bạn"></div><div class="col-md-auto"><button class="btn btn-primary group-btn w-100"><i class="bi bi-box-arrow-in-right me-2"></i>Tham gia phòng</button></div></div>
             </form>
         @elseif(!$currentMember && $isOpen && $isFull)
@@ -66,12 +61,12 @@
                         @endforeach
                         <div class="group-search-empty" data-product-empty><i class="bi bi-exclamation-circle me-1"></i>Không tìm thấy đồ uống phù hợp.</div>
                     </div></div></div></div>
-                    <div class="col-lg-6"><div class="group-field-panel"><div class="group-custom-grid"><div><label class="group-form-label">Size</label><select name="size" class="form-select group-input"><option selected>S</option><option>M</option><option>L</option></select></div><div><label class="group-form-label">Mức đường</label><select name="sugar_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Mức đá</label><select name="ice_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Số lượng</label><input type="number" name="quantity" value="1" min="1" max="20" class="form-control group-input text-center"></div></div></div></div>
+                    <div class="col-lg-6"><div class="group-field-panel"><div class="group-custom-grid"><div><label class="group-form-label">Kích cỡ</label><select name="size" class="form-select group-input"><option selected>S</option><option>M</option><option>L</option></select></div><div><label class="group-form-label">Mức đường</label><select name="sugar_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Mức đá</label><select name="ice_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Số lượng</label><input type="number" name="quantity" value="1" min="1" max="20" class="form-control group-input text-center"></div></div></div></div>
                     @if($toppings->isNotEmpty())
                         @php($initialToppingIds = $selectedProduct ? $productToppingMap->get($selectedProduct->id, collect()) : collect())
                         <div class="col-12" data-group-topping-section>
                             <div class="group-option-box">
-                                <label class="group-form-label d-block mb-1">Topping phù hợp</label>
+                                <label class="group-form-label d-block mb-1">Món thêm phù hợp</label>
                                 <p class="text-secondary small mb-3" data-topping-help>{{ $selectedProduct ? 'Chỉ hiển thị topping dùng được với món đã chọn.' : 'Hãy chọn đồ uống trước để xem topping phù hợp.' }}</p>
                                 <div class="d-flex flex-wrap gap-2" data-group-toppings>
                                     @foreach($toppings as $topping)
@@ -79,7 +74,7 @@
                                     @endforeach
                                 </div>
                                 <div class="text-secondary small {{ $selectedProduct ? 'd-none' : '' }}" data-choose-product-for-toppings><i class="bi bi-cup-straw me-1"></i>Chưa chọn đồ uống.</div>
-                                <div class="text-secondary small d-none" data-no-toppings><i class="bi bi-info-circle me-1"></i>Món này không có topping thêm.</div>
+                                <div class="text-secondary small d-none" data-no-toppings><i class="bi bi-info-circle me-1"></i>Món này không có món thêm.</div>
                             </div>
                         </div>
                     @endif
@@ -88,13 +83,23 @@
                 </div>
             </form>
         @endif
+        @if($currentMember)
+            <div class="mb-4" data-vue-group-chat
+                 data-group-id="{{ $group->id }}"
+                 data-messages-url="{{ route('group-orders.messages', $group->code) }}"
+                 data-send-url="{{ route('group-orders.messages.send', $group->code) }}"
+                 data-read-url="{{ route('group-orders.messages.read', $group->code) }}"
+                 data-current-member-id="{{ $currentMember->id }}"
+                 data-members='@json($group->members->map(fn($member) => ["id" => $member->id, "name" => $member->name])->values())'></div>
+        @endif
+        </div>
 
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3" data-group-order-heading><div><div class="group-eyebrow mb-1">Đơn hiện tại</div><h2 class="group-section-title mb-0">Mọi người đã chọn gì?</h2></div><span class="text-secondary">{{ $memberCount }}/{{ \App\Models\GroupOrder::MAX_MEMBERS }} thành viên · {{ $group->items->sum('quantity') }} món</span></div>
         <div class="row g-4 mb-4" data-group-members>
             @forelse($group->members as $member)
                 <div class="col-lg-6"><article class="group-card member-card"><header class="member-head"><div class="d-flex align-items-center gap-2"><span class="member-avatar">{{ mb_strtoupper(mb_substr($member->name, 0, 1)) }}</span><div><h3 class="h6 fw-bold mb-0">{{ $member->name }}</h3><small class="text-secondary">{{ $member->items->sum('quantity') }} món</small></div></div><strong class="text-primary">{{ number_format($member->items->sum(fn($item) => $item->subtotal()), 0, ',', '.') }}đ</strong></header>
                     @forelse($member->items as $item)
-                        <div class="member-item"><x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div><small class="text-secondary">Size {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>@if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif</div><div class="text-end"><strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>@if($currentMember?->id === $member->id && $isOpen)<div class="group-item-actions"><form method="POST" action="{{ route('group-orders.items.increment', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-item-action is-add" aria-label="Thêm một phần {{ $item->product->name }}" title="Thêm 1 phần"><i class="bi bi-plus-lg"></i></button></form><form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item]) }}" data-group-async-action>@csrf @method('DELETE')<button class="group-item-action is-remove" aria-label="Xóa món" title="Xóa món"><i class="bi bi-trash3"></i></button></form></div>@endif</div></div>
+                        <div class="member-item"><x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div><small class="text-secondary">Kích cỡ {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>@if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif</div><div class="text-end"><strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>@if($currentMember?->id === $member->id && $isOpen)<div class="group-item-actions"><form method="POST" action="{{ route('group-orders.items.increment', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-item-action is-add" aria-label="Thêm một phần {{ $item->product->name }}" title="Thêm 1 phần"><i class="bi bi-plus-lg"></i></button></form><form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item]) }}" data-group-async-action>@csrf @method('DELETE')<button class="group-item-action is-remove" aria-label="Xóa món" title="Xóa món"><i class="bi bi-trash3"></i></button></form></div>@endif</div></div>
                     @empty<div class="p-4 text-center text-secondary"><i class="bi bi-cup-straw d-block fs-3 mb-2"></i>Chưa chọn món</div>@endforelse
                 </article></div>
             @empty
@@ -122,6 +127,7 @@
         </div>
     </div>
 </section>
+@if(false)
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const showLiveMessage = function (message, isError = false) {
@@ -255,8 +261,7 @@ document.addEventListener('DOMContentLoaded', function () {
         window.setInterval(tick, 1000);
     }
 
-    const awayNotice = document.querySelector('[data-owner-away-notice]');
-    const presenceUrl = awayNotice?.dataset.presenceUrl || @json($isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code) : null);
+    const presenceUrl = @json($isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code) : null);
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
     if (presenceUrl && csrfToken) {
         let presenceTimer = null;
@@ -270,7 +275,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 if (!response.ok) return;
                 const state = await response.json();
-                awayNotice?.classList.toggle('is-visible', state.is_open && !state.owner_present);
                 if (!state.is_open) {
                     if (presenceTimer) window.clearInterval(presenceTimer);
                     if (!hasReloadedForClosing) {
@@ -287,17 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.addEventListener('visibilitychange', () => { if (!document.hidden) syncPresence(); });
     }
 
-    const awayCountdown = document.querySelector('[data-owner-away-countdown]');
-    if (awayNotice && awayCountdown) {
-        const awayClosesAt = new Date(awayNotice.dataset.closesAt).getTime();
-        const tickAway = function () {
-            const seconds = Math.max(0, Math.ceil((awayClosesAt - Date.now()) / 1000));
-            const minutes = Math.floor(seconds / 60);
-            awayCountdown.textContent = String(minutes).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
-        };
-        tickAway();
-        window.setInterval(tickAway, 1000);
-    }
 });
 </script>
+@endif
 @endsection

@@ -492,17 +492,17 @@
             right: 1.25rem;
             top: 5rem;
             z-index: 1081;
-            display: inline-flex;
+            display: grid;
+            grid-template-columns: 38px minmax(0, 1fr) auto;
             align-items: center;
-            gap: 0.6rem;
-            max-width: min(340px, calc(100vw - 2rem));
-            padding: 0.7rem 1rem;
+            gap: 0.85rem;
+            width: min(440px, calc(100vw - 2rem));
+            padding: 1rem;
             border: 1px solid var(--c-border);
-            border-radius: var(--radius-lg);
+            border-radius: 20px;
             background: var(--c-surface);
             color: var(--c-ink);
-            box-shadow: var(--shadow-xl);
-            font-weight: 600;
+            box-shadow: 0 22px 55px rgba(7, 42, 38, .2);
             font-size: 0.875rem;
             opacity: 0;
             transform: translateY(-10px);
@@ -510,21 +510,79 @@
             pointer-events: none;
         }
 
+        body.cart-warning-open { overflow: hidden; }
+        body.cart-warning-open::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 1089;
+            background: rgba(10, 28, 25, .48);
+            backdrop-filter: blur(4px);
+        }
+        .cart-feedback.is-warning {
+            left: 50%;
+            right: auto;
+            top: 50%;
+            z-index: 1090;
+            grid-template-columns: 1fr;
+            justify-items: center;
+            width: min(470px, calc(100vw - 2rem));
+            padding: 1.75rem;
+            border: 0;
+            border-radius: 28px;
+            background: linear-gradient(160deg, #ffffff 0%, #fffdf8 100%);
+            text-align: center;
+            box-shadow: 0 30px 90px rgba(5, 28, 24, .32);
+            transform: translate(-50%, calc(-50% - 12px)) scale(.97);
+        }
+        .cart-feedback-copy { min-width: 0; line-height: 1.5; }
+        .cart-feedback-copy strong { display: block; margin-bottom: .15rem; font-size: .95rem; }
+        .cart-feedback-copy span { display: block; color: var(--c-muted); font-weight: 500; }
+        .cart-feedback-actions { display: flex; align-items: center; gap: .45rem; }
+        .cart-feedback-action { min-height: 40px; padding-inline: 1rem !important; white-space: nowrap; }
+        .cart-feedback-close { width: 34px; height: 34px; border: 0; border-radius: 50%; background: #f3f5f4; color: #66736f; }
+
         .cart-feedback.show {
             opacity: 1;
             transform: translateY(0);
+            pointer-events: auto;
         }
 
         .cart-feedback-icon {
-            width: 28px;
-            height: 28px;
+            width: 38px;
+            height: 38px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: var(--radius-sm);
+            border-radius: 12px;
             background: var(--c-primary-light);
             color: var(--c-primary);
             flex: 0 0 auto;
+        }
+
+        .cart-feedback.is-warning.show { transform: translate(-50%, -50%) scale(1); }
+        .cart-feedback.is-warning .cart-feedback-icon {
+            width: 58px;
+            height: 58px;
+            margin-bottom: .15rem;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #fff0c7, #ffe1a1);
+            color: #b85c00;
+            font-size: 1.45rem;
+            box-shadow: 0 10px 24px rgba(205, 119, 20, .18);
+        }
+        .cart-feedback.is-warning .cart-feedback-copy strong { margin-bottom: .45rem; font-size: 1.25rem; color: #17231f; }
+        .cart-feedback.is-warning .cart-feedback-copy span { max-width: 370px; font-size: .95rem; line-height: 1.65; }
+        .cart-feedback.is-warning .cart-feedback-actions { width: 100%; justify-content: center; margin-top: .35rem; }
+        .cart-feedback.is-warning .cart-feedback-action { min-height: 46px; padding-inline: 1.35rem !important; }
+        .cart-feedback.is-warning .cart-feedback-close { width: auto; min-height: 46px; padding: 0 1.2rem; border-radius: 999px; font-weight: 700; }
+
+        @media (max-width: 575.98px) {
+            .cart-feedback { right: 1rem; top: 4.75rem; grid-template-columns: 38px minmax(0, 1fr); width: calc(100vw - 2rem); }
+            .cart-feedback-actions { grid-column: 1 / -1; justify-content: flex-end; }
+            .cart-feedback.is-warning { left: 50%; right: auto; top: 50%; padding: 1.4rem 1.1rem; }
+            .cart-feedback.is-warning .cart-feedback-actions { grid-column: auto; flex-direction: column; }
+            .cart-feedback.is-warning .cart-feedback-actions > * { width: 100%; }
         }
 
         [data-ajax-cart].is-adding button[type="submit"],
@@ -1120,7 +1178,7 @@
                         <strong class="d-block mb-1">Thành công!</strong>
                         {{ session('success') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1133,7 +1191,7 @@
                         <strong class="d-block mb-1">Lỗi!</strong>
                         {{ session('error') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1146,7 +1204,7 @@
                         <strong class="d-block mb-1">Cảnh báo!</strong>
                         {{ session('warning') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1159,7 +1217,7 @@
                         <strong class="d-block mb-1">Thông tin</strong>
                         {{ session('info') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1171,7 +1229,7 @@
                     <div class="flex-grow-1">
                         {{ session('status') }}
                     </div>
-                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Đóng"></button>
                 </div>
             </div>
         @endif
@@ -1195,6 +1253,9 @@
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('order-lookup.index') }}" class="nav-link {{ request()->routeIs('order-lookup.*') ? 'active' : '' }}">Tra Cứu Đơn Hàng</a>
                     </li>
                 </ul>
 
@@ -1325,6 +1386,7 @@
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">
                             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
                             <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                            <li><a class="dropdown-item" href="{{ route('loyalty.index') }}"><i class="bi bi-star-fill me-2 text-warning"></i>Điểm thưởng</a></li>
                             @if(auth()->user()->isStaff())
                                 <li><a class="dropdown-item" href="{{ auth()->user()->isSuperAdmin() ? route('admin.super-admin') : (auth()->user()->isCskh() ? route('admin.chat.index') : route('admin.dashboard')) }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
                             @endif
@@ -1413,9 +1475,39 @@
     </footer>
     @endunless
 
+    @if(!auth()->check() || auth()->user()?->isCustomer())
+        @include('components.chatbox')
+    @endif
+
     @auth
         @if(auth()->user()->isCustomer())
-            @include('components.chatbox')
+            {{-- Banner xin quyền vị trí -- chỉ hiện khi permission chưa được cấp --}}
+            <div
+                id="location-permission-banner"
+                style="display:none; position:fixed; top:1rem; left:50%; transform:translateX(-50%); z-index:1100;
+                       background:#fff; border:1px solid #d1fae5; border-radius:16px; box-shadow:0 8px 32px rgba(7,52,58,.18);
+                       padding:1rem 1.25rem; gap:.75rem; align-items:flex-start; max-width:360px; width:calc(100vw - 2rem);"
+            >
+                <span style="font-size:1.5rem; flex-shrink:0;">📍</span>
+                <div style="flex:1;">
+                    <p style="margin:0 0 .3rem; font-weight:700; font-size:.9rem; color:#065f46;">Cho phép truy cập vị trí?</p>
+                    <p style="margin:0 0 .75rem; font-size:.8rem; color:#374151; line-height:1.5;">
+                        Chill Drink sẽ tìm chi nhánh gần bạn nhất để hỗ trợ đặt hàng và chat nhanh hơn.
+                    </p>
+                    <div style="display:flex; gap:.5rem;">
+                        <button id="location-allow-btn"
+                            style="flex:1; padding:.45rem .75rem; border-radius:8px; border:0; font-size:.8rem; font-weight:700;
+                                   background:linear-gradient(135deg,var(--c-primary),var(--c-accent)); color:#fff; cursor:pointer;">
+                            Cho phép
+                        </button>
+                        <button id="location-skip-btn"
+                            style="padding:.45rem .75rem; border-radius:8px; border:1px solid #d1d5db; font-size:.8rem;
+                                   background:#f9fafb; color:#6b7280; cursor:pointer;">
+                            Bỏ qua
+                        </button>
+                    </div>
+                </div>
+            </div>
         @endif
     @endauth
 
@@ -1589,7 +1681,17 @@
                 }, 760);
             }
 
-            function showCartFeedback(message) {
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                })[char]);
+            }
+
+            function showCartFeedback(message, options = {}) {
                 if (!isAddAction) {
                     return;
                 }
@@ -1605,16 +1707,38 @@
                     document.body.appendChild(feedback);
                 }
 
+                const isWarning = options.type === 'warning';
+                const icon = isWarning ? 'bi-exclamation-triangle' : 'bi-bag-check';
+                const action = options.redirectUrl
+                    ? `<a class="btn btn-primary rounded-pill fw-bold cart-feedback-action" href="${escapeHtml(options.redirectUrl)}">${escapeHtml(options.redirectLabel || 'Mở')}</a>`
+                    : '';
+
+                const hideCartFeedback = () => {
+                    feedback.classList.remove('show');
+                    document.body.classList.remove('cart-warning-open');
+                };
+
+                feedback.classList.toggle('is-warning', isWarning);
+                feedback.setAttribute('role', isWarning ? 'alertdialog' : 'status');
                 feedback.innerHTML = `
-                    <span class="cart-feedback-icon"><i class="bi bi-bag-check"></i></span>
-                    <span>${message || 'Đã thêm vào giỏ hàng'}</span>
+                    <span class="cart-feedback-icon"><i class="bi ${icon}"></i></span>
+                    <span class="cart-feedback-copy">
+                        <strong>${isWarning ? 'Bạn đang có đơn nhóm' : 'Thêm món thành công'}</strong>
+                        <span>${escapeHtml(message || 'Đã thêm vào giỏ hàng')}</span>
+                    </span>
+                    <span class="cart-feedback-actions">
+                        ${action}
+                        <button type="button" class="cart-feedback-close" aria-label="Đóng">${isWarning ? 'Để sau' : '<i class="bi bi-x-lg"></i>'}</button>
+                    </span>
                 `;
+                feedback.querySelector('.cart-feedback-close')?.addEventListener('click', hideCartFeedback);
+                document.body.classList.toggle('cart-warning-open', isWarning);
                 feedback.classList.add('show');
 
                 window.clearTimeout(feedback._hideTimer);
-                feedback._hideTimer = window.setTimeout(() => {
-                    feedback.classList.remove('show');
-                }, 1800);
+                if (!isWarning) {
+                    feedback._hideTimer = window.setTimeout(hideCartFeedback, 1800);
+                }
             }
 
             if (submitter && submitter.name) {
@@ -1638,6 +1762,20 @@
                 });
 
                 if (!response.ok) {
+                    let errorData = {};
+
+                    try {
+                        errorData = await response.json();
+                    } catch (error) {
+                        errorData = {};
+                    }
+
+                    showCartFeedback(errorData.message || 'Không thể thêm sản phẩm vào giỏ hàng.', {
+                        type: 'warning',
+                        redirectUrl: errorData.redirect_url,
+                        redirectLabel: errorData.redirect_label,
+                    });
+
                     return;
                 }
 
@@ -1771,6 +1909,7 @@
 
             const link = activeGroupTimer.closest('.active-group-return');
             const closesAt = new Date(activeGroupTimer.dataset.closesAt).getTime();
+            let timerId = null;
             const tick = function () {
                 const seconds = Math.max(0, Math.ceil((closesAt - Date.now()) / 1000));
                 const minutes = Math.floor(seconds / 60);
@@ -1778,42 +1917,96 @@
                 activeGroupTimer.textContent = hours > 0
                     ? String(hours).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0')
                     : String(minutes).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
-                if (seconds === 0) link?.remove();
+                if (seconds === 0) {
+                    link?.remove();
+                    stopTimer();
+                }
             };
-            tick();
-            window.setInterval(tick, 1000);
+            const startTimer = function () {
+                if (document.hidden || timerId !== null || !link?.isConnected) return;
+                tick();
+                timerId = window.setInterval(tick, 1000);
+            };
+            const stopTimer = function () {
+                if (timerId === null) return;
+                window.clearInterval(timerId);
+                timerId = null;
+            };
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) stopTimer();
+                else startTimer();
+            });
+            window.addEventListener('pagehide', stopTimer, { once: true });
+            startTimer();
         });
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function (position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    
-                    fetch('{{ route('select-nearest-branch') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            latitude: lat,
-                            longitude: lng
-                        })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success && data.changed) {
-                            window.location.reload();
-                        }
-                    })
-                    .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
-                }, function (error) {
-                    console.warn("Không thể lấy tọa độ GPS:", error);
+            @auth
+            // Chỉ chạy khi user đã đăng nhập
+            if (!navigator.geolocation) return;
+
+            // Hàm gửi tọa độ lên server
+            function submitLocation(lat, lng) {
+                fetch('{{ route('select-nearest-branch') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ latitude: lat, longitude: lng })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.changed) {
+                        window.location.reload();
+                    }
+                })
+                .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
+            }
+
+            // Kiểm tra và tự động gửi tọa độ nếu đã được cấp quyền trước đó
+            if (navigator.permissions) {
+                navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+                    if (result.state === 'granted') {
+                        navigator.geolocation.getCurrentPosition(
+                            pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
+                            err => console.warn("Lỗi GPS:", err),
+                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+                        );
+                    } else if (result.state === 'prompt') {
+                        // Chưa hỏi → hiện banner giải thích trước khi hỏi
+                        var banner = document.getElementById('location-permission-banner');
+                        if (banner) banner.style.display = 'flex';
+                    }
                 });
             }
+
+
+            // Nút "Cho phép" trên banner
+            var allowBtn = document.getElementById('location-allow-btn');
+            if (allowBtn) {
+                allowBtn.addEventListener('click', function() {
+                    var banner = document.getElementById('location-permission-banner');
+                    if (banner) banner.style.display = 'none';
+                    navigator.geolocation.getCurrentPosition(
+                        pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
+                        function(err) { console.warn("User từ chối vị trí:", err); },
+                        { enableHighAccuracy: true, timeout: 10000 }
+                    );
+                });
+            }
+
+            // Nút "Bỏ qua"
+            var skipBtn = document.getElementById('location-skip-btn');
+            if (skipBtn) {
+                skipBtn.addEventListener('click', function() {
+                    var banner = document.getElementById('location-permission-banner');
+                    if (banner) banner.style.display = 'none';
+                });
+            }
+            @endauth
         });
     </script>
     @include('partials.realtime')

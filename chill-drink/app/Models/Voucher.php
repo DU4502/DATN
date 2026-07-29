@@ -13,13 +13,6 @@ class Voucher extends Model
     public const TYPE_PERCENT = 'percent';
     public const TYPE_FIXED = 'fixed';
 
-    public const RANK_LABELS = [
-        'bronze' => 'Đồng',
-        'silver' => 'Bạc',
-        'gold' => 'Vàng',
-        'diamond' => 'Kim cương',
-    ];
-
     protected $table = 'coupons';
 
     public $timestamps = false;
@@ -41,7 +34,6 @@ class Voucher extends Model
         'starts_at',
         'expires_at',
         'status',
-        'required_rank',
         'point_cost',
         'is_redeemable',
         'show_on_products',
@@ -129,10 +121,5 @@ class Voucher extends Model
         return number_format((int) $this->used_count, 0, ',', '.')
             . '/'
             . ($limit > 0 ? number_format($limit, 0, ',', '.') : '∞');
-    }
-
-    public function rankLabel(): string
-    {
-        return self::RANK_LABELS[$this->required_rank] ?? 'Tất cả';
     }
 }

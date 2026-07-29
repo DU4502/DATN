@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Favorite;
+use App\Models\GroupOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -97,7 +98,7 @@ class CartController extends Controller
             return $cart;
         }
 
-        $products = Product::with('category')
+        $products = Product::with(['category', 'sizes'])
             ->whereIn('id', $productIds)
             ->get()
             ->keyBy('id');
@@ -110,12 +111,20 @@ class CartController extends Controller
             }
 
             $product = $products->get((int) $productId);
+            $sizeCode = strtoupper((string) ($item['size'] ?? 'M'));
+            $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
+            $defaultExtra = $sizeCode === 'S' ? 0 : ($sizeCode === 'M' ? 5000 : 10000);
+            $sizeExtra = ($sizeObj && isset($sizeObj->pivot->price))
+                ? (int) $sizeObj->pivot->price
+                : (int) ($item['size_extra'] ?? $defaultExtra);
+
             $cart[$key]['name'] = $product->name;
             $cart[$key]['image'] = $product->image_url;
             $cart[$key]['sku'] = $product->sku ?? null;
             $cart[$key]['category'] = $product->category?->name;
             $cart[$key]['base_price'] = (int) $product->price;
-            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0);
+            $cart[$key]['size_extra'] = $sizeExtra;
+            $cart[$key]['price'] = (int) $product->price + $sizeExtra + (int) ($item['topping_total'] ?? 0);
         }
 
         return $cart;
@@ -126,6 +135,22 @@ class CartController extends Controller
      */
     public function add(Request $request, $id)
     {
+        if ($activeGroup = $this->activeOpenGroupForCurrentUser()) {
+            $message = 'Bạn đang tham gia phòng "'.$activeGroup->name.'". Hãy quay lại để chọn món, hoặc rời/hủy phòng trước khi mua riêng.';
+            $redirectUrl = route('group-orders.show', $activeGroup->code);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'redirect_url' => $redirectUrl,
+                    'redirect_label' => 'Về phòng nhóm',
+                ], 409);
+            }
+
+            return redirect($redirectUrl)->with('error', $message);
+        }
+
         $demoProducts = $this->demoProducts();
         $product = isset($demoProducts[$id])
             ? $this->resolveOrCreatePayableProduct($demoProducts[$id], $id)
@@ -134,7 +159,20 @@ class CartController extends Controller
         $cart = session()->get('cart', []);
         $sizes = $this->sizeOptions();
         $sizeCode = strtoupper((string) $request->input('size', 'M'));
+        if (! in_array($sizeCode, ['S', 'M', 'L'], true)) {
+            $sizeCode = 'M';
+        }
         $size = $sizes[$sizeCode] ?? $sizes['M'];
+
+        $sizeExtra = (int) $size['extra'];
+        if ($product instanceof Product) {
+            $product->loadMissing('sizes');
+            $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
+            if ($sizeObj && isset($sizeObj->pivot->price)) {
+                $sizeExtra = (int) $sizeObj->pivot->price;
+            }
+        }
+
         $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
         $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
         $toppings = collect(json_decode((string) $request->input('toppings', '[]'), true) ?: [])
@@ -166,10 +204,10 @@ class CartController extends Controller
                 'product_id' => $productId,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => $basePrice + $size['extra'] + $toppingTotal,
+                'price' => $basePrice + $sizeExtra + $toppingTotal,
                 'size' => $sizeCode,
-                'size_label' => $size['label'],
-                'size_extra' => $size['extra'],
+                'size_label' => 'Size ' . $sizeCode,
+                'size_extra' => $sizeExtra,
                 'sugar_level' => $sugarLevel,
                 'ice_level' => $iceLevel,
                 'toppings' => $toppings,
@@ -198,6 +236,23 @@ class CartController extends Controller
         }
         
         return redirect()->back();
+    }
+
+    private function activeOpenGroupForCurrentUser(): ?GroupOrder
+    {
+        if (! auth()->check() || session()->has('checkout_group_order_id')) {
+            return null;
+        }
+
+        return GroupOrder::query()
+            ->where(function ($query) {
+                $query->where('owner_id', auth()->id())
+                    ->orWhereHas('members', fn ($members) => $members->where('user_id', auth()->id()));
+            })
+            ->where('status', 'open')
+            ->where('closes_at', '>', now())
+            ->latest('id')
+            ->first();
     }
 
     private function resolveOrCreatePayableProduct(array $demoProduct, string $demoId): Product

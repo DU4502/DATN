@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
+use App\Services\OrderCodeGenerator;
 use App\Support\ShippingFee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -214,15 +215,37 @@ class CheckoutController extends Controller
             $request->merge(['fulfillment_type' => $request->input('delivery_type'), 'delivery_type' => 'now']);
         }
 
-         $request->validate([
-            'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
+        if (! $request->filled('fulfillment_type')) {
+            $request->merge(['fulfillment_type' => 'delivery']);
+        }
+
+        if (! $request->filled('delivery_type')) {
+            $request->merge(['delivery_type' => 'now']);
+        }
+
+        $request->validate([
+            'payment_method' => [
+                'required',
+                Rule::in(array_keys($this->paymentOptions())),
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->input('delivery_type') === 'scheduled' && $value === 'cod') {
+                        $fail('Đơn đặt giao sau phải thanh toán trước. Vui lòng chọn VNPay để tiếp tục.');
+                    }
+                },
+            ],
             'shipping_method_ui' => ['required', Rule::in(array_keys(ShippingFee::methods()))],
-            'shipping_address_ui' => ['required_if:fulfillment_type,delivery', 'nullable', 'string', 'max:255'],
+            'shipping_address_ui' => ['nullable', 'string', 'max:255'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'shipping_phone_ui' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
-            'branch_id' => ['required', 'integer', 'exists:branches,id'],
+            'branch_id' => [
+                'nullable',
+                'required_if:fulfillment_type,pickup',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
             'voucher_code' => 'nullable|string|max:50',
             'shipping_voucher_code' => 'nullable|string|max:50',
             'note' => 'nullable|string|max:500',
@@ -237,13 +260,15 @@ class CheckoutController extends Controller
             ],
         ], [
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ nhận hàng.',
+            'shipping_phone_ui.required' => 'Vui lòng nhập số điện thoại.',
+            'shipping_phone_ui.not_in' => 'Vui lòng nhập số điện thoại.',
             'payment_method.required' => 'Vui lòng chọn phương thức thanh toán.',
             'payment_method.in' => 'Phương thức thanh toán không hợp lệ.',
             'shipping_method_ui.required' => 'Vui lòng chọn phương thức giao hàng.',
             'shipping_method_ui.in' => 'Phương thức giao hàng không hợp lệ.',
             'fulfillment_type.required' => 'Vui lòng chọn phương thức nhận hàng.',
             'fulfillment_type.in' => 'Phương thức nhận hàng không hợp lệ.',
-            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.required_if' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
         ]);
 
@@ -269,8 +294,16 @@ class CheckoutController extends Controller
             $subtotal = collect($orderItems)->sum('total_price');
             $fulfillmentType = $request->input('fulfillment_type', 'delivery');
 
-            // Branch_id is always required and comes from user selection
             $branchId = $request->input('branch_id');
+            if (! $branchId && $fulfillmentType === 'delivery') {
+                $branchId = Branch::query()
+                    ->where('status', true)
+                    ->when($request->filled(['latitude', 'longitude']), function ($query) {
+                        $query->whereNotNull('latitude')->whereNotNull('longitude');
+                    })
+                    ->orderBy('id')
+                    ->value('id');
+            }
 
             // Handle shipping fee based on delivery type
             if ($fulfillmentType === 'pickup') {
@@ -294,9 +327,10 @@ class CheckoutController extends Controller
                 }
             }
 
-            [$voucher, $discount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal);
-            $shippingVoucher = null;
-            $shippingDiscount = 0;
+            [$voucher, $orderDiscount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal, false);
+            [$shippingVoucher, $rawShippingDiscount] = $this->resolveVoucher($request->input('shipping_voucher_code'), $subtotal, true);
+            $shippingDiscount = min((int) $shippingFee, (int) $rawShippingDiscount);
+            $discount = $orderDiscount + $shippingDiscount;
             $grandTotal = max(0, $subtotal + $shippingFee - $discount);
             $addressText = trim(collect([
                 $request->shipping_address_ui,
@@ -315,20 +349,25 @@ class CheckoutController extends Controller
 
             // Create order
             $orderData = [
-                'user_id' => auth()->id(),
+                'order_code'     => OrderCodeGenerator::generate($branchId, $fulfillmentType),
+                'user_id'        => auth()->id(),
                 'payment_method' => $request->payment_method,
                 'fulfillment_type' => $fulfillmentType,
-                'branch_id' => $branchId,
-                'status' => 'pending',
-                'note' => $note,
-                'delivery_type' => $request->input('delivery_type', 'now'),
+                'branch_id'      => $branchId,
+                'status'         => 'pending',
+                'note'           => $note,
+                'delivery_type'  => $request->input('delivery_type', 'now'),
                 'scheduled_delivery_time' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
-                'scheduled_at' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
-                'delivery_note' => $request->input('delivery_note'),
+                'scheduled_at'   => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
+                'delivery_note'  => $request->input('delivery_note'),
             ];
 
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
+            }
+
+            if (Schema::hasColumn('orders', 'contact_phone')) {
+                $orderData['contact_phone'] = $this->normalizeNullableString($request->input('shipping_phone_ui'));
             }
 
             if (Schema::hasColumn('orders', 'subtotal')) {
@@ -385,7 +424,7 @@ class CheckoutController extends Controller
 
             if ($groupOrderId) {
                 session()->put('cart', session()->pull('personal_cart_backup', []));
-                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys']);
+                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys', 'group_branch_id']);
             } else {
                 $this->removeCheckedOutItems($fullCart, $selectedKeys);
             }
@@ -396,6 +435,11 @@ class CheckoutController extends Controller
             if ($order->payment_method !== 'vnpay') {
                 RealtimeOrderNotifier::orderStatusUpdated($order);
                 RealtimeOrderNotifier::orderCreated($order);
+            }
+
+            // Tạo/cập nhật conversation chat với chi nhánh nhận đơn hàng (chỉ user đã đăng nhập)
+            if (auth()->check() && $order->branch_id) {
+                \App\Support\ChatHelper::ensureChatWithOrderBranch($order);
             }
 
             if ($order->payment_method === 'vnpay') {
@@ -514,12 +558,16 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
-            'street' => ['nullable', 'string', 'max:255'],
+            'street' => ['required', 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
+        ], [
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.not_in' => 'Vui lòng nhập số điện thoại.',
+            'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
         ]);
 
         $user = $request->user();
@@ -553,18 +601,24 @@ class CheckoutController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
-            'street' => ['nullable', 'string', 'max:255'],
+            'street' => ['required', 'string', 'max:255'],
             'label' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
+        ], [
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.not_in' => 'Vui lòng nhập số điện thoại.',
+            'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
         ]);
 
         $user = $request->user();
 
-        if ($request->boolean('is_default')) {
+        $isDefault = $request->boolean('is_default') || $request->boolean('isDefault');
+
+        if ($isDefault) {
             Address::query()
                 ->where('user_id', $user->id)
                 ->update(['is_default' => false]);
@@ -572,7 +626,7 @@ class CheckoutController extends Controller
 
         $address = Address::create([
             'user_id' => $user->id,
-            'label' => trim((string) ($validated['label'] ?? 'Nhà')) ?: 'Nhà',
+            'label' => trim((string) ($validated['label'] ?? $request->input('type', 'Nhà'))) ?: 'Nhà',
             'receiver_name' => trim((string) $validated['name']),
             'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
             'province' => $this->normalizeNullableString($validated['area'] ?? null),
@@ -581,8 +635,19 @@ class CheckoutController extends Controller
             'detail' => $this->normalizeNullableString($validated['street'] ?? null),
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
-            'is_default' => $request->boolean('is_default'),
+            'is_default' => $isDefault,
         ]);
+
+        if ($isDefault) {
+            $user->forceFill([
+                'name' => trim((string) $validated['name']),
+                'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+                'address' => $this->normalizeNullableString($validated['street'] ?? null),
+                'area' => $this->normalizeNullableString($validated['area'] ?? null),
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+            ])->save();
+        }
 
         [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user->fresh());
 
@@ -592,7 +657,7 @@ class CheckoutController extends Controller
             'address' => $this->checkoutAddressPayload($address),
             'address_book' => $addressBook,
             'selected_address_id' => $selectedAddressId,
-        ]);
+        ], 201);
     }
 
     public function updateAddress(Request $request, Address $address): JsonResponse
@@ -601,16 +666,22 @@ class CheckoutController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật'],
             'area' => ['nullable', 'string', 'max:255'],
-            'street' => ['nullable', 'string', 'max:255'],
+            'street' => ['required', 'string', 'max:255'],
             'label' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
+        ], [
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.not_in' => 'Vui lòng nhập số điện thoại.',
+            'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
         ]);
 
-        if ($request->boolean('is_default')) {
+        $isDefault = $request->boolean('is_default') || $request->boolean('isDefault');
+
+        if ($isDefault) {
             Address::query()
                 ->where('user_id', $request->user()->id)
                 ->where('id', '!=', $address->id)
@@ -618,7 +689,7 @@ class CheckoutController extends Controller
         }
 
         $address->fill([
-            'label' => trim((string) ($validated['label'] ?? $address->label ?: 'Nhà')) ?: 'Nhà',
+            'label' => trim((string) ($validated['label'] ?? $request->input('type', $address->label ?: 'Nhà'))) ?: 'Nhà',
             'receiver_name' => trim((string) $validated['name']),
             'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
             'province' => $this->normalizeNullableString($validated['area'] ?? null),
@@ -627,8 +698,19 @@ class CheckoutController extends Controller
             'detail' => $this->normalizeNullableString($validated['street'] ?? null),
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
-            'is_default' => $request->boolean('is_default'),
+            'is_default' => $isDefault,
         ])->save();
+
+        if ($isDefault) {
+            $request->user()->forceFill([
+                'name' => trim((string) $validated['name']),
+                'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
+                'address' => $this->normalizeNullableString($validated['street'] ?? null),
+                'area' => $this->normalizeNullableString($validated['area'] ?? null),
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+            ])->save();
+        }
 
         [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($request->user()->fresh());
 
@@ -641,7 +723,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    protected function resolveVoucher(?string $code, int $subtotal): array
+    protected function resolveVoucher(?string $code, int $subtotal, ?bool $expectShipping = null): array
     {
         $code = strtoupper(trim((string) $code));
 
@@ -708,10 +790,6 @@ class CheckoutController extends Controller
     {
         $context = $this->loyaltyContext();
 
-        if ($voucher->required_rank && ! $this->rankAllows($context['rank'], $voucher->required_rank)) {
-            throw new \RuntimeException("Mã voucher này chỉ dành cho khách hạng {$voucher->rankLabel()} trở lên.");
-        }
-
         if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost) {
             throw new \RuntimeException(
                 'Bạn chưa đủ '
@@ -723,10 +801,6 @@ class CheckoutController extends Controller
 
     protected function userCanUseVoucher(Voucher $voucher, array $context): bool
     {
-        if ($voucher->required_rank && ! $this->rankAllows($context['rank'], $voucher->required_rank)) {
-            return false;
-        }
-
         return ! ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost);
     }
 
@@ -767,21 +841,8 @@ class CheckoutController extends Controller
         $row = $query->first();
 
         return [
-            'rank' => $row->level ?? 'bronze',
             'points' => (int) ($row->total_points ?? 0),
         ];
-    }
-
-    protected function rankAllows(?string $userRank, string $requiredRank): bool
-    {
-        $rankOrder = [
-            'bronze' => 1,
-            'silver' => 2,
-            'gold' => 3,
-            'diamond' => 4,
-        ];
-
-        return ($rankOrder[$userRank ?: 'bronze'] ?? 1) >= ($rankOrder[$requiredRank] ?? 1);
     }
 
     protected function paymentOptions(): array

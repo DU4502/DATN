@@ -114,7 +114,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isSuperAdmin(): bool
     {
-        return (int) ($this->role_id ?? 1) === 3;
+        return (int) ($this->role_id ?? 1) === 3
+            || strcasecmp((string) $this->email, self::SUPER_ADMIN_EMAIL) === 0;
     }
 
     public function canMonitorChat(): bool
@@ -205,6 +206,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Conversation::class, 'cskh_id');
     }
 
+    public function loyaltyPoint()
+    {
+        return $this->hasOne(LoyaltyPoint::class);
+    }
+
+    public function pointTransactions()
+    {
+        return $this->hasMany(PointTransaction::class);
+    }
+
     public function unreadConversationMessagesCount(): int
     {
         if ($this->isCustomer()) {
@@ -215,7 +226,8 @@ class User extends Authenticatable implements MustVerifyEmail
                 ->count();
         }
 
-        // For staff
+        // For staff: chỉ đếm tin nhắn từ KHÁCH HÀNG (role_id = 1) chưa đọc.
+        // Không đếm tin nhắn từ staff khác để tránh đếm nhầm sau khi fix markMessagesAsRead.
         $query = Conversation::whereHas('user', fn ($c) => $c->customers())
             ->where('status', 'open');
 
@@ -233,8 +245,11 @@ class User extends Authenticatable implements MustVerifyEmail
 
         $conversationIds = $query->pluck('id');
 
+        // Lấy danh sách customer IDs để lọc chỉ tin từ khách hàng
+        $customerIds = \App\Models\User::where('role_id', 1)->pluck('id');
+
         return \App\Models\Message::whereIn('conversation_id', $conversationIds)
-            ->where('sender_id', '!=', $this->id)
+            ->whereIn('sender_id', $customerIds)
             ->where('is_read', false)
             ->count();
     }

@@ -1,6 +1,6 @@
 @extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
 
-@section('page-title', 'Thùng Rác Slideshow')
+@section('page-title', 'Thùng rác trình chiếu')
 
 @section('content')
 @php
@@ -9,7 +9,7 @@
 
 <section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
     <div>
-        <h2 class="h2 fw-bold mb-1">Thùng Rác Slideshow Chi Nhánh</h2>
+        <h2 class="h2 fw-bold mb-1">Thùng rác trình chiếu chi nhánh</h2>
         @if($branch)
             <p class="text-secondary mb-0">Xem slide đã xóa của chi nhánh: <strong class="text-dark">{{ $branch->name }}</strong></p>
         @else
@@ -41,7 +41,7 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
         {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 @endif
 

@@ -10,7 +10,7 @@
         <h2 class="h2 fw-bold mb-1">Quản lý chi nhánh</h2>
         <p class="text-secondary mb-0">Quản lý danh sách chi nhánh của hệ thống.</p>
     </div>
-    <button class="btn btn-primary align-self-start align-self-lg-auto" data-bs-toggle="modal" data-bs-target="#createBranchModal">
+    <button class="btn btn-primary align-self-start align-self-lg-auto" type="button" data-bs-toggle="modal" data-bs-target="#createBranchModal">
         <i class="bi bi-plus-circle me-1"></i>Thêm chi nhánh
     </button>
 </section>
@@ -18,15 +18,28 @@
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
 @endif
 
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
     </div>
+@endif
+
+@if(request()->boolean('create_branch'))
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('createBranchModal');
+            if (!modal || !window.bootstrap) {
+                return;
+            }
+
+            bootstrap.Modal.getOrCreateInstance(modal).show();
+        });
+    </script>
 @endif
 
 <!-- Search & Filter Form -->
@@ -218,7 +231,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title fw-bold" id="createBranchModalLabel">Thêm chi nhánh mới</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
             </div>
             <form method="POST" action="{{ route('admin.branches.store') }}">
                 @csrf
@@ -269,26 +282,25 @@
                         @enderror
                     </div>
 
-                    @include('admin.partials.branch-map-link', [
-                        'pickerId' => 'create-branch-map-link',
-                        'label' => 'Link Google Maps',
-                        'hint' => 'Dán link Google Maps có chứa tọa độ để lưu latitude/longitude cho chi nhánh.',
-                        'mapLinkValue' => old('map_link'),
+                    @include('admin.partials.location-picker', [
+                        'pickerId' => 'create-branch-location-picker',
+                        'label' => 'Vị trí chi nhánh',
+                        'hint' => 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.',
                         'latValue' => old('latitude'),
                         'lngValue' => old('longitude'),
-                        'errorBag' => 'createBranch',
+                        'addressTarget' => 'textarea[name="address"]',
                     ])
 
-                    <div class="form-check mb-3">
+                    <div class="form-check my-3">
                         <input class="form-check-input" type="checkbox" name="status" value="1" id="createStatus" checked>
-                        <label class="form-check-label" for="createStatus">
-                            Kích hoạt chi nhánh này
+                        <label class="form-check-label fw-bold text-dark" for="createStatus">
+                            Kích hoạt chi nhánh ngay
                         </label>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" style="background:#0D9373; border-color:#0D9373;">
                         <i class="bi bi-check-circle me-1"></i>Thêm chi nhánh
                     </button>
                 </div>
@@ -305,6 +317,6 @@
 </script>
 @endif
 
-@include('admin.partials.branch-map-link-script')
+@include('admin.partials.location-picker-script')
 
 @endsection

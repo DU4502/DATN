@@ -3,27 +3,28 @@
 use App\Http\Controllers\Admin\BranchController;
 use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GroupOrderController as AdminGroupOrderController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReviewController;
 use App\Http\Controllers\Admin\SuperAdminController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
+use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Auth\GuestConvertController;
+use App\Http\Controllers\Client\OrderLookupController;
 use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
 use App\Http\Controllers\Client\CheckoutController;
+use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
-use App\Http\Controllers\Client\VnpayController;
-use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\QuickOrderController;
-use App\Http\Controllers\Client\AddressController;
+use App\Http\Controllers\Client\VnpayController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -41,6 +42,11 @@ Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBran
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');
 Route::get('/products/{slug}', [ClientProductController::class, 'show'])->name('products.show');
+
+// Order Lookup
+Route::get('/tra-cuu-don-hang', [OrderLookupController::class, 'index'])->name('order-lookup.index');
+Route::post('/tra-cuu-don-hang', [OrderLookupController::class, 'search'])->name('order-lookup.search');
+Route::get('/tra-cuu-don-hang/{order}/status', [OrderLookupController::class, 'status'])->name('order-lookup.status');
 
 // Cart
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -82,8 +88,13 @@ Route::middleware('auth')->group(function () {
     Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->name('checkout.addresses.update');
     Route::patch('/checkout/address/primary', [CheckoutController::class, 'updatePrimaryAddress'])->name('checkout.addresses.primary.update');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
+
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
     Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
+    Route::post('/group-orders/join/{code}/leave', [GroupOrderController::class, 'leave'])->name('group-orders.leave');
+    Route::get('/group-orders/join/{code}/messages', [GroupOrderController::class, 'messages'])->name('group-orders.messages');
+    Route::post('/group-orders/join/{code}/messages', [GroupOrderController::class, 'sendMessage'])->name('group-orders.messages.send');
+    Route::post('/group-orders/join/{code}/messages/read', [GroupOrderController::class, 'readMessages'])->name('group-orders.messages.read');
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
@@ -101,16 +112,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/taste-profile', [QuickOrderController::class, 'saveTaste'])->name('taste-profiles.store');
 });
 
-// Chat routes (client)
-Route::middleware('auth')->prefix('chat')->name('chat.')->group(function () {
+// Chat routes (client) — không yêu cầu auth, dùng guest_token để xác thực
+Route::prefix('chat')->name('chat.')->group(function () {
     Route::get('/', [ChatController::class, 'getOrCreateConversation'])->name('index');
+    Route::get('/nearest-branches', [ChatController::class, 'nearestBranches'])->name('nearest-branches');
+    Route::post('/guest-init', [ChatController::class, 'guestInit'])->name('guest-init');
+    Route::post('/select-branch', [ChatController::class, 'selectBranch'])->name('select-branch');
     Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
     Route::post('/send', [ChatController::class, 'send'])->name('send');
+    Route::post('/end-session', [ChatController::class, 'endSession'])->name('end-session');
 });
 
 // Chat routes (admin/cskh)
 Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->group(function () {
     Route::get('/', [AdminChatController::class, 'index'])->name('index');
+    Route::get('/conversations', [AdminChatController::class, 'conversationList'])->name('conversations');
+    Route::get('/unread-count', [AdminChatController::class, 'unreadCount'])->name('unread-count');
     Route::get('/{conversation}/messages', [AdminChatController::class, 'messages'])->name('messages');
     Route::get('/{conversation}', [AdminChatController::class, 'show'])->name('show');
     Route::post('/{conversation}/reply', [AdminChatController::class, 'reply'])->name('reply');
@@ -142,11 +159,17 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
+    Route::post('/orders/{order}/cancel', [ProfileController::class, 'cancelOrder'])->name('orders.cancel');
+    Route::post('/orders/{order}/confirm-received', [ProfileController::class, 'confirmReceived'])->name('orders.confirm-received');
     Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
     Route::post('/notifications/mark-all-read', [ProfileController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Loyalty Points
+    Route::get('/loyalty-points', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'index'])->name('loyalty.index');
+    Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
 });
 
 /*
@@ -180,6 +203,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Voucher Management
     Route::resource('vouchers', VoucherController::class)->except(['show']);
 
+    // Topping Management
+    Route::resource('toppings', ToppingController::class)->except(['show']);
+
     // Product Trash Management
     Route::get('/products/trash', [AdminProductController::class, 'trash'])->name('products.trash');
     Route::post('/products/{id}/restore', [AdminProductController::class, 'restore'])->name('products.restore');
@@ -199,8 +225,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('orders', OrderController::class)->only(['index']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
-
-    // Group Order Monitoring
     Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
 
     // Review Management
@@ -223,4 +247,3 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 });
 
 require __DIR__.'/auth.php';
-

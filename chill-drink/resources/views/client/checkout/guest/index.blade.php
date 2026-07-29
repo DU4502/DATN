@@ -6,7 +6,6 @@
 @php
     $guestInfo = $guestInfo ?? [];
     $deliveryType = old('fulfillment_type', $guestInfo['fulfillment_type'] ?? 'delivery');
-    $orderTiming = old('delivery_type', $guestInfo['delivery_type'] ?? 'now');
 @endphp
 
 <style>
@@ -91,7 +90,7 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="guest_email" class="form-label fw-semibold">Email *</label>
+                            <label for="guest_email" class="form-label fw-semibold">Địa chỉ email *</label>
                             <input type="email" id="guest_email" name="guest_email" class="form-control guest-input @error('guest_email') is-invalid @enderror" value="{{ old('guest_email', $guestInfo['guest_email'] ?? '') }}" required autocomplete="email">
                             <div class="form-text"><i class="bi bi-envelope-check me-1"></i>Nhận hóa đơn & cập nhật trạng thái đơn hàng qua email.</div>
                             @error('guest_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -100,7 +99,7 @@
                         <div class="mb-3">
                             <label class="form-label fw-semibold d-block">Nhận hàng *</label>
                             <div class="btn-group delivery-toggle w-100" role="group">
-                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType === 'delivery')>
+                                <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypeDelivery" value="delivery" @checked($deliveryType !== 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypeDelivery"><i class="bi bi-truck me-1"></i>Giao đến địa chỉ</label>
                                 <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypePickup"><i class="bi bi-shop me-1"></i>Lấy tại chi nhánh</label>
@@ -172,13 +171,17 @@
         const pickupFields = document.querySelector('[data-pickup-fields]');
         const deliveryInput = document.getElementById('deliveryTypeDelivery');
         const pickupInput = document.getElementById('deliveryTypePickup');
-        const guestSchedule = document.querySelector('[data-guest-schedule]');
-        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', () => guestSchedule?.classList.toggle('is-hidden', input.value !== 'scheduled')));
 
         function syncDeliveryMode() {
             const isPickup = pickupInput?.checked;
             deliveryFields?.classList.toggle('is-hidden', isPickup);
             pickupFields?.classList.toggle('is-hidden', !isPickup);
+
+            // Địa chỉ giao hàng chỉ required khi chọn "Giao đến địa chỉ"
+            const addressInput = document.getElementById('shipping_address_ui');
+            if (addressInput) {
+                addressInput.required = !isPickup;
+            }
         }
 
         deliveryInput?.addEventListener('change', syncDeliveryMode);

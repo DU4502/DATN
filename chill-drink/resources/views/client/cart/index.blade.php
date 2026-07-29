@@ -53,6 +53,38 @@
         border-radius: 20px;
     }
 
+    .cart-top-actions {
+        min-height: 48px;
+    }
+
+    .cart-clear-all {
+        display: inline-flex !important;
+        align-items: center;
+        gap: 0.45rem;
+        padding: 0.65rem 1rem !important;
+        border: 1px solid rgba(220, 53, 69, 0.22) !important;
+        border-radius: 999px !important;
+        background: rgba(255, 255, 255, 0.82) !important;
+        color: #dc3545 !important;
+        font-weight: 700;
+        line-height: 1.2;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .cart-clear-all:hover {
+        border-color: #dc3545 !important;
+        background: #fff1f2 !important;
+        color: #b42334 !important;
+    }
+
+    .cart-select-meta {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1rem;
+    }
+
     .cart-select-check {
         width: 42px;
         height: 42px;
@@ -227,6 +259,11 @@
             flex-direction: column;
             border-radius: 18px;
         }
+
+        .cart-select-meta {
+            width: 100%;
+            justify-content: space-between;
+        }
     }
 </style>
 
@@ -243,6 +280,12 @@
                 $tax = 0;
             @endphp
 
+            <div class="cart-top-actions d-flex align-items-center mb-4">
+                <a href="{{ route('products.index') }}" class="btn btn-link text-primary text-decoration-none px-0">
+                    <i class="bi bi-arrow-left me-1"></i>Tiếp tục mua hàng
+                </a>
+            </div>
+
             <div class="row g-5 align-items-start">
                 <div class="col-lg-8">
                     <div class="cart-select-toolbar mb-3">
@@ -250,8 +293,17 @@
                             <input class="form-check-input m-0" type="checkbox" id="cartSelectAll" checked>
                             Chọn tất cả sản phẩm
                         </label>
-                        <div class="text-secondary">
-                            Đã chọn <strong class="text-primary" data-selected-count>{{ count($cart) }}</strong> sản phẩm
+                        <div class="cart-select-meta">
+                            <div class="text-secondary">
+                                Đã chọn <strong class="text-primary" data-selected-count>{{ count($cart) }}</strong> sản phẩm
+                            </div>
+                            <form action="{{ route('cart.clear') }}" method="POST" class="d-block m-0" data-ajax-cart>
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn cart-clear-all" aria-label="Xóa tất cả sản phẩm trong giỏ hàng">
+                                    <i class="bi bi-trash3"></i>Xóa tất cả
+                                </button>
+                            </form>
                         </div>
                     </div>
 
@@ -281,14 +333,14 @@
                                     <div class="flex-grow-1">
                                         <h2 class="h4 fw-bold mb-1">{{ $item['name'] }}</h2>
                                         <p class="text-secondary small mb-1">
-                                            {{ $item['size_label'] ?? 'Size M' }}
+                                            {{ $item['size_label'] ?? 'Kích cỡ M' }}
                                             @if(($item['size_extra'] ?? 0) > 0)
                                                 · +{{ number_format($item['size_extra'], 0, ',', '.') }}đ
                                             @endif
                                         </p>
                                         @if(!empty($item['toppings']))
                                             <p class="text-primary small fw-semibold mb-1">
-                                                Topping: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}
+                                                Món thêm: {{ collect($item['toppings'])->pluck('name')->filter()->implode(', ') }}
                                             </p>
                                         @endif
                                         <p class="text-secondary small mb-1">
@@ -322,16 +374,6 @@
                         @endforeach
                     </div>
 
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4">
-                        <a href="{{ route('products.index') }}" class="btn btn-link text-primary text-decoration-none px-0">
-                            <i class="bi bi-arrow-left me-1"></i>Tiếp tục mua hàng
-                        </a>
-                        <form action="{{ route('cart.clear') }}" method="POST" data-ajax-cart>
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-link text-dark text-decoration-none px-0">Xóa giỏ hàng</button>
-                        </form>
-                    </div>
                 </div>
 
                 <div class="col-lg-4">
@@ -452,7 +494,7 @@
                     </div>
                     <ul class="small text-secondary mb-4 ps-3">
                         <li>Tích điểm mỗi đơn (1.000đ = 1 điểm)</li>
-                        <li>Voucher giảm giá theo hạng thành viên</li>
+                        <li>Phiếu giảm giá theo hạng thành viên</li>
                         <li>Theo dõi đơn nhanh hơn</li>
                     </ul>
                     <a href="{{ route('login') }}" class="btn btn-outline-primary w-100 rounded-pill py-2">

@@ -57,17 +57,32 @@ class OrderController extends Controller
                 $cleanKeyword = ltrim($keyword, '#');
 
                 $query->where(function ($subQuery) use ($keyword, $cleanKeyword) {
-                    // Search by order ID (with or without #)
+                    // Tìm theo order_code (VD: CN1-ON-20260728-0002)
+                    $subQuery->where('order_code', 'like', '%'.$cleanKeyword.'%');
+
+                    // Nếu nhập số → tìm thêm theo ID (exact match)
                     if (is_numeric($cleanKeyword)) {
-                        $subQuery->where('id', (int) $cleanKeyword);
+                        $subQuery->orWhere('id', (int) $cleanKeyword);
+                        return;
                     }
 
-                    // Search by customer name or email
+                    // Tìm theo tên/email của user đã đăng nhập
                     $subQuery->orWhereHas('user', function ($userQuery) use ($keyword) {
                         $userQuery
                             ->where('name', 'like', '%'.$keyword.'%')
                             ->orWhere('email', 'like', '%'.$keyword.'%');
                     });
+
+                    // Tìm theo thông tin guest (nếu cột tồn tại)
+                    if (Schema::hasColumn('orders', 'guest_name')) {
+                        $subQuery->orWhere('guest_name', 'like', '%'.$keyword.'%');
+                    }
+                    if (Schema::hasColumn('orders', 'guest_email')) {
+                        $subQuery->orWhere('guest_email', 'like', '%'.$keyword.'%');
+                    }
+                    if (Schema::hasColumn('orders', 'guest_phone')) {
+                        $subQuery->orWhere('guest_phone', 'like', '%'.$keyword.'%');
+                    }
                 });
             })
             ->when(isset($statusOptions[$filters['status']]) && $filters['status'] !== '', function ($query) use ($filters) {
@@ -155,6 +170,7 @@ class OrderController extends Controller
         $customerEmail = $order->customerEmail() ?: '';
         $customerPhone = $order->customerPhone() ?: '';
         $total = (int) ($order->total ?? $order->total_price ?? 0);
+        $fulfillmentType = $order->fulfillment_type ?? 'delivery';
 
         return [
             'order_id' => $order->id,
@@ -163,6 +179,7 @@ class OrderController extends Controller
             'customer_email' => $customerEmail,
             'customer_phone' => $customerPhone,
             'note' => $order->note ?? '',
+            'cancellation_reason' => $order->cancellation_reason ?? '',
             'total' => $total,
             'total_formatted' => number_format($total, 0, ',', '.').'đ',
             'subtotal_formatted' => number_format((int) ($order->subtotal ?? 0), 0, ',', '.').'đ',
@@ -175,9 +192,9 @@ class OrderController extends Controller
             'shipping_address' => $order->getShippingAddress(),
             'status' => $order->status,
             'status_label' => OrderStatus::label((string) $order->status),
-            'next_status' => OrderStatus::nextStatus((string) $order->status),
+            'next_status' => OrderStatus::nextStatus((string) $order->status, $fulfillmentType),
             'can_cancel' => ! in_array(OrderStatus::normalize((string) $order->status), [OrderStatus::COMPLETED, OrderStatus::CANCELLED], true),
-            'status_options' => OrderStatus::stepwiseOptions((string) $order->status),
+            'status_options' => OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
             'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'delivery_type' => $order->delivery_type,
@@ -247,6 +264,7 @@ class OrderController extends Controller
     {
         $request->validate([
             'status' => ['required', OrderStatus::validationRule()],
+            'cancellation_reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         $order = Order::findOrFail($id);
@@ -258,17 +276,55 @@ class OrderController extends Controller
         }
 
         $newStatus = OrderStatus::normalize($request->status);
+        $fulfillmentType = $order->fulfillment_type ?? 'delivery';
 
-        if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus)) {
-            return redirect()->back()->with('error', 'Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn.');
+        // Kiểm tra yêu cầu lý do hủy
+        if ($newStatus === OrderStatus::CANCELLED && empty($request->cancellation_reason)) {
+            return redirect()->back()->with('error', 'Vui lòng nhập lý do hủy đơn hàng.');
         }
 
+        // Kiểm tra logic chuyển trạng thái
+        if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus, $fulfillmentType)) {
+            return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này. Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn (nếu được phép).');
+        }
+
+        // Kiểm tra thanh toán VNPay trước khi xác nhận
+        if ($newStatus === OrderStatus::CONFIRMED && 
+            $order->payment_method === 'vnpay' && 
+            $order->payment_status !== 'paid') {
+            return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
+        }
+
+        $oldStatus = $order->status;
         $order->status = $newStatus;
+        
+        // Lưu lý do hủy nếu trạng thái là cancelled
+        if ($newStatus === OrderStatus::CANCELLED) {
+            $order->cancellation_reason = $request->cancellation_reason;
+        }
+        
+        // Lưu thời gian giao hàng nếu chuyển sang DELIVERED
+        if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
+            $order->delivered_at = now();
+        }
+        
         $order->save();
+
+        // Nếu chuyển sang COMPLETED, cập nhật payment_status cho COD và cộng điểm thưởng
+        if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
+            $order->payment_status = 'paid';
+            $order->save();
+        }
+        
+        // Award loyalty points when order is completed
+        if ($newStatus === OrderStatus::COMPLETED && $oldStatus !== OrderStatus::COMPLETED) {
+            $order->awardLoyaltyPoints();
+        }
 
         RealtimeOrderNotifier::orderStatusUpdated($order);
 
-        return redirect()->back()->with('success', 'Cập nhật trạng thái thành công!');
+        $statusLabel = OrderStatus::label($newStatus);
+        return redirect()->back()->with('success', "Đã cập nhật trạng thái đơn hàng thành: {$statusLabel}");
     }
 
     /**

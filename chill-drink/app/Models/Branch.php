@@ -65,7 +65,6 @@ class Branch extends Model
     {
         return $this->hasMany(Order::class);
     }
-
     public function slides()
     {
         return $this->hasMany(BranchSlide::class)->orderBy('sort_order')->orderBy('id');

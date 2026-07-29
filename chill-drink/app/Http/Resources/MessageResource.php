@@ -12,21 +12,24 @@ class MessageResource
         $message->loadMissing(['sender', 'displayAsSender', 'impersonatedBy']);
         $display = $message->display_sender;
 
+        // Guest message: sender_id = null, có guest_sender_name
+        $isGuestMessage = is_null($message->sender_id) && !is_null($message->guest_sender_name);
+
         return [
-            'id' => $message->id,
+            'id'              => $message->id,
             'conversation_id' => $message->conversation_id,
-            'sender_id' => $display->id,
-            'content' => $message->content,
+            'sender_id'       => $isGuestMessage ? null : $display?->id,
+            'is_guest_message'=> $isGuestMessage,
+            'guest_sender_name' => $message->guest_sender_name,
+            'content'         => $message->content,
             'attachment_path' => $message->attachment_path,
             'attachment_name' => $message->attachment_name,
-            'attachment_url' => $message->attachment_url,
-            'is_read' => $message->is_read,
-            'created_at' => $message->created_at->toIso8601String(),
-            'sender' => [
-                'id' => $display->id,
-                'name' => $display->name,
-                'avatar' => $display->avatar,
-            ],
+            'attachment_url'  => $message->attachment_url,
+            'is_read'         => $message->is_read,
+            'created_at'      => $message->created_at->toIso8601String(),
+            'sender'          => $isGuestMessage
+                ? ['id' => null, 'name' => $message->guest_sender_name ?? 'Khách vãng lai', 'avatar' => null]
+                : ['id' => $display?->id, 'name' => $display?->name ?? 'Hệ thống', 'avatar' => $display?->avatar],
         ];
     }
 
@@ -39,11 +42,11 @@ class MessageResource
 
             $payload['is_impersonated'] = true;
             $payload['actual_sender'] = [
-                'id' => $message->sender_id,
+                'id'   => $message->sender_id,
                 'name' => $message->sender->name,
             ];
             $payload['impersonated_by'] = [
-                'id' => $message->impersonatedBy->id,
+                'id'   => $message->impersonatedBy->id,
                 'name' => $message->impersonatedBy->name,
             ];
         }
@@ -56,17 +59,23 @@ class MessageResource
         $message->loadMissing(['sender', 'displayAsSender']);
         $display = $message->display_sender;
 
+        $isGuestMessage = is_null($message->sender_id) && !is_null($message->guest_sender_name);
+
         return [
-            'message_id' => $message->id,
+            'message_id'      => $message->id,
             'conversation_id' => $message->conversation_id,
-            'sender_id' => $display->id,
-            'sender_name' => $display->name,
-            'content' => $message->content,
+            'sender_id'       => $isGuestMessage ? null : $display?->id,
+            'sender_name'     => $isGuestMessage
+                ? ($message->guest_sender_name ?? 'Khách vãng lai')
+                : $display?->name,
+            'is_guest_message'=> $isGuestMessage,
+            'guest_sender_name' => $message->guest_sender_name,
+            'content'         => $message->content,
             'attachment_path' => $message->attachment_path,
             'attachment_name' => $message->attachment_name,
-            'attachment_url' => $message->attachment_url,
-            'is_read' => $message->is_read,
-            'created_at' => $message->created_at?->toISOString(),
+            'attachment_url'  => $message->attachment_url,
+            'is_read'         => $message->is_read,
+            'created_at'      => $message->created_at?->toISOString(),
         ];
     }
 }

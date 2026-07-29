@@ -68,24 +68,37 @@
 
                         <p class="fw-semibold mb-3">Chọn phương thức thanh toán</p>
 
+                        @php
+                            $isScheduledDelivery = ($guestInfo['delivery_type'] ?? 'now') === 'scheduled';
+                            $selectedPaymentMethod = old('payment_method', $isScheduledDelivery ? 'vnpay' : 'cod');
+                            if ($isScheduledDelivery && $selectedPaymentMethod === 'cod') {
+                                $selectedPaymentMethod = 'vnpay';
+                            }
+                        @endphp
+
+                        @if($isScheduledDelivery)
+                            <div class="alert alert-info small mb-3">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Đơn đặt giao sau cần thanh toán trước, nên bạn vui lòng chọn VNPay.
+                            </div>
+                        @endif
+
                         <div class="d-flex flex-column gap-3 mb-4">
                             @foreach($paymentOptions as $key => $option)
-                                <label class="payment-option position-relative">
-                                    <input type="radio" name="payment_method" value="{{ $key }}" @checked(old('payment_method', 'cod') === $key) required>
+                                <label class="payment-option position-relative {{ $isScheduledDelivery && $key === 'cod' ? 'opacity-50' : '' }}">
+                                    <input type="radio" name="payment_method" value="{{ $key }}" @checked($selectedPaymentMethod === $key) @disabled($isScheduledDelivery && $key === 'cod') required>
                                     <div class="payment-card d-flex align-items-center gap-3">
                                         <span class="checkout-step"><i class="bi {{ $option['icon'] }}"></i></span>
                                         <div>
                                             <strong>{{ $option['title'] }}</strong>
                                             <div class="small text-secondary">{{ $option['desc'] }}</div>
+                                            @if($isScheduledDelivery && $key === 'cod')
+                                                <div class="small text-danger fw-semibold mt-1">Không áp dụng cho đặt giao sau</div>
+                                            @endif
                                         </div>
                                     </div>
                                 </label>
                             @endforeach
-                        </div>
-
-                        <div class="qr-hint mb-4">
-                            <strong><i class="bi bi-qr-code me-1"></i>VNPay / Quét QR</strong>
-                            <p class="small text-secondary mb-0 mt-2">Sau khi xác nhận, bạn sẽ được chuyển đến cổng VNPay để quét mã QR hoặc thanh toán qua ngân hàng. Hệ thống tự cập nhật khi thanh toán thành công.</p>
                         </div>
 
                         @error('payment_method')
