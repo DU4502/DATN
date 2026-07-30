@@ -195,13 +195,13 @@ class AdminChatController extends Controller
             if (request()->has('branch_id') && request('branch_id')) {
                 $query->where('branch_id', request('branch_id'));
             }
-        } elseif ($user->isAdmin() || $user->isCskh()) {
+        } elseif ($user->isAdmin() || $user->isCskh() || $user->isStaffOnly()) {
             if ($user->branch_id) {
                 $query->where('branch_id', $user->branch_id);
             }
 
-            // Also filter by assigned cskh if it's just CSKH (role 4)
-            if ($user->isCskh() && !$user->isAdmin()) {
+            // Also filter by assigned cskh if it's CSKH (role 4) or Staff (role 5)
+            if (($user->isCskh() || $user->isStaffOnly()) && !$user->isAdmin()) {
                 $query->where(function ($inner) use ($user) {
                     $inner->whereNull('cskh_id')
                         ->orWhere('cskh_id', $user->id);
@@ -231,8 +231,12 @@ class AdminChatController extends Controller
             return;
         }
 
-        if ($conversation->cskh_id === $user->id || !$conversation->cskh_id) {
-            return;
+        // CSKH và Nhân viên (role 4, 5): được xem nếu chưa assign hoặc assign cho mình
+        if ($user->isCskh() || $user->isStaffOnly()) {
+            if ($conversation->cskh_id === $user->id || !$conversation->cskh_id) {
+                return;
+            }
+            abort(403, 'Cuộc trò chuyện này đã được phân công cho nhân viên khác.');
         }
 
         abort(403);
