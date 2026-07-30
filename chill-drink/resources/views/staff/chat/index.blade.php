@@ -1,7 +1,7 @@
 @extends('layouts.staff')
 
 @section('page-title', 'Chat hỗ trợ')
-@section('hide-topbar-search')
+@section('hide-topbar-search', '1')
 
 @section('content')
 @php $viewer = auth()->user(); @endphp
@@ -67,6 +67,13 @@
                 <div class="p-3 border-bottom bg-light d-flex align-items-center justify-content-between">
                     <h2 class="h6 fw-bold mb-0 text-dark">Danh sách trò chuyện</h2>
                     <span x-show="totalUnread > 0" x-text="totalUnread + ' chưa đọc'" class="badge bg-danger rounded-pill small"></span>
+                </div>
+                <div class="p-2 border-bottom">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-secondary"></i></span>
+                        <input type="search" class="form-control border-start-0 ps-0" placeholder="Tìm theo tên, email..."
+                               x-model="searchKeyword" @input.debounce.300ms="fetchList()">
+                    </div>
                 </div>
                 <div class="admin-chat-scroll">
                     <template x-if="listLoading && conversations.length === 0">
@@ -202,6 +209,7 @@ function staffChatManager() {
     return {
         conversations: [], totalUnread: 0, listLoading: true,
         openChats: [], echoChannels: {}, chatPollTimers: {}, listPollTimer: null,
+        searchKeyword: '',
         viewerId: {{ $viewer->id }},
         csrfToken: '{{ csrf_token() }}',
         listUrl: '{{ route('staff.chat.conversations') }}',
@@ -217,7 +225,10 @@ function staffChatManager() {
 
         async fetchList() {
             try {
-                const res = await fetch(this.listUrl, { headers: { Accept: 'application/json' } });
+                const url = this.searchKeyword.trim()
+                    ? this.listUrl + '?q=' + encodeURIComponent(this.searchKeyword.trim())
+                    : this.listUrl;
+                const res = await fetch(url, { headers: { Accept: 'application/json' } });
                 const data = await res.json();
                 if (data.success) { this.conversations = data.conversations; this.totalUnread = data.total_unread; }
             } catch(e) {} finally { this.listLoading = false; }

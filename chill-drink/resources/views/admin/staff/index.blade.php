@@ -118,7 +118,6 @@
                     <tr>
                         <th>Nhân viên</th>
                         <th>Chi nhánh</th>
-                        <th class="text-center">Gán chi nhánh</th>
                         <th class="text-center">Trạng thái</th>
                         <th class="text-center">Ngày tạo</th>
                         <th class="text-center">Hành động</th>
@@ -143,22 +142,6 @@
                                 </span>
                             @else
                                 <span class="text-secondary small"><i class="bi bi-dash"></i> Chưa gán</span>
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            {{-- Gán chi nhánh --}}
-                            @if(auth()->user()->isSuperAdmin())
-                            <form action="{{ route('admin.staff.update-branch', $staff) }}" method="POST" class="d-inline">
-                                @csrf @method('PATCH')
-                                <select name="branch_id" class="staff-filter" style="height:30px;font-size:.72rem;padding:.2rem .5rem;" onchange="this.form.submit()">
-                                    <option value="">-- Chi nhánh --</option>
-                                    @foreach($branches as $b)
-                                        <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
-                                    @endforeach
-                                </select>
-                            </form>
-                            @else
-                                <span class="text-secondary small">—</span>
                             @endif
                         </td>
                         <td class="text-center">
@@ -231,12 +214,17 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Chi nhánh</label>
+                    @if(auth()->user()->isSuperAdmin())
                     <select name="branch_id" class="form-select">
                         <option value="">-- Chưa gán --</option>
                         @foreach($branches as $b)
                             <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
                         @endforeach
                     </select>
+                    @else
+                    <input type="text" class="form-control" value="{{ $staff->branch?->name ?? 'Chưa gán' }}" disabled>
+                    <div class="form-text text-secondary"><i class="bi bi-lock me-1"></i>Chỉ Super Admin mới có thể thay đổi chi nhánh.</div>
+                    @endif
                 </div>
                 <div class="row g-3">
                     <div class="col-6">

@@ -36,14 +36,30 @@ class AdminChatController extends Controller
      */
     public function conversationList()
     {
-        $user = auth()->user();
+        $user    = auth()->user();
+        $search  = trim((string) request()->query('q', ''));
 
-        $conversations = $this->conversationQuery()
+        $query = $this->conversationQuery()
             ->withCount([
                 'messages as unread_count' => fn ($q) => $q
                     ->where('is_read', false)
                     ->whereHas('sender', fn ($u) => $u->where('role_id', 1)),
-            ])
+            ]);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                // Thành viên đã đăng ký
+                $q->whereHas('user', fn ($u) => $u
+                    ->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                )
+                // Khách vãng lai
+                ->orWhere('guest_name', 'like', "%{$search}%")
+                ->orWhere('guest_email', 'like', "%{$search}%");
+            });
+        }
+
+        $conversations = $query
             ->orderBy('last_message_at', 'desc')
             ->orderBy('created_at', 'desc')
             ->limit(50)

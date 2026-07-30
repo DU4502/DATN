@@ -773,7 +773,12 @@
                         </div>
 
                         @php
-                            $tabCount = $adminUser->is(auth()->user()) ? 3 : 4;
+                            $isSelf = $adminUser->is(auth()->user());
+                            $isSuperAdminUser = $adminUser->isSuperAdmin();
+                            // Tabs: Phân quyền + Gán nhánh (ẩn với SuperAdmin) + Khóa/Mở (ẩn với chính mình) + Lịch sử
+                            $tabCount = 2; // Phân quyền + Lịch sử luôn có
+                            if (!$isSuperAdminUser) $tabCount++; // Gán nhánh
+                            if (!$isSelf) $tabCount++;            // Khóa/Mở
                             $loginHistories = $loginHistoryByAdmin->get($adminUser->id, collect());
                         @endphp
 
@@ -782,10 +787,12 @@
                             <button class="admin-action-tab" data-tab="permissions" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'permissions', {{ $adminUser->id }})">
                                 <i class="bi bi-key"></i><span>Phân quyền</span>
                             </button>
+                            @if(!$isSuperAdminUser)
                             <button class="admin-action-tab" data-tab="branch" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'branch', {{ $adminUser->id }})">
                                 <i class="bi bi-shop"></i><span>Gán nhánh</span>
                             </button>
-                            @if(!$adminUser->is(auth()->user()))
+                            @endif
+                            @if(!$isSelf)
                                 <button class="admin-action-tab" data-tab="security" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'security', {{ $adminUser->id }})">
                                     <i class="bi bi-lock"></i><span>Khóa/Mở khóa</span>
                                 </button>
@@ -829,6 +836,7 @@
                         </div>
 
                         <!-- Tab: Gán nhánh -->
+                        @if(!$isSuperAdminUser)
                         <div class="admin-action-content" id="content-branch-{{ $adminUser->id }}" style="display: none;">
                             <div style="display: grid; gap: 0.75rem;">
                                 <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
@@ -871,6 +879,7 @@
                                 </form>
                             </div>
                         </div>
+                        @endif
 
                         <!-- Tab: Lịch sử đăng nhập -->
                         <div class="admin-action-content" id="content-login-history-{{ $adminUser->id }}" style="display: none;">

@@ -131,8 +131,12 @@ class StaffManagementController extends Controller
         $data = [
             'name'      => $validated['name'],
             'email'     => strtolower($validated['email']),
-            'branch_id' => $validated['branch_id'] ?? null,
         ];
+
+        // Chỉ Super Admin mới được thay đổi chi nhánh của nhân viên
+        if (auth()->user()->isSuperAdmin()) {
+            $data['branch_id'] = $validated['branch_id'] ?? null;
+        }
 
         if (! empty($validated['password'])) {
             $data['password'] = Hash::make($validated['password']);
