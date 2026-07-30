@@ -10,7 +10,7 @@
     .staff-badge-active { background:#dcfce7;color:#166534; }
     .staff-badge-locked { background:#fee2e2;color:#991b1b; }
     .staff-badge-branch { background:var(--sp-amber-soft);color:#92400e; }
-    .btn-staff-primary { background:var(--sp-amber);border:none;color:#fff;border-radius:8px;padding:.45rem 1rem;font-size:.8rem;font-weight:700;display:inline-flex;align-items:center;gap:.4rem; }
+    .btn-staff-primary { background:#d97706;border:none;color:#fff;border-radius:8px;padding:.45rem 1rem;font-size:.8rem;font-weight:700;display:inline-flex;align-items:center;gap:.4rem; }
     .btn-staff-primary:hover { background:#b45309;color:#fff; }
     .staff-table th { font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--sp-muted);background:#f9fafb;padding:.65rem .85rem;border-bottom:2px solid var(--sp-border); }
     .staff-table td { padding:.72rem .85rem;border-bottom:1px solid var(--sp-border);vertical-align:middle;font-size:.8rem; }
@@ -118,6 +118,7 @@
                     <tr>
                         <th>Nhân viên</th>
                         <th>Chi nhánh</th>
+                        <th class="text-center">Gán chi nhánh</th>
                         <th class="text-center">Trạng thái</th>
                         <th class="text-center">Ngày tạo</th>
                         <th class="text-center">Hành động</th>
@@ -145,6 +146,22 @@
                             @endif
                         </td>
                         <td class="text-center">
+                            {{-- Gán chi nhánh --}}
+                            @if(auth()->user()->isSuperAdmin())
+                            <form action="{{ route('admin.staff.update-branch', $staff) }}" method="POST" class="d-inline">
+                                @csrf @method('PATCH')
+                                <select name="branch_id" class="staff-filter" style="height:30px;font-size:.72rem;padding:.2rem .5rem;" onchange="this.form.submit()">
+                                    <option value="">-- Chi nhánh --</option>
+                                    @foreach($branches as $b)
+                                        <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
+                                    @endforeach
+                                </select>
+                            </form>
+                            @else
+                                <span class="text-secondary small">—</span>
+                            @endif
+                        </td>
+                        <td class="text-center">
                             @if($staff->is_active)
                                 <span class="staff-badge staff-badge-active"><i class="bi bi-check-circle-fill"></i>Hoạt động</span>
                             @else
@@ -157,27 +174,15 @@
                         <td class="text-center">
                             <div class="d-flex gap-1 justify-content-center flex-wrap">
                                 {{-- Sửa --}}
-                                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;padding:.25rem .5rem;"
+                                <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;width:35px;height:30px;padding:0;border-radius:100%;display:inline-flex;align-items:center;justify-content:center;"
                                         data-bs-toggle="modal" data-bs-target="#editStaffModal{{ $staff->id }}" title="Sửa">
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                {{-- Gán chi nhánh --}}
-                                @if(auth()->user()->isSuperAdmin())
-                                <form action="{{ route('admin.staff.update-branch', $staff) }}" method="POST" class="d-inline">
-                                    @csrf @method('PATCH')
-                                    <select name="branch_id" class="staff-filter" style="height:30px;font-size:.72rem;padding:.2rem .5rem;" onchange="this.form.submit()">
-                                        <option value="">-- Chi nhánh --</option>
-                                        @foreach($branches as $b)
-                                            <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </form>
-                                @endif
                                 {{-- Khóa/Mở --}}
                                 <form action="{{ route('admin.staff.toggle-status', $staff) }}" method="POST" class="d-inline">
                                     @csrf @method('PATCH')
                                     <button type="submit" class="btn btn-sm {{ $staff->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}"
-                                            style="font-size:.72rem;padding:.25rem .5rem;"
+                                            style="font-size:.75rem;width:35px;height:10px;padding:0;border-radius:100%;display:inline-flex;align-items:center;justify-content:center;"
                                             onclick="return confirm('{{ $staff->is_active ? 'Khóa' : 'Mở khóa' }} nhân viên {{ $staff->name }}?')"
                                             title="{{ $staff->is_active ? 'Khóa' : 'Mở khóa' }}">
                                         <i class="bi bi-{{ $staff->is_active ? 'lock' : 'unlock' }}"></i>
@@ -187,7 +192,7 @@
                                 <form action="{{ route('admin.staff.destroy', $staff) }}" method="POST" class="d-inline">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            style="font-size:.72rem;padding:.25rem .5rem;"
+                                            style="font-size:.75rem;width:35px;height:10px;padding:0;border-radius:100%;display:inline-flex;align-items:center;justify-content:center;"
                                             onclick="return confirm('Xóa vĩnh viễn nhân viên {{ $staff->name }}?')"
                                             title="Xóa">
                                         <i class="bi bi-trash"></i>
@@ -196,53 +201,6 @@
                             </div>
                         </td>
                     </tr>
-                    {{-- Modal sửa nhân viên --}}
-                    <div class="modal fade" id="editStaffModal{{ $staff->id }}" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <form class="modal-content" method="POST" action="{{ route('admin.staff.update', $staff) }}" style="border:0;border-radius:10px;">
-                                @csrf @method('PUT')
-                                <div class="modal-header">
-                                    <h5 class="modal-title fw-bold fs-6"><i class="bi bi-person-badge me-2 text-warning"></i>Sửa nhân viên</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">Họ và tên</label>
-                                        <input type="text" name="name" class="form-control" value="{{ $staff->name }}" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">Email</label>
-                                        <input type="email" name="email" class="form-control" value="{{ $staff->email }}" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label small fw-bold">Chi nhánh</label>
-                                        <select name="branch_id" class="form-select">
-                                            <option value="">-- Chưa gán --</option>
-                                            @foreach($branches as $b)
-                                                <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-6">
-                                            <label class="form-label small fw-bold">Mật khẩu mới <span class="text-secondary fw-normal">(để trống nếu không đổi)</span></label>
-                                            <input type="password" name="password" class="form-control" placeholder="Để trống nếu không đổi">
-                                        </div>
-                                        <div class="col-6">
-                                            <label class="form-label small fw-bold">Xác nhận mật khẩu</label>
-                                            <input type="password" name="password_confirmation" class="form-control">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
-                                    <button type="submit" class="btn-staff-primary btn btn-sm">
-                                        <i class="bi bi-save"></i> Lưu thay đổi
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
                 @endforeach
                 </tbody>
             </table>
@@ -251,6 +209,56 @@
         @endif
     </div>
 </div>
+
+{{-- Modals sửa nhân viên (đặt ngoài table để tránh lỗi DOM) --}}
+@foreach($staffUsers as $staff)
+<div class="modal fade" id="editStaffModal{{ $staff->id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="POST" action="{{ route('admin.staff.update', $staff) }}" style="border:0;border-radius:10px;">
+            @csrf @method('PUT')
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold fs-6"><i class="bi bi-person-badge me-2 text-warning"></i>Sửa nhân viên</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Họ và tên</label>
+                    <input type="text" name="name" class="form-control" value="{{ $staff->name }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Email</label>
+                    <input type="email" name="email" class="form-control" value="{{ $staff->email }}" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Chi nhánh</label>
+                    <select name="branch_id" class="form-select">
+                        <option value="">-- Chưa gán --</option>
+                        @foreach($branches as $b)
+                            <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Mật khẩu mới</label>
+                        <input type="password" name="password" class="form-control">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Xác nhận mật khẩu</label>
+                        <input type="password" name="password_confirmation" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn-staff-primary btn btn-sm">
+                    <i class="bi bi-save"></i> Lưu thay đổi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endforeach
 
 {{-- Modal tạo nhân viên --}}
 <div class="modal fade" id="createStaffModal" tabindex="-1" aria-hidden="true"

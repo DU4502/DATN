@@ -42,10 +42,21 @@ class StaffDashboardController extends Controller
 
         $openGroups = (clone $groupOrderQuery)->where('status', 'open')->count();
 
-        // 5 đơn hàng gần nhất cần xử lý
+        // 5 đơn hàng gần nhất cần xử lý (tất cả trạng thái đang trong quá trình xử lý)
+        $processingStatuses = [
+            OrderStatus::PENDING,
+            OrderStatus::CONFIRMED,
+            OrderStatus::PREPARING,
+            OrderStatus::READY_FOR_DELIVERY,
+            OrderStatus::SHIPPER_PICKED_UP,
+            OrderStatus::DELIVERING,
+            OrderStatus::DELIVERED,
+            OrderStatus::READY_FOR_PICKUP,
+        ];
+
         $recentOrders = (clone $orderQuery)
             ->with(['user', 'branch'])
-            ->whereIn('status', [OrderStatus::PENDING, OrderStatus::CONFIRMED, OrderStatus::PREPARING])
+            ->whereIn('status', $processingStatuses)
             ->latest()
             ->take(5)
             ->get();

@@ -1069,10 +1069,14 @@
             </div>
             <div class="modal-footer" style="border-top:1px solid #e5e7eb;padding:.75rem 1rem;justify-content:flex-end;gap:.5rem;">
                 <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" id="createStaffSubmitBtn" class="btn px-4"
-                    style="background-color:#d97706 !important;color:#ffffff !important;border-color:#d97706 !important;font-weight:700 !important;min-width:150px;font-size:0.875rem;">
-                    <i class="bi bi-person-badge" style="color:#ffffff !important;"></i>
-                    <span style="color:#ffffff !important;"> Tạo Nhân Viên</span>
+                <button type="submit" id="createStaffSubmitBtn"
+                    style="display:inline-flex;align-items:center;gap:6px;min-width:150px;font-weight:700;font-size:0.875rem;padding:0.5rem 1.25rem;border-radius:6px;border:none;outline:none;cursor:pointer;background-color:#d97706;color:#ffffff;line-height:1.5;"
+                    onmouseover="this.style.backgroundColor='#b45309'"
+                    onmouseout="this.style.backgroundColor='#d97706'"
+                    onmousedown="this.style.backgroundColor='#92400e'"
+                    onmouseup="this.style.backgroundColor='#b45309'">
+                    <i class="bi bi-person-badge" style="color:#ffffff;font-size:1rem;"></i>
+                    <span style="color:#ffffff;">Tạo Nhân Viên</span>
                 </button>
             </div>
         </form>
@@ -1080,36 +1084,7 @@
     </div>
 </div>
 
-<style>
-/* Override mọi CSS project có thể ảnh hưởng nút submit staff modal */
-#createStaffSubmitBtn,
-#createStaffSubmitBtn:link,
-#createStaffSubmitBtn:visited {
-    background-color: #d97706 !important;
-    color: #ffffff !important;
-    border-color: #d97706 !important;
-}
-#createStaffSubmitBtn:hover,
-#createStaffSubmitBtn:focus,
-#createStaffSubmitBtn:active {
-    background-color: #b45309 !important;
-    color: #ffffff !important;
-    border-color: #b45309 !important;
-    box-shadow: 0 0 0 3px rgba(217,119,6,.35) !important;
-}
-#createStaffSubmitBtn:disabled,
-#createStaffSubmitBtn[disabled] {
-    background-color: #d97706 !important;
-    color: #ffffff !important;
-    border-color: #d97706 !important;
-    opacity: 0.55 !important;
-    cursor: not-allowed;
-}
-#createStaffSubmitBtn i,
-#createStaffSubmitBtn span {
-    color: #ffffff !important;
-}
-</style>
+
 
 @php
     $modalToOpen = old('form_type') === 'admin'

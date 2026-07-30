@@ -61,7 +61,7 @@
     <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
         <div>
             <h3 class="h5 fw-bold mb-1">Đơn hàng cần xử lý</h3>
-            <small class="text-secondary">Đơn đang chờ xác nhận hoặc đang chuẩn bị</small>
+            <small class="text-secondary">Đơn đang trong quá trình xử lý (chưa hoàn thành hoặc hủy)</small>
         </div>
         <a href="{{ route('staff.orders.index') }}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
     </div>
@@ -69,6 +69,7 @@
     @php
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
         $nextStatus = \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType);
+        $canCancel = in_array($order->status, [\App\Support\OrderStatus::PENDING, \App\Support\OrderStatus::CONFIRMED, \App\Support\OrderStatus::PREPARING]);
     @endphp
     <div class="p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
@@ -95,6 +96,15 @@
             @else
             <span class="badge bg-success">{{ \App\Support\OrderStatus::label($order->status) }}</span>
             @endif
+            @if($canCancel)
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                data-bs-toggle="modal"
+                data-bs-target="#cancelOrderModal"
+                data-order-id="{{ $order->id }}"
+                data-order-code="{{ $order->displayCode() }}">
+                <i class="bi bi-x-circle me-1"></i>Hủy
+            </button>
+            @endif
         </div>
     </div>
     @empty
@@ -104,6 +114,56 @@
     </div>
     @endforelse
 </div>
+
+<!-- Modal hủy đơn hàng -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-labelledby="cancelOrderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="cancelOrderModalLabel">
+                    <i class="bi bi-x-circle text-danger me-2"></i>Hủy đơn hàng
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <form id="cancelOrderForm" method="POST" action="">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="status" value="cancelled">
+                <div class="modal-body">
+                    <p class="mb-3">Bạn đang hủy đơn hàng <strong id="cancelOrderCode"></strong>. Hành động này không thể hoàn tác.</p>
+                    <div class="mb-3">
+                        <label for="cancelReason" class="form-label fw-semibold">Lý do hủy <span class="text-danger">*</span></label>
+                        <textarea id="cancelReason" name="cancellation_reason" class="form-control" rows="3"
+                            placeholder="Nhập lý do hủy đơn hàng..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-x-circle me-1"></i>Xác nhận hủy
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var cancelModal = document.getElementById('cancelOrderModal');
+    if (cancelModal) {
+        cancelModal.addEventListener('show.bs.modal', function (event) {
+            var btn = event.relatedTarget;
+            var orderId = btn.getAttribute('data-order-id');
+            var orderCode = btn.getAttribute('data-order-code');
+            document.getElementById('cancelOrderCode').textContent = orderCode;
+            document.getElementById('cancelOrderForm').action = '{{ url('staff/orders') }}/' + orderId + '/status';
+            // Reset textarea
+            document.getElementById('cancelReason').value = '';
+        });
+    }
+});
+</script>
 
 <!-- Liên kết nhanh -->
 <div class="row g-3">
