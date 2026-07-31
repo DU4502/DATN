@@ -38,6 +38,7 @@
                 <a href="{{ route('admin.group-orders.index') }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
+                <a href="{{ route('admin.staff.index') }}" class="nav-link {{ request()->routeIs('admin.staff.*') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Nhân viên</a>
                 @if(auth()->user()?->isSuperAdmin())
                     <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock-fill"></i> Quản trị cấp cao</a>
                 @endif

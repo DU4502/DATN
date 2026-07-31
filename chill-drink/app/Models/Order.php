@@ -44,6 +44,8 @@ class Order extends Model
         'delivered_at',
         'note',
         'scheduled_at',
+        'status_changed_at',
+        'status_changed_by',
     ];
 
     /**
@@ -61,6 +63,7 @@ class Order extends Model
         'scheduled_at'                   => 'datetime',
         'scheduled_delivery_time'        => 'datetime',
         'delivered_at'                   => 'datetime',
+        'status_changed_at'              => 'datetime',
     ];
 
     /**
@@ -74,6 +77,11 @@ class Order extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function statusChangedBy()
+    {
+        return $this->belongsTo(User::class, 'status_changed_by');
     }
 
     public function address()

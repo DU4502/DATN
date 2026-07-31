@@ -62,6 +62,28 @@ class GroupOrderController extends Controller
         return view('admin.group-orders.show', compact('groupOrder'));
     }
 
+    public function updateStatus(Request $request, GroupOrder $groupOrder)
+    {
+        $request->validate([
+            'status' => ['required', 'in:open,closed,ordered,cancelled'],
+        ]);
+
+        $user = auth()->user();
+        if (!$user->isSuperAdmin()) {
+            if ($groupOrder->branch_id && $user->branch_id && $groupOrder->branch_id !== $user->branch_id) {
+                abort(403, 'Bạn không có quyền cập nhật đơn nhóm này.');
+            }
+        }
+
+        $groupOrder->update([
+            'status' => $request->status,
+            'status_changed_at' => now(),
+            'status_changed_by' => $user->id,
+        ]);
+
+        return redirect()->back()->with('success', 'Đã cập nhật trạng thái đơn nhóm thành công.');
+    }
+
     /**
      * Apply branch scope to query:
      * - Super Admin sees all group orders.
