@@ -15,7 +15,9 @@ class CskhMiddleware
         }
 
         // Kiểm tra tài khoản có bị khóa không — force logout nếu bị khóa
-        if (!auth()->user()->is_active) {
+        // Dữ liệu tài khoản cũ có thể chưa có giá trị is_active.
+        // Chỉ khóa khi trạng thái được ghi rõ là false/0.
+        if (auth()->user()->is_active === false) {
             auth()->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
