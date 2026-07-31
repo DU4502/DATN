@@ -562,7 +562,7 @@
         @endif
     </section>
 
-    <div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true" data-auto-open="{{ old('form_type') === 'branch' ? 'true' : 'false' }}">
+    <div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true" data-auto-open="{{ $errors->createBranch->any() ? 'true' : 'false' }}">
         <div class="modal-dialog modal-lg">
             <form class="modal-content" method="POST" action="{{ route('admin.branches.store') }}" style="border:0;border-radius:8px;">
                 @csrf
@@ -989,7 +989,7 @@
 
 </div>
 
-<div class="modal fade" id="createAdminModal" tabindex="-1" aria-labelledby="createAdminModalLabel" aria-hidden="true" data-auto-open="{{ $errors->any() ? 'true' : 'false' }}">
+<div class="modal fade" id="createAdminModal" tabindex="-1" aria-labelledby="createAdminModalLabel" aria-hidden="true" data-auto-open="{{ $errors->createAdmin->any() ? 'true' : 'false' }}">
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" method="POST" action="{{ route('admin.super-admin.admins.store') }}" style="border:0;border-radius:8px;">
             @csrf
@@ -1020,7 +1020,8 @@
 @include('admin.partials.branch-map-link-script')
 
 {{-- Modal tạo nhân viên (role_id = 5) --}}
-<div class="modal fade" id="createStaffModal" tabindex="-1" aria-labelledby="createStaffModalLabel" aria-hidden="true">
+<div class="modal fade" id="createStaffModal" tabindex="-1" aria-labelledby="createStaffModalLabel" aria-hidden="true"
+     data-auto-open="{{ $errors->createStaff->any() ? 'true' : 'false' }}">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content" style="border-radius:12px;overflow:hidden;">
         <form method="POST" action="{{ route('admin.super-admin.staff.store') }}">
@@ -1116,6 +1117,15 @@
 </script>
 @endif
 @endsection
+
+{{-- Fallback: xử lý data-auto-open cho tất cả modal (backup khi $modalToOpen không chạy) --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.modal[data-auto-open="true"]').forEach(function (modal) {
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    });
+});
+</script>
 
 
 <script>

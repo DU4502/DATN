@@ -118,19 +118,33 @@ class SuperAdminController extends Controller
 
     public function storeAdmin(Request $request): RedirectResponse
     {
+        // Normalize email về chữ thường TRƯỚC validate — đảm bảo unique check khớp DB
+        $normalizedEmail = strtolower(trim((string) $request->input('email', '')));
+        $request->merge(['email' => $normalizedEmail]);
+
         $validated = $request->validateWithBag('createAdmin', [
             'name' => ['required', 'string', 'max:150'],
-            'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')],
+            'email' => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'is_active' => ['nullable', 'boolean'],
         ], [
-            'name.required' => 'Vui lòng nhập tên quản trị viên.',
-            'email.required' => 'Vui lòng nhập email.',
-            'email.unique' => 'Email này đã được sử dụng.',
-            'password.required' => 'Vui lòng nhập mật khẩu ban đầu.',
-            'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự.',
+            'name.required'      => 'Vui lòng nhập tên quản trị viên.',
+            'email.required'     => 'Vui lòng nhập email.',
+            'email.email'        => 'Email không đúng định dạng.',
+            'email.unique'       => 'Email đã được sử dụng.',
+            'password.required'  => 'Vui lòng nhập mật khẩu ban đầu.',
+            'password.min'       => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
         ]);
+
+        // Double-check: kiểm tra lại email trùng ngay trước khi insert
+        // (phòng race condition — 2 request đồng thời cùng pass validation)
+        if (User::where('email', $validated['email'])->exists()) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['email' => 'Email đã được sử dụng.'], 'createAdmin');
+        }
 
         try {
             DB::beginTransaction();
@@ -138,7 +152,7 @@ class SuperAdminController extends Controller
             // Create admin user
             $admin = User::create([
                 'name' => $validated['name'],
-                'email' => strtolower($validated['email']),
+                'email' => $validated['email'], // đã lowercase từ bước merge trước validate
                 'password' => Hash::make($validated['password']),
                 'role_id' => 2,
                 'is_active' => $request->boolean('is_active', true),
@@ -170,6 +184,28 @@ class SuperAdminController extends Controller
             return redirect()
                 ->route('admin.super-admin', ['q' => $admin->email])
                 ->with('success', 'Đã tạo tài khoản Admin và chi nhánh quản lý mới.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
+            // Lỗi duplicate key (MySQL error code 1062) — email trùng do race condition
+            if ($e->getCode() === '23000') {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->withErrors(['email' => 'Email đã được sử dụng.'], 'createAdmin');
+            }
+
+            \Log::error('Admin creation failed', [
+                'email' => $validated['email'],
+                'message' => $e->getMessage(),
+            ]);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra khi tạo Admin. Vui lòng thử lại.');
         } catch (Throwable $e) {
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
@@ -659,24 +695,37 @@ class SuperAdminController extends Controller
      */
     public function storeStaff(Request $request): RedirectResponse
     {
+        // Normalize email về chữ thường TRƯỚC validate — đảm bảo unique check khớp DB
+        $normalizedEmail = strtolower(trim((string) $request->input('email', '')));
+        $request->merge(['email' => $normalizedEmail]);
+
         $validated = $request->validateWithBag('createStaff', [
-            'name'     => ['required', 'string', 'max:150'],
-            'email'    => ['required', 'email', 'max:150', Rule::unique('users', 'email')],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'name'      => ['required', 'string', 'max:150'],
+            'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')],
+            'password'  => ['required', 'string', 'min:8', 'confirmed'],
             'branch_id' => ['nullable', 'exists:branches,id'],
         ], [
-            'name.required'     => 'Vui lòng nhập tên nhân viên.',
-            'email.required'    => 'Vui lòng nhập email.',
-            'email.unique'      => 'Email này đã được sử dụng.',
-            'password.required' => 'Vui lòng nhập mật khẩu.',
-            'password.min'      => 'Mật khẩu phải có ít nhất 8 ký tự.',
-            'password.confirmed'=> 'Mật khẩu xác nhận không khớp.',
+            'name.required'      => 'Vui lòng nhập tên nhân viên.',
+            'email.required'     => 'Vui lòng nhập email.',
+            'email.email'        => 'Email không đúng định dạng.',
+            'email.unique'       => 'Email đã được sử dụng.',
+            'password.required'  => 'Vui lòng nhập mật khẩu.',
+            'password.min'       => 'Mật khẩu phải có ít nhất 8 ký tự.',
+            'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
         ]);
+
+        // Double-check: kiểm tra lại email trùng ngay trước khi insert
+        if (User::where('email', $validated['email'])->exists()) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['email' => 'Email đã được sử dụng.'], 'createStaff');
+        }
 
         try {
             $staff = User::create([
                 'name'      => $validated['name'],
-                'email'     => strtolower($validated['email']),
+                'email'     => $validated['email'], // đã lowercase từ bước merge trước validate
                 'password'  => \Illuminate\Support\Facades\Hash::make($validated['password']),
                 'role_id'   => 5, // Nhân viên
                 'branch_id' => $validated['branch_id'] ?? null,
@@ -694,6 +743,16 @@ class SuperAdminController extends Controller
             return redirect()
                 ->route('admin.super-admin')
                 ->with('success', "Đã tạo tài khoản nhân viên {$staff->name}.");
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Lỗi duplicate key (MySQL error code 1062) — email trùng do race condition
+            if ($e->getCode() === '23000') {
+                return redirect()
+                    ->back()
+                    ->withInput()
+                    ->withErrors(['email' => 'Email đã được sử dụng.'], 'createStaff');
+            }
+            \Log::error('Staff creation failed', ['email' => $validated['email'], 'message' => $e->getMessage()]);
+            return redirect()->back()->withInput()->with('error', 'Có lỗi xảy ra khi tạo nhân viên. Vui lòng thử lại.');
         } catch (\Throwable $e) {
             \Log::error('Staff creation failed', ['email' => $validated['email'], 'message' => $e->getMessage()]);
             return redirect()->back()->withInput()->with('error', 'Có lỗi xảy ra khi tạo nhân viên. Vui lòng thử lại.');

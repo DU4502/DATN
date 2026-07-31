@@ -195,7 +195,9 @@
 
 {{-- Modals sửa nhân viên (đặt ngoài table để tránh lỗi DOM) --}}
 @foreach($staffUsers as $staff)
-<div class="modal fade" id="editStaffModal{{ $staff->id }}" tabindex="-1" aria-hidden="true">
+@php $editBag = 'editStaff' . $staff->id; @endphp
+<div class="modal fade" id="editStaffModal{{ $staff->id }}" tabindex="-1" aria-hidden="true"
+     data-auto-open="{{ $errors->{$editBag}->any() ? 'true' : 'false' }}">
     <div class="modal-dialog modal-dialog-centered">
         <form class="modal-content" method="POST" action="{{ route('admin.staff.update', $staff) }}" style="border:0;border-radius:10px;">
             @csrf @method('PUT')
@@ -206,11 +208,17 @@
             <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Họ và tên</label>
-                    <input type="text" name="name" class="form-control" value="{{ $staff->name }}" required>
+                    <input type="text" name="name"
+                           class="form-control @error('name', $editBag) is-invalid @enderror"
+                           value="{{ $errors->{$editBag}->any() ? old('name') : $staff->name }}" required>
+                    @error('name', $editBag)<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Email</label>
-                    <input type="email" name="email" class="form-control" value="{{ $staff->email }}" required>
+                    <input type="email" name="email"
+                           class="form-control @error('email', $editBag) is-invalid @enderror"
+                           value="{{ $errors->{$editBag}->any() ? old('email') : $staff->email }}" required>
+                    @error('email', $editBag)<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Chi nhánh</label>
@@ -229,7 +237,9 @@
                 <div class="row g-3">
                     <div class="col-6">
                         <label class="form-label small fw-bold">Mật khẩu mới</label>
-                        <input type="password" name="password" class="form-control">
+                        <input type="password" name="password"
+                               class="form-control @error('password', $editBag) is-invalid @enderror">
+                        @error('password', $editBag)<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-6">
                         <label class="form-label small fw-bold">Xác nhận mật khẩu</label>
@@ -325,4 +335,13 @@
     });
 </script>
 @endif
+
+{{-- Fallback: mở modal nào có data-auto-open="true" (bao gồm editStaffModal khi update fail) --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.modal[data-auto-open="true"]').forEach(function (modal) {
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    });
+});
+</script>
 @endsection
