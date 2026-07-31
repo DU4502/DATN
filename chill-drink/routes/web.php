@@ -104,6 +104,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
+    Route::patch('/group-orders/join/{code}/items/{item}/decrement', [GroupOrderController::class, 'decrementItem'])->name('group-orders.items.decrement');
     Route::delete('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'removeItem'])->name('group-orders.items.destroy');
     Route::get('/group-orders', [GroupOrderController::class, 'index'])->name('group-orders.index');
     Route::get('/group-orders/create', [GroupOrderController::class, 'create'])->name('group-orders.create');

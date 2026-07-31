@@ -244,6 +244,22 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame(2, $item->fresh()->quantity);
     }
 
+    public function test_member_can_decrement_their_own_group_item_and_remove_the_last_one(): void
+    {
+        [$group] = $this->openGroup();
+        $user = User::factory()->create();
+        $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $user->id, 'name' => 'Bạn A', 'member_token' => 'decrement-owner']);
+        $product = Product::factory()->create(['status' => true, 'stock' => 5]);
+        $item = GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
+            'product_id' => $product->id, 'size' => 'S', 'quantity' => 2, 'unit_price' => 45000]);
+
+        $this->actingAs($user)->patch(route('group-orders.items.decrement', [$group->code, $item]))->assertRedirect();
+        $this->assertSame(1, $item->fresh()->quantity);
+
+        $this->patch(route('group-orders.items.decrement', [$group->code, $item]))->assertRedirect();
+        $this->assertDatabaseMissing('group_order_items', ['id' => $item->id]);
+    }
+
     public function test_group_can_only_be_closed_once_and_price_is_refreshed(): void
     {
         [$group, $owner] = $this->openGroup();
@@ -274,6 +290,17 @@ class QuickOrderFeaturesTest extends TestCase
         $this->post(route('group-orders.cancel', $group->code))->assertRedirect(route('group-orders.index'));
         $this->assertSame($personalCart, session('cart'));
         $this->assertSame('cancelled', $group->fresh()->status);
+    }
+
+    public function test_owner_can_resume_the_same_group_order_checkout(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $group->update(['status' => 'closed']);
+
+        $this->actingAs($owner)
+            ->withSession(['checkout_group_order_id' => $group->id])
+            ->post(route('group-orders.resume', $group->code))
+            ->assertRedirect(route('checkout.index'));
     }
 
     public function test_group_checkout_links_order_deducts_stock_and_restores_personal_cart(): void

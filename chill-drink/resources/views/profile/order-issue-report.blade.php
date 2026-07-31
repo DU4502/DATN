@@ -13,13 +13,65 @@
             @if(session('success'))<div class="alert alert-success rounded-4 border-0"><i class="bi bi-check-circle me-1"></i>{{ session('success') }}</div>@endif
 
             @if($reports->isEmpty())
-                <form method="POST" action="{{ route('orders.issues.store', $order) }}" class="mt-4" enctype="multipart/form-data">
+                <form method="POST" action="{{ route('orders.issues.store', $order) }}" class="mt-4" enctype="multipart/form-data" data-evidence-form>
                     @csrf
-                    <div class="mb-3"><label class="form-label fw-semibold">Loại vấn đề</label><select name="type" class="form-select" required><option value="">Chọn vấn đề</option><option value="missing_item">Thiếu món</option><option value="wrong_item">Sai món</option><option value="quality_issue">Chất lượng đồ uống chưa tốt</option><option value="refund_request">Yêu cầu hoàn tiền</option><option value="other">Vấn đề khác</option></select></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">Loại vấn đề</label><select name="type" class="form-select" required><option value="">Chọn vấn đề</option><option value="missing_item" @selected(old('type') === 'missing_item')>Thiếu món</option><option value="wrong_item" @selected(old('type') === 'wrong_item')>Sai món</option><option value="quality_issue" @selected(old('type') === 'quality_issue')>Chất lượng đồ uống chưa tốt</option><option value="refund_request" @selected(old('type') === 'refund_request')>Yêu cầu hoàn tiền</option><option value="other" @selected(old('type') === 'other')>Vấn đề khác</option></select></div>
                     <div class="mb-4"><label class="form-label fw-semibold">Mô tả chi tiết</label><textarea name="description" rows="5" class="form-control" required>{{ old('description') }}</textarea><div class="form-text">Tối thiểu 10 ký tự, tối đa 1.500 ký tự.</div></div>
-                    <div class="mb-4"><label class="form-label fw-semibold">Ảnh bằng chứng <span class="text-secondary fw-normal">(không bắt buộc)</span></label><input type="file" name="evidence" class="form-control @error('evidence') is-invalid @enderror" accept="image/jpeg,image/png,image/webp"><div class="form-text">Ảnh món nhận được hoặc hóa đơn; JPG, PNG, WEBP, tối đa 5 MB.</div>@error('evidence')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Ảnh bằng chứng <span class="text-danger">*</span> <span class="text-secondary fw-normal">(chọn ít nhất 2 ảnh, tối đa 3 ảnh)</span></label>
+                        <div class="evidence-upload-grid">
+                            @for($slot = 0; $slot < 3; $slot++)
+                                <label class="evidence-upload-slot" for="evidence-{{ $slot }}">
+                                    <input id="evidence-{{ $slot }}" type="file" name="evidence[]" accept="image/jpeg,image/png,image/webp" data-evidence-input>
+                                    <span class="evidence-upload-icon"><i class="bi bi-image"></i></span>
+                                    <strong data-evidence-label>Chọn ảnh {{ $slot + 1 }}</strong>
+                                    <small>Nhấn để chọn tệp</small>
+                                </label>
+                            @endfor
+                        </div>
+                        <div class="form-text">Ảnh món nhận được hoặc hóa đơn; JPG, PNG, WEBP, tối đa 5 MB mỗi ảnh.</div>
+                        <div class="text-danger small mt-2 d-none" data-evidence-error><i class="bi bi-exclamation-circle me-1"></i>Vui lòng chọn ít nhất 2 ảnh bằng chứng trước khi gửi yêu cầu.</div>
+                        @error('evidence')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                        @error('evidence.*')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                    </div>
                     <button class="btn btn-primary rounded-pill px-4"><i class="bi bi-send me-1"></i>Gửi yêu cầu</button>
                 </form>
+                <style>
+                    .evidence-upload-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+                    .evidence-upload-slot { min-height:126px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; padding:14px; border:1px dashed #9dccc0; border-radius:14px; color:#176d5c; background:#f7fcfa; cursor:pointer; text-align:center; transition:.18s ease; }
+                    .evidence-upload-slot:hover { border-color:#009a7b; background:#edfaf6; transform:translateY(-1px); }
+                    .evidence-upload-slot input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+                    .evidence-upload-icon { display:grid; place-items:center; width:38px; height:38px; border-radius:11px; color:#008b70; background:#dff5ee; font-size:1.2rem; }
+                    .evidence-upload-slot strong { color:#26342f; font-size:.9rem; }
+                    .evidence-upload-slot small { color:#71817b; font-size:.76rem; }
+                    .evidence-upload-slot.is-selected { border-style:solid; border-color:#00a17f; background:#edfaf6; }
+                    @media (max-width:575px) { .evidence-upload-grid { grid-template-columns:1fr; } .evidence-upload-slot { min-height:82px; flex-direction:row; justify-content:flex-start; text-align:left; } }
+                </style>
+                <script>
+                    const evidenceForm = document.querySelector('[data-evidence-form]');
+                    const evidenceInputs = [...document.querySelectorAll('[data-evidence-input]')];
+                    const evidenceError = document.querySelector('[data-evidence-error]');
+                    const selectedEvidenceCount = () => evidenceInputs.filter((input) => input.files?.length).length;
+                    const refreshEvidenceError = () => evidenceError?.classList.toggle('d-none', selectedEvidenceCount() >= 2);
+
+                    evidenceInputs.forEach((input) => {
+                        input.addEventListener('change', () => {
+                            const slot = input.closest('.evidence-upload-slot');
+                            const label = slot?.querySelector('[data-evidence-label]');
+                            const file = input.files?.[0];
+                            if (!slot || !label || !file) return;
+                            slot.classList.add('is-selected');
+                            label.textContent = file.name.length > 20 ? `${file.name.slice(0, 17)}...` : file.name;
+                            refreshEvidenceError();
+                        });
+                    });
+                    evidenceForm?.addEventListener('submit', (event) => {
+                        if (selectedEvidenceCount() >= 2) return;
+                        event.preventDefault();
+                        refreshEvidenceError();
+                        evidenceError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+                </script>
             @else
                 @foreach($reports as $report)
                     @php

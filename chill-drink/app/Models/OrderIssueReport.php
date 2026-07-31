@@ -9,9 +9,10 @@ class OrderIssueReport extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['order_id', 'user_id', 'handled_by', 'type', 'description', 'evidence_path', 'evidence_name', 'status', 'resolution_type', 'resolution_value', 'voucher_coupon_id', 'estimated_at', 'admin_note', 'received_at', 'processing_at', 'resolved_at', 'rejected_at', 'approved_at', 'remedy_started_at', 'customer_confirmed_at', 'refund_requested_at'];
+    protected $fillable = ['order_id', 'user_id', 'handled_by', 'type', 'description', 'evidence_path', 'evidence_name', 'evidence_files', 'status', 'resolution_type', 'resolution_value', 'voucher_coupon_id', 'estimated_at', 'admin_note', 'received_at', 'processing_at', 'resolved_at', 'rejected_at', 'approved_at', 'remedy_started_at', 'customer_confirmed_at', 'refund_requested_at'];
 
     protected $casts = [
+        'evidence_files' => 'array',
         'received_at' => 'datetime',
         'processing_at' => 'datetime',
         'resolved_at' => 'datetime',

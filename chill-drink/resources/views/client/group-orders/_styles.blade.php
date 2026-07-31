@@ -180,10 +180,15 @@
     .member-avatar { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 auto; border-radius: 50%; color: #087560; background: #d9f4ed; font-weight: 850; }
     .member-item { display: flex; gap: .85rem; align-items: center; padding: 1rem 1.15rem; border-bottom: 1px solid #edf2f1; }
     .member-item:last-child { border-bottom: 0; }
-    .group-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: .45rem; margin-top: .35rem; }
-    .group-item-action { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 1px solid #d7e8e4; border-radius: 50%; background: #fff; transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
+    .group-item-actions { display: flex; align-items: center; justify-content: flex-end; gap: .6rem; margin-top: .5rem; }
+    .group-quantity-stepper { display: flex; flex: 0 0 102px; flex-wrap: nowrap; align-items: center; width: 102px; height: 36px; overflow: hidden; border: 1px solid #cfe6df; border-radius: 999px; background: #f8fcfb; box-shadow: 0 4px 12px rgba(8, 117, 96, .06); white-space: nowrap; }
+    .group-quantity-stepper form { display: block; flex: 0 0 34px; width: 34px !important; min-width: 34px; margin: 0; }
+    .group-stepper-button { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; color: #527069; background: transparent; transition: background .18s ease, color .18s ease; }
+    .group-stepper-button:hover { color: #087560; background: #e7f7f2; }
+    .group-stepper-button.is-add { color: #07866f; }
+    .group-stepper-value { display: grid; flex: 0 0 32px; place-items: center; width: 32px; min-width: 32px; color: #173c34; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .group-item-action { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid #d7e8e4; border-radius: 50%; background: #fff; transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
     .group-item-action:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(8, 117, 96, .14); }
-    .group-item-action.is-add { color: #07866f; border-color: #a9ddd1; background: #edfaf6; }
     .group-item-action.is-remove { color: #dc3545; border-color: #f3c5ca; background: #fff7f7; }
     .group-item-action:disabled, .group-add-button:disabled { cursor: wait; opacity: .65; }
     .group-live-toast { position: fixed; top: 88px; right: 22px; z-index: 1080; max-width: min(390px, calc(100vw - 32px)); padding: .85rem 1rem; border: 1px solid #bde4d9; border-radius: 14px; color: #05634f; background: #effbf7; box-shadow: 0 16px 35px rgba(10, 80, 66, .18); font-weight: 700; animation: group-menu-in .2s ease both; }

@@ -44,16 +44,32 @@ class OrderIssueReportController extends Controller
         $data = $request->validate([
             'type' => ['required', 'in:missing_item,wrong_item,quality_issue,refund_request,other'],
             'description' => ['required', 'string', 'min:10', 'max:1500'],
-            'evidence' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'evidence' => ['required', 'array', 'min:2', 'max:3'],
+            'evidence.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
+
+        $evidenceFiles = collect($request->file('evidence', []))
+            ->filter()
+            ->map(fn ($file) => [
+                'path' => $file->store('order-issue-evidence'),
+                'name' => $file->getClientOriginalName(),
+            ])
+            ->values()
+            ->all();
+
+        if (count($evidenceFiles) < 2) {
+            return back()->withErrors(['evidence' => 'Vui lòng chọn ít nhất 2 ảnh bằng chứng.'])->withInput();
+        }
 
         $report = OrderIssueReport::create([
             'order_id' => $order->id,
             'user_id' => $request->user()->id,
             'type' => $data['type'],
             'description' => trim($data['description']),
-            'evidence_path' => $request->file('evidence')?->store('order-issue-evidence'),
-            'evidence_name' => $request->file('evidence')?->getClientOriginalName(),
+            // Giữ lại ảnh đầu tiên để tương thích với các yêu cầu hỗ trợ cũ.
+            'evidence_path' => $evidenceFiles[0]['path'] ?? null,
+            'evidence_name' => $evidenceFiles[0]['name'] ?? null,
+            'evidence_files' => $evidenceFiles,
             'received_at' => now(),
         ]);
 

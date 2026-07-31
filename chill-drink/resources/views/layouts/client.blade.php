@@ -1264,6 +1264,9 @@
                         <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
                             <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
                             <span>Tiếp tục thanh toán</span>
+                            <span class="active-group-return__time" title="Đã chốt lúc {{ $pendingCheckoutGroup->closes_at?->format('H:i · d/m/Y') }}">
+                                {{ $pendingCheckoutGroup->closes_at?->format('H:i') ?? '--:--' }}
+                            </span>
                         </a>
                     @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
                         <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">

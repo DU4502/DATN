@@ -132,14 +132,22 @@ class OrderIssueReportController extends Controller
     {
         $issue->load('order');
         abort_unless($request->user()->isSuperAdmin() || (int) $issue->order->branch_id === (int) $request->user()->branch_id, 403);
-        abort_unless(filled($issue->evidence_path), 404);
+        $evidenceFiles = collect($issue->evidence_files ?? [])
+            ->filter(fn ($file) => filled($file['path'] ?? null))
+            ->values();
+        $fileIndex = max(0, (int) $request->query('file', 0));
+        $selectedFile = $evidenceFiles->get($fileIndex);
+        $path = $selectedFile['path'] ?? $issue->evidence_path;
+        $name = $selectedFile['name'] ?? $issue->evidence_name;
 
-        if (Storage::disk('local')->exists($issue->evidence_path)) {
-            return Storage::disk('local')->response($issue->evidence_path, $issue->evidence_name);
+        abort_unless(filled($path), 404);
+
+        if (Storage::disk('local')->exists($path)) {
+            return Storage::disk('local')->response($path, $name);
         }
 
-        abort_unless(Storage::disk('public')->exists($issue->evidence_path), 404);
-        return Storage::disk('public')->response($issue->evidence_path, $issue->evidence_name);
+        abort_unless(Storage::disk('public')->exists($path), 404);
+        return Storage::disk('public')->response($path, $name);
     }
 
 }

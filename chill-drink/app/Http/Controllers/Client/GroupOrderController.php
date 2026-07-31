@@ -471,6 +471,32 @@ class GroupOrderController extends Controller
         return back()->with('success', 'Đã thêm 1 phần của món này.');
     }
 
+    public function decrementItem(string $code, GroupOrderItem $item)
+    {
+        DB::transaction(function () use ($code, $item) {
+            $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
+            $group->closeIfExpired();
+            abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng hoặc hết hạn.');
+
+            $member = $this->currentMember($group);
+            $lockedItem = GroupOrderItem::lockForUpdate()->findOrFail($item->id);
+            abort_unless(
+                $lockedItem->group_order_id === $group->id && $lockedItem->group_order_member_id === $member->id,
+                403
+            );
+
+            if ($lockedItem->quantity <= 1) {
+                $lockedItem->delete();
+
+                return;
+            }
+
+            $lockedItem->decrement('quantity');
+        });
+
+        return back()->with('success', 'Đã giảm 1 phần của món này.');
+    }
+
     public function close(string $code)
     {
         if (session()->has('checkout_group_order_id')) {
@@ -546,11 +572,19 @@ class GroupOrderController extends Controller
 
     public function resume(string $code)
     {
-        if (session()->has('checkout_group_order_id')) {
-            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
-        }
         $group = GroupOrder::with(['items.product.category', 'items.member'])->where('code', $code)->firstOrFail();
         abort_unless($group->owner_id === auth()->id() && $group->status === 'closed' && ! $group->order_id, 403);
+
+        // Nhóm này đã ở giỏ chờ thanh toán: quay thẳng về checkout thay vì
+        // chặn nhầm là một đơn nhóm khác.
+        if (session()->has('checkout_group_order_id')) {
+            if ((int) session('checkout_group_order_id') === (int) $group->id) {
+                return redirect()->route('checkout.index');
+            }
+
+            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
+        }
+
         if ($group->items->isEmpty()) {
             return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
         }
