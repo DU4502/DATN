@@ -74,6 +74,9 @@ class SuperAdminController extends Controller
             ->withQueryString();
 
         $allAdmins = User::admins()->get();
+
+        // Danh sách nhân viên (role_id = 5)
+        $staffUsers = User::where('role_id', 5)->with('branch')->orderBy('name')->get();
         $loginHistoryByAdmin = $this->loginHistoryByAdmin($adminUsers);
         $orderStats = $this->orderStats();
 
@@ -102,6 +105,7 @@ class SuperAdminController extends Controller
             'notifications' => $request->user()->notifications()->latest()->limit(5)->get(),
             'unreadNotificationCount' => $request->user()->unreadNotifications()->count(),
             'filters' => compact('search', 'status', 'role', 'created'),
+            'staffUsers' => $staffUsers,
             // Branch Statistics - Phase 1 Data
             'branchSummaryStats' => $this->branchSummaryStats(),
             'branchInsightStats' => $this->branchInsightStats(),
@@ -589,12 +593,23 @@ class SuperAdminController extends Controller
 
     public function updateBranch(Request $request, User $user)
     {
-        $validated = $request->validate([
-            'branch_id' => [
-                'nullable',
-                'exists:branches,id',
-            ],
-        ]);
+        // Nếu user là admin (role 2,3), vẫn enforce unique branch
+        $branchUniqueRule = $user->isAdmin()
+            ? Rule::unique('users', 'branch_id')
+                ->ignore($user->id)
+                ->where(fn ($q) => $q->whereIn('role_id', [2, 3]))
+                ->whereNotNull('branch_id')
+            : null;
+
+        $rules = ['branch_id' => array_filter([
+            'nullable',
+            'exists:branches,id',
+            $branchUniqueRule,
+        ])];
+
+        $messages = ['branch_id.unique' => 'Chi nhánh này đã được gán cho admin khác.'];
+
+        $validated = $request->validate($rules, $messages);
 
         $user->update(['branch_id' => $validated['branch_id'] ?? null]);
 
@@ -667,13 +682,13 @@ class SuperAdminController extends Controller
         }
 
         $validated = $request->validate([
-            'role_id' => ['required', 'in:2,3'],
+            'role_id' => ['required', 'in:2,3,4,5'],
         ]);
 
         $roleId = (int) $validated['role_id'];
 
         // Prevent downgrading the last active Super Admin
-        if ($roleId === 2 && $user->isSuperAdmin()) {
+        if ($roleId !== 3 && $user->isSuperAdmin()) {
             $activeSuperAdmins = User::where('role_id', 3)->where('is_active', true)->count();
             if ($activeSuperAdmins <= 1) {
                 if ($request->wantsJson()) {
@@ -694,9 +709,120 @@ class SuperAdminController extends Controller
         );
 
         if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'message' => "Đã cập nhật vai trò cho admin {$user->name}"]);
+            return response()->json(['success' => true, 'message' => "Đã cập nhật vai trò cho {$user->name}"]);
         }
 
-        return redirect()->route('admin.super-admin')->with('success', "Đã cập nhật vai trò cho admin {$user->name}");
+        return redirect()->route('admin.super-admin')->with('success', "Đã cập nhật vai trò cho {$user->name}");
+    }
+
+    /**
+     * Tạo tài khoản nhân viên (role_id = 5)
+     */
+    public function storeStaff(Request $request): RedirectResponse
+    {
+        $validated = $request->validateWithBag('createStaff', [
+            'name'     => ['required', 'string', 'max:150'],
+            'email'    => ['required', 'email', 'max:150', Rule::unique('users', 'email')],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'branch_id' => ['nullable', 'exists:branches,id'],
+        ], [
+            'name.required'     => 'Vui lòng nhập tên nhân viên.',
+            'email.required'    => 'Vui lòng nhập email.',
+            'email.unique'      => 'Email này đã được sử dụng.',
+            'password.required' => 'Vui lòng nhập mật khẩu.',
+            'password.min'      => 'Mật khẩu phải có ít nhất 8 ký tự.',
+            'password.confirmed'=> 'Mật khẩu xác nhận không khớp.',
+        ]);
+
+        try {
+            $staff = User::create([
+                'name'      => $validated['name'],
+                'email'     => strtolower($validated['email']),
+                'password'  => \Illuminate\Support\Facades\Hash::make($validated['password']),
+                'role_id'   => 5, // Nhân viên
+                'branch_id' => $validated['branch_id'] ?? null,
+                'is_active' => true,
+            ]);
+
+            SystemLog::record(
+                $request->user(),
+                "Đã tạo tài khoản Nhân viên {$staff->email}",
+                'admin',
+                'success',
+                ['target_user_id' => $staff->id],
+            );
+
+            return redirect()
+                ->route('admin.super-admin')
+                ->with('success', "Đã tạo tài khoản nhân viên {$staff->name}.");
+        } catch (\Throwable $e) {
+            \Log::error('Staff creation failed', ['email' => $validated['email'], 'message' => $e->getMessage()]);
+            return redirect()->back()->withInput()->with('error', 'Có lỗi xảy ra khi tạo nhân viên. Vui lòng thử lại.');
+        }
+    }
+
+    /**
+     * Gán/bỏ gán chi nhánh cho nhân viên (không ràng buộc unique)
+     */
+    public function updateStaffBranch(Request $request, User $user): RedirectResponse
+    {
+        if (! $user->isStaffOnly()) {
+            abort(403, 'Chỉ áp dụng cho nhân viên.');
+        }
+
+        $validated = $request->validate([
+            'branch_id' => ['nullable', 'exists:branches,id'],
+        ]);
+
+        $user->update(['branch_id' => $validated['branch_id'] ?? null]);
+
+        return redirect()->back()->with('success', "Đã cập nhật chi nhánh cho nhân viên {$user->name}.");
+    }
+
+    /**
+     * Khóa/mở khóa nhân viên
+     */
+    public function toggleStaffStatus(Request $request, User $user): RedirectResponse
+    {
+        if (! $user->isStaffOnly()) {
+            abort(403, 'Chỉ áp dụng cho nhân viên.');
+        }
+
+        $newStatus = ! $user->is_active;
+        $user->update(['is_active' => $newStatus]);
+
+        SystemLog::record(
+            $request->user(),
+            ($newStatus ? 'Đã mở khóa nhân viên ' : 'Đã khóa nhân viên ') . $user->email,
+            'admin',
+            'success',
+            ['target_user_id' => $user->id],
+        );
+
+        return redirect()->back()->with('success', "Đã " . ($newStatus ? 'mở khóa' : 'khóa') . " nhân viên {$user->name}.");
+    }
+
+    /**
+     * Xóa nhân viên
+     */
+    public function destroyStaff(Request $request, User $user): RedirectResponse
+    {
+        if (! $user->isStaffOnly()) {
+            abort(403, 'Chỉ áp dụng cho nhân viên.');
+        }
+
+        $name = $user->name;
+        $email = $user->email;
+        $user->delete();
+
+        SystemLog::record(
+            $request->user(),
+            "Đã xóa tài khoản nhân viên {$email}",
+            'admin',
+            'success',
+            [],
+        );
+
+        return redirect()->back()->with('success', "Đã xóa nhân viên {$name}.");
     }
 }

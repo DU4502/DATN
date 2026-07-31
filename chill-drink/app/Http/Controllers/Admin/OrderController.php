@@ -204,6 +204,10 @@ class OrderController extends Controller
             'shipping_address' => $order->getShippingAddress(),
             'status' => $order->status,
             'status_label' => OrderStatus::label((string) $order->status),
+            'status_changed_at' => $order->status_changed_at?->format('d/m/Y H:i'),
+            'status_changed_by_name' => $order->status_changed_by
+                ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên')
+                : null,
             'next_status' => OrderStatus::nextStatus((string) $order->status, $fulfillmentType),
             'can_cancel' => OrderStatus::normalize((string) $order->status) !== OrderStatus::CANCELLED,
             'status_options' => OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType),
@@ -311,6 +315,10 @@ class OrderController extends Controller
 
         DB::transaction(function () use ($order, $newStatus, $oldStatus, $request) {
             $order->status = $newStatus;
+        
+        // Lưu thông tin người thay đổi trạng thái
+        $order->status_changed_at = now();
+        $order->status_changed_by = auth()->id();
         
         // Lưu lý do hủy nếu trạng thái là cancelled
         if ($newStatus === OrderStatus::CANCELLED) {

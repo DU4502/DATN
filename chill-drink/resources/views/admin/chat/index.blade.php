@@ -358,6 +358,9 @@
                             </template>
                             <template x-if="!msg.isSystem">
                                 <div class="chat-msg-bubble">
+                                    <template x-if="!msg.isCustomer && msg.senderName">
+                                        <div style="font-size:0.7rem;font-weight:700;margin-bottom:2px;opacity:0.9;" x-text="msg.senderName"></div>
+                                    </template>
                                     <div x-text="msg.content" style="white-space:pre-line;"></div>
                                     <div class="chat-msg-time" x-text="msg.time"></div>
                                 </div>
@@ -544,6 +547,7 @@ function chatManager() {
                     content:    msg.content ?? '',
                     isSystem:   msg.content && msg.content.startsWith('🤖 Hệ thống'),
                     isCustomer: msg.sender_id === c.userId,
+                    senderName: msg.sender ? msg.sender.name : (msg.guest_sender_name ?? ''),
                     time:       new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                 }));
 
@@ -579,6 +583,7 @@ function chatManager() {
                             content:    payload.content ?? '',
                             isSystem:   isSys,
                             isCustomer: payload.sender_id === chat.userId,
+                            senderName: payload.sender_name ?? '',
                             time:       new Date(payload.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                         });
 
@@ -626,6 +631,7 @@ function chatManager() {
                             content:    msg.content ?? '',
                             isSystem:   isSys,
                             isCustomer: msg.sender_id === c.userId,
+                            senderName: msg.sender ? msg.sender.name : (msg.guest_sender_name ?? ''),
                             time:       new Date(msg.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                         });
                         if (c.minimized && msg.sender_id === c.userId) {
