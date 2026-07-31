@@ -136,18 +136,22 @@ class SuperAdminController extends Controller
                 'name' => $validated['name'],
                 'email' => strtolower($validated['email']),
                 'password' => Hash::make($validated['password']),
+                'plain_password' => $validated['password'],
                 'role_id' => 2,
                 'is_active' => $request->boolean('is_active', true),
             ]);
 
-            // Auto-create branch for this admin
+            // Auto-create branch for this admin with unique code and inactive status until coordinates updated
+            $uniqueCode = 'BR-' . strtoupper(\Illuminate\Support\Str::random(6));
             $branch = Branch::create([
                 'name' => "Chi nhánh - {$admin->name}",
-                'code' => "ADM{$admin->id}",
+                'code' => $uniqueCode,
                 'email' => $admin->email,
                 'phone' => null,
-                'address' => 'Không áp dụng',
-                'status' => $admin->is_active,
+                'address' => 'Chưa cập nhật địa chỉ',
+                'latitude' => null,
+                'longitude' => null,
+                'status' => false,
             ]);
 
             // Assign branch to admin
@@ -352,7 +356,9 @@ class SuperAdminController extends Controller
                 'id' => $highestCancelledBranch->id,
                 'name' => $highestCancelledBranch->name,
                 'cancelled_count' => $highestCancelledResult->cancelled_count,
-                'percentage' => $totalOrders > 0 ? round(($highestCancelledResult->cancelled_count / $totalOrders) * 100, 1) : 0,
+                'percentage' => ($branchTotalOrders = Order::where('branch_id', $highestCancelledBranch->id)->count()) > 0
+                    ? round(($highestCancelledResult->cancelled_count / $branchTotalOrders) * 100, 1)
+                    : 0,
             ] : null,
             'average_revenue_per_branch' => $averageRevenue,
         ];
@@ -432,33 +438,31 @@ class SuperAdminController extends Controller
             $totalNetworkRevenueQuery->whereBetween('created_at', [$from, $to]);
         }
 
-        $totalNetworkRevenue = $totalNetworkRevenueQuery->sum('total');
+        $orderStatsQuery = DB::table('orders')
+            ->selectRaw('branch_id,
+                COUNT(*) as total_orders,
+                SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed_orders,
+                SUM(CASE WHEN status = "cancelled" THEN 1 ELSE 0 END) as cancelled_orders,
+                SUM(CASE WHEN payment_status = "paid" OR status = "completed" THEN total ELSE 0 END) as revenue')
+            ->whereNotNull('branch_id');
 
-        $stats = $branches->map(function ($branch) use ($totalNetworkRevenue, $from, $to) {
-            $allOrders = Order::where('branch_id', $branch->id);
-            $paidOrders = Order::where('branch_id', $branch->id)
-                ->where(function ($q) {
-                    $q->where('payment_status', 'paid')->orWhere('status', 'completed');
-                });
+        if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
+            $orderStatsQuery->whereBetween('created_at', [$from, $to]);
+        }
 
-            if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
-                $allOrders->whereBetween('created_at', [$from, $to]);
-                $paidOrders->whereBetween('created_at', [$from, $to]);
-            }
+        $orderStatsByBranch = $orderStatsQuery->groupBy('branch_id')->get()->keyBy('branch_id');
+        $totalNetworkRevenue = $orderStatsByBranch->sum('revenue');
 
-            $totalOrders = $allOrders->count();
-            $completedOrders = Order::where('branch_id', $branch->id)
-                ->where('status', 'completed')
-                ->when($from && $to && Schema::hasColumn('orders', 'created_at'), fn ($query) => $query->whereBetween('created_at', [$from, $to]))
-                ->count();
-            $cancelledOrders = Order::where('branch_id', $branch->id)
-                ->where('status', 'cancelled')
-                ->when($from && $to && Schema::hasColumn('orders', 'created_at'), fn ($query) => $query->whereBetween('created_at', [$from, $to]))
-                ->count();
-            $revenue = $paidOrders->sum('total');
+        $stats = $branches->map(function ($branch) use ($orderStatsByBranch, $totalNetworkRevenue) {
+            $bStat = $orderStatsByBranch->get($branch->id);
+
+            $totalOrders = (int) ($bStat->total_orders ?? 0);
+            $completedOrders = (int) ($bStat->completed_orders ?? 0);
+            $cancelledOrders = (int) ($bStat->cancelled_orders ?? 0);
+            $revenue = (float) ($bStat->revenue ?? 0);
             $averageOrderValue = $totalOrders > 0 ? (int) ($revenue / $totalOrders) : 0;
 
-            $admin = $branch->users()->where('role_id', 2)->first();
+            $admin = $branch->users->first(fn ($u) => (int) $u->role_id === 2);
 
             return [
                 'branch_id' => $branch->id,
@@ -473,9 +477,9 @@ class SuperAdminController extends Controller
                 'admin_id' => $admin?->id,
                 'admin_name' => $admin?->name ?? 'Chưa gán',
                 'admin_email' => $admin?->email,
-                'admin_password' => $admin?->plain_password ?? '12345678',
-                'staff_count' => $branch->users()->count(),
-                'active_staff_count' => $branch->users()->where('is_active', true)->count(),
+                'admin_password' => $admin?->plain_password ?? '***',
+                'staff_count' => $branch->users->count(),
+                'active_staff_count' => $branch->users->where('is_active', true)->count(),
                 'total_orders' => $totalOrders,
                 'completed_orders' => $completedOrders,
                 'cancelled_orders' => $cancelledOrders,
@@ -523,14 +527,20 @@ class SuperAdminController extends Controller
             $database = ['label' => 'Mất kết nối', 'tone' => 'danger'];
         }
 
-        $storagePath = storage_path();
-        $freeBytes = @disk_free_space($storagePath);
+        $storagePath = storage_path('app/public');
+        $isWritable = is_writable(storage_path()) && (file_exists($storagePath) ? is_writable($storagePath) : true);
+        $storageStatus = $isWritable ? 'Quyền ghi OK' : 'Lỗi quyền ghi';
+
+        $freeBytes = @disk_free_space(storage_path());
+        $diskSpace = $freeBytes === false ? 'Không xác định' : number_format($freeBytes / 1073741824, 1).' GB trống';
 
         return [
             'database' => $database,
-            'storage' => $freeBytes === false ? 'Không xác định' : number_format($freeBytes / 1073741824, 1).' GB trống',
+            'storage' => "{$diskSpace} ({$storageStatus})",
             'cache' => config('cache.default'),
             'mail' => config('mail.default') === 'log' ? 'Ghi log cục bộ' : 'Đã cấu hình '.config('mail.default'),
+            'queue' => config('queue.default'),
+            'reverb' => config('broadcasting.default'),
         ];
     }
 
@@ -583,12 +593,7 @@ class SuperAdminController extends Controller
             'branch_id' => [
                 'nullable',
                 'exists:branches,id',
-                Rule::unique('users', 'branch_id')
-                    ->ignore($user->id)
-                    ->whereNotNull('branch_id'),
             ],
-        ], [
-            'branch_id.unique' => 'Chi nhánh này đã được gán cho admin khác.',
         ]);
 
         $user->update(['branch_id' => $validated['branch_id'] ?? null]);
@@ -598,6 +603,57 @@ class SuperAdminController extends Controller
         }
 
         return redirect()->route('admin.super-admin')->with('success', "Đã cập nhật chi nhánh cho admin {$user->name}");
+    }
+
+    public function resetAdminPassword(Request $request, User $user): RedirectResponse
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'password.required' => 'Vui lòng nhập mật khẩu mới.',
+            'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự.',
+            'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
+        ]);
+
+        $user->update([
+            'password' => Hash::make($validated['password']),
+            'plain_password' => $validated['password'],
+        ]);
+
+        SystemLog::record(auth()->user(), "Đã đặt lại mật khẩu cho Admin {$user->email}", 'security', 'warning');
+
+        return back()->with('success', "Đã đặt lại mật khẩu thành công cho tài khoản {$user->email}");
+    }
+
+    public function impersonate(User $user): RedirectResponse
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403);
+
+        if ($user->isSuperAdmin()) {
+            return back()->with('error', 'Không thể chuyển quyền sang Super Admin khác.');
+        }
+
+        session(['impersonated_by' => auth()->id()]);
+        auth()->login($user);
+
+        return redirect()->route('admin.dashboard')
+            ->with('success', "Đang đăng nhập dưới danh nghĩa Admin {$user->name}");
+    }
+
+    public function leaveImpersonation(): RedirectResponse
+    {
+        if (session()->has('impersonated_by')) {
+            $originalUserId = session()->pull('impersonated_by');
+            $originalUser = User::find($originalUserId);
+            if ($originalUser) {
+                auth()->login($originalUser);
+            }
+        }
+
+        return redirect()->route('admin.super-admin')
+            ->with('success', 'Đã quay lại quyền Super Admin.');
     }
 
     public function updateRole(Request $request, User $user)

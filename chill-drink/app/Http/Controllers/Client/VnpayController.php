@@ -132,8 +132,8 @@ class VnpayController extends Controller
 
         if ($this->isSuccessful($request)) {
             // For guest orders, keep awaiting_email_confirmation status until email is confirmed
-            // For regular orders, change to in_progress
-            $newStatus = $order->isGuest() ? $order->status : 'in_progress';
+            // For regular orders, use standard PENDING status
+            $newStatus = $order->isGuest() ? $order->status : \App\Support\OrderStatus::PENDING;
             
             $order->update([
                 'payment_status' => 'paid',
@@ -206,8 +206,8 @@ class VnpayController extends Controller
 
             if ($this->isSuccessful($request)) {
                 // For guest orders, keep awaiting_email_confirmation status until email is confirmed
-                // For regular orders, change to in_progress
-                $newStatus = $order->isGuest() ? $order->status : 'in_progress';
+                // For regular orders, use standard PENDING status
+                $newStatus = $order->isGuest() ? $order->status : \App\Support\OrderStatus::PENDING;
                 
                 $order->update([
                     'payment_status' => 'paid',

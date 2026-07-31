@@ -134,22 +134,30 @@ class AdminChatController extends Controller
             'content' => 'required|string|max:5000',
         ]);
 
-        abort_unless($this->canReply($conversation), 403);
-
         $user = auth()->user();
 
-        if (!$conversation->cskh_id && !$user->isSuperAdmin()) {
-            $conversation->update(['cskh_id' => $user->id]);
-        }
+        $message = DB::transaction(function () use ($conversation, $user, $request) {
+            $lockedConversation = Conversation::query()
+                ->lockForUpdate()
+                ->findOrFail($conversation->id);
 
-        if ($conversation->status === 'closed') {
-            $conversation->update(['status' => 'open']);
-        }
+            // Re-check quyền sau khi lấy lock để request đến sau không thể
+            // ghi đè người phụ trách đã được request trước đó nhận.
+            abort_unless($this->canReply($lockedConversation), 403);
 
-        $message = $this->createMessage($conversation, [
-            'sender_id' => $user->id,
-            'content' => $request->content,
-        ]);
+            if (! $lockedConversation->cskh_id && ! $user->isSuperAdmin()) {
+                $lockedConversation->update(['cskh_id' => $user->id]);
+            }
+
+            if ($lockedConversation->status === 'closed') {
+                $lockedConversation->update(['status' => 'open']);
+            }
+
+            return $this->createMessage($lockedConversation, [
+                'sender_id' => $user->id,
+                'content' => $request->content,
+            ]);
+        });
 
         return $this->jsonMessageResponse($message);
     }
@@ -162,7 +170,18 @@ class AdminChatController extends Controller
 
         try {
             broadcast(new \App\Events\ConversationClosed($conversation, 'cskh'))->toOthers();
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ConversationClosed Broadcast Error: ' . $e->getMessage(), [
+                'conversation_id' => $conversation->id,
+            ]);
+        }
+
+        \App\Models\SystemLog::record(
+            auth()->user(),
+            "Đã đóng cuộc trò chuyện #{$conversation->id} của " . ($conversation->user?->name ?? $conversation->guest_name ?? 'Khách vãng lai'),
+            'chat',
+            'info'
+        );
 
         if (request()->wantsJson()) {
             return response()->json(['success' => true]);
@@ -263,7 +282,12 @@ class AdminChatController extends Controller
 
         try {
             broadcast(new MessageSent($message))->toOthers();
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Chat Broadcast Error: ' . $e->getMessage(), [
+                'message_id' => $message->id,
+                'conversation_id' => $message->conversation_id,
+            ]);
+        }
 
         return $message;
     }

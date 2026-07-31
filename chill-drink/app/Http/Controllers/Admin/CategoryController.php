@@ -51,6 +51,10 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->has('name')) {
+            $request->merge(['name' => trim((string) $request->input('name'))]);
+        }
+
         // Validation dữ liệu đầu vào (Đã bổ sung ràng buộc cho status và slug)
         $validated = $request->validate([
             'name'   => 'required|string|max:255|unique:categories,name',
@@ -96,6 +100,9 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
+        if ($request->has('name')) {
+            $request->merge(['name' => trim((string) $request->input('name'))]);
+        }
         // Validation khi cập nhật (Bỏ qua trùng tên và trùng slug của chính bản ghi hiện tại)
         $validated = $request->validate([
             'name'   => 'required|string|max:255|unique:categories,name,' . $category->id,

@@ -383,6 +383,15 @@ class ProductController extends Controller
     {
         $product = Product::withTrashed()->whereKey($id)->orWhere('slug', $id)->firstOrFail();
 
+        $hasOrders = \Illuminate\Support\Facades\DB::table('order_items')
+            ->where('product_id', $product->id)
+            ->exists();
+
+        if ($hasOrders) {
+            return redirect()->route('admin.products.trash')
+                ->with('error', 'Không thể xóa vĩnh viễn! Sản phẩm này đã tồn tại trong lịch sử đơn hàng của khách hàng. Vui lòng duy trì lưu trữ trong thùng rác.');
+        }
+
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
         }

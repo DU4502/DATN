@@ -8,9 +8,12 @@ use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Schema;
 
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+
 class ReviewController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $hasReviewTable = Schema::hasTable('reviews');
         $reviews = new LengthAwarePaginator([], 0, 12, 1, [
@@ -23,7 +26,16 @@ class ReviewController extends Controller
         $monthReviews = 0;
 
         if ($hasReviewTable) {
-            $reviewQuery = Review::with(['user', 'product.category']);
+            $reviewQuery = Review::with(['user', 'product.category'])
+                ->when($request->filled('rating'), fn ($q) => $q->where('rating', (int) $request->rating))
+                ->when($request->filled('product_id'), fn ($q) => $q->where('product_id', (int) $request->product_id))
+                ->when($request->filled('q'), function ($q) use ($request) {
+                    $search = $request->q;
+                    $q->where(function ($inner) use ($search) {
+                        $inner->where('comment', 'like', "%{$search}%")
+                            ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$search}%"));
+                    });
+                });
 
             if (Schema::hasColumn('reviews', 'created_at')) {
                 $reviewQuery->latest();
@@ -31,7 +43,7 @@ class ReviewController extends Controller
                 $reviewQuery->orderByDesc('id');
             }
 
-            $reviews = $reviewQuery->paginate(12);
+            $reviews = $reviewQuery->paginate(12)->withQueryString();
             $totalReviews = Review::count();
             $averageRating = round((float) Review::avg('rating'), 1);
 
@@ -55,5 +67,19 @@ class ReviewController extends Controller
             'weekReviews',
             'monthReviews'
         ));
+    }
+
+    public function destroy(Review $review): RedirectResponse
+    {
+        $review->delete();
+        return redirect()->back()->with('success', 'Đã xóa đánh giá thành công.');
+    }
+
+    public function toggleStatus(Review $review): RedirectResponse
+    {
+        if (Schema::hasColumn('reviews', 'status')) {
+            $review->update(['status' => ! (bool) $review->status]);
+        }
+        return redirect()->back()->with('success', 'Đã cập nhật trạng thái hiển thị đánh giá.');
     }
 }

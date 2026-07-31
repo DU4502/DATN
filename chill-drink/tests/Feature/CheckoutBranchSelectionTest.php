@@ -25,6 +25,7 @@ class CheckoutBranchSelectionTest extends TestCase
             'password' => Hash::make('password'),
             'role_id' => 1,
             'is_active' => true,
+            'email_verified_at' => now(),
         ]);
 
         $branch = Branch::create([
@@ -103,6 +104,7 @@ class CheckoutBranchSelectionTest extends TestCase
             'password' => Hash::make('password'),
             'role_id' => 1,
             'is_active' => true,
+            'email_verified_at' => now(),
         ]);
 
         $branch = Branch::create([

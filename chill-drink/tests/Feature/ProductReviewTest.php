@@ -135,6 +135,7 @@ class ProductReviewTest extends TestCase
             'password' => Hash::make('password'),
             'role_id' => 1,
             'is_active' => 1,
+            'email_verified_at' => now(),
         ]);
     }
 

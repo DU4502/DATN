@@ -284,6 +284,10 @@ class DashboardController extends Controller
             $query->whereBetween('created_at', [$from, $to]);
         }
 
+        if (Schema::hasColumn('orders', 'status')) {
+            $query->where('status', 'completed');
+        }
+
         return $query->count();
     }
 

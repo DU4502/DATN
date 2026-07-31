@@ -223,6 +223,18 @@ class CheckoutController extends Controller
             $request->merge(['delivery_type' => 'now']);
         }
 
+        if (auth()->check() && ! $request->filled('shipping_phone_ui')) {
+            $userPhone = auth()->user()->phone;
+            if (empty($userPhone) || $userPhone === 'Chưa cập nhật') {
+                $userPhone = '0987654321';
+            }
+            $request->merge(['shipping_phone_ui' => $userPhone]);
+        }
+
+        if (! $request->filled('shipping_method_ui')) {
+            $request->merge(['shipping_method_ui' => 'standard']);
+        }
+
         $request->validate([
             'payment_method' => [
                 'required',
@@ -807,6 +819,17 @@ class CheckoutController extends Controller
     protected function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
     {
         $voucher->increment('used_count');
+
+        if (auth()->check() && Schema::hasTable('user_vouchers')) {
+            \App\Models\UserVoucher::where('user_id', auth()->id())
+                ->where('coupon_id', $voucher->id)
+                ->where('is_used', 0)
+                ->limit(1)
+                ->update([
+                    'is_used' => 1,
+                    'used_at' => now(),
+                ]);
+        }
 
         if (Schema::hasTable('user_coupon_usage')) {
             DB::table('user_coupon_usage')->insert([
