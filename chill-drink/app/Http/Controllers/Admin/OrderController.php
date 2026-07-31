@@ -57,17 +57,32 @@ class OrderController extends Controller
                 $cleanKeyword = ltrim($keyword, '#');
 
                 $query->where(function ($subQuery) use ($keyword, $cleanKeyword) {
-                    // Search by order ID (with or without #)
+                    // Tìm theo order_code (VD: CN1-ON-20260728-0002)
+                    $subQuery->where('order_code', 'like', '%'.$cleanKeyword.'%');
+
+                    // Nếu nhập số → tìm thêm theo ID (exact match)
                     if (is_numeric($cleanKeyword)) {
-                        $subQuery->where('id', (int) $cleanKeyword);
+                        $subQuery->orWhere('id', (int) $cleanKeyword);
+                        return;
                     }
 
-                    // Search by customer name or email
+                    // Tìm theo tên/email của user đã đăng nhập
                     $subQuery->orWhereHas('user', function ($userQuery) use ($keyword) {
                         $userQuery
                             ->where('name', 'like', '%'.$keyword.'%')
                             ->orWhere('email', 'like', '%'.$keyword.'%');
                     });
+
+                    // Tìm theo thông tin guest (nếu cột tồn tại)
+                    if (Schema::hasColumn('orders', 'guest_name')) {
+                        $subQuery->orWhere('guest_name', 'like', '%'.$keyword.'%');
+                    }
+                    if (Schema::hasColumn('orders', 'guest_email')) {
+                        $subQuery->orWhere('guest_email', 'like', '%'.$keyword.'%');
+                    }
+                    if (Schema::hasColumn('orders', 'guest_phone')) {
+                        $subQuery->orWhere('guest_phone', 'like', '%'.$keyword.'%');
+                    }
                 });
             })
             ->when(isset($statusOptions[$filters['status']]) && $filters['status'] !== '', function ($query) use ($filters) {
@@ -177,6 +192,10 @@ class OrderController extends Controller
             'shipping_address' => $order->getShippingAddress(),
             'status' => $order->status,
             'status_label' => OrderStatus::label((string) $order->status),
+            'status_changed_at' => $order->status_changed_at?->format('d/m/Y H:i'),
+            'status_changed_by_name' => $order->status_changed_by
+                ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên')
+                : null,
             'next_status' => OrderStatus::nextStatus((string) $order->status, $fulfillmentType),
             'can_cancel' => ! in_array(OrderStatus::normalize((string) $order->status), [OrderStatus::COMPLETED, OrderStatus::CANCELLED], true),
             'status_options' => OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType),
@@ -300,6 +319,10 @@ class OrderController extends Controller
 
         $oldStatus = $order->status;
         $order->status = $newStatus;
+        
+        // Lưu thông tin người thay đổi trạng thái
+        $order->status_changed_at = now();
+        $order->status_changed_by = auth()->id();
         
         // Lưu lý do hủy nếu trạng thái là cancelled
         if ($newStatus === OrderStatus::CANCELLED) {

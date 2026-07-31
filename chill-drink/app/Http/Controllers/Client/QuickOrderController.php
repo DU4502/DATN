@@ -72,7 +72,9 @@ class QuickOrderController extends Controller
         if (! in_array($size, ['S', 'M', 'L'], true)) $size = 'M';
         $toppings = DB::table('order_item_toppings')->join('toppings', 'toppings.id', '=', 'order_item_toppings.topping_id')
             ->where('order_item_id', $item->id)->get(['toppings.name', 'order_item_toppings.price'])->map(fn ($t) => ['name' => $t->name, 'price' => (int) $t->price])->all();
-        $sizeExtra = ['S' => 0, 'M' => 5000, 'L' => 10000][$size];
+        $sizeExtra = isset($item->productSize?->price)
+            ? (int) $item->productSize->price
+            : (['S' => 0, 'M' => 5000, 'L' => 10000][$size] ?? 0);
         $toppingTotal = collect($toppings)->sum('price');
         $key = 'reorder-'.$item->id.'-'.uniqid();
         $cart = session()->get('cart', []);

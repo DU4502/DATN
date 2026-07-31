@@ -742,7 +742,6 @@
                     <a class="sa-page-link {{ $page === $adminUsers->currentPage() ? 'active' : '' }}" href="{{ $adminUsers->url($page) }}">{{ $page }}</a>
                 @endforeach
             </div>
-        </div>
     </section>
 
     <!-- Branch Edit Modals -->
@@ -790,7 +789,12 @@
                         </div>
 
                         @php
-                            $tabCount = $adminUser->is(auth()->user()) ? 3 : 4;
+                            $isSelf = $adminUser->is(auth()->user());
+                            $isSuperAdminUser = $adminUser->isSuperAdmin();
+                            // Tabs: Phân quyền + Gán nhánh (ẩn với SuperAdmin) + Khóa/Mở (ẩn với chính mình) + Lịch sử
+                            $tabCount = 2; // Phân quyền + Lịch sử luôn có
+                            if (!$isSuperAdminUser) $tabCount++; // Gán nhánh
+                            if (!$isSelf) $tabCount++;            // Khóa/Mở
                             $loginHistories = $loginHistoryByAdmin->get($adminUser->id, collect());
                         @endphp
 
@@ -799,10 +803,12 @@
                             <button class="admin-action-tab" data-tab="permissions" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'permissions', {{ $adminUser->id }})">
                                 <i class="bi bi-key"></i><span>Phân quyền</span>
                             </button>
+                            @if(!$isSuperAdminUser)
                             <button class="admin-action-tab" data-tab="branch" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'branch', {{ $adminUser->id }})">
                                 <i class="bi bi-shop"></i><span>Gán nhánh</span>
                             </button>
-                            @if(!$adminUser->is(auth()->user()))
+                            @endif
+                            @if(!$isSelf)
                                 <button class="admin-action-tab" data-tab="security" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'security', {{ $adminUser->id }})">
                                     <i class="bi bi-lock"></i><span>Khóa/Mở khóa</span>
                                 </button>
@@ -846,6 +852,7 @@
                         </div>
 
                         <!-- Tab: Gán nhánh -->
+                        @if(!$isSuperAdminUser)
                         <div class="admin-action-content" id="content-branch-{{ $adminUser->id }}" style="display: none;">
                             <div style="display: grid; gap: 0.75rem;">
                                 <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
@@ -888,6 +895,7 @@
                                 </form>
                             </div>
                         </div>
+                        @endif
 
                         <!-- Tab: Lịch sử đăng nhập -->
                         <div class="admin-action-content" id="content-login-history-{{ $adminUser->id }}" style="display: none;">
@@ -1015,10 +1023,10 @@
                 </div>
                 <div class="form-check form-switch mt-3"><input type="hidden" name="is_active" value="0"><input id="admin_active" class="form-check-input" type="checkbox" name="is_active" value="1" @checked(old('is_active', '1') === '1')><label class="form-check-label small fw-semibold" for="admin_active">Kích hoạt ngay</label></div>
             </div>
-            <div class="modal-footer" style="gap: 0.75rem;">
-                <button type="button" class="sa-btn" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" class="sa-btn sa-btn-primary" style="min-width: 160px; background: var(--sa-green); color: #fff; border-color: var(--sa-green);">
-                    <i class="bi bi-person-plus"></i>Tạo Admin
+            <div class="modal-footer" style="gap: 0.75rem;background:#f9fafb;border-top:1px solid #e5e7eb;">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" class="btn px-4 fw-bold" style="min-width:160px;background:#0d9373;color:#fff;border:none;border-radius:8px;">
+                    <i class="bi bi-person-plus me-1"></i>Tạo Admin
                 </button>
             </div>
         </form>
@@ -1027,12 +1035,90 @@
 
 @include('admin.partials.location-picker-script')
 
+{{-- Modal tạo nhân viên (role_id = 5) --}}
+<div class="modal fade" id="createStaffModal" tabindex="-1" aria-labelledby="createStaffModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:12px;overflow:hidden;">
+        <form method="POST" action="{{ route('admin.super-admin.staff.store') }}">
+            @csrf
+            <input type="hidden" name="form_type" value="staff">
+            <div class="modal-header" style="border-bottom:1px solid #e5e7eb;">
+                <h2 class="modal-title fs-6 fw-bold" id="createStaffModalLabel">
+                    <i class="bi bi-person-badge me-2" style="color:#d97706;"></i>Thêm nhân viên mới
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning d-flex gap-2 align-items-start" style="font-size:.76rem;border-radius:8px;">
+                    <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+                    <div>
+                        Nhân viên có quyền: <strong>Chat hỗ trợ</strong>, <strong>đổi trạng thái đơn hàng</strong> và <strong>đổi trạng thái đơn nhóm</strong> trong chi nhánh được gán.
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold" for="staff_name">Họ và tên <span class="text-danger">*</span></label>
+                    <input id="staff_name" class="form-control @error('name', 'createStaff') is-invalid @enderror"
+                           name="name" value="{{ old('name') }}" required placeholder="Nguyễn Văn A">
+                    @error('name', 'createStaff')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold" for="staff_email">Email <span class="text-danger">*</span></label>
+                    <input id="staff_email" class="form-control @error('email', 'createStaff') is-invalid @enderror"
+                           type="email" name="email" value="{{ old('email') }}" required placeholder="nhanvien@chilldrink.com">
+                    @error('email', 'createStaff')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold" for="staff_branch">Chi nhánh phụ trách</label>
+                    <select id="staff_branch" class="form-select" name="branch_id">
+                        <option value="">-- Chưa gán chi nhánh --</option>
+                        @foreach(\App\Models\Branch::where('status', true)->orderBy('name')->get() as $branch)
+                            <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
+                                {{ $branch->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="form-text">Nhân viên chỉ thấy đơn hàng của chi nhánh được gán.</div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-bold" for="staff_password">Mật khẩu <span class="text-danger">*</span></label>
+                        <input id="staff_password" class="form-control @error('password', 'createStaff') is-invalid @enderror"
+                               type="password" name="password" required>
+                        @error('password', 'createStaff')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-bold" for="staff_password_confirmation">Xác nhận mật khẩu</label>
+                        <input id="staff_password_confirmation" class="form-control" type="password" name="password_confirmation" required>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid #e5e7eb;padding:.75rem 1rem;justify-content:flex-end;gap:.5rem;">
+                <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="submit" id="createStaffSubmitBtn"
+                    style="display:inline-flex;align-items:center;gap:6px;min-width:150px;font-weight:700;font-size:0.875rem;padding:0.5rem 1.25rem;border-radius:6px;border:none;outline:none;cursor:pointer;background-color:#d97706;color:#ffffff;line-height:1.5;"
+                    onmouseover="this.style.backgroundColor='#b45309'"
+                    onmouseout="this.style.backgroundColor='#d97706'"
+                    onmousedown="this.style.backgroundColor='#92400e'"
+                    onmouseup="this.style.backgroundColor='#b45309'">
+                    <i class="bi bi-person-badge" style="color:#ffffff;font-size:1rem;"></i>
+                    <span style="color:#ffffff;">Tạo Nhân Viên</span>
+                </button>
+            </div>
+        </form>
+        </div>
+    </div>
+</div>
+
+
+
 @php
     $modalToOpen = old('form_type') === 'admin'
         ? 'createAdminModal'
-        : (old('form_type') === 'branch'
-            ? 'createBranchModal'
-            : (old('form_type') === 'branch-edit' && old('branch_modal_id') ? 'branchEditModal'.old('branch_modal_id') : null));
+        : (old('form_type') === 'staff'
+            ? 'createStaffModal'
+            : (old('form_type') === 'branch'
+                ? 'createBranchModal'
+                : (old('form_type') === 'branch-edit' && old('branch_modal_id') ? 'branchEditModal'.old('branch_modal_id') : null)));
 @endphp
 
 @if($modalToOpen)

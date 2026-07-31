@@ -133,9 +133,33 @@ class User extends Authenticatable implements MustVerifyEmail
         return (int) ($this->role_id ?? 1) === 4;
     }
 
+    /**
+     * Nhân viên (role_id = 5): có quyền chat, đổi trạng thái đơn hàng/đơn nhóm
+     */
+    public function isStaffOnly(): bool
+    {
+        return (int) ($this->role_id ?? 1) === 5;
+    }
+
     public function isStaff(): bool
     {
-        return in_array((int) ($this->role_id ?? 1), [2, 3, 4], true);
+        return in_array((int) ($this->role_id ?? 1), [2, 3, 4, 5], true);
+    }
+
+    /**
+     * Có thể quản lý đơn hàng: admin (2,3) hoặc nhân viên (5)
+     */
+    public function canManageOrders(): bool
+    {
+        return in_array((int) ($this->role_id ?? 1), [2, 3, 5], true);
+    }
+
+    /**
+     * Có thể truy cập khu vực staff panel
+     */
+    public function canAccessStaffPanel(): bool
+    {
+        return $this->isStaffOnly();
     }
 
     public function isCustomer(): bool
@@ -235,7 +259,7 @@ class User extends Authenticatable implements MustVerifyEmail
             if ($this->branch_id) {
                 $query->where('branch_id', $this->branch_id);
             }
-            if ($this->isCskh() && !$this->isAdmin()) {
+            if (($this->isCskh() || $this->isStaffOnly()) && !$this->isAdmin()) {
                 $query->where(function ($inner) {
                     $inner->whereNull('cskh_id')
                         ->orWhere('cskh_id', $this->id);
