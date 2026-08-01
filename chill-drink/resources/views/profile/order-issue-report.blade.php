@@ -9,13 +9,13 @@
         <div class="card border-0 shadow-sm rounded-4 mt-3"><div class="card-body p-4 p-md-5">
             <p class="text-primary fw-semibold mb-1">Hỗ trợ đơn hàng</p>
             <h1 class="h3 fw-bold">{{ $reports->isNotEmpty() ? 'Tiến trình xử lý yêu cầu' : 'Báo vấn đề cho đơn' }} {{ $order->order_code ?? '#'.$order->id }}</h1>
-            <p class="text-secondary">{{ $reports->isNotEmpty() ? 'Yêu cầu đã được tiếp nhận. Bạn có thể theo dõi trạng thái xử lý tại đây.' : 'Gửi mô tả để nhân viên kiểm tra: thiếu món, sai món, chất lượng đồ uống hoặc yêu cầu hoàn tiền.' }}</p>
+            <p class="text-secondary">{{ $reports->isNotEmpty() ? 'Yêu cầu đã được tiếp nhận. Bạn có thể theo dõi trạng thái xử lý tại đây.' : 'Gửi mô tả để nhân viên kiểm tra: thiếu món, sai món hoặc chất lượng đồ uống. Yêu cầu chỉ được gửi trong ngày đơn hoàn thành.' }}</p>
             @if(session('success'))<div class="alert alert-success rounded-4 border-0"><i class="bi bi-check-circle me-1"></i>{{ session('success') }}</div>@endif
 
             @if($reports->isEmpty())
                 <form method="POST" action="{{ route('orders.issues.store', $order) }}" class="mt-4" enctype="multipart/form-data" data-evidence-form>
                     @csrf
-                    <div class="mb-3"><label class="form-label fw-semibold">Loại vấn đề</label><select name="type" class="form-select" required><option value="">Chọn vấn đề</option><option value="missing_item" @selected(old('type') === 'missing_item')>Thiếu món</option><option value="wrong_item" @selected(old('type') === 'wrong_item')>Sai món</option><option value="quality_issue" @selected(old('type') === 'quality_issue')>Chất lượng đồ uống chưa tốt</option><option value="refund_request" @selected(old('type') === 'refund_request')>Yêu cầu hoàn tiền</option><option value="other" @selected(old('type') === 'other')>Vấn đề khác</option></select></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">Loại vấn đề</label><select name="type" class="form-select" required><option value="">Chọn vấn đề</option><option value="missing_item" @selected(old('type') === 'missing_item')>Thiếu món</option><option value="wrong_item" @selected(old('type') === 'wrong_item')>Sai món</option><option value="quality_issue" @selected(old('type') === 'quality_issue')>Chất lượng đồ uống chưa tốt</option><option value="other" @selected(old('type') === 'other')>Vấn đề khác</option></select></div>
                     <div class="mb-4"><label class="form-label fw-semibold">Mô tả chi tiết</label><textarea name="description" rows="5" class="form-control" required>{{ old('description') }}</textarea><div class="form-text">Tối thiểu 10 ký tự, tối đa 1.500 ký tự.</div></div>
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Ảnh bằng chứng <span class="text-danger">*</span> <span class="text-secondary fw-normal">(chọn ít nhất 2 ảnh, tối đa 3 ảnh)</span></label>
@@ -71,31 +71,30 @@
                         refreshEvidenceError();
                         evidenceError?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     });
+                    evidenceForm?.addEventListener('submit', () => {
+                        evidenceInputs.filter((input) => !input.files?.length).forEach((input) => input.removeAttribute('name'));
+                    });
                 </script>
             @else
                 @foreach($reports as $report)
                     @php
                         $level = match ($report->status) {
-                            'resolved' => 5,
-                            'awaiting_customer' => 4,
-                            'approved', 'remedy_in_progress' => 3,
+                            'resolved' => 3,
                             'processing' => 2,
                             default => 1,
                         };
                         $rejected = $report->status === 'rejected';
                         $steps = [
                             ['Tiếp nhận yêu cầu', 'Yêu cầu của bạn đã được gửi thành công.', 'bi-inbox', $report->received_at ?? $report->created_at],
-                            ['Đang kiểm tra', 'Nhân viên đang kiểm tra và xử lý vấn đề.', 'bi-search', $report->processing_at],
-                            ['Đã duyệt phương án', 'Nhân viên đã thống nhất quyền lợi hỗ trợ cho bạn.', 'bi-clipboard-check', $report->approved_at],
-                            ['Chờ bạn xác nhận', 'Vui lòng xác nhận khi đã nhận đủ hỗ trợ.', 'bi-person-check', null],
-                            ['Hoàn tất xử lý', 'Yêu cầu hỗ trợ đã được hoàn tất.', 'bi-check2-circle', $report->customer_confirmed_at ?? $report->resolved_at],
+                            ['Đang xử lý', 'Nhân viên đang kiểm tra và thực hiện phương án hỗ trợ.', 'bi-gear', $report->processing_at],
+                            ['Hoàn tất xử lý', 'Yêu cầu hỗ trợ đã được hoàn tất.', 'bi-check2-circle', $report->resolved_at],
                         ];
                     @endphp
                     <div class="rounded-4 p-3 p-md-4 mt-4 js-issue-card" data-issue-id="{{ $report->id }}" style="background:#f6fbf9;border:1px solid #dcefe8;">
-                        @php $statusTime = match ($report->status) {'processing' => $report->processing_at, 'approved' => $report->approved_at, 'remedy_in_progress' => $report->remedy_started_at, 'awaiting_customer' => $report->updated_at, 'resolved' => $report->customer_confirmed_at ?? $report->resolved_at, 'rejected' => $report->rejected_at, default => $report->received_at ?? $report->created_at}; $statusLabel = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang kiểm tra', 'approved' => 'Đã duyệt hỗ trợ', 'remedy_in_progress' => 'Đang khắc phục', 'awaiting_customer' => 'Chờ bạn xác nhận', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'][$report->status] ?? 'Đang chờ xử lý'; @endphp
+                        @php $statusTime = match ($report->status) {'processing' => $report->processing_at, 'resolved' => $report->resolved_at, 'rejected' => $report->rejected_at, default => $report->received_at ?? $report->created_at}; $statusLabel = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'][$report->status] ?? 'Đang chờ xử lý'; @endphp
                         <div class="d-flex justify-content-between gap-3 mb-3"><div><strong>{{ ucfirst(str_replace('_', ' ', $report->type)) }}</strong><div class="small text-secondary mt-1">Gửi lúc {{ $report->created_at->format('d/m/Y H:i') }}</div></div><div class="text-end"><span class="badge rounded-pill px-3 py-2 js-issue-status {{ $rejected ? 'text-bg-danger' : ($report->status === 'resolved' ? 'text-bg-success' : 'text-bg-warning') }}">{{ $statusLabel }}</span><div class="small text-secondary mt-2 js-issue-time {{ $statusTime ? '' : 'd-none' }}"><i class="bi bi-clock me-1"></i>Cập nhật lúc <span>{{ $statusTime?->format('d/m/Y H:i') }}</span></div></div></div>
                         <p class="mb-3"><i class="bi bi-chat-square-text text-primary me-1"></i>{{ $report->description }}</p>
-                        <div class="alert alert-info mt-3 js-resolution {{ $report->resolution_type ? '' : 'd-none' }}"><strong><i class="bi bi-gift me-1"></i>Phương án hỗ trợ:</strong> <span class="js-resolution-type">{{ ['redelivery' => 'Giao bù / đổi đúng món', 'refund' => 'Hoàn tiền', 'voucher' => 'Tặng voucher bù', 'other' => 'Phương án khác'][$report->resolution_type] ?? '' }}</span><span class="js-resolution-value">{{ $report->resolution_value ? ' — '.$report->resolution_value : '' }}</span><div class="small mt-1 js-estimated {{ $report->estimated_at ? '' : 'd-none' }}">Dự kiến hoàn tất: <span>{{ $report->estimated_at?->format('d/m/Y H:i') }}</span></div></div>
+                        <div class="alert alert-info mt-3 js-resolution {{ $report->resolution_type ? '' : 'd-none' }}"><strong><i class="bi bi-gift me-1"></i>Phương án hỗ trợ:</strong> <span class="js-resolution-type">{{ ['redelivery' => 'Giao bù / đổi đúng món', 'voucher' => 'Tặng voucher bù', 'other' => 'Phương án khác'][$report->resolution_type] ?? 'Phương án khác' }}</span><span class="js-resolution-value">{{ $report->resolution_value ? ' — '.$report->resolution_value : '' }}</span></div>
                         @if($rejected)
                             <div class="alert alert-danger mb-0"><i class="bi bi-x-circle me-1"></i>Yêu cầu chưa được chấp nhận.@if($report->admin_note) {{ $report->admin_note }} @endif</div>
                         @else
@@ -107,7 +106,6 @@
                             @if($report->admin_note)
                                 <div class="alert alert-info mt-3 mb-0"><strong>Phản hồi từ nhân viên:</strong> {{ $report->admin_note }}</div>
                             @endif
-                            <form method="POST" action="{{ route('orders.issues.confirm', [$order, $report]) }}" class="mt-3 js-confirm-resolution {{ $report->status === 'awaiting_customer' ? '' : 'd-none' }}">@csrf<button class="btn btn-success rounded-pill px-4"><i class="bi bi-check2-circle me-1"></i>Tôi đã nhận đủ hỗ trợ</button><div class="small text-secondary mt-2">Chỉ xác nhận khi bạn đã nhận món giao bù, tiền hoàn hoặc voucher theo phương án trên.</div></form>
                         @endif
                     </div>
                 @endforeach
@@ -121,10 +119,10 @@
 @push('scripts')
 <script>
 (() => {
-    const labels = {open: 'Đang chờ xử lý', processing: 'Đang kiểm tra', approved: 'Đã duyệt hỗ trợ', remedy_in_progress: 'Đang khắc phục', awaiting_customer: 'Chờ bạn xác nhận', resolved: 'Hoàn tất', rejected: 'Không được chấp nhận'};
-    const times = {processing: 'processing_at', approved: 'approved_at', remedy_in_progress: 'remedy_started_at', awaiting_customer: 'remedy_started_at', resolved: 'customer_confirmed_at', rejected: 'rejected_at'};
-    const levels = {open: 1, processing: 2, approved: 3, remedy_in_progress: 3, awaiting_customer: 4, resolved: 5};
-    const resolutionLabels = {redelivery: 'Giao bù / đổi đúng món', refund: 'Hoàn tiền', voucher: 'Tặng voucher bù', other: 'Phương án khác'};
+    const labels = {open: 'Đang chờ xử lý', processing: 'Đang xử lý', resolved: 'Hoàn tất', rejected: 'Không được chấp nhận'};
+    const times = {processing: 'processing_at', resolved: 'resolved_at', rejected: 'rejected_at'};
+    const levels = {open: 1, processing: 2, resolved: 3};
+    const resolutionLabels = {redelivery: 'Giao bù / đổi đúng món', voucher: 'Tặng voucher bù', other: 'Phương án khác'};
     const refreshIssues = async () => {
         try {
             const response = await fetch('{{ route('orders.issues.status', $order) }}', {headers: {Accept: 'application/json'}});
@@ -144,11 +142,6 @@
                 resolution.classList.toggle('d-none', !report.resolution_type);
                 resolution.querySelector('.js-resolution-type').textContent = resolutionLabels[report.resolution_type] || '';
                 resolution.querySelector('.js-resolution-value').textContent = report.resolution_value ? ` — ${report.resolution_value}` : '';
-                const estimated = resolution.querySelector('.js-estimated');
-                estimated.classList.toggle('d-none', !report.estimated_at);
-                estimated.querySelector('span').textContent = report.estimated_at || '';
-                const confirmButton = card.querySelector('.js-confirm-resolution');
-                if (confirmButton) confirmButton.classList.toggle('d-none', report.status !== 'awaiting_customer');
                 if (report.status === 'rejected') return;
                 const level = levels[report.status] || 1;
                 card.querySelectorAll('.js-issue-step').forEach((step) => {
@@ -158,7 +151,7 @@
                     const circle = step.querySelector('span');
                     circle.className = `rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0 ${active ? 'bg-success text-white' : 'bg-light text-secondary'}`;
                     step.querySelector('strong').className = active ? 'text-dark' : 'text-secondary';
-                    step.querySelector('i').className = `bi ${completed ? 'bi-check-lg' : ['bi-inbox', 'bi-search', 'bi-clipboard-check', 'bi-person-check', 'bi-check2-circle'][stepNumber - 1]}`;
+                    step.querySelector('i').className = `bi ${completed ? 'bi-check-lg' : ['bi-inbox', 'bi-gear', 'bi-check2-circle'][stepNumber - 1]}`;
                 });
             });
         } catch (_) {}

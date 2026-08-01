@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use App\Support\OrderStatus;
 
@@ -24,6 +25,9 @@ class OrderIssueReportController extends Controller
         }
 
         $reports = $order->issueReports()->where('user_id', $request->user()->id)->latest()->get();
+        if ($reports->isEmpty() && ! $this->canReportIssueToday($order)) {
+            return redirect()->route('orders.index')->with('error', 'Yêu cầu hỗ trợ chỉ được gửi trong ngày đơn hàng hoàn thành.');
+        }
 
         return view('profile.order-issue-report', [
             'order' => $order,
@@ -37,29 +41,32 @@ class OrderIssueReportController extends Controller
         if (OrderStatus::normalize((string) $order->status) !== OrderStatus::COMPLETED) {
             return redirect()->route('orders.index')->with('error', 'Chỉ có thể báo vấn đề sau khi đơn hàng đã hoàn thành.');
         }
+        if (! $this->canReportIssueToday($order)) {
+            return redirect()->route('orders.index')->with('error', 'Yêu cầu hỗ trợ chỉ được gửi trong ngày đơn hàng hoàn thành.');
+        }
         if ($order->issueReports()->where('user_id', $request->user()->id)->whereNotIn('status', ['resolved', 'rejected'])->exists()) {
             return redirect()->route('orders.issues.create', $order)->with('error', 'Đơn hàng này đã có một yêu cầu hỗ trợ đang được xử lý.');
         }
 
         $data = $request->validate([
-            'type' => ['required', 'in:missing_item,wrong_item,quality_issue,refund_request,other'],
+            'type' => ['required', 'in:missing_item,wrong_item,quality_issue,other'],
             'description' => ['required', 'string', 'min:10', 'max:1500'],
-            'evidence' => ['required', 'array', 'min:2', 'max:3'],
-            'evidence.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
-        $evidenceFiles = collect($request->file('evidence', []))
-            ->filter()
+        // Chỉ kiểm tra các tệp thực sự đã được chọn, nên 2 trong 3 ô ảnh là hợp lệ.
+        $evidenceUploads = collect($request->file('evidence', []))->filter()->values();
+        Validator::make(['evidence' => $evidenceUploads->all()], [
+            'evidence' => ['required', 'array', 'min:2', 'max:3'],
+            'evidence.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ])->validate();
+
+        $evidenceFiles = $evidenceUploads
             ->map(fn ($file) => [
                 'path' => $file->store('order-issue-evidence'),
                 'name' => $file->getClientOriginalName(),
             ])
             ->values()
             ->all();
-
-        if (count($evidenceFiles) < 2) {
-            return back()->withErrors(['evidence' => 'Vui lòng chọn ít nhất 2 ảnh bằng chứng.'])->withInput();
-        }
 
         $report = OrderIssueReport::create([
             'order_id' => $order->id,
@@ -127,5 +134,12 @@ class OrderIssueReportController extends Controller
             ->each(fn (User $staff) => $staff->notify(new \App\Notifications\OrderIssueReportStatusNotification($issue)));
 
         return back()->with('success', 'Cảm ơn bạn đã xác nhận. Yêu cầu hỗ trợ đã hoàn tất.');
+    }
+
+    private function canReportIssueToday(Order $order): bool
+    {
+        $completedAt = $order->status_changed_at ?? $order->updated_at;
+
+        return $completedAt !== null && $completedAt->isSameDay(now());
     }
 }

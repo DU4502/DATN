@@ -12,7 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class OrderIssueReportController extends Controller
@@ -32,38 +31,26 @@ class OrderIssueReportController extends Controller
         $issue->load('order');
         abort_unless($request->user()->isSuperAdmin() || (int) $issue->order->branch_id === (int) $request->user()->branch_id, 403);
         $data = $request->validate([
-            'status' => ['required', 'in:open,processing,approved,remedy_in_progress,awaiting_customer,resolved,rejected'],
-            'resolution_type' => ['nullable', 'in:redelivery,refund,voucher,other'],
+            'status' => ['required', 'in:open,processing,resolved,rejected'],
+            'resolution_type' => ['nullable', 'in:redelivery,voucher,other'],
             'resolution_value' => ['nullable', 'string', 'max:255'],
-            'estimated_at' => ['nullable', 'date'],
             'admin_note' => ['nullable', 'string', 'max:1500'],
         ]);
 
         $allowedTransitions = [
             'open' => ['open', 'processing', 'rejected'],
-            'processing' => ['processing', 'approved', 'rejected'],
-            'approved' => ['approved', 'remedy_in_progress', 'rejected'],
-            'remedy_in_progress' => ['remedy_in_progress', 'awaiting_customer'],
-            'awaiting_customer' => ['awaiting_customer', 'resolved'],
+            'processing' => ['processing', 'resolved', 'rejected'],
             'resolved' => ['resolved'],
             'rejected' => ['rejected'],
         ];
         if (! in_array($data['status'], $allowedTransitions[$issue->status] ?? [$issue->status], true)) {
             return back()->withErrors(['status' => 'Không thể chuyển lùi hoặc bỏ qua bước xử lý của yêu cầu.'])->withInput();
         }
-        if (! empty($data['estimated_at'])) {
-            $estimatedAt = Carbon::parse($data['estimated_at']);
-            $isChangingEstimate = ! $issue->estimated_at || ! $issue->estimated_at->equalTo($estimatedAt);
-            if ($isChangingEstimate && $estimatedAt->isPast()) {
-                return back()->withErrors(['estimated_at' => 'Thời gian dự kiến phải từ thời điểm hiện tại trở đi.'])->withInput();
-            }
+        if ($data['status'] === 'resolved' && empty($data['resolution_type'])) {
+            return back()->withErrors(['resolution_type' => 'Hãy chọn phương án hỗ trợ cho khách trước khi hoàn tất.'])->withInput();
         }
 
-        if (in_array($data['status'], ['approved', 'remedy_in_progress', 'awaiting_customer', 'resolved'], true) && empty($data['resolution_type'])) {
-            return back()->withErrors(['resolution_type' => 'Hãy chọn phương án hỗ trợ cho khách trước khi duyệt.'])->withInput();
-        }
-
-        if ($data['resolution_type'] === 'voucher' && in_array($data['status'], ['approved', 'remedy_in_progress', 'awaiting_customer', 'resolved'], true) && ! $issue->voucher_coupon_id) {
+        if ($data['resolution_type'] === 'voucher' && $data['status'] === 'resolved' && ! $issue->voucher_coupon_id) {
             $voucherAmount = (int) $issue->order->total;
             if ($voucherAmount <= 0) {
                 return back()->withErrors(['resolution_type' => 'Không thể cấp voucher vì tổng tiền đơn không hợp lệ.'])->withInput();
@@ -110,18 +97,11 @@ class OrderIssueReportController extends Controller
 
         $timestamps = match ($data['status']) {
             'processing' => ['processing_at' => $issue->processing_at ?? now()],
-            'approved' => ['approved_at' => $issue->approved_at ?? now()],
-            'remedy_in_progress' => ['remedy_started_at' => $issue->remedy_started_at ?? now()],
             'resolved' => ['resolved_at' => $issue->resolved_at ?? now()],
             'rejected' => ['rejected_at' => $issue->rejected_at ?? now()],
             default => [],
         };
-        $refundTimestamp = $data['resolution_type'] === 'refund'
-            && $issue->order->payment_method === 'vnpay'
-            && $issue->order->payment_status === 'paid'
-            ? ['refund_requested_at' => $issue->refund_requested_at ?? now()]
-            : [];
-        $issue->update([...$data, ...$timestamps, ...$refundTimestamp, 'handled_by' => $request->user()->id]);
+        $issue->update([...$data, ...$timestamps, 'estimated_at' => null, 'handled_by' => $request->user()->id]);
         $issue->load('order');
         \App\Support\ChatHelper::notifyOrderIssueStatus($issue, $request->user());
         $issue->user->notify(new OrderIssueReportStatusNotification($issue));

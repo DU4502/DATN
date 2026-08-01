@@ -43,7 +43,6 @@ class ChatHelper
             'missing_item' => 'Thiếu món',
             'wrong_item' => 'Sai món',
             'quality_issue' => 'Chất lượng đồ uống',
-            'refund_request' => 'Yêu cầu hoàn tiền',
             'other' => 'Vấn đề khác',
         ];
         $content = "[YÊU CẦU HỖ TRỢ ĐƠN {$order->displayCode()}]"
@@ -85,7 +84,7 @@ class ChatHelper
             return;
         }
 
-        $labels = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang kiểm tra', 'approved' => 'Đã duyệt hỗ trợ', 'remedy_in_progress' => 'Đang khắc phục', 'awaiting_customer' => 'Chờ khách xác nhận', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'];
+        $labels = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'];
         $content = "[CẬP NHẬT HỖ TRỢ ĐƠN {$order->displayCode()}]"
             ."\nTrạng thái: ".($labels[$issue->status] ?? $issue->status)
             .($issue->resolution_value ? "\nPhương án: {$issue->resolution_value}" : '')
