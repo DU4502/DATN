@@ -11,8 +11,19 @@
         --sa-ink: #111827;
         --sa-muted: #6b7280;
         --sa-border: #e1e6e4;
+        --sa-card-radius: 16px;
+        --sa-card-padding: 1.35rem;
+        --sa-section-gap: 1.45rem;
+        --sa-control-height: 48px;
+        --sa-table-row-height: 58px;
+        --sa-font-body: 16px;
+        --sa-font-small: 0.84rem;
+        --sa-font-menu: 0.96rem;
+        --sa-font-heading: 1.26rem;
+        font-size: var(--sa-font-body);
+        line-height: 1.55;
         display: grid;
-        gap: 1rem;
+        gap: var(--sa-section-gap);
     }
 
     .sa-header, .sa-panel-header, .sa-stat-top, .sa-health-row, .sa-security-item,
@@ -21,73 +32,110 @@
         align-items: center;
     }
 
-    .sa-header { justify-content: space-between; gap: 1rem; }
-    .sa-kicker { margin: 0 0 0.25rem; color: var(--sa-green); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; }
-    .sa-title { margin: 0; color: var(--sa-ink); font-size: 1.45rem; font-weight: 800; }
-    .sa-subtitle { margin: 0.3rem 0 0; color: var(--sa-muted); font-size: 0.78rem; }
+    .sa-header {
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem 1.25rem;
+        flex-wrap: nowrap;
+        margin-bottom: 0.2rem;
+    }
+    .sa-header-copy {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: 700px;
+        display: grid;
+        gap: 0.18rem;
+        padding-top: 0.12rem;
+    }
+    .sa-kicker { margin: 0; color: var(--sa-green); font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.2; }
+    .sa-title { margin: 0; color: var(--sa-ink); font-size: clamp(1.82rem, 2.1vw, 2.38rem); font-weight: 900; letter-spacing: -0.035em; line-height: 1.03; }
+    .sa-subtitle {
+        margin: 0.16rem 0 0;
+        color: var(--sa-muted);
+        font-size: 0.9rem;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        max-width: 62ch;
+    }
 
     .sa-btn {
-        min-height: 38px;
+        min-height: 44px;
         border: 1px solid var(--sa-border);
-        border-radius: 7px;
-        padding: 0.5rem 0.75rem;
+        border-radius: 12px;
+        padding: 0.62rem 0.95rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 0.4rem;
         background: #fff;
         color: var(--sa-ink);
-        font-size: 0.72rem;
+        font-size: 0.86rem;
         font-weight: 750;
         text-decoration: none;
+        white-space: nowrap;
     }
 
     .sa-btn:hover { border-color: var(--sa-green); color: var(--sa-green-dark); }
     .sa-btn-primary { border-color: var(--sa-green); background: var(--sa-green); color: #fff; }
     .sa-btn-primary:hover { background: var(--sa-green-dark); color: #fff; }
 
-    .sa-alert { margin: 0; border-radius: 7px; font-size: 0.74rem; }
+    .sa-alert { margin: 0; border-radius: 10px; font-size: 0.84rem; }
 
-    .sa-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; }
-    .sa-stat { min-height: 104px; padding: 0.9rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff; }
-    .sa-stat-top { justify-content: space-between; gap: 0.5rem; }
-    .sa-stat-icon { width: 34px; height: 34px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); }
-    .sa-stat-note { color: var(--sa-muted); font-size: 0.62rem; font-weight: 650; }
-    .sa-stat-value { margin-top: 0.55rem; color: var(--sa-ink); font-size: 1.25rem; font-weight: 800; line-height: 1.05; }
-    .sa-stat-label { margin-top: 0.25rem; color: var(--sa-muted); font-size: 0.68rem; font-weight: 650; }
+    .sa-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; }
+    .sa-stat { min-height: 150px; padding: 1.3rem 1.15rem; border: 1px solid var(--sa-border); border-radius: var(--sa-card-radius); background: #fff; }
+    .sa-stat-top { justify-content: space-between; gap: 0.7rem; }
+    .sa-stat-icon { width: 46px; height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); font-size: 1.15rem; }
+    .sa-stat-note { color: var(--sa-muted); font-size: 0.78rem; font-weight: 700; }
+    .sa-stat-value { margin-top: 0.8rem; color: var(--sa-ink); font-size: 1.92rem; font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; }
+    .sa-stat-label { margin-top: 0.32rem; color: var(--sa-muted); font-size: 0.9rem; font-weight: 700; }
 
-    .sa-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-    .sa-grid-main { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.7fr); gap: 1rem; align-items: start; }
-    .sa-panel { border: 1px solid var(--sa-border); border-radius: 8px; background: #fff; overflow: hidden; scroll-margin-top: 82px; }
-    .sa-panel-header { min-height: 58px; padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--sa-border); justify-content: space-between; gap: 0.75rem; }
-    .sa-panel-title { margin: 0; color: var(--sa-ink); font-size: 0.86rem; font-weight: 800; }
-    .sa-panel-note { margin: 0.15rem 0 0; color: var(--sa-muted); font-size: 0.64rem; }
+    .sa-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; }
+    .sa-grid-main { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.72fr); gap: 1.1rem; align-items: start; }
+    .sa-panel { border: 1px solid var(--sa-border); border-radius: var(--sa-card-radius); background: #fff; overflow: hidden; scroll-margin-top: 96px; box-shadow: 0 16px 36px rgba(17, 24, 39, 0.04); }
+    .sa-panel-header { min-height: 74px; padding: 1rem 1.1rem; border-bottom: 1px solid var(--sa-border); justify-content: space-between; gap: 0.9rem; }
+    .sa-panel-title { margin: 0; color: var(--sa-ink); font-size: 1.14rem; font-weight: 900; line-height: 1.25; }
+    .sa-panel-note { margin: 0.18rem 0 0; color: var(--sa-muted); font-size: 0.82rem; line-height: 1.45; }
 
-    .sa-chart { height: 238px; padding: 0.9rem; display: flex; flex-direction: column; }
-    .sa-chart-meta { justify-content: space-between; margin-bottom: 0.65rem; color: var(--sa-muted); font-size: 0.64rem; }
-    .sa-chart-bars { min-height: 0; flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); align-items: end; gap: 0.65rem; border-bottom: 1px solid var(--sa-border); }
+    .sa-chart { height: 294px; padding: 1.1rem; display: flex; flex-direction: column; }
+    .sa-chart-meta { justify-content: space-between; margin-bottom: 0.9rem; color: var(--sa-muted); font-size: 0.88rem; }
+    .sa-chart-bars { min-height: 0; flex: 1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); align-items: end; gap: 0.8rem; border-bottom: 1px solid var(--sa-border); }
     .sa-chart-bars.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     .sa-chart-column { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 0.35rem; }
-    .sa-chart-value { min-height: 18px; color: var(--sa-muted); font-size: 0.56rem; font-weight: 700; white-space: nowrap; }
+    .sa-chart-value { min-height: 20px; color: var(--sa-muted); font-size: 0.82rem; font-weight: 700; white-space: nowrap; }
     .sa-chart-bar { width: min(38px, 72%); min-height: 4px; border-radius: 4px 4px 0 0; background: var(--sa-green); }
     .sa-chart-bar.alt { background: #4f8fd9; }
-    .sa-chart-label { padding-top: 0.45rem; color: var(--sa-muted); font-size: 0.58rem; font-weight: 650; }
+    .sa-chart-label { padding-top: 0.45rem; color: var(--sa-muted); font-size: 0.74rem; font-weight: 700; }
 
-    .sa-filter-form { padding: 0.8rem 0.9rem; border-bottom: 1px solid var(--sa-border); display: grid; grid-template-columns: minmax(200px, 1.4fr) repeat(3, minmax(130px, 0.65fr)) auto; gap: 0.6rem; }
-    .sa-control { min-width: 0; height: 38px; border: 1px solid var(--sa-border); border-radius: 7px; padding: 0 0.65rem; background: #fff; color: var(--sa-ink); font-size: 0.7rem; outline: 0; }
+    .sa-filter-form { padding: 1rem 1.1rem; border-bottom: 1px solid var(--sa-border); display: grid; grid-template-columns: minmax(220px, 1.45fr) repeat(3, minmax(140px, 0.68fr)) auto; gap: 0.85rem; }
+    .sa-control { min-width: 0; height: var(--sa-control-height); border: 1px solid var(--sa-border); border-radius: 12px; padding: 0 0.9rem; background: #fff; color: var(--sa-ink); font-size: 0.9rem; outline: 0; }
     .sa-control:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,0.1); }
-    .sa-filter-actions { display: flex; gap: 0.4rem; }
+    .sa-filter-actions { display: flex; gap: 0.7rem; }
+    .sa-branch-compare-header { min-height: 0; padding: 0.95rem 1rem 0.8rem; align-items: center; gap: 0.85rem; }
+    .sa-branch-compare-header-copy { min-width: 0; display: grid; gap: 0.35rem; }
+    .sa-branch-compare-title { margin: 0; color: var(--sa-ink); font-size: 1rem; font-weight: 900; line-height: 1.25; }
+    .sa-branch-compare-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .sa-branch-compare-tools { display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.45rem; flex-wrap: nowrap; margin-left: auto; }
+    .sa-branch-period-switcher { display: inline-flex; align-items: center; gap: 0.22rem; padding: 0.18rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; white-space: nowrap; }
+    .sa-branch-period-link { min-height: 40px; padding: 0.42rem 0.82rem; border-radius: 999px; font-size: 0.82rem; line-height: 1; }
+    .sa-branch-compare-form { padding: 0.85rem 1rem; grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(120px, 0.62fr)) auto; gap: 0.75rem; align-items: end; }
+    .sa-branch-compare-actions { justify-content: flex-end; align-self: end; white-space: nowrap; }
+    .sa-branch-compare-summary { padding: 0.7rem 1rem 0.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: nowrap; }
+    .sa-branch-compare-summary-text { color: var(--sa-muted); font-size: 0.78rem; white-space: nowrap; }
+    .sa-branch-compare-summary-meta { display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap; }
 
     .sa-table-wrap { overflow-x: auto; }
     .sa-table { width: 100%; min-width: 970px; border-collapse: collapse; }
-    .sa-table th { padding: 0.62rem 0.8rem; background: #f8faf9; color: var(--sa-muted); font-size: 0.6rem; font-weight: 800; text-align: left; text-transform: uppercase; }
-    .sa-table td { padding: 0.72rem 0.8rem; border-top: 1px solid #edf1ef; color: #374151; font-size: 0.69rem; vertical-align: middle; }
-    .sa-admin-cell { gap: 0.6rem; }
-    .sa-avatar { width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; overflow: hidden; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.68rem; font-weight: 800; }
+    .sa-table th { padding: 0.95rem 1rem; background: #f8faf9; color: var(--sa-muted); font-size: 0.84rem; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: 0.02em; }
+    .sa-table td { padding: 0.82rem 1rem; border-top: 1px solid #edf1ef; color: #374151; font-size: 0.92rem; vertical-align: middle; }
+    .sa-admin-cell { gap: 0.85rem; }
+    .sa-avatar { width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; overflow: hidden; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.82rem; font-weight: 800; }
     .sa-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .sa-admin-name { color: var(--sa-ink); font-weight: 800; }
-    .sa-admin-email { margin-top: 0.1rem; color: var(--sa-muted); font-size: 0.62rem; }
-    .sa-role, .sa-state, .sa-presence { border-radius: 999px; padding: 0.26rem 0.5rem; display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.6rem; font-weight: 800; white-space: nowrap; }
+    .sa-admin-email { margin-top: 0.12rem; color: var(--sa-muted); font-size: 0.72rem; }
+    .sa-role, .sa-state, .sa-presence { border-radius: 999px; padding: 0.34rem 0.62rem; display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 800; white-space: nowrap; }
     .sa-role-super { background: #fff3cd; color: #8a4b08; }
     .sa-role-admin { background: #e0f2fe; color: #075985; }
     .sa-state-active { background: #dcfce7; color: #166534; }
@@ -97,83 +145,596 @@
     .sa-presence-away { color: #a16207; background: #fefce8; }
     .sa-presence-offline { color: #6b7280; background: #f3f4f6; }
     .sa-actions { gap: 0.35rem; }
-    .sa-action-btn { width: 30px; height: 30px; border: 1px solid var(--sa-border); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: var(--sa-muted); text-decoration: none; }
+    .sa-action-btn { width: 34px; height: 34px; border: 1px solid var(--sa-border); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: var(--sa-muted); text-decoration: none; }
     .sa-action-btn:hover { border-color: var(--sa-green); color: var(--sa-green); }
     .sa-action-btn.danger:hover { border-color: #dc2626; color: #dc2626; }
 
-    .sa-pagination { min-height: 52px; padding: 0.7rem 0.9rem; border-top: 1px solid var(--sa-border); justify-content: space-between; gap: 1rem; color: var(--sa-muted); font-size: 0.64rem; }
+    .sa-pagination { min-height: 58px; padding: 0.8rem 1rem; border-top: 1px solid var(--sa-border); justify-content: space-between; gap: 1rem; color: var(--sa-muted); font-size: 0.74rem; }
     .sa-page-links { display: flex; gap: 0.3rem; }
-    .sa-page-link { min-width: 30px; height: 30px; border: 1px solid var(--sa-border); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: var(--sa-muted); text-decoration: none; font-size: 0.64rem; }
+    .sa-page-link { min-width: 34px; height: 34px; border: 1px solid var(--sa-border); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: var(--sa-muted); text-decoration: none; font-size: 0.74rem; }
     .sa-page-link.active { border-color: var(--sa-green); background: var(--sa-green); color: #fff; }
     .sa-page-link.disabled { pointer-events: none; opacity: 0.45; }
 
     .sa-activity-list { padding: 0.25rem 0.9rem; }
-    .sa-activity { position: relative; padding: 0.72rem 0 0.72rem 1.8rem; border-bottom: 1px solid #edf1ef; }
+    .sa-activity { position: relative; padding: 0.85rem 0 0.85rem 2rem; border-bottom: 1px solid #edf1ef; }
     .sa-activity:last-child { border-bottom: 0; }
-    .sa-activity-icon { position: absolute; left: 0; top: 0.76rem; width: 24px; height: 24px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); font-size: 0.68rem; }
-    .sa-activity p { margin: 0; color: #374151; font-size: 0.67rem; line-height: 1.45; }
+    .sa-activity-icon { position: absolute; left: 0; top: 0.88rem; width: 32px; height: 32px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); font-size: 0.82rem; }
+    .sa-activity p { margin: 0; color: #374151; font-size: 0.84rem; line-height: 1.5; }
     .sa-activity strong { color: var(--sa-ink); }
-    .sa-activity time { display: block; margin-top: 0.12rem; color: #9ca3af; font-size: 0.58rem; }
-    .sa-empty { min-height: 170px; padding: 1.25rem; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--sa-muted); text-align: center; }
-    .sa-empty i { margin-bottom: 0.45rem; color: var(--sa-green); font-size: 1.4rem; }
-    .sa-empty strong { color: var(--sa-ink); font-size: 0.72rem; }
+    .sa-activity time { display: block; margin-top: 0.15rem; color: #9ca3af; font-size: 0.78rem; }
+    .sa-empty { min-height: 190px; padding: 1.4rem; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--sa-muted); text-align: center; }
+    .sa-empty i { margin-bottom: 0.55rem; color: var(--sa-green); font-size: 1.6rem; }
+    .sa-empty strong { color: var(--sa-ink); font-size: 0.82rem; }
 
-    .sa-security-grid { padding: 0.9rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.6rem; }
-    .sa-security-item { min-height: 72px; padding: 0.7rem; border: 1px solid var(--sa-border); border-radius: 7px; gap: 0.55rem; }
-    .sa-security-item i { color: var(--sa-green); font-size: 1rem; }
-    .sa-security-value { color: var(--sa-ink); font-size: 1rem; font-weight: 800; }
-    .sa-security-label { color: var(--sa-muted); font-size: 0.6rem; }
+    .sa-security-grid { padding: 1rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.9rem; }
+    .sa-security-item { min-height: 90px; padding: 0.95rem; border: 1px solid var(--sa-border); border-radius: 12px; gap: 0.7rem; }
+    .sa-security-item i { color: var(--sa-green); font-size: 1.1rem; }
+    .sa-security-value { color: var(--sa-ink); font-size: 1.15rem; font-weight: 800; }
+    .sa-security-label { color: var(--sa-muted); font-size: 0.72rem; }
 
-    .sa-health-list { padding: 0.3rem 0.9rem; }
-    .sa-health-row { min-height: 52px; border-bottom: 1px solid #edf1ef; justify-content: space-between; gap: 1rem; }
+    .sa-health-list { padding: 0.4rem 1rem; }
+    .sa-health-row { min-height: 58px; border-bottom: 1px solid #edf1ef; justify-content: space-between; gap: 1rem; }
     .sa-health-row:last-child { border-bottom: 0; }
-    .sa-health-name { display: flex; align-items: center; gap: 0.5rem; color: var(--sa-ink); font-size: 0.68rem; font-weight: 750; }
+    .sa-health-name { display: flex; align-items: center; gap: 0.55rem; color: var(--sa-ink); font-size: 0.8rem; font-weight: 750; }
     .sa-health-name i { color: var(--sa-green); }
-    .sa-health-value { color: var(--sa-muted); font-size: 0.64rem; font-weight: 650; text-align: right; }
+    .sa-health-value { color: var(--sa-muted); font-size: 0.74rem; font-weight: 650; text-align: right; }
     .sa-health-value.success { color: #15803d; }
     .sa-health-value.danger { color: #b91c1c; }
 
-    .sa-permissions { padding: 0.9rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.55rem; }
-    .sa-permission { min-height: 52px; padding: 0.65rem; border: 1px solid var(--sa-border); border-radius: 7px; display: flex; align-items: center; gap: 0.5rem; color: #374151; font-size: 0.66rem; font-weight: 700; }
+    .sa-permissions { padding: 1rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.65rem; }
+    .sa-permission { min-height: 64px; padding: 0.85rem 0.95rem; border: 1px solid var(--sa-border); border-radius: 12px; display: flex; align-items: center; gap: 0.7rem; color: #374151; font-size: 0.84rem; font-weight: 700; }
     .sa-permission i { color: var(--sa-green); }
 
+    /* Keep the existing overview as the source of truth; the analytics layout is retained for later incremental updates. */
+    .analytics-dashboard { display: none; }
+    .analytics-dashboard .sa-title { font-size: clamp(1.5rem, 2vw, 2rem); letter-spacing: -0.04em; }
+    .analytics-dashboard .sa-subtitle { font-size: 0.82rem; }
+    .analytics-periods { display: flex; flex-wrap: wrap; gap: 0.2rem; padding: 0.25rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff; }
+    .analytics-period { border: 0; border-radius: 10px; padding: 0.72rem 1rem; background: transparent; color: var(--sa-muted); font-size: 0.84rem; font-weight: 750; text-decoration: none; cursor: pointer; }
+    .analytics-period.active { background: var(--sa-green); color: #fff; box-shadow: 0 3px 8px rgba(13,147,115,.2); }
+    .analytics-filters { display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)) auto; gap: 0.85rem; align-items: end; padding: 1.1rem; border: 2px solid var(--sa-green); border-radius: 16px; background: linear-gradient(180deg, #fbfffd, #fff); }
+    .analytics-filter-label { display: block; margin: 0 0 0.48rem; color: var(--sa-muted); font-size: 0.78rem; font-weight: 800; }
+    .analytics-filter-label.strong { color: var(--sa-ink); }
+    .analytics-filter-intro { display: none; }
+    .analytics-control { width: 100%; height: 44px; border: 1px solid var(--sa-border); border-radius: 10px; padding: 0 0.85rem; background: #fff; color: var(--sa-ink); font-size: 0.8rem; outline: 0; }
+    .analytics-control:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,.1); }
+    .analytics-filter-actions { display: flex; gap: 0.45rem; justify-content: flex-end; }
+    .analytics-filter-actions .sa-btn { white-space: nowrap; }
+    .analytics-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.85rem; }
+    .analytics-kpi { min-width: 0; padding: 1rem; border: 1px solid var(--sa-border); border-radius: 12px; background: #fff; box-shadow: 0 4px 14px rgba(17,24,39,.03); }
+    .analytics-kpi-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+    .analytics-kpi-icon { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; background: #e8f8f3; color: var(--sa-green); }
+    .analytics-kpi:nth-child(2) .analytics-kpi-icon { background: #fff0f0; color: #ef6a6a; }
+    .analytics-kpi:nth-child(3) .analytics-kpi-icon { background: #e8f7fb; color: #1da5bf; }
+    .analytics-kpi:nth-child(4) .analytics-kpi-icon { background: #eaf3ff; color: #3484dc; }
+    .analytics-kpi:nth-child(5) .analytics-kpi-icon { background: #f0eaff; color: #8261d7; }
+    .analytics-kpi-label { color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
+    .analytics-kpi-value { margin-top: 0.8rem; color: var(--sa-ink); font-size: clamp(1.32rem, 2vw, 1.85rem); font-weight: 850; white-space: nowrap; letter-spacing: -0.02em; }
+    .analytics-kpi-growth { margin-top: 0.34rem; color: var(--sa-green); font-size: 0.8rem; font-weight: 750; }
+    .analytics-spark { height: 30px; margin-top: 0.65rem; display: flex; align-items: end; gap: 3px; }
+    .analytics-spark i { flex: 1; min-height: 3px; border-radius: 2px 2px 0 0; background: #2bbd96; opacity: .9; }
+    .analytics-grid { display: grid; grid-template-columns: minmax(230px, .95fr) minmax(300px, 1fr) minmax(300px, 1fr); gap: 0.95rem; }
+    .analytics-card { min-width: 0; border: 1px solid var(--sa-border); border-radius: 12px; background: #fff; overflow: hidden; }
+    .analytics-card-header { display: flex; justify-content: space-between; align-items: center; gap: .7rem; padding: 1rem 1rem .7rem; }
+    .analytics-card-title { margin: 0; color: var(--sa-ink); font-size: .98rem; font-weight: 850; text-transform: uppercase; }
+    .analytics-card-link { color: var(--sa-green); font-size: .75rem; font-weight: 750; text-decoration: none; }
+    .analytics-card-body { padding: .4rem 1rem 1rem; }
+    .top-product { display: grid; grid-template-columns: 24px 32px minmax(0,1fr) auto; align-items: center; gap: .65rem; min-height: 48px; border-bottom: 1px solid #edf1ef; }
+    .top-product:last-child { border-bottom: 0; }
+    .top-product-rank { color: var(--sa-ink); font-size: .88rem; font-weight: 850; }
+    .top-product-thumb { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: linear-gradient(145deg, #e5fff5, #b8e9d6); color: var(--sa-green-dark); font-size: .75rem; font-weight: 850; }
+    .top-product-name { min-width: 0; color: #374151; font-size: .76rem; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .top-product-bar { height: 4px; margin-top: 4px; border-radius: 99px; background: #edf0ef; overflow: hidden; }
+    .top-product-bar span { display: block; height: 100%; border-radius: inherit; background: var(--sa-green); }
+    .top-product-units { color: var(--sa-muted); font-size: .72rem; white-space: nowrap; }
+    .analytics-chart { height: 260px; padding: .55rem .95rem .95rem; }
+    .analytics-bars { height: 190px; display: flex; align-items: end; gap: .45rem; padding: 0 0 .2rem; border-bottom: 1px solid var(--sa-border); }
+    .analytics-bar-column { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: end; gap: .3rem; }
+    .analytics-bar-column span { width: min(38px, 80%); min-height: 3px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #20ae88, #078567); }
+    .analytics-bar-label { color: var(--sa-muted); font-size: .64rem; white-space: nowrap; }
+    .analytics-line-chart { width: 100%; height: 190px; overflow: visible; }
+    .analytics-line-chart .grid-line { stroke: #e7eeeb; stroke-dasharray: 3 4; stroke-width: 1; }
+    .analytics-line-chart .trend-line { fill: none; stroke: var(--sa-green); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .analytics-line-chart .comparison-line { fill: none; stroke: #4f9ee7; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .analytics-legend { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: .45rem; color: var(--sa-muted); font-size: .7rem; }
+    .analytics-legend span::before { content: ''; width: 15px; height: 2px; display: inline-block; margin: 0 .25rem .15rem 0; background: var(--sa-green); }
+    .analytics-legend span:last-child::before { background: #4f9ee7; }
+    .analytics-insights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.95rem; }
+    .analytics-insight { padding: 1rem; border: 1px solid var(--sa-border); border-radius: 12px; background: linear-gradient(180deg, #ffffff, #fbfffd); }
+    .analytics-insight-kicker { color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+    .analytics-insight-value { margin-top: 0.55rem; color: var(--sa-ink); font-size: 1.22rem; font-weight: 850; line-height: 1.35; }
+    .analytics-insight-meta { margin-top: 0.28rem; color: var(--sa-green); font-size: 0.72rem; font-weight: 750; }
+    .analytics-insight-note { margin-top: 0.28rem; color: var(--sa-muted); font-size: 0.72rem; line-height: 1.5; }
+    .analytics-branch-section { border: 1px solid var(--sa-border); border-radius: 14px; background: #fff; overflow: hidden; }
+    .analytics-branch-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; padding: 0 1rem 1rem; }
+    .analytics-branch-card { padding: 1rem; border: 1px solid #e8efec; border-radius: 14px; background: linear-gradient(180deg, #ffffff, #f9fdfb); box-shadow: 0 10px 24px rgba(17, 24, 39, 0.03); }
+    .analytics-branch-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+    .analytics-branch-rank { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); font-size: 0.8rem; font-weight: 900; }
+    .analytics-branch-name { color: var(--sa-ink); font-size: 0.86rem; font-weight: 850; line-height: 1.35; }
+    .analytics-branch-code { margin-top: 0.15rem; color: var(--sa-muted); font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+    .analytics-branch-share { color: var(--sa-green); font-size: 0.8rem; font-weight: 850; white-space: nowrap; }
+    .analytics-branch-revenue { margin-top: 0.8rem; color: var(--sa-ink); font-size: 1.3rem; font-weight: 900; }
+    .analytics-branch-growth { margin-top: 0.2rem; color: var(--sa-green); font-size: 0.72rem; font-weight: 800; }
+    .analytics-branch-growth.down { color: #dc2626; }
+    .analytics-branch-progress { height: 7px; margin-top: 0.85rem; border-radius: 999px; background: #edf2ef; overflow: hidden; }
+    .analytics-branch-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #12b98a, #0d9373); }
+    .analytics-branch-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; margin-top: 1rem; }
+    .analytics-branch-stat { min-width: 0; }
+    .analytics-branch-stat-label { color: var(--sa-muted); font-size: 0.66rem; font-weight: 800; text-transform: uppercase; }
+    .analytics-branch-stat-value { margin-top: 0.18rem; color: var(--sa-ink); font-size: 0.9rem; font-weight: 850; white-space: nowrap; }
+    .analytics-table-card { display: none; }
+    .analytics-table { min-width: 760px; }
+    .analytics-table th { background: #fbfcfc; text-transform: none; font-size: .62rem; }
+    .analytics-table td { font-size: .66rem; }
+    .branch-product-layout { display: grid; grid-template-columns: minmax(0, 0.34fr) minmax(0, 0.66fr); gap: 1rem; padding: 1rem; }
+    .branch-product-panel { min-width: 0; border: 1px solid var(--sa-border); border-radius: 14px; background: #fff; overflow: hidden; }
+    .branch-product-panel-header { padding: 1rem 1rem 0.85rem; border-bottom: 1px solid var(--sa-border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+    .branch-product-panel-title { margin: 0; color: var(--sa-ink); font-size: 1rem; font-weight: 900; }
+    .branch-product-panel-note { margin: 0.16rem 0 0; color: var(--sa-muted); font-size: 0.76rem; line-height: 1.45; }
+    .branch-product-list-wrap { max-height: 560px; overflow: auto; }
+    .branch-product-list-table { width: 100%; border-collapse: collapse; }
+    .branch-product-list-table th { padding: 0.82rem 0.85rem; background: #f8faf9; color: var(--sa-muted); font-size: 0.72rem; font-weight: 850; text-align: left; text-transform: uppercase; letter-spacing: 0.02em; }
+    .branch-product-list-table td { padding: 0.85rem 0.85rem; border-top: 1px solid #edf1ef; font-size: 0.78rem; vertical-align: top; }
+    .branch-product-select { display: block; width: 100%; border: 0; background: transparent; padding: 0; text-align: left; color: inherit; cursor: pointer; text-decoration: none; }
+    .branch-product-select:hover .branch-product-name { color: var(--sa-green-dark); }
+    .branch-product-select.active { background: #f0fdf4; }
+    .branch-product-name { margin: 0; color: var(--sa-ink); font-size: 0.82rem; font-weight: 850; line-height: 1.35; }
+    .branch-product-code { margin-top: 0.14rem; color: var(--sa-muted); font-size: 0.78rem; font-weight: 700; }
+    .branch-product-subtext { margin-top: 0.18rem; color: var(--sa-muted); font-size: 0.78rem; line-height: 1.45; }
+    .branch-product-badge { border-radius: 999px; padding: 0.24rem 0.55rem; display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.66rem; font-weight: 800; white-space: nowrap; }
+    .branch-product-badge.up { background: #ecfdf5; color: #15803d; }
+    .branch-product-badge.down { background: #fef2f2; color: #b91c1c; }
+    .branch-product-badge.flat { background: #f8fafc; color: #475569; }
+    .branch-product-detail { min-width: 0; display: grid; gap: 0.85rem; padding: 1rem; }
+    .branch-product-detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    .branch-product-detail-title { margin: 0; color: var(--sa-ink); font-size: 1.15rem; font-weight: 900; line-height: 1.3; }
+    .branch-product-detail-meta { margin-top: 0.22rem; color: var(--sa-muted); font-size: 0.76rem; line-height: 1.45; }
+    .branch-product-detail-chiprow { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .branch-product-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; }
+    .branch-product-summary-card { min-width: 0; padding: 0.9rem; border: 1px solid #e9eeec; border-radius: 12px; background: linear-gradient(180deg, #fff, #fbfffd); }
+    .branch-product-summary-label { color: var(--sa-muted); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
+    .branch-product-summary-value { margin-top: 0.34rem; color: var(--sa-ink); font-size: 1.15rem; font-weight: 900; white-space: nowrap; }
+    .branch-product-summary-note { margin-top: 0.2rem; color: var(--sa-green); font-size: 0.72rem; font-weight: 750; }
+    .branch-product-mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+    .branch-product-mini { padding: 0.75rem 0.8rem; border: 1px solid #edf1ef; border-radius: 12px; background: #f8fcfb; }
+    .branch-product-mini-label { color: var(--sa-muted); font-size: 0.66rem; font-weight: 800; text-transform: uppercase; }
+    .branch-product-mini-value { margin-top: 0.2rem; color: var(--sa-ink); font-size: 0.92rem; font-weight: 850; white-space: nowrap; }
+    .branch-product-toplist { display: grid; gap: 0.65rem; }
+    .branch-product-toprow { padding: 0.9rem 0.95rem; border: 1px solid #edf1ef; border-radius: 12px; display: grid; grid-template-columns: 30px 52px minmax(0, 1fr) 96px 96px 100px; gap: 0.85rem; align-items: center; background: #fff; }
+    .branch-product-toprank { width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.8rem; font-weight: 900; }
+    .branch-product-thumb { width: 48px; height: 48px; border-radius: 12px; background: #f3f4f6; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.8rem; font-weight: 800; }
+    .branch-product-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .branch-product-topname { min-width: 0; color: var(--sa-ink); font-size: 0.8rem; font-weight: 850; line-height: 1.35; }
+    .branch-product-topmeta { margin-top: 0.16rem; color: var(--sa-muted); font-size: 0.78rem; line-height: 1.35; }
+    .branch-product-topmetric { color: var(--sa-ink); font-size: 0.84rem; font-weight: 800; white-space: nowrap; text-align: right; }
+    .branch-product-topmetric strong { display: block; color: var(--sa-green-dark); font-size: 0.9rem; font-weight: 900; }
+    .branch-product-empty-detail { min-height: 320px; border: 1px dashed #d8e3df; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: var(--sa-muted); text-align: center; padding: 1.1rem; }
+    .branch-product-loading { opacity: 0.72; pointer-events: none; }
+    .focus-product-layout { display: grid; grid-template-columns: minmax(0, 0.38fr) minmax(0, 0.62fr); gap: 0.9rem; padding: 0.85rem; }
+    .focus-product-panel { min-width: 0; border: 1px solid var(--sa-border); border-radius: 12px; background: #fff; overflow: hidden; }
+    .focus-product-panel-header { padding: 1rem 1rem 0.8rem; border-bottom: 1px solid var(--sa-border); display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+    .focus-product-panel-title { margin: 0; color: var(--sa-ink); font-size: 0.95rem; font-weight: 900; }
+    .focus-product-panel-note { margin: 0.12rem 0 0; color: var(--sa-muted); font-size: 0.76rem; line-height: 1.45; }
+    .focus-product-panel-body { display: grid; gap: 0.75rem; }
+    .focus-product-form { padding: 0.85rem 0.9rem 0; display: grid; gap: 0.55rem; }
+    .focus-product-form-row { display: flex; align-items: flex-end; gap: 0.75rem; }
+    .focus-product-search { flex: 1 1 auto; min-width: 0; }
+    .focus-product-search .sa-control { height: 40px; }
+    .focus-product-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end; }
+    .focus-product-candidate-list { padding: 0 0.9rem 0.9rem; display: grid; gap: 0.45rem; }
+    .focus-product-candidate { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 0.75rem; align-items: center; padding: 0.82rem 0.9rem; border: 1px solid #edf1ef; border-radius: 12px; text-decoration: none; color: inherit; background: linear-gradient(180deg, #fff, #fbfffd); }
+    .focus-product-candidate:hover { border-color: var(--sa-green); color: inherit; }
+    .focus-product-candidate.active { border-color: var(--sa-green); background: #f0fdf4; }
+    .focus-product-candidate-thumb { width: 44px; height: 44px; border-radius: 10px; overflow: hidden; background: #f3f4f6; display: inline-flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 0.78rem; font-weight: 800; }
+    .focus-product-candidate-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .focus-product-candidate-name { margin: 0; color: var(--sa-ink); font-size: 0.71rem; font-weight: 850; line-height: 1.35; }
+    .focus-product-candidate-meta { margin-top: 0.12rem; color: var(--sa-muted); font-size: 0.72rem; line-height: 1.35; display: flex; flex-wrap: wrap; gap: 0.35rem 0.65rem; }
+    .focus-product-candidate-meta span { white-space: nowrap; }
+    .focus-product-candidate-status { border-radius: 999px; padding: 0.25rem 0.55rem; background: #f8fafc; color: #475569; font-size: 0.7rem; font-weight: 800; white-space: nowrap; }
+    .focus-product-selected { margin: 0 1rem; padding: 0.9rem; border: 1px solid #e8efec; border-radius: 12px; background: linear-gradient(180deg, #fbfffd, #fff); }
+    .focus-product-selected-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+    .focus-product-selected-title { margin: 0; color: var(--sa-ink); font-size: 0.9rem; font-weight: 900; line-height: 1.35; }
+    .focus-product-selected-subtitle { margin: 0.12rem 0 0; color: var(--sa-muted); font-size: 0.62rem; line-height: 1.4; }
+    .focus-product-selected-chiprow { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+    .focus-product-summary-grid { padding: 0 0.9rem 0.1rem; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.85rem; }
+    .focus-product-summary-card { min-width: 0; padding: 0.82rem; border: 1px solid #e9eeec; border-radius: 12px; background: linear-gradient(180deg, #fff, #fbfffd); }
+    .focus-product-summary-label { color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; }
+    .focus-product-summary-value { margin-top: 0.24rem; color: var(--sa-ink); font-size: 0.98rem; font-weight: 900; white-space: nowrap; }
+    .focus-product-summary-note { margin-top: 0.16rem; color: var(--sa-green); font-size: 0.72rem; font-weight: 750; }
+    .focus-product-controls { padding: 0.35rem 1rem 0; display: flex; align-items: center; justify-content: space-between; gap: 0.9rem; flex-wrap: wrap; }
+    .focus-product-sort { display: flex; flex-wrap: wrap; gap: 0.35rem; padding: 0.2rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; }
+    .focus-product-sort-link { min-height: 40px; padding: 0.42rem 0.8rem; border: 1px solid transparent; border-radius: 999px; background: #fff; color: var(--sa-muted); font-size: 0.82rem; font-weight: 800; text-decoration: none; }
+    .focus-product-sort-link.active { border-color: var(--sa-green); background: var(--sa-green); color: #fff; }
+    .focus-product-searchbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.4rem; align-items: end; padding: 0.15rem 0.9rem 0.35rem; }
+    .focus-product-searchbar .sa-control { height: 44px; }
+    .focus-product-branch-list { padding: 0.35rem 0.9rem 0.9rem; display: grid; gap: 0.5rem; }
+    .focus-product-branch-card { display: grid; grid-template-columns: 34px minmax(0, 1.2fr) minmax(0, 0.95fr) auto; gap: 0.85rem; align-items: center; padding: 0.9rem; border: 1px solid #edf1ef; border-radius: 12px; background: linear-gradient(180deg, #fff, #fbfffd); }
+    .focus-product-branch-card.top { border-color: rgba(13,147,115,.22); background: linear-gradient(180deg, #f5fffb, #fff); }
+    .focus-product-branch-rank { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.76rem; font-weight: 900; }
+    .focus-product-branch-name { margin: 0; color: var(--sa-ink); font-size: 0.74rem; font-weight: 900; line-height: 1.35; }
+    .focus-product-branch-meta { margin-top: 0.12rem; color: var(--sa-muted); font-size: 0.72rem; line-height: 1.35; display: flex; flex-wrap: wrap; gap: 0.35rem 0.65rem; }
+    .focus-product-branch-meta span { white-space: nowrap; }
+    .focus-product-branch-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; }
+    .focus-product-branch-stat { min-width: 0; }
+    .focus-product-branch-stat-label { color: var(--sa-muted); font-size: 0.55rem; font-weight: 800; text-transform: uppercase; }
+    .focus-product-branch-stat-value { margin-top: 0.16rem; color: var(--sa-ink); font-size: 0.72rem; font-weight: 850; white-space: nowrap; }
+    .focus-product-branch-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+    .focus-product-branch-badge { border-radius: 999px; padding: 0.28rem 0.6rem; background: #f8fafc; color: #475569; font-size: 0.7rem; font-weight: 800; white-space: nowrap; }
+    .focus-product-branch-badge.up { background: #ecfdf5; color: #15803d; }
+    .focus-product-branch-badge.down { background: #fef2f2; color: #b91c1c; }
+    .focus-product-branch-badge.flat { background: #f8fafc; color: #475569; }
+    .focus-product-branch-badge.muted { background: #f8fafc; color: #64748b; }
+    .focus-product-pagination { min-height: 58px; padding: 0.8rem 1rem 1rem; border-top: 1px solid var(--sa-border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: var(--sa-muted); font-size: 0.76rem; }
+    .focus-product-empty { padding: 1.55rem 1.1rem; color: var(--sa-muted); text-align: center; font-size: 0.8rem; }
+    @media (max-width: 991px) {
+        .branch-product-layout { grid-template-columns: 1fr; }
+        .branch-product-summary-grid,
+        .branch-product-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .branch-product-toprow { grid-template-columns: 24px 44px minmax(0, 1fr); }
+        .branch-product-topmetric { text-align: left; }
+        .focus-product-layout { grid-template-columns: 1fr; }
+        .focus-product-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .focus-product-branch-card { grid-template-columns: 30px minmax(0, 1fr); }
+        .focus-product-branch-stats { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .focus-product-branch-badges { grid-column: 1 / -1; align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+    }
+    @media (max-width: 640px) {
+        .branch-product-summary-grid,
+        .branch-product-mini-grid { grid-template-columns: 1fr; }
+        .branch-product-toprow { grid-template-columns: 24px minmax(0, 1fr); }
+        .focus-product-summary-grid { grid-template-columns: 1fr; }
+        .focus-product-searchbar { grid-template-columns: 1fr; }
+        .focus-product-pagination { align-items: flex-start; flex-direction: column; }
+    }
+    .analytics-table-total td { background: #f5fbf8; color: var(--sa-ink); font-weight: 850; }
+    .analytics-positive { color: var(--sa-green); font-weight: 800; }
+    .analytics-empty { padding: 2rem 1rem; color: var(--sa-muted); text-align: center; font-size: .7rem; }
+    .legacy-analytics-bar { margin-bottom: 1rem; padding: 1rem 1.1rem 1.05rem; border: 1px solid var(--sa-border); border-radius: 12px; background: linear-gradient(180deg, #fbfffd, #fff); box-shadow: 0 8px 24px rgba(17, 24, 39, 0.03); }
+    .legacy-analytics-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .legacy-analytics-pill { padding: 0.34rem 0.7rem; border-radius: 999px; background: #eefbf7; color: var(--sa-green-dark); font-size: 0.74rem; font-weight: 800; white-space: nowrap; }
+    .legacy-analytics-form { display: grid; grid-template-columns: minmax(180px, 0.74fr) minmax(180px, 0.74fr) minmax(250px, 1.08fr) minmax(180px, 0.72fr) auto; gap: 0.8rem; align-items: end; }
+    .legacy-analytics-field { min-width: 0; }
+    .legacy-analytics-field--branch { min-width: min(100%, 320px); }
+    .legacy-analytics-label { display: block; margin: 0 0 0.3rem; color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; }
+    .legacy-analytics-control { width: 100%; height: 44px; border: 1px solid var(--sa-border); border-radius: 10px; padding: 0 0.85rem; background: #fff; color: var(--sa-ink); font-size: 0.84rem; outline: 0; }
+    .legacy-analytics-control:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,0.1); }
+    .legacy-analytics-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; grid-column: 1 / -1; }
+    .legacy-analytics-actions { display: inline-flex; gap: 0.5rem; align-items: center; justify-content: flex-end; white-space: nowrap; }
+    .legacy-analytics-actions .sa-btn { min-width: 0; }
+    .sa-branch-scope { position: relative; min-width: 0; }
+    .sa-branch-scope-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0 0.85rem; text-align: left; }
+    .sa-branch-scope-trigger-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+    .sa-branch-scope-trigger-count { flex: 0 0 auto; min-width: 32px; height: 22px; padding: 0 0.42rem; border-radius: 999px; background: #eefbf7; color: var(--sa-green-dark); display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900; }
+    .sa-branch-scope-panel { position: absolute; z-index: 40; top: calc(100% + 0.5rem); left: 0; width: min(100%, 420px); min-width: 320px; max-height: 420px; padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 14px; background: #fff; box-shadow: 0 20px 42px rgba(17,24,39,.16); overflow: hidden; }
+    .sa-branch-scope-panel[hidden] { display: none !important; }
+    .sa-branch-scope-panel.align-right { left: auto; right: 0; }
+    .sa-branch-scope-panel-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+    .sa-branch-scope-panel-title { color: var(--sa-ink); font-size: 0.92rem; font-weight: 900; }
+    .sa-branch-scope-panel-note { margin-top: 0.2rem; color: var(--sa-muted); font-size: 0.72rem; line-height: 1.4; }
+    .sa-branch-scope-close { width: 34px; height: 34px; border: 0; border-radius: 10px; background: #f6f9f8; color: var(--sa-muted); display: inline-flex; align-items: center; justify-content: center; }
+    .sa-branch-scope-searchbar { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; padding: 0 0.8rem; border: 1px solid var(--sa-border); border-radius: 12px; background: #fff; }
+    .sa-branch-scope-searchbar i { color: var(--sa-muted); font-size: 0.9rem; }
+    .sa-branch-scope-search { width: 100%; height: 42px; border: 0; outline: 0; font-size: 0.82rem; background: transparent; }
+    .sa-branch-scope-actions { display: flex; gap: 0.45rem; margin-top: 0.75rem; }
+    .sa-btn-soft { min-height: 36px; padding: 0 0.8rem; background: #f7fbfa; color: var(--sa-ink); border-color: #dce9e4; font-size: 0.76rem; font-weight: 800; }
+    .sa-branch-scope-list { max-height: 230px; overflow: auto; margin-top: 0.75rem; padding-right: 0.1rem; overscroll-behavior: contain; }
+    .sa-branch-scope-option { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.7rem 0.75rem; border: 1px solid #edf2ef; border-radius: 12px; cursor: pointer; }
+    .sa-branch-scope-option + .sa-branch-scope-option { margin-top: 0.45rem; }
+    .sa-branch-scope-option:hover { border-color: #c8e7de; background: #f7fbfa; }
+    .sa-branch-scope-option input { margin-top: 0.1rem; }
+    .sa-branch-scope-option-body { display: flex; flex-direction: column; gap: 0.12rem; min-width: 0; }
+    .sa-branch-scope-option-title { color: var(--sa-ink); font-size: 0.82rem; font-weight: 850; line-height: 1.35; }
+    .sa-branch-scope-option-meta { color: var(--sa-muted); font-size: 0.72rem; line-height: 1.35; }
+    .sa-branch-scope-empty { padding: 1rem 0.75rem; color: var(--sa-muted); font-size: 0.8rem; text-align: center; }
+    .sa-branch-scope-footer { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
+    .sa-branch-scope-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.45rem; }
+    .sa-branch-scope-chip { padding: 0.32rem 0.65rem; border-radius: 999px; background: #eefbf7; color: var(--sa-green-dark); font-size: 0.72rem; font-weight: 800; }
+    .sa-branch-scope-chip.muted { background: #f3f4f6; color: var(--sa-muted); }
+    .legacy-analytics-hidden { display: none !important; }
+    .legacy-top-products { margin-bottom: 1rem; overflow: hidden; border: 1px solid var(--sa-border); border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(17, 24, 39, 0.03); display: flex; flex-direction: column; }
+    .legacy-top-products-header { padding: 1rem 1.05rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; border-bottom: 1px solid var(--sa-border); }
+    .legacy-top-products-title { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 850; }
+    .legacy-top-products-actions { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; justify-content: flex-end; }
+    .legacy-top-products-action { min-height: 40px; padding: 0.42rem 0.85rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; color: var(--sa-muted); font-size: 0.76rem; font-weight: 800; text-decoration: none; }
+    .legacy-top-products-action.active { border-color: var(--sa-green); background: var(--sa-green); color: #fff; }
+    .legacy-top-products-list { padding: 0.8rem 1rem 1rem; display: grid; gap: 0.55rem; }
+    .legacy-top-products-row { display: grid; grid-template-columns: 32px 50px minmax(0, 1fr) minmax(180px, 0.92fr); gap: 0.85rem; align-items: center; padding: 0.82rem 0.9rem; border: 1px solid #edf1ef; border-radius: 12px; background: linear-gradient(180deg, #ffffff, #fbfffd); }
+    .legacy-top-products-rank { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.72rem; font-weight: 900; }
+    .legacy-top-products-thumb { width: 46px; height: 46px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex: 0 0 auto; }
+    .legacy-top-products-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .legacy-top-products-name { margin: 0; color: var(--sa-ink); font-size: 0.84rem; font-weight: 850; line-height: 1.35; }
+    .legacy-top-products-meta { margin-top: 0.18rem; display: flex; flex-wrap: wrap; gap: 0.42rem 0.75rem; color: var(--sa-muted); font-size: 0.72rem; font-weight: 650; }
+    .legacy-top-products-meta span { white-space: nowrap; }
+    .legacy-top-products-branch { min-width: 0; text-align: right; }
+    .legacy-top-products-branch strong { display: block; color: var(--sa-ink); font-size: 0.78rem; font-weight: 850; line-height: 1.35; }
+    .legacy-top-products-branch span { display: block; margin-top: 0.12rem; color: var(--sa-muted); font-size: 0.78rem; line-height: 1.35; }
+    .legacy-top-products-empty { padding: 1.45rem 1.1rem 1.3rem; color: var(--sa-muted); text-align: center; font-size: 0.8rem; }
+    .legacy-overview { display: grid; gap: var(--sa-section-gap); width: 100%; min-width: 0; }
+    .legacy-page-header { display: flex; }
+    .legacy-page-header { align-items: flex-start; }
+    .legacy-overview > * { min-width: 0; }
+    .sa-section,
+    .sa-stats,
+    .sa-overview-grid,
+    .sa-supplemental-grid,
+    .sa-charts-grid,
+    .sa-health-grid,
+    .sa-ops-grid,
+    .sa-analytics-shell,
+    .legacy-analytics-bar,
+    .legacy-top-products { min-width: 0; width: 100%; }
+    .sa-header-actions {
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: min(100%, 560px);
+        display: grid;
+        justify-items: end;
+        gap: 0.6rem;
+        align-content: start;
+    }
+    .sa-header-action-row {
+        display: inline-flex;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+        gap: 0.6rem;
+        width: auto;
+        max-width: 100%;
+    }
+    .sa-header-action-row .sa-btn { min-width: 0; }
+    .sa-period-shortcuts {
+        display: inline-flex;
+        flex-wrap: nowrap;
+        gap: 0.2rem;
+        padding: 0.22rem;
+        border: 1px solid var(--sa-border);
+        border-radius: 14px;
+        background: #fff;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+    }
+    .sa-period-shortcuts::-webkit-scrollbar { display: none; }
+    .sa-period-shortcut {
+        flex: 0 0 auto;
+        min-height: 40px;
+        padding: 0.58rem 0.9rem;
+        border-radius: 10px;
+        color: var(--sa-muted);
+        font-size: 0.82rem;
+        font-weight: 800;
+        text-decoration: none;
+        white-space: nowrap;
+        line-height: 1;
+    }
+    .sa-period-shortcut.active { background: var(--sa-green); color: #fff; box-shadow: 0 10px 20px rgba(13,147,115,.18); }
+    .legacy-analytics-bar { order: 1; padding: 1rem 1.15rem 1.05rem; border-radius: 18px; background: linear-gradient(180deg, #fcfffe, #ffffff); }
+    .sa-kpi-grid { order: 2; margin-bottom: 0 !important; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .sa-quick-section { order: 3; }
+    .sa-business-section { order: 4; }
+    .sa-supplemental-section { order: 5; }
+    .legacy-analytics-head { gap: 1rem; margin-bottom: 0.6rem; align-items: center; flex-wrap: nowrap; }
+    .legacy-analytics-pill { padding: 0.4rem 0.78rem; font-size: 0.78rem; }
+    .legacy-analytics-form { grid-template-columns: minmax(170px, 0.72fr) minmax(170px, 0.72fr) minmax(240px, 1.05fr) minmax(170px, 0.68fr) auto; gap: 0.75rem; }
+    .legacy-analytics-label { margin: 0 0 0.42rem; font-size: 0.8rem; }
+    .legacy-analytics-control { height: 48px; border-radius: 12px; font-size: 0.9rem; }
+    .legacy-analytics-range { gap: 0.85rem; }
+    .legacy-analytics-actions { gap: 0.6rem; }
+    .legacy-analytics-form,
+    .legacy-analytics-range,
+    .legacy-analytics-compare-grid,
+    .legacy-analytics-actions { min-width: 0; width: 100%; }
+    .legacy-analytics-form > .legacy-analytics-range { display: contents; }
+    .legacy-analytics-form > .legacy-analytics-range > .legacy-analytics-field { grid-column: auto; }
+    .legacy-analytics-form > .legacy-analytics-range > .legacy-analytics-field[data-analytics-period-group="range"] { grid-column: 1 / -2; }
+    .legacy-analytics-form > .legacy-analytics-range > .legacy-analytics-field[data-analytics-period-group="range"] .legacy-analytics-range { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .legacy-analytics-actions { width: auto; align-self: end; }
+    .legacy-analytics-compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; grid-column: 1 / -1; }
+    .legacy-analytics-compare-grid .legacy-analytics-field[data-analytics-compare-group="range"],
+    .legacy-analytics-compare-grid .legacy-analytics-field[data-analytics-compare-group="week"] { grid-column: 1 / -1; }
+    .sa-section { display: grid; gap: 1rem; }
+    .sa-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+    .sa-section-kicker { margin: 0 0 0.25rem; color: var(--sa-green); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
+    .sa-section-title { margin: 0; color: var(--sa-ink); font-size: clamp(1.22rem, 1.4vw, 1.45rem); font-weight: 900; letter-spacing: -0.02em; }
+    .sa-section-copy { max-width: 880px; margin: 0.25rem 0 0; color: var(--sa-muted); font-size: 0.92rem; }
+    .sa-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: stretch; }
+    .sa-overview-grid > .sa-panel,
+    .sa-overview-grid > .legacy-top-products { height: 100%; }
+    .sa-overview-card-header { min-height: 0; padding: 0 0 0.85rem; margin-bottom: 0.1rem; border-bottom: 1px solid var(--sa-border); align-items: center; }
+    .sa-quick-branches { display: flex; flex-direction: column; padding: 1.05rem; }
+    .sa-quick-branch-list { display: grid; gap: 0.65rem; }
+    .sa-quick-branch-row { padding: 0.85rem 0.9rem; border: 1px solid #edf2ef; border-radius: 14px; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 0.8rem; align-items: center; background: linear-gradient(180deg, #fff, #fbfffd); }
+    .sa-quick-branch-rank { width: 38px; height: 38px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.82rem; font-weight: 900; }
+    .sa-quick-branch-name { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 850; }
+    .sa-quick-branch-meta { margin-top: 0.16rem; color: var(--sa-muted); font-size: 0.78rem; line-height: 1.4; }
+    .sa-quick-branch-metric { text-align: right; }
+    .sa-quick-branch-metric strong { display: block; color: var(--sa-green); font-size: 1.02rem; font-weight: 900; }
+    .sa-quick-branch-metric span { display: block; margin-top: 0.14rem; color: var(--sa-muted); font-size: 0.8rem; }
+    .sa-analytics-shell { padding: 1.2rem; background: linear-gradient(180deg, #fbfffd 0%, #ffffff 100%); }
+    .sa-analytics-tabs { display: flex; flex-wrap: wrap; gap: 0.55rem; padding-bottom: 0.2rem; border-bottom: 1px solid #ebf1ef; }
+    .sa-analytics-tab { min-height: 48px; padding: 0.72rem 1.05rem; border: 1px solid var(--sa-border); border-radius: 13px; background: #f7faf9; color: var(--sa-muted); font-size: 0.89rem; font-weight: 800; cursor: pointer; transition: all 0.18s ease; }
+    .sa-analytics-tab.active { border-color: rgba(13,147,115,.25); background: var(--sa-green-soft); color: var(--sa-green-dark); }
+    .sa-analytics-panels { margin-top: 1rem; }
+    .sa-analytics-panel[hidden] { display: none !important; }
+    .sa-analytics-panel > .sa-panel { box-shadow: none; }
+    .sa-analytics-panel > .sa-panel,
+    .sa-analytics-panel > [data-branch-product-detail-region],
+    .sa-analytics-panel > [data-product-branch-performance-region] { margin-top: 0 !important; }
+    .sa-supplemental-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .sa-supplemental-grid .sa-panel { overflow: visible; }
+    .sa-charts-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .sa-ops-grid { display: grid; gap: 1rem; }
+    .sa-health-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr); gap: 1rem; }
+
+    @media (max-width: 1519.98px) {
+        .legacy-analytics-head { align-items: flex-start; flex-direction: column; }
+        .legacy-analytics-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .legacy-analytics-actions { grid-column: 1 / -1; justify-content: flex-start; }
+        .legacy-analytics-field--branch { grid-column: 1 / -1; }
+        .sa-branch-compare-header { align-items: flex-start; flex-wrap: wrap; }
+        .sa-branch-compare-tools { margin-left: 0; width: 100%; justify-content: space-between; }
+        .sa-branch-compare-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .sa-branch-compare-actions { grid-column: 1 / -1; justify-content: flex-end; }
+        .sa-branch-compare-summary { flex-wrap: wrap; }
+    }
     @media (max-width: 1399.98px) {
+        .sa-header { gap: 0.9rem 1rem; }
+        .sa-header-copy { max-width: 620px; }
+        .sa-header-actions { max-width: 500px; gap: 0.55rem; }
+        .sa-header-action-row { gap: 0.5rem; }
+        .sa-period-shortcuts { gap: 0.16rem; padding: 0.2rem; }
+        .sa-period-shortcut { padding: 0.56rem 0.74rem; font-size: 0.78rem; }
+        .sa-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .analytics-filters { grid-template-columns: repeat(3, minmax(160px, 1fr)); }
+        .analytics-filter-actions { grid-column: 1 / -1; justify-content: flex-start; }
+        .analytics-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .analytics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .analytics-grid .analytics-card:first-child { grid-row: span 2; }
+        .analytics-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .analytics-branch-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .sa-grid-main { grid-template-columns: 1fr; }
         .sa-filter-form { grid-template-columns: minmax(200px, 1fr) repeat(3, minmax(120px, 0.7fr)); }
         .sa-filter-actions { grid-column: 1 / -1; }
+        .sa-branch-compare-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .sa-branch-compare-actions { grid-column: 1 / -1; justify-content: flex-start; }
+        .legacy-top-products-header { flex-direction: column; }
+        .legacy-top-products-actions { justify-content: flex-start; }
+        .legacy-top-products-row { grid-template-columns: 28px 46px minmax(0, 1fr); }
+        .legacy-top-products-branch { grid-column: 1 / -1; text-align: left; }
+        .sa-overview-grid, .sa-health-grid, .sa-charts-grid { grid-template-columns: 1fr; }
+        .sa-supplemental-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .legacy-analytics-field--branch { grid-column: auto; }
+    }
+    @media (max-width: 1366.98px) {
+        .sa-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .sa-header-copy { max-width: none; }
+        .sa-header-actions {
+            max-width: none;
+            width: 100%;
+            justify-items: stretch;
+        }
+        .sa-header-action-row {
+            justify-content: flex-start;
+            width: 100%;
+        }
+        .sa-period-shortcuts {
+            width: 100%;
+        }
     }
     @media (max-width: 1199.98px) {
+        .sa-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .sa-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .sa-security-grid, .sa-permissions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .sa-supplemental-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 767.98px) {
+        .analytics-filters { grid-template-columns: 1fr 1fr; }
+        .analytics-filter-actions { grid-column: span 2; flex-wrap: wrap; }
+        .analytics-kpis, .analytics-grid { grid-template-columns: 1fr; }
+        .analytics-insights, .analytics-branch-list { grid-template-columns: 1fr; }
+        .analytics-grid .analytics-card:first-child { grid-row: auto; }
         .sa-header { align-items: stretch; flex-direction: column; }
         .sa-grid-2 { grid-template-columns: 1fr; }
         .sa-filter-form { grid-template-columns: 1fr; }
         .sa-filter-actions { grid-column: auto; }
+        .sa-branch-compare-tools { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
+        .sa-branch-period-switcher { overflow-x: auto; max-width: 100%; }
+        .sa-branch-compare-form { grid-template-columns: 1fr; }
+        .sa-branch-compare-summary { align-items: flex-start; }
+        .sa-branch-compare-summary-text,
+        .sa-branch-compare-summary-meta { white-space: normal; }
+        .legacy-analytics-form, .legacy-analytics-range { grid-template-columns: 1fr; }
+        .legacy-analytics-compare-grid { grid-template-columns: 1fr; }
+        .legacy-analytics-actions { justify-content: stretch; }
+        .legacy-top-products-row { grid-template-columns: 24px 40px minmax(0, 1fr); }
         .sa-pagination { align-items: flex-start; flex-direction: column; }
+        .sa-header-actions { justify-items: stretch; }
+        .sa-header-action-row { flex-wrap: wrap; }
+        .sa-header-action-row .sa-btn { flex: 1 1 calc(50% - 0.3rem); }
+        .sa-period-shortcuts { width: 100%; }
+        .sa-period-shortcut { text-align: center; }
+        .sa-kpi-grid { grid-template-columns: 1fr; }
+        .sa-quick-branch-row { grid-template-columns: 42px minmax(0, 1fr); }
+        .sa-quick-branch-metric { grid-column: 1 / -1; text-align: left; }
+        .sa-section-heading { align-items: flex-start; flex-direction: column; }
     }
     @media (max-width: 575.98px) {
         .sa-stats, .sa-security-grid, .sa-permissions { grid-template-columns: 1fr; }
         .sa-chart-bars { gap: 0.25rem; }
-        .sa-chart-value { font-size: 0.5rem; }
+        .sa-chart-value { font-size: 0.65rem; }
     }
 </style>
 
 <div class="sa-page">
-    <header class="sa-header">
-        <div>
-            <p class="sa-kicker">Tổng quan hệ thống</p>
-            <h1 class="sa-title">Tổng quan quản trị cấp cao</h1>
-            <p class="sa-subtitle">Quản trị tài khoản, quyền truy cập, bảo mật và tình trạng nền tảng Chill Drink.</p>
+    @php
+        $analyticsSelectedBranchIds = $analyticsContext->normalizedBranchIds();
+        $analyticsBranchScopeLabel = $analyticsContext->branchScopeLabel;
+        if ($analyticsSelectedBranchIds !== []) {
+            if (count($analyticsSelectedBranchIds) === 1) {
+                $analyticsBranchScopeLabel = collect($branches ?? [])->firstWhere('id', $analyticsSelectedBranchIds[0])?->name
+                    ?? $analyticsBranchScopeLabel;
+            } else {
+                $analyticsBranchScopeLabel = count($analyticsSelectedBranchIds).' chi nhánh được chọn';
+            }
+        }
+
+        $analyticsCompareType = (string) request('analytics_compare_type', $analyticsContext->periodType === 'all' ? 'none' : 'previous');
+        $topBranchHighlights = collect($branchRankingStats ?? [])->take(5)->values();
+        $periodShortcutBase = request()->except([
+            'analytics_period_type',
+            'analytics_date',
+            'analytics_week',
+            'analytics_month',
+            'analytics_year',
+            'analytics_start_date',
+            'analytics_end_date',
+        ]);
+        $periodShortcuts = [
+            'day' => [
+                'label' => 'Hôm nay',
+                'query' => ['analytics_period_type' => 'day', 'analytics_date' => now()->format('Y-m-d')],
+            ],
+            'week' => [
+                'label' => 'Tuần này',
+                'query' => ['analytics_period_type' => 'week', 'analytics_week' => now()->format('o-\WW')],
+            ],
+            'month' => [
+                'label' => 'Tháng này',
+                'query' => ['analytics_period_type' => 'month', 'analytics_month' => now()->format('Y-m')],
+            ],
+            'year' => [
+                'label' => 'Năm nay',
+                'query' => ['analytics_period_type' => 'year', 'analytics_year' => now()->format('Y')],
+            ],
+            'range' => [
+                'label' => 'Tùy chọn',
+                'query' => [
+                    'analytics_period_type' => 'range',
+                    'analytics_start_date' => now()->startOfMonth()->format('Y-m-d'),
+                    'analytics_end_date' => now()->format('Y-m-d'),
+                ],
+            ],
+        ];
+    @endphp
+
+    <header class="sa-header legacy-page-header">
+        <div class="sa-header-copy">
+            <p class="sa-kicker">Chill Drink / Tổng quan hệ thống</p>
+            <h1 class="sa-title">Tổng quan &amp; Phân tích hệ thống</h1>
+            <p class="sa-subtitle">Theo dõi hiệu quả kinh doanh, chi nhánh, sản phẩm và tình trạng vận hành.</p>
         </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
-            <a href="{{ route('admin.group-orders.index') }}" class="sa-btn">
-                <i class="bi bi-people-fill"></i> Quản lý đơn nhóm
-            </a>
-            <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createAdminModal">
-                <i class="bi bi-person-plus"></i> Thêm Admin
-            </button>
+        <div class="sa-header-actions">
+            <div class="sa-header-action-row">
+                <a href="{{ route('admin.group-orders.index') }}" class="sa-btn">
+                    <i class="bi bi-people-fill"></i> Quản lý đơn nhóm
+                </a>
+                <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createAdminModal">
+                    <i class="bi bi-person-plus"></i> Thêm Admin
+                </button>
+            </div>
         </div>
     </header>
 
@@ -184,36 +745,326 @@
         <div class="alert alert-danger sa-alert"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}</div>
     @endif
 
-    <!-- KPI Cards chính - Metrics quan trọng nhất -->
-    <section class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem;" aria-label="KPI chính">
-        @foreach([
-            ['bi-cash-stack', number_format($branchSummaryStats['total_revenue'], 0, ',', '.').'đ', 'Tổng doanh thu', 'Tất cả chi nhánh', 'revenue'],
-            ['bi-shop-window', $branchSummaryStats['active_branches'], 'Chi nhánh hoạt động', $branchSummaryStats['total_branches'] . ' tổng', 'branch'],
-            ['bi-bag-check', $branchSummaryStats['total_orders'], 'Tổng đơn hàng', 'Đã xử lý', 'order'],
-            ['bi-people', $totalUserCount, 'Tổng người dùng', $adminCount . ' Admin', 'user'],
-        ] as [$icon, $value, $label, $note, $type])
-            <article class="sa-stat" style="min-height: 110px; @if($type === 'revenue') background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-color: rgba(13, 147, 115, 0.25); @endif">
+    {{-- LEGACY OVERVIEW - CURRENTLY ACTIVE --}}
+    <div class="legacy-overview">
+        <section class="legacy-analytics-bar" aria-label="Bộ lọc thống kê">
+            <div class="legacy-analytics-head">
+                <div>
+                    <h2 class="sa-panel-title">Bộ lọc thống kê</h2>
+                </div>
+                <div class="sa-period-shortcuts" aria-label="Chọn nhanh khoảng thời gian">
+                    @foreach($periodShortcuts as $periodKey => $shortcut)
+                        <a
+                            href="{{ route('admin.super-admin', array_merge($periodShortcutBase, $shortcut['query'])) }}"
+                            class="sa-period-shortcut {{ $analyticsContext->periodType === $periodKey ? 'active' : '' }}"
+                        >
+                            {{ $shortcut['label'] }}
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+
+            <form class="legacy-analytics-form" method="GET" action="{{ route('admin.super-admin') }}">
+                <input type="hidden" name="q" value="{{ $filters['search'] }}">
+                <input type="hidden" name="status" value="{{ $filters['status'] }}">
+                <input type="hidden" name="role" value="{{ $filters['role'] }}">
+                <input type="hidden" name="created" value="{{ $filters['created'] }}">
+                <input type="hidden" name="ranking_period" value="{{ $rankingPeriod }}">
+                <input type="hidden" name="analytics_product_sort" value="{{ request('analytics_product_sort', 'quantity') }}">
+                <input type="hidden" name="branch_search" value="{{ request('branch_search') }}">
+                <input type="hidden" name="branch_sort" value="{{ request('branch_sort', 'revenue') }}">
+                <input type="hidden" name="branch_direction" value="{{ request('branch_direction', 'desc') }}">
+                <input type="hidden" name="branch_performance" value="{{ request('branch_performance', 'all') }}">
+                <input type="hidden" name="branch_per_page" value="{{ request('branch_per_page', 5) }}">
+                <input type="hidden" name="branch_page" value="{{ request('branch_page') }}">
+
+                <div class="legacy-analytics-field">
+                    <label class="legacy-analytics-label" for="analytics-period-type">Khoảng thời gian</label>
+                    <select id="analytics-period-type" name="analytics_period_type" class="legacy-analytics-control" data-analytics-period-selector>
+                        <option value="all" @selected($analyticsContext->periodType === 'all')>Tất cả thời gian</option>
+                        <option value="day" @selected($analyticsContext->periodType === 'day')>Ngày</option>
+                        <option value="week" @selected($analyticsContext->periodType === 'week')>Tuần</option>
+                        <option value="month" @selected($analyticsContext->periodType === 'month')>Tháng</option>
+                        <option value="year" @selected($analyticsContext->periodType === 'year')>Năm</option>
+                        <option value="range" @selected($analyticsContext->periodType === 'range')>Tùy chọn</option>
+                    </select>
+                </div>
+
+                <div class="legacy-analytics-field">
+                    <label class="legacy-analytics-label" for="analytics-compare-type">So sánh với</label>
+                    <select id="analytics-compare-type" name="analytics_compare_type" class="legacy-analytics-control" data-analytics-compare-selector>
+                        <option value="none" @selected($analyticsCompareType === 'none')>Không so sánh</option>
+                        <option value="previous" @selected($analyticsCompareType === 'previous')>Kỳ liền trước</option>
+                        <option value="previous_year" @selected($analyticsCompareType === 'previous_year')>Cùng kỳ năm trước</option>
+                        <option value="custom" @selected($analyticsCompareType === 'custom') @disabled($analyticsContext->periodType === 'all')>Tùy chọn</option>
+                    </select>
+                </div>
+
+                <div class="legacy-analytics-field legacy-analytics-field--branch">
+                    <label class="legacy-analytics-label">Chi nhánh</label>
+                    @include('admin.super-admin.partials.branch-scope-multi-select', [
+                        'controlId' => 'legacy-analytics-branch-scope',
+                        'inputName' => 'analytics_branch_ids',
+                        'branches' => $branches,
+                        'selectedIds' => $analyticsContext->normalizedBranchIds(),
+                        'summaryLabel' => $analyticsBranchScopeLabel,
+                        'placeholder' => 'Tìm chi nhánh...',
+                        'showChips' => false,
+                    ])
+                </div>
+
+                <div class="legacy-analytics-range">
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="day">
+                        <label class="legacy-analytics-label" for="analytics-date">Ngày</label>
+                        <input id="analytics-date" type="date" name="analytics_date" value="{{ $analyticsContext->currentStart?->format('Y-m-d') ?? now()->format('Y-m-d') }}" class="legacy-analytics-control">
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="week">
+                        <label class="legacy-analytics-label" for="analytics-week">Tuần</label>
+                        <input id="analytics-week" type="week" name="analytics_week" value="{{ $analyticsContext->currentStart?->format('o-\WW') ?? now()->format('o-\WW') }}" class="legacy-analytics-control">
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="month">
+                        <label class="legacy-analytics-label" for="analytics-month">Tháng</label>
+                        <input id="analytics-month" type="month" name="analytics_month" value="{{ $analyticsContext->currentStart?->format('Y-m') ?? now()->format('Y-m') }}" class="legacy-analytics-control">
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="year">
+                        <label class="legacy-analytics-label" for="analytics-year">Năm</label>
+                        <input id="analytics-year" type="number" name="analytics_year" min="2000" max="{{ now()->addYear()->year }}" value="{{ $analyticsContext->currentStart?->format('Y') ?? now()->format('Y') }}" class="legacy-analytics-control">
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="range" style="grid-column: 1 / -1;">
+                        <label class="legacy-analytics-label">Khoảng ngày tùy chọn</label>
+                        <div class="legacy-analytics-range">
+                            <input type="date" name="analytics_start_date" value="{{ $analyticsContext->currentStart?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d') }}" class="legacy-analytics-control">
+                            <input type="date" name="analytics_end_date" value="{{ $analyticsContext->currentEnd?->format('Y-m-d') ?? now()->format('Y-m-d') }}" class="legacy-analytics-control">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="legacy-analytics-actions">
+                    <a href="{{ route('admin.super-admin', request()->except(['analytics_period_type', 'analytics_date', 'analytics_week', 'analytics_month', 'analytics_year', 'analytics_start_date', 'analytics_end_date', 'analytics_compare_type', 'analytics_compare_date', 'analytics_compare_month', 'analytics_compare_year', 'analytics_compare_start_date', 'analytics_compare_end_date', 'analytics_branch_id', 'analytics_branch_ids', 'branch_ids', 'analytics_product_sort'])) }}" class="sa-btn" style="white-space: nowrap;"><i class="bi bi-arrow-counterclockwise"></i> Xóa lọc</a>
+                    <button type="submit" class="sa-btn sa-btn-primary" style="white-space: nowrap;"><i class="bi bi-funnel"></i> Áp dụng</button>
+                </div>
+
+                <div class="legacy-analytics-compare-grid">
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="day">
+                        <label class="legacy-analytics-label" for="analytics-compare-date">Ngày đối chiếu</label>
+                        <input id="analytics-compare-date" type="date" name="analytics_compare_date" value="{{ request('analytics_compare_date') }}" class="legacy-analytics-control">
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="month">
+                        <label class="legacy-analytics-label" for="analytics-compare-month">Tháng đối chiếu</label>
+                        <input id="analytics-compare-month" type="month" name="analytics_compare_month" value="{{ request('analytics_compare_month') }}" class="legacy-analytics-control">
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="year">
+                        <label class="legacy-analytics-label" for="analytics-compare-year">Năm đối chiếu</label>
+                        <input id="analytics-compare-year" type="number" name="analytics_compare_year" min="2000" max="{{ now()->addYear()->year }}" value="{{ request('analytics_compare_year') }}" class="legacy-analytics-control">
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="week">
+                        <label class="legacy-analytics-label">Khoảng đối chiếu cho tuần</label>
+                        <div class="legacy-analytics-range">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control">
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control">
+                        </div>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="range">
+                        <label class="legacy-analytics-label">Khoảng ngày đối chiếu</label>
+                        <div class="legacy-analytics-range">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control">
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control">
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </section>
+
+    @php
+        $businessKpis = [
+            ['key' => 'revenue', 'icon' => 'bi-cash-stack', 'label' => 'Tổng doanh thu', 'money' => true],
+            ['key' => 'orders', 'icon' => 'bi-bag-check', 'label' => 'Đơn hàng', 'money' => false],
+            ['key' => 'customers', 'icon' => 'bi-people', 'label' => 'Khách hàng', 'money' => false, 'note' => 'Không gồm khách đặt nhanh chưa đăng nhập'],
+            ['key' => 'items_sold', 'icon' => 'bi-cup-straw', 'label' => 'Sản phẩm bán ra', 'money' => false],
+            ['key' => 'average_order_value', 'icon' => 'bi-receipt', 'label' => 'Trung bình mỗi đơn', 'money' => true],
+        ];
+        $topProductSort = in_array(request('analytics_product_sort'), ['quantity', 'revenue'], true)
+            ? (string) request('analytics_product_sort')
+            : 'quantity';
+        $topProductSortLabel = match ($topProductSort) {
+            'revenue' => 'Theo doanh thu',
+            default => 'Theo số lượng',
+        };
+        $topProductSortLinks = [
+            'quantity' => request()->fullUrlWithQuery(['analytics_product_sort' => 'quantity']),
+            'revenue' => request()->fullUrlWithQuery(['analytics_product_sort' => 'revenue']),
+        ];
+    @endphp
+
+    <!-- KPI Cards chính - 5 KPI kinh doanh -->
+    <section class="sa-stats sa-kpi-grid" aria-label="KPI chính">
+        @foreach($businessKpis as $kpi)
+            @php
+                $metric = $businessSummary[$kpi['key']] ?? [
+                    'current_value' => 0,
+                    'compare_value' => null,
+                    'absolute_change' => null,
+                    'percentage_change' => null,
+                    'change_state' => 'unavailable',
+                    'comparison_label' => 'Không đối chiếu',
+                ];
+                $state = $metric['change_state'];
+                $changeTone = match ($state) {
+                    'increased', 'new_activity' => 'var(--sa-green)',
+                    'decreased' => '#dc2626',
+                    'unchanged' => '#6b7280',
+                    default => '#9ca3af',
+                };
+                $changeIcon = match ($state) {
+                    'increased' => 'bi-arrow-up',
+                    'decreased' => 'bi-arrow-down',
+                    'unchanged' => 'bi-dash',
+                    default => 'bi-dash',
+                };
+            @endphp
+            <article class="sa-stat" data-business-kpi-card="{{ $kpi['key'] }}" style="min-height: 132px; @if($kpi['key'] === 'revenue') background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-color: rgba(13, 147, 115, 0.25); @endif">
                 <div class="sa-stat-top">
-                    <span class="sa-stat-icon" style="width: 38px; height: 38px; @if($type === 'revenue') background: var(--sa-green); color: #fff; @endif">
-                        <i class="bi {{ $icon }}"></i>
+                    <span class="sa-stat-icon" style="width: 44px; height: 44px; @if($kpi['key'] === 'revenue') background: var(--sa-green); color: #fff; @endif">
+                        <i class="bi {{ $kpi['icon'] }}"></i>
                     </span>
-                    <span class="sa-stat-note">{{ $note }}</span>
+                    @if(!empty($kpi['note']))
+                        <span class="sa-stat-note">{{ $kpi['note'] }}</span>
+                    @else
+                        <span class="sa-stat-note">{{ $metric['comparison_label'] }}</span>
+                    @endif
                 </div>
-                <div class="sa-stat-value" style="font-size: 1.4rem; @if($type === 'revenue') color: var(--sa-green); @endif">
-                    {{ is_numeric($value) ? number_format($value) : $value }}
+                <div class="sa-stat-value" style="font-size: 1.58rem; @if($kpi['key'] === 'revenue' || $kpi['key'] === 'average_order_value') color: var(--sa-green); @endif">
+                    @if($kpi['money'])
+                        {{ number_format((int) $metric['current_value'], 0, ',', '.') }}đ
+                    @else
+                        {{ number_format((int) $metric['current_value'], 0, ',', '.') }}
+                    @endif
                 </div>
-                <div class="sa-stat-label">{{ $label }}</div>
+                <div class="sa-stat-label">{{ $kpi['label'] }}</div>
+                <div style="margin-top: 0.28rem; color: {{ $changeTone }}; font-size: 0.78rem; font-weight: 800; line-height: 1.35;">
+                    @if($state === 'unavailable')
+                        Không đối chiếu
+                    @elseif($state === 'new_activity')
+                        Phát sinh mới
+                    @else
+                        <i class="bi {{ $changeIcon }}"></i>
+                        {{ $metric['percentage_change'] >= 0 ? '+' : '' }}{{ number_format((float) $metric['percentage_change'], 1, ',', '.') }}%
+                        so với {{ $metric['comparison_label'] }}
+                    @endif
+                </div>
             </article>
         @endforeach
     </section>
 
+    <section class="sa-section sa-quick-section" aria-labelledby="quick-overview-title">
+        <div class="sa-section-heading">
+            <div>
+                <p class="sa-section-kicker">Tổng quan nhanh</p>
+                <h2 class="sa-section-title" id="quick-overview-title">Điểm nóng cần theo dõi ngay</h2>
+                <p class="sa-section-copy">Tóm tắt chi nhánh và sản phẩm nổi bật trong kỳ đang chọn.</p>
+            </div>
+        </div>
+
+        <div class="sa-overview-grid">
+            <article class="sa-panel sa-quick-branches">
+                <div class="sa-panel-header sa-overview-card-header">
+                    <div>
+                        <h3 class="sa-panel-title">Top chi nhánh</h3>
+                    </div>
+                </div>
+
+                @if($topBranchHighlights->isNotEmpty())
+                    <div class="sa-quick-branch-list">
+                        @foreach($topBranchHighlights as $branchHighlight)
+                            @php
+                                $highlightGrowth = (float) ($branchHighlight['revenue_change_percentage'] ?? 0);
+                                $highlightGrowthState = (string) ($branchHighlight['change_state'] ?? 'unavailable');
+                                $highlightGrowthLabel = $highlightGrowthState === 'unavailable'
+                                    ? 'Không đối chiếu'
+                                    : (($highlightGrowth > 0 ? '+' : '').number_format($highlightGrowth, 1, ',', '.').'%');
+                            @endphp
+                            <article class="sa-quick-branch-row">
+                                <span class="sa-quick-branch-rank">#{{ $branchHighlight['rank'] }}</span>
+                                <div>
+                                    <h3 class="sa-quick-branch-name">{{ $branchHighlight['branch_name'] }}</h3>
+                                    <div class="sa-quick-branch-meta">
+                                        {{ $branchHighlight['valid_order_count'] }} đơn · {{ number_format($branchHighlight['items_sold']) }} món
+                                    </div>
+                                </div>
+                                <div class="sa-quick-branch-metric">
+                                    <strong>{{ number_format($branchHighlight['revenue'], 0, ',', '.') }}đ</strong>
+                                    @if($highlightGrowthState !== 'unavailable')
+                                        <span>{{ $highlightGrowthLabel }}</span>
+                                    @endif
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="sa-empty" style="min-height: 220px;">
+                        <i class="bi bi-shop"></i>
+                        <strong>Chưa có dữ liệu chi nhánh</strong>
+                    </div>
+                @endif
+            </article>
+
+            <section class="legacy-top-products" aria-label="Bán chạy toàn hệ thống">
+        <div class="legacy-top-products-header">
+            <div>
+                <h2 class="legacy-top-products-title">Bán chạy toàn hệ thống</h2>
+            </div>
+            <div class="legacy-top-products-actions" role="tablist" aria-label="Chọn cách xếp hạng sản phẩm">
+                <a href="{{ $topProductSortLinks['quantity'] }}" class="legacy-top-products-action {{ $topProductSort === 'quantity' ? 'active' : '' }}">Theo số lượng</a>
+                <a href="{{ $topProductSortLinks['revenue'] }}" class="legacy-top-products-action {{ $topProductSort === 'revenue' ? 'active' : '' }}">Theo doanh thu</a>
+            </div>
+        </div>
+
+        @if($topProducts->isEmpty())
+            <div class="legacy-top-products-empty">Chưa có sản phẩm được bán trong kỳ đã chọn.</div>
+        @else
+            <div class="legacy-top-products-list">
+                @foreach($topProducts as $topProduct)
+                    <article class="legacy-top-products-row" data-top-product-row>
+                        <span class="legacy-top-products-rank">{{ $topProduct['rank'] }}</span>
+                        <div class="legacy-top-products-thumb">
+                            <img src="{{ $topProduct['product_image_url'] }}" alt="{{ $topProduct['product_name'] }}" loading="lazy">
+                        </div>
+                        <div>
+                            <h3 class="legacy-top-products-name">{{ $topProduct['product_name'] }}</h3>
+                            <div class="legacy-top-products-meta">
+                                <span>{{ number_format($topProduct['total_quantity']) }} sản phẩm</span>
+                                <span>{{ number_format($topProduct['total_revenue'], 0, ',', '.') }}đ</span>
+                            </div>
+                        </div>
+                        <div class="legacy-top-products-branch">
+                            <strong>Mạnh nhất: {{ $topProduct['strongest_branch_name'] }}</strong>
+                            <span>{{ number_format($topProduct['strongest_branch_quantity']) }} sản phẩm · {{ number_format($topProduct['strongest_branch_revenue'], 0, ',', '.') }}đ</span>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
+            </section>
+        </div>
+    </section>
+
+    <section class="sa-section sa-supplemental-section" aria-labelledby="supplemental-title">
+        <div class="sa-section-heading">
+            <div>
+                <p class="sa-section-kicker">Thông tin bổ sung</p>
+                <h2 class="sa-section-title" id="supplemental-title">Bức tranh vận hành nền tảng</h2>
+                <p class="sa-section-copy">Các thẻ thông tin chi tiết và biểu đồ cột phụ trợ được giữ nguyên dữ liệu, chỉ tổ chức lại để dễ đọc hơn.</p>
+            </div>
+        </div>
+
     <!-- Expandable Stats Sections -->
-    <div style="display: grid; gap: 0.75rem; margin-bottom: 1.5rem;">
+    <div class="sa-supplemental-grid" style="margin-bottom: 0;">
         <!-- Chi tiết doanh thu -->
         <div class="sa-panel" style="overflow: visible;">
-            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none; border-bottom: 1px solid var(--sa-border);" onclick="toggleSection('revenue')">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none;" onclick="toggleSection('revenue')">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <span class="sa-stat-icon" style="width: 32px; height: 32px; background: var(--sa-green); color: #fff;">
+                    <span class="sa-stat-icon" style="width: 40px; height: 40px; background: var(--sa-green); color: #fff;">
                         <i class="bi bi-currency-exchange"></i>
                     </span>
                     <div style="text-align: left;">
@@ -222,26 +1073,26 @@
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">
-                        {{ number_format($branchSummaryStats['today_revenue'], 0, ',', '.') }}đ hôm nay
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.32rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 800;">
+                        {{ number_format($branchSummaryStats['total_revenue'], 0, ',', '.') }}đ trong {{ mb_strtolower($branchSummaryStats['period_label']) }}
                     </span>
-                    <i class="bi bi-chevron-down" style="font-size: 0.85rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-revenue"></i>
+                    <i class="bi bi-chevron-down" style="font-size: 1rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-revenue"></i>
                 </div>
             </button>
             <div id="content-revenue" style="display: none; overflow: hidden; transition: all 0.3s ease;">
-                <div style="padding: 0.75rem 0.9rem; border-top: 1px solid var(--sa-border);">
-                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem;">
+                <div style="padding: 0.9rem 1rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
                         @foreach([
                             ['bi-calendar-day', number_format($branchSummaryStats['today_revenue'], 0, ',', '.').'đ', 'Hôm nay'],
                             ['bi-calendar-week', number_format($branchSummaryStats['month_revenue'], 0, ',', '.').'đ', 'Tháng này'],
                             ['bi-graph-up', number_format($branchSummaryStats['total_revenue'], 0, ',', '.').'đ', 'Tổng cộng'],
                         ] as [$icon, $value, $label])
-                            <div style="padding: 0.65rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff;">
-                                <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem;">
-                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 0.9rem;"></i>
-                                    <span style="color: var(--sa-muted); font-size: 0.62rem; font-weight: 650;">{{ $label }}</span>
+                            <div style="padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.55rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 1rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.72rem; font-weight: 650;">{{ $label }}</span>
                                 </div>
-                                <div style="color: var(--sa-ink); font-size: 1.1rem; font-weight: 800;">{{ $value }}</div>
+                                <div style="color: var(--sa-ink); font-size: 1.24rem; font-weight: 800;">{{ $value }}</div>
                             </div>
                         @endforeach
                     </div>
@@ -251,9 +1102,9 @@
 
         <!-- Chi tiết chi nhánh -->
         <div class="sa-panel" style="overflow: visible;">
-            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none; border-bottom: 1px solid var(--sa-border);" onclick="toggleSection('branch')">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none;" onclick="toggleSection('branch')">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <span class="sa-stat-icon" style="width: 32px; height: 32px;">
+                    <span class="sa-stat-icon" style="width: 40px; height: 40px;">
                         <i class="bi bi-shop"></i>
                     </span>
                     <div style="text-align: left;">
@@ -262,27 +1113,27 @@
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.32rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 800;">
                         {{ $branchSummaryStats['active_branches'] }}/{{ $branchSummaryStats['total_branches'] }} hoạt động
                     </span>
-                    <i class="bi bi-chevron-down" style="font-size: 0.85rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-branch"></i>
+                    <i class="bi bi-chevron-down" style="font-size: 1rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-branch"></i>
                 </div>
             </button>
             <div id="content-branch" style="display: none; overflow: hidden; transition: all 0.3s ease;">
-                <div style="padding: 0.75rem 0.9rem; border-top: 1px solid var(--sa-border);">
-                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem;">
+                <div style="padding: 0.9rem 1rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
                         @foreach([
                             ['bi-diagram-3', $branchSummaryStats['total_branches'], 'Tổng chi nhánh'],
                             ['bi-shop-window', $branchSummaryStats['active_branches'], 'Đang hoạt động'],
                             ['bi-people', $branchSummaryStats['total_branch_staff'], 'Nhân viên'],
                             ['bi-bag-check', $branchSummaryStats['total_orders'], 'Đơn hàng'],
                         ] as [$icon, $value, $label])
-                            <div style="padding: 0.65rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff;">
-                                <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem;">
-                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 0.9rem;"></i>
-                                    <span style="color: var(--sa-muted); font-size: 0.62rem; font-weight: 650;">{{ $label }}</span>
+                            <div style="padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.55rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 1rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.72rem; font-weight: 650;">{{ $label }}</span>
                                 </div>
-                                <div style="color: var(--sa-ink); font-size: 1.1rem; font-weight: 800;">{{ number_format($value) }}</div>
+                                <div style="color: var(--sa-ink); font-size: 1.24rem; font-weight: 800;">{{ number_format($value) }}</div>
                             </div>
                         @endforeach
                     </div>
@@ -292,9 +1143,9 @@
 
         <!-- Chi tiết hệ thống -->
         <div class="sa-panel" style="overflow: visible;">
-            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none; border-bottom: 1px solid var(--sa-border);" onclick="toggleSection('system')">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none;" onclick="toggleSection('system')">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <span class="sa-stat-icon" style="width: 32px; height: 32px;">
+                    <span class="sa-stat-icon" style="width: 40px; height: 40px;">
                         <i class="bi bi-gear"></i>
                     </span>
                     <div style="text-align: left;">
@@ -303,15 +1154,15 @@
                     </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.7rem; font-weight: 800;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.32rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 800;">
                         {{ $activeAdminCount }}/{{ $adminCount }} admin
                     </span>
-                    <i class="bi bi-chevron-down" style="font-size: 0.85rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-system"></i>
+                    <i class="bi bi-chevron-down" style="font-size: 1rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-system"></i>
                 </div>
             </button>
             <div id="content-system" style="display: none; overflow: hidden; transition: all 0.3s ease;">
-                <div style="padding: 0.75rem 0.9rem; border-top: 1px solid var(--sa-border);">
-                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.6rem;">
+                <div style="padding: 0.9rem 1rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
                         @foreach([
                             ['bi-person-badge', $adminCount, 'Tổng Admin'],
                             ['bi-person-check', $activeAdminCount, 'Admin hoạt động'],
@@ -319,12 +1170,12 @@
                             ['bi-grid', $categoryCount, 'Danh mục'],
                             ['bi-diagram-3', $roleCount, 'Vai trò'],
                         ] as [$icon, $value, $label])
-                            <div style="padding: 0.65rem; border: 1px solid var(--sa-border); border-radius: 8px; background: #fff;">
-                                <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem;">
-                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 0.9rem;"></i>
-                                    <span style="color: var(--sa-muted); font-size: 0.62rem; font-weight: 650;">{{ $label }}</span>
+                            <div style="padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.55rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 1rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.72rem; font-weight: 650;">{{ $label }}</span>
                                 </div>
-                                <div style="color: var(--sa-ink); font-size: 1.1rem; font-weight: 800;">{{ number_format($value) }}</div>
+                                <div style="color: var(--sa-ink); font-size: 1.24rem; font-weight: 800;">{{ number_format($value) }}</div>
                             </div>
                         @endforeach
                     </div>
@@ -350,10 +1201,70 @@
                 }
             }
         }
+
+        function syncLegacyAnalyticsPeriodFields() {
+            const selector = document.querySelector('[data-analytics-period-selector]');
+            if (!selector) {
+                return;
+            }
+
+            const periodType = selector.value || 'all';
+            document.querySelectorAll('[data-analytics-period-group]').forEach((field) => {
+                const shouldShow = field.getAttribute('data-analytics-period-group') === periodType;
+                field.classList.toggle('legacy-analytics-hidden', !shouldShow);
+            });
+
+            const compareSelector = document.querySelector('[data-analytics-compare-selector]');
+            if (compareSelector) {
+                const customOption = compareSelector.querySelector('option[value="custom"]');
+                if (customOption) {
+                    customOption.disabled = periodType === 'all';
+                }
+                if (periodType === 'all' && compareSelector.value !== 'none') {
+                    compareSelector.value = 'none';
+                }
+            }
+
+            syncLegacyAnalyticsCompareFields();
+        }
+
+        function syncLegacyAnalyticsCompareFields() {
+            const compareSelector = document.querySelector('[data-analytics-compare-selector]');
+            const periodSelector = document.querySelector('[data-analytics-period-selector]');
+
+            if (!compareSelector || !periodSelector) {
+                return;
+            }
+
+            const compareType = compareSelector.value || 'none';
+            const periodType = periodSelector.value || 'all';
+
+            document.querySelectorAll('[data-analytics-compare-group]').forEach((field) => {
+                const fieldPeriod = field.getAttribute('data-analytics-compare-group');
+                const shouldShow = compareType === 'custom' && fieldPeriod === periodType;
+                field.classList.toggle('legacy-analytics-hidden', !shouldShow);
+            });
+        }
+
+        document.addEventListener('change', function (event) {
+            if (event.target && event.target.matches('[data-analytics-period-selector]')) {
+                syncLegacyAnalyticsPeriodFields();
+                return;
+            }
+
+            if (event.target && event.target.matches('[data-analytics-compare-selector]')) {
+                syncLegacyAnalyticsCompareFields();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            syncLegacyAnalyticsPeriodFields();
+            syncLegacyAnalyticsCompareFields();
+        });
     </script>
 
     <!-- System Charts -->
-    <section class="sa-grid-2" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem;" aria-label="Biểu đồ hệ thống">
+    <section class="sa-charts-grid" aria-label="Biểu đồ hệ thống">
         <!-- System Revenue Chart (7-day) -->
         <article class="sa-panel">
             <div class="sa-panel-header"><div><h2 class="sa-panel-title">Doanh thu 7 ngày</h2><p class="sa-panel-note">Đơn đã thanh toán hoặc hoàn thành</p></div><i class="bi bi-graph-up-arrow text-success"></i></div>
@@ -389,179 +1300,39 @@
         </article>
     </section>
 
-    <!-- Branch Ranking Table -->
-    @php
-        $rankingQueryBase = request()->except('ranking_period');
-        $rankingPeriod = $rankingPeriod ?? 'all';
-    @endphp
-    <section class="sa-panel" id="branch-ranking" data-branch-ranking-region style="margin-top: 1.5rem;">
-        <div class="sa-panel-header" style="gap: 0.8rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+    </section>
+
+    <section class="sa-section sa-business-section" aria-labelledby="business-analytics-title">
+        <div class="sa-section-heading">
             <div>
-                <h2 class="sa-panel-title">Quản Lý chi nhánh - bảng xếp hạng</h2>
-                <p class="sa-panel-note">So sánh hiệu suất từng chi nhánh theo đơn hàng, doanh thu và nhân sự</p>
-            </div>
-            <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; justify-content:flex-end; margin-left:auto;">
-                <div style="display:flex; flex-wrap:wrap; gap:0.25rem; padding:0.2rem; border:1px solid var(--sa-border); border-radius:999px; background:#fff;">
-                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'all'])) }}#branch-ranking" data-ranking-period="all" class="sa-btn {{ $rankingPeriod === 'all' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'all' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tất cả</a>
-                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'week'])) }}#branch-ranking" data-ranking-period="week" class="sa-btn {{ $rankingPeriod === 'week' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'week' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tuần</a>
-                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'month'])) }}#branch-ranking" data-ranking-period="month" class="sa-btn {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
-                    <a href="{{ route('admin.super-admin', array_merge($rankingQueryBase, ['ranking_period' => 'year'])) }}#branch-ranking" data-ranking-period="year" class="sa-btn {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="min-height:32px; padding:0.28rem 0.62rem; border-radius:999px; font-size:0.72rem; line-height:1; {{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
-                </div>
-                <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal" style="min-height:32px; padding:0.28rem 0.7rem; border-radius:999px; white-space:nowrap; font-size:0.75rem;"><i class="bi bi-plus-circle"></i> Thêm chi nhánh</button>
+                <p class="sa-section-kicker">Phân tích kinh doanh</p>
+                <h2 class="sa-section-title" id="business-analytics-title">So sánh, đào sâu theo chi nhánh và theo sản phẩm</h2>
+                <p class="sa-section-copy">Ba module analytics dùng chung cùng payload hiện có, chỉ đổi bố cục hiển thị bằng tab phía client.</p>
             </div>
         </div>
 
-        @if($branchRankingStats->count() > 0)
-            <div class="sa-table-wrap">
-                <table class="sa-table">
-                    <thead>
-                        <tr>
-                            <th>Hạng</th>
-                            <th>Chi nhánh</th>
-                            <th>Quản trị viên</th>
-                            <th>Trạng thái</th>
-                            <th>Nhân viên</th>
-                            <th>Đơn hàng</th>
-                            <th>Hoàn thành</th>
-                            <th>Đơn hủy</th>
-                            <th>Doanh thu</th>
-                            <th>GTB/đơn</th>
-                            <th>Hiệu suất</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($branchRankingStats as $index => $branch)
-                            <tr data-branch-row="{{ $branch['branch_id'] }}" @if($index === 0) style="background-color: #f0fdf4;" @endif>
-                                <td style="font-weight: 800; color: var(--sa-green);">{{ $index + 1 }}</td>
-                                <td data-branch-name-cell style="font-weight: 800; color: var(--sa-ink);">{{ $branch['branch_name'] }}</td>
-                                <td style="font-size: 0.69rem; line-height: 1.4;">
-                                    @if($branch['admin_id'])
-                                        <div style="color: var(--sa-ink); font-weight: 700;">{{ $branch['admin_name'] }}</div>
-                                        <div style="color: var(--sa-muted); font-size: 0.62rem;">{{ $branch['admin_email'] }}</div>
-                                    @else
-                                        <span style="color: var(--sa-muted);">Chưa gán</span>
-                                    @endif
-                                </td>
-                                <td data-branch-status-cell>
-                                    @if($branch['branch_status'])
-                                        <span class="sa-state sa-state-active" data-branch-status-badge="{{ $branch['branch_id'] }}"><i class="bi bi-check-circle"></i> Hoạt động</span>
-                                    @else
-                                        <span class="sa-state" style="background: #fef2f2; color: #991b1b;" data-branch-status-badge="{{ $branch['branch_id'] }}"><i class="bi bi-pause-circle"></i> Tạm ngưng</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span style="color: var(--sa-ink); font-weight: 700;">{{ $branch['active_staff_count'] }}</span><span style="color: var(--sa-muted);">/{{ $branch['staff_count'] }}</span>
-                                </td>
-                                <td style="text-align: center;">{{ number_format($branch['total_orders']) }}</td>
-                                <td style="text-align: center; color: #15803d; font-weight: 700;">{{ number_format($branch['completed_orders']) }}</td>
-                                <td style="text-align: center; color: #991b1b; font-weight: 700;">{{ number_format($branch['cancelled_orders']) }}</td>
-                                <td style="font-weight: 700; color: var(--sa-green);">{{ number_format($branch['revenue'], 0, ',', '.').'đ' }}</td>
-                                <td style="font-weight: 700;">{{ number_format($branch['average_order_value'], 0, ',', '.').'đ' }}</td>
-                                <td style="font-weight: 800; color: var(--sa-green);">{{ $branch['performance_percentage'] }}%</td>
-                                <td>
-                                    <div class="sa-actions">
-                                        <button class="sa-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#branchEditModal{{ $branch['branch_id'] }}" title="Sửa chi nhánh">
-                                            <i class="bi bi-gear"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+        <div class="sa-panel sa-analytics-shell" id="analytics-tabs-shell">
+            <div class="sa-analytics-tabs" role="tablist" aria-label="Chuyển vùng phân tích kinh doanh">
+                <button type="button" class="sa-analytics-tab active" data-analytics-tab="branch-ranking" role="tab" aria-selected="true">So sánh chi nhánh</button>
+                <button type="button" class="sa-analytics-tab" data-analytics-tab="branch-product-detail" role="tab" aria-selected="false">Bán chạy theo chi nhánh</button>
+                <button type="button" class="sa-analytics-tab" data-analytics-tab="focus-product-section" role="tab" aria-selected="false">Một món bán tốt ở đâu?</button>
             </div>
-            @foreach($branchRankingStats as $branch)
-                @php
-                    $isEditingThisBranch = (string) old('branch_modal_id') === (string) $branch['branch_id'];
-                    $branchStatusValue = (int) ($isEditingThisBranch ? old('status', $branch['branch_status']) : $branch['branch_status']);
-                @endphp
-                <div class="modal fade" id="branchEditModal{{ $branch['branch_id'] }}" tabindex="-1" aria-labelledby="branchEditModalLabel{{ $branch['branch_id'] }}" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered modal-lg">
-                        <form class="modal-content branch-edit-form" method="POST" action="{{ route('admin.branches.update', ['branch' => $branch['branch_id']], false) }}" data-branch-id="{{ $branch['branch_id'] }}" style="border:0;border-radius:8px;">
-                            @csrf
-                            @method('PUT')
-                            <input type="hidden" name="form_type" value="branch-edit">
-                            <input type="hidden" name="branch_modal_id" value="{{ $branch['branch_id'] }}">
-                            <div class="modal-header">
-                                <h2 class="modal-title fs-6 fw-bold" id="branchEditModalLabel{{ $branch['branch_id'] }}">Sửa chi nhánh</h2>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="alert alert-danger d-none" role="alert" data-branch-edit-errors="{{ $branch['branch_id'] }}" style="font-size: 0.8rem;"></div>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold" for="branch_name_{{ $branch['branch_id'] }}">Tên chi nhánh <span class="text-danger">*</span></label>
-                                        <input id="branch_name_{{ $branch['branch_id'] }}" class="form-control @error('name', 'editBranch') is-invalid @enderror" name="name" value="{{ $isEditingThisBranch ? old('name', $branch['branch_name']) : $branch['branch_name'] }}" placeholder="Nhập tên chi nhánh" required>
-                                        @error('name', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold" for="branch_code_{{ $branch['branch_id'] }}">Mã chi nhánh <span class="text-danger">*</span></label>
-                                        <input id="branch_code_{{ $branch['branch_id'] }}" class="form-control @error('code', 'editBranch') is-invalid @enderror" name="code" value="{{ $isEditingThisBranch ? old('code', $branch['branch_code']) : $branch['branch_code'] }}" placeholder="VD: CN1, CN2" required>
-                                        @error('code', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
-                                </div>
-                                <div class="row g-3 mb-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold" for="branch_email_{{ $branch['branch_id'] }}">Email</label>
-                                        <input id="branch_email_{{ $branch['branch_id'] }}" class="form-control @error('email', 'editBranch') is-invalid @enderror" type="email" name="email" value="{{ $isEditingThisBranch ? old('email', $branch['branch_email']) : $branch['branch_email'] }}" placeholder="branch@example.com">
-                                        @error('email', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold" for="branch_phone_{{ $branch['branch_id'] }}">Điện thoại</label>
-                                        <input id="branch_phone_{{ $branch['branch_id'] }}" class="form-control @error('phone', 'editBranch') is-invalid @enderror" type="text" name="phone" value="{{ $isEditingThisBranch ? old('phone', $branch['branch_phone']) : $branch['branch_phone'] }}" placeholder="0123456789">
-                                        @error('phone', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold" for="branch_address_{{ $branch['branch_id'] }}">Địa chỉ</label>
-                                    <textarea id="branch_address_{{ $branch['branch_id'] }}" class="form-control @error('address', 'editBranch') is-invalid @enderror" name="address" rows="2" placeholder="Nhập địa chỉ chi nhánh">{{ $isEditingThisBranch ? old('address', $branch['branch_address']) : $branch['branch_address'] }}</textarea>
-                                    @error('address', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                                </div>
-                                @include('admin.partials.branch-map-link', [
-                                    'pickerId' => 'super-admin-edit-branch-map-link-'.$branch['branch_id'],
-                                    'label' => 'Link Google Maps',
-                                    'hint' => 'Dán link Google Maps có chứa tọa độ để cập nhật latitude/longitude cho chi nhánh.',
-                                    'addressTarget' => '#branch_address_'.$branch['branch_id'],
-                                    'latName' => 'latitude',
-                                    'lngName' => 'longitude',
-                                    'latValue' => $isEditingThisBranch ? old('latitude', $branch['branch_latitude']) : $branch['branch_latitude'],
-                                    'lngValue' => $isEditingThisBranch ? old('longitude', $branch['branch_longitude']) : $branch['branch_longitude'],
-                                    'mapLinkValue' => ($branch['branch_latitude'] !== null && $branch['branch_longitude'] !== null) ? 'https://www.google.com/maps?q='.$branch['branch_latitude'].','.$branch['branch_longitude'] : '',
-                                    'errorBag' => 'editBranch',
-                                ])
-                                <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
-                                    <input type="hidden" name="status" value="{{ $branchStatusValue ? 1 : 0 }}" data-branch-status-input="{{ $branch['branch_id'] }}">
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm px-3 fw-semibold {{ $branchStatusValue ? 'btn-success' : 'btn-danger' }}"
-                                        data-branch-status-toggle="{{ $branch['branch_id'] }}"
-                                    >
-                                        <i class="bi bi-{{ $branchStatusValue ? 'toggle-on' : 'toggle-off' }} me-1"></i>
-                                        <span data-branch-status-label="{{ $branch['branch_id'] }}">{{ $branchStatusValue ? 'Đóng chi nhánh' : 'Mở chi nhánh' }}</span>
-                                    </button>
-                                    <small class="text-secondary">Nhấn để đổi trạng thái chi nhánh</small>
-                                </div>
-                            </div>
-                            <div class="modal-footer" style="gap: 0.75rem;">
-                                <button type="button" class="sa-btn" data-bs-dismiss="modal">Hủy</button>
-                                <button type="submit" class="sa-btn sa-btn-primary" style="min-width: 160px; background: var(--sa-green); color: #fff; border-color: var(--sa-green);">
-                                    <i class="bi bi-gear"></i>Lưu thay đổi
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+
+            <div class="sa-analytics-panels">
+                <div class="sa-analytics-panel" data-analytics-tab-panel="branch-ranking" role="tabpanel">
+                    @include('admin.super-admin.partials.branch-ranking')
                 </div>
-            @endforeach
-        @else
-            <div class="sa-empty">
-                <i class="bi bi-shop"></i>
-                <strong>Chưa có dữ liệu chi nhánh</strong>
-                <p style="margin-top: 0.3rem; font-size: 0.7rem;">Hệ thống chưa có chi nhánh hoặc dữ liệu chưa được đồng bộ</p>
+                <div class="sa-analytics-panel" data-analytics-tab-panel="branch-product-detail" role="tabpanel" hidden>
+                    @include('admin.super-admin.partials.branch-product-detail')
+                </div>
+                <div class="sa-analytics-panel" data-analytics-tab-panel="focus-product-section" role="tabpanel" hidden>
+                    @include('admin.super-admin.partials.product-branch-performance')
+                </div>
             </div>
-        @endif
+        </div>
     </section>
 
+    </div>
     <div class="modal fade" id="createBranchModal" tabindex="-1" aria-labelledby="createBranchModalLabel" aria-hidden="true" data-auto-open="{{ old('form_type') === 'branch' ? 'true' : 'false' }}">
         <div class="modal-dialog modal-lg">
             <form class="modal-content" method="POST" action="{{ route('admin.branches.store', [], false) }}" style="border:0;border-radius:8px;">
@@ -635,6 +1406,15 @@
         </div>
     </div>
 
+    <section class="sa-section sa-ops-grid" aria-labelledby="ops-title">
+        <div class="sa-section-heading">
+            <div>
+                <p class="sa-section-kicker">Quản trị vận hành</p>
+                <h2 class="sa-section-title" id="ops-title">Nhân sự quản trị và thao tác hệ thống</h2>
+                <p class="sa-section-copy">Giữ nguyên bộ lọc, modal, phân quyền và trạng thái hoạt động của từng quản trị viên.</p>
+            </div>
+        </div>
+
     <div id="admins-region" data-admins-region>
     <section class="sa-panel" id="admins">
         <div class="sa-panel-header">
@@ -642,6 +1422,22 @@
         </div>
         <form class="sa-filter-form" method="GET" action="{{ route('admin.super-admin') }}" data-admins-filter-form>
             <input class="sa-control" type="search" name="q" value="{{ $filters['search'] }}" placeholder="Tìm theo tên hoặc email" aria-label="Tìm theo tên hoặc email">
+            <input type="hidden" name="analytics_period_type" value="{{ $analyticsContext->periodType }}">
+            <input type="hidden" name="analytics_date" value="{{ request('analytics_date') }}">
+            <input type="hidden" name="analytics_week" value="{{ request('analytics_week') }}">
+            <input type="hidden" name="analytics_month" value="{{ request('analytics_month') }}">
+            <input type="hidden" name="analytics_year" value="{{ request('analytics_year') }}">
+            <input type="hidden" name="analytics_start_date" value="{{ request('analytics_start_date') }}">
+            <input type="hidden" name="analytics_end_date" value="{{ request('analytics_end_date') }}">
+            <input type="hidden" name="analytics_compare_type" value="{{ request('analytics_compare_type') }}">
+            <input type="hidden" name="analytics_compare_date" value="{{ request('analytics_compare_date') }}">
+            <input type="hidden" name="analytics_compare_month" value="{{ request('analytics_compare_month') }}">
+            <input type="hidden" name="analytics_compare_year" value="{{ request('analytics_compare_year') }}">
+            <input type="hidden" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}">
+            <input type="hidden" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}">
+            @foreach($analyticsContext->normalizedBranchIds() as $branchId)
+                <input type="hidden" name="analytics_branch_ids[]" value="{{ $branchId }}">
+            @endforeach
             <select class="sa-control" name="role" aria-label="Lọc vai trò">
                 <option value="all">Tất cả vai trò</option>
                 <option value="super" @selected($filters['role'] === 'super')>Quản trị cấp cao</option>
@@ -660,7 +1456,7 @@
             </select>
             <div class="sa-filter-actions">
                 <button class="sa-btn sa-btn-primary" type="submit"><i class="bi bi-funnel"></i> Lọc</button>
-                <a class="sa-btn" href="{{ route('admin.super-admin') }}#admins" title="Xóa bộ lọc" data-admins-reset><i class="bi bi-arrow-counterclockwise"></i></a>
+                <a class="sa-btn" href="{{ route('admin.super-admin', request()->except(['q', 'status', 'role', 'created'])) }}#admins" title="Xóa bộ lọc" data-admins-reset><i class="bi bi-arrow-counterclockwise"></i></a>
             </div>
         </form>
 
@@ -707,9 +1503,9 @@
                             <td>
                                 <div class="sa-actions">
                                     @if($adminUser->isSuperAdmin())
-                                        <a class="sa-action-btn" href="{{ route('admin.super-admin', ['q' => $adminUser->email]) }}" title="Xem trang quản trị"><i class="bi bi-eye"></i></a>
+                                        <a class="sa-action-btn" href="{{ route('admin.preview-admin') }}" title="Vào trang admin bằng quyền super admin"><i class="bi bi-eye"></i></a>
                                     @elseif($adminUser->branch_id)
-                                        <a class="sa-action-btn" href="{{ route('admin.dashboard', ['branch_id' => $adminUser->branch_id]) }}" title="Xem tổng quan chi nhánh"><i class="bi bi-eye"></i></a>
+                                        <a class="sa-action-btn" href="{{ route('admin.preview-admin', ['branch_id' => $adminUser->branch_id]) }}" title="Vào trang admin của chi nhánh bằng quyền super admin"><i class="bi bi-eye"></i></a>
                                     @else
                                         <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                     @endif
@@ -785,18 +1581,18 @@
 
                         <!-- Horizontal Tab Navigation -->
                         <div style="display: grid; grid-template-columns: repeat({{ $tabCount }}, minmax(0, 1fr)); gap: 0; border-bottom: 2px solid #e1e6e4; margin-bottom: 1.5rem;">
-                            <button class="admin-action-tab" data-tab="permissions" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'permissions', {{ $adminUser->id }})">
+                            <button class="admin-action-tab" data-tab="permissions" style="width: 100%; min-width: 0; height: 76px; padding: 0.7rem 0.55rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.88rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; white-space: normal; line-height: 1.2;" onclick="switchTab(event, 'permissions', {{ $adminUser->id }})">
                                 <i class="bi bi-key"></i><span>Phân quyền</span>
                             </button>
-                            <button class="admin-action-tab" data-tab="branch" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'branch', {{ $adminUser->id }})">
+                            <button class="admin-action-tab" data-tab="branch" style="width: 100%; min-width: 0; height: 76px; padding: 0.7rem 0.55rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.88rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; white-space: normal; line-height: 1.2;" onclick="switchTab(event, 'branch', {{ $adminUser->id }})">
                                 <i class="bi bi-shop"></i><span>Gán nhánh</span>
                             </button>
                             @if(!$adminUser->is(auth()->user()))
-                                <button class="admin-action-tab" data-tab="security" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'security', {{ $adminUser->id }})">
+                                <button class="admin-action-tab" data-tab="security" style="width: 100%; min-width: 0; height: 76px; padding: 0.7rem 0.55rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.88rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; white-space: normal; line-height: 1.2;" onclick="switchTab(event, 'security', {{ $adminUser->id }})">
                                     <i class="bi bi-lock"></i><span>Khóa/Mở khóa</span>
                                 </button>
                             @endif
-                            <button class="admin-action-tab" data-tab="login-history" style="width: 100%; min-width: 0; height: 68px; padding: 0.55rem 0.4rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.8rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.18rem; white-space: normal; line-height: 1.15;" onclick="switchTab(event, 'login-history', {{ $adminUser->id }})">
+                            <button class="admin-action-tab" data-tab="login-history" style="width: 100%; min-width: 0; height: 76px; padding: 0.7rem 0.55rem; border: none; background: none; color: #6b7280; cursor: pointer; font-weight: 700; font-size: 0.88rem; border-bottom: 3px solid transparent; transition: all 0.2s ease; text-align: center; position: relative; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; white-space: normal; line-height: 1.2;" onclick="switchTab(event, 'login-history', {{ $adminUser->id }})">
                                 <i class="bi bi-clock-history"></i><span>Lịch sử đăng nhập</span>
                             </button>
                         </div>
@@ -805,10 +1601,10 @@
                         <!-- Tab: Phân quyền -->
                         <div class="admin-action-content" id="content-permissions-{{ $adminUser->id }}" style="display: block;">
                             <div style="display: grid; gap: 0.75rem;">
-                                <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
-                                    <div style="font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Vai trò hiện tại</div>
+                                <div style="padding: 0.9rem; background: #f8faf9; border-radius: 10px;">
+                                    <div style="font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.55rem;">Vai trò hiện tại</div>
                                     <div data-current-role>
-                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}" style="font-size: 0.75rem;"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span>
+                                        <span class="sa-role {{ $adminUser->isSuperAdmin() ? 'sa-role-super' : 'sa-role-admin' }}" style="font-size: 0.84rem;"><i class="bi {{ $adminUser->isSuperAdmin() ? 'bi-shield-fill-check' : 'bi-gear' }}"></i>{{ $adminUser->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị hệ thống' }}</span>
                                     </div>
                                 </div>
 
@@ -816,9 +1612,9 @@
                                 <form method="POST" action="{{ route('admin.super-admin.update-role', $adminUser) }}" class="admin-role-form" data-admin-id="{{ $adminUser->id }}" style="margin: 0;">
                                     @csrf
                                     @method('PATCH')
-                                    <div style="margin-bottom: 0.75rem;">
-                                        <label style="display: block; font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Chọn vai trò mới</label>
-                                        <select name="role_id" class="form-select" style="font-size: 0.85rem;">
+                                    <div style="margin-bottom: 0.85rem;">
+                                        <label style="display: block; font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.55rem;">Chọn vai trò mới</label>
+                                        <select name="role_id" class="form-select" style="font-size: 0.95rem;">
                                             <option value="">-- Chọn vai trò --</option>
                                             <option value="2" @selected($adminUser->role_id === 2)>Quản trị hệ thống</option>
                                             <option value="3" @selected($adminUser->role_id === 3)>Quản trị cấp cao</option>
@@ -837,9 +1633,9 @@
                         <!-- Tab: Gán nhánh -->
                         <div class="admin-action-content" id="content-branch-{{ $adminUser->id }}" style="display: none;">
                             <div style="display: grid; gap: 0.75rem;">
-                                <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
-                                    <div style="font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Chi nhánh hiện tại</div>
-                                    <div data-current-branch style="color: #111827; font-weight: 600; font-size: 0.85rem;">
+                                <div style="padding: 0.9rem; background: #f8faf9; border-radius: 10px;">
+                                    <div style="font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.55rem;">Chi nhánh hiện tại</div>
+                                    <div data-current-branch style="color: #111827; font-weight: 600; font-size: 0.95rem;">
                                         @if($adminUser->branch)
                                             {{ $adminUser->branch->name }} ({{ $adminUser->branch->code }})
                                         @else
@@ -851,9 +1647,9 @@
                                 <form method="POST" action="{{ route('admin.super-admin.update-branch', $adminUser) }}" class="admin-branch-form" data-admin-id="{{ $adminUser->id }}" style="margin: 0;">
                                     @csrf
                                     @method('PATCH')
-                                    <div style="margin-bottom: 0.75rem;">
-                                        <label style="display: block; font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.5rem;">Chọn chi nhánh</label>
-                                        <select name="branch_id" class="form-select" style="font-size: 0.85rem;">
+                                    <div style="margin-bottom: 0.85rem;">
+                                        <label style="display: block; font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.55rem;">Chọn chi nhánh</label>
+                                        <select name="branch_id" class="form-select" style="font-size: 0.95rem;">
                                             <option value="">-- Không gán --</option>
                                             @forelse($branches ?? [] as $branch)
                                                 @php
@@ -881,8 +1677,8 @@
                         <!-- Tab: Lịch sử đăng nhập -->
                         <div class="admin-action-content" id="content-login-history-{{ $adminUser->id }}" style="display: none;">
                             <div style="display: grid; gap: 0.75rem;">
-                                <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
-                                    <div style="font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.4rem;">Đăng nhập gần nhất</div>
+                                <div style="padding: 0.9rem; background: #f8faf9; border-radius: 10px;">
+                                    <div style="font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.45rem;">Đăng nhập gần nhất</div>
                                     <div style="color: #111827; font-weight: 700;">
                                         {{ $adminUser->last_login_at?->format('d/m/Y H:i') ?? 'Chưa đăng nhập' }}
                                     </div>
@@ -894,30 +1690,30 @@
                                 <div style="padding: 0.75rem; background: #fff; border: 1px solid #e5ece9; border-radius: 6px;">
                                     <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
                                         <div class="flex-grow-1" style="min-width: 220px;">
-                                            <label class="form-label small fw-bold mb-1" style="font-size: 0.7rem; color: #6b7280; text-transform: uppercase;">Tìm theo ngày</label>
+                                            <label class="form-label small fw-bold mb-1" style="font-size: 0.82rem; color: #6b7280; text-transform: uppercase;">Tìm theo ngày</label>
                                             <input type="date" class="form-control form-control-sm" data-login-history-date-input="{{ $adminUser->id }}" onchange="filterLoginHistory({{ $adminUser->id }})">
                                         </div>
                                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearLoginHistoryFilter({{ $adminUser->id }})">
                                             Xóa lọc
                                         </button>
                                     </div>
-                                    <div style="font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.75rem;">4 lần đăng nhập gần nhất trong 3 tháng</div>
+                                    <div style="font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.8rem;">4 lần đăng nhập gần nhất trong 3 tháng</div>
 
                                     @if($loginHistories->isNotEmpty())
-                                        <div style="display: grid; gap: 0.6rem;" data-login-history-list="{{ $adminUser->id }}">
+                                        <div style="display: grid; gap: 0.8rem;" data-login-history-list="{{ $adminUser->id }}">
                                             @foreach($loginHistories as $history)
                                                 <div
-                                                    style="display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.65rem 0.75rem; background: #f8faf9; border-radius: 6px;"
+                                                    style="display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.8rem 0.9rem; background: #f8faf9; border-radius: 10px;"
                                                     data-login-history-row="{{ $adminUser->id }}"
                                                     data-login-date="{{ $history->created_at?->format('Y-m-d') }}"
                                                     data-default-visible="{{ $loop->index < 4 ? '1' : '0' }}"
                                                     @if($loop->index >= 4) class="d-none" @endif
                                                 >
                                                     <div style="min-width: 0;">
-                                                        <div style="color: #111827; font-weight: 700; font-size: 0.88rem;">{{ $history->created_at?->format('d/m/Y H:i') }}</div>
-                                                        <div style="color: #6b7280; font-size: 0.78rem;">{{ $history->action }}</div>
+                                                        <div style="color: #111827; font-weight: 700; font-size: 0.98rem;">{{ $history->created_at?->format('d/m/Y H:i') }}</div>
+                                                        <div style="color: #6b7280; font-size: 0.86rem;">{{ $history->action }}</div>
                                                     </div>
-                                                    <div style="color: #6b7280; font-size: 0.78rem; white-space: nowrap;">{{ $history->ip_address ?: 'Nội bộ' }}</div>
+                                                    <div style="color: #6b7280; font-size: 0.86rem; white-space: nowrap;">{{ $history->ip_address ?: 'Nội bộ' }}</div>
                                                 </div>
                                             @endforeach
                                         </div>
@@ -934,7 +1730,7 @@
                             <div class="admin-action-content" id="content-security-{{ $adminUser->id }}" style="display: none;">
                                 <div style="display: grid; gap: 0.75rem;">
                                     <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
-                                        <div style="font-size: 0.7rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.3rem;">Trạng thái tài khoản</div>
+                                        <div style="font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.3rem;">Trạng thái tài khoản</div>
                                         <div>
                                             <span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}" style="font-size: 0.75rem;">{{ $adminUser->is_active ? '✓ Hoạt động' : '✕ Đã khóa' }}</span>
                                         </div>
@@ -955,8 +1751,18 @@
         </div>
     @endforeach
     </div>
+    </section>
 
-    <section class="sa-grid-main">
+    <section class="sa-section" aria-labelledby="health-title">
+        <div class="sa-section-heading">
+            <div>
+                <p class="sa-section-kicker">Sức khỏe hệ thống</p>
+                <h2 class="sa-section-title" id="health-title">Theo dõi log và trạng thái dịch vụ</h2>
+                <p class="sa-section-copy">Đây là lớp thông tin cuối trang, ít cạnh tranh thị giác với KPI và analytics nhưng vẫn giữ nguyên dữ liệu.</p>
+            </div>
+        </div>
+
+    <section class="sa-health-grid">
         <article class="sa-panel" id="audit">
             <div class="sa-panel-header"><div><h2 class="sa-panel-title">Nhật ký hệ thống</h2><p class="sa-panel-note">Sự kiện xác thực và quản trị gần nhất</p></div><i class="bi bi-journal-text text-success"></i></div>
             @forelse($activityLogs as $log)
@@ -981,6 +1787,7 @@
                 <div class="sa-health-row"><span class="sa-health-name"><i class="bi bi-envelope"></i>Email</span><span class="sa-health-value">{{ $systemHealth['mail'] }}</span></div>
             </div>
         </aside>
+    </section>
     </section>
 
 
@@ -1343,35 +2150,143 @@ async function loadAdminsRegion(url) {
     window.history.replaceState({}, '', targetUrl.toString());
 }
 
-async function loadBranchRankingRegion(url) {
-    const targetUrl = new URL(url, window.location.origin);
-    targetUrl.hash = 'branch-ranking';
+let branchSectionLoading = false;
 
-    const response = await fetch(targetUrl.toString(), {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'text/html',
-        },
+function resolveAnalyticsTabFromHash(hashValue = '') {
+    const normalizedHash = String(hashValue || '').replace(/^#/, '');
+    if (normalizedHash === 'focus-product-section') {
+        return 'focus-product-section';
+    }
+    if (normalizedHash === 'branch-product-detail') {
+        return 'branch-product-detail';
+    }
+
+    return 'branch-ranking';
+}
+
+function setAnalyticsTab(tabId, options = {}) {
+    const targetTabId = resolveAnalyticsTabFromHash(tabId);
+    const buttons = document.querySelectorAll('[data-analytics-tab]');
+    const panels = document.querySelectorAll('[data-analytics-tab-panel]');
+
+    buttons.forEach((button) => {
+        const isActive = button.getAttribute('data-analytics-tab') === targetTabId;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
 
-    if (!response.ok) {
-        window.location.href = targetUrl.toString();
+    panels.forEach((panel) => {
+        const isActive = panel.getAttribute('data-analytics-tab-panel') === targetTabId;
+        panel.hidden = !isActive;
+    });
+
+    if (options.updateHash === true) {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.hash = targetTabId;
+        window.history.replaceState({}, '', nextUrl.toString());
+    }
+}
+
+function syncAnalyticsTabFromLocation() {
+    setAnalyticsTab(window.location.hash || 'branch-ranking');
+}
+
+async function loadSuperAdminAnalyticsRegions(url, options = {}) {
+    if (branchSectionLoading) {
         return;
     }
 
-    const html = await response.text();
-    const parser = new DOMParser();
-    const nextDoc = parser.parseFromString(html, 'text/html');
-    const nextRegion = nextDoc.querySelector('[data-branch-ranking-region]');
-    const currentRegion = document.querySelector('[data-branch-ranking-region]');
+    branchSectionLoading = true;
+    const targetUrl = new URL(url, window.location.origin);
+    const targetHash = options.hash || targetUrl.hash || 'branch-ranking';
+    targetUrl.hash = targetHash;
+    const shouldPushState = options.pushState === true;
+    const shouldUpdateHistory = options.updateHistory !== false;
+    const regionSelectors = options.regionSelectors || [
+        '[data-branch-ranking-region]',
+        '[data-branch-product-detail-region]',
+        '[data-product-branch-performance-region]',
+    ];
+    const currentRegions = regionSelectors
+        .map((selector) => document.querySelector(selector))
+        .filter(Boolean);
 
-    if (!nextRegion || !currentRegion) {
-        window.location.href = targetUrl.toString();
-        return;
+    currentRegions.forEach((region) => region.classList.add('branch-product-loading'));
+
+    try {
+        const response = await fetch(targetUrl.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html',
+            },
+        });
+
+        if (!response.ok) {
+            window.location.href = targetUrl.toString();
+            return;
+        }
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const nextDoc = parser.parseFromString(html, 'text/html');
+        let replaced = false;
+
+        regionSelectors.forEach((selector) => {
+            const nextRegion = nextDoc.querySelector(selector);
+            const currentRegion = document.querySelector(selector);
+
+            if (nextRegion && currentRegion) {
+                currentRegion.replaceWith(nextRegion);
+                replaced = true;
+            }
+        });
+
+        if (!replaced) {
+            window.location.href = targetUrl.toString();
+            return;
+        }
+
+        if (shouldUpdateHistory) {
+            if (shouldPushState) {
+                window.history.pushState({}, '', targetUrl.toString());
+            } else {
+                window.history.replaceState({}, '', targetUrl.toString());
+            }
+        }
+
+        syncAnalyticsTabFromLocation();
+    } catch (error) {
+        console.error('Analytics region load error:', error);
+    } finally {
+        branchSectionLoading = false;
+        regionSelectors.forEach((selector) => {
+            document.querySelector(selector)?.classList.remove('branch-product-loading');
+        });
     }
+}
 
-    currentRegion.replaceWith(nextRegion);
-    window.history.replaceState({}, '', targetUrl.toString());
+async function loadBranchComparisonRegion(url, options = {}) {
+    return loadSuperAdminAnalyticsRegions(url, {
+        ...options,
+        hash: 'branch-ranking',
+        regionSelectors: ['[data-branch-ranking-region]'],
+    });
+}
+
+async function loadBranchRankingRegion(url, options = {}) {
+    return loadSuperAdminAnalyticsRegions(url, {
+        ...options,
+        hash: 'branch-product-detail',
+        regionSelectors: ['[data-branch-product-detail-region]'],
+    });
+}
+
+async function loadFocusProductRegion(url, options = {}) {
+    return loadSuperAdminAnalyticsRegions(url, {
+        ...options,
+        hash: 'focus-product-section',
+        regionSelectors: ['[data-product-branch-performance-region]'],
+    });
 }
 
 // Initialize first tab as active on modal open
@@ -1403,14 +2318,76 @@ document.addEventListener('submit', function(e) {
         url.search = params.toString();
 
         loadAdminsRegion(url.toString());
+        return;
+    }
+
+    if (e.target && e.target.matches('[data-branch-ranking-form]')) {
+        e.preventDefault();
+
+        const form = e.target;
+        const params = new URLSearchParams(new FormData(form));
+        const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
+        url.search = params.toString();
+
+        if (form.closest('[data-branch-ranking-region]')) {
+            loadBranchComparisonRegion(url.toString());
+            return;
+        }
+
+        loadBranchRankingRegion(url.toString());
+        return;
+    }
+
+    if (e.target && e.target.matches('[data-product-branch-performance-form]')) {
+        e.preventDefault();
+
+        const form = e.target;
+        const params = new URLSearchParams(new FormData(form));
+        const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
+        url.search = params.toString();
+
+        loadFocusProductRegion(url.toString());
     }
 });
 
 document.addEventListener('click', function(e) {
+    const branchDetailLink = e.target.closest('[data-branch-detail-link]');
+    if (branchDetailLink) {
+        e.preventDefault();
+        loadBranchRankingRegion(branchDetailLink.getAttribute('href'), { pushState: true });
+        return;
+    }
+
     const rankingLink = e.target.closest('[data-ranking-period]');
     if (rankingLink) {
         e.preventDefault();
+        if (rankingLink.closest('[data-branch-ranking-region]')) {
+            loadBranchComparisonRegion(rankingLink.getAttribute('href'));
+            return;
+        }
+
         loadBranchRankingRegion(rankingLink.getAttribute('href'));
+        return;
+    }
+
+    const analyticsTabButton = e.target.closest('[data-analytics-tab]');
+    if (analyticsTabButton) {
+        e.preventDefault();
+        setAnalyticsTab(analyticsTabButton.getAttribute('data-analytics-tab') || 'branch-ranking', { updateHash: true });
+        return;
+    }
+
+    const focusProductLink = e.target.closest('[data-focus-product-link]');
+    if (focusProductLink) {
+        e.preventDefault();
+        loadFocusProductRegion(focusProductLink.getAttribute('href'), { pushState: true });
+        return;
+    }
+
+    const focusSortLink = e.target.closest('[data-focus-product-sort]');
+    if (focusSortLink) {
+        e.preventDefault();
+        loadFocusProductRegion(focusSortLink.getAttribute('href'), { pushState: true });
         return;
     }
 
@@ -1422,7 +2399,48 @@ document.addEventListener('click', function(e) {
     }
 
     const pageLink = e.target.closest('.sa-page-link');
-    if (!pageLink || !pageLink.closest('[data-admins-region]')) {
+    if (!pageLink) {
+        return;
+    }
+
+    const branchRegion = pageLink.closest('[data-branch-product-detail-region]');
+    if (branchRegion) {
+        if (pageLink.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
+
+        e.preventDefault();
+        loadBranchRankingRegion(pageLink.getAttribute('href'));
+        return;
+    }
+
+    const branchComparisonRegion = pageLink.closest('[data-branch-ranking-region]');
+    if (branchComparisonRegion) {
+        if (pageLink.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
+
+        e.preventDefault();
+        loadBranchComparisonRegion(pageLink.getAttribute('href'));
+        return;
+    }
+
+    const focusRegion = pageLink.closest('[data-product-branch-performance-region]');
+    if (focusRegion) {
+        if (pageLink.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
+
+        e.preventDefault();
+        loadFocusProductRegion(pageLink.getAttribute('href'));
+        return;
+    }
+
+    const adminsRegion = pageLink.closest('[data-admins-region]');
+    if (!adminsRegion) {
         return;
     }
 
@@ -1434,6 +2452,332 @@ document.addEventListener('click', function(e) {
     e.preventDefault();
     loadAdminsRegion(pageLink.getAttribute('href'));
 });
+
+window.addEventListener('popstate', function() {
+    if (document.querySelector('[data-branch-ranking-region]') || document.querySelector('[data-branch-product-detail-region]') || document.querySelector('[data-product-branch-performance-region]')) {
+        loadSuperAdminAnalyticsRegions(window.location.href, { updateHistory: false });
+        return;
+    }
+
+    syncAnalyticsTabFromLocation();
+});
+
+window.addEventListener('hashchange', function() {
+    syncAnalyticsTabFromLocation();
+});
+
+function initBranchScopeControl(root) {
+    if (!root || root.dataset.branchScopeInitialized === '1') {
+        return;
+    }
+
+    root.dataset.branchScopeInitialized = '1';
+    syncBranchScope(root);
+    filterBranchScopeOptions(root);
+}
+
+function getBranchScopeRefs(root) {
+    if (!root) {
+        return null;
+    }
+
+    return {
+        root,
+        trigger: root.querySelector('[data-branch-scope-trigger]'),
+        panel: root.querySelector('[data-branch-scope-panel]'),
+        search: root.querySelector('[data-branch-scope-search]'),
+        selectAllButton: root.querySelector('[data-branch-scope-select-all]'),
+        clearButton: root.querySelector('[data-branch-scope-clear]'),
+        chips: root.querySelector('[data-branch-scope-chips]'),
+        summary: root.querySelector('[data-branch-scope-summary]'),
+        triggerText: root.querySelector('[data-branch-scope-trigger-text]'),
+        triggerCount: root.querySelector('[data-branch-scope-trigger-count]'),
+        hiddenContainer: root.querySelector('[data-branch-scope-hidden]'),
+        checkboxItems: Array.from(root.querySelectorAll('[data-branch-scope-checkbox]')),
+        optionItems: Array.from(root.querySelectorAll('[data-branch-scope-option]')),
+        emptyState: root.querySelector('[data-branch-scope-empty-state]'),
+        inputName: root.dataset.inputName || 'analytics_branch_ids',
+        mirrorInputName: root.dataset.mirrorInputName || '',
+        emptyLabel: root.dataset.emptyLabel || 'Tất cả chi nhánh',
+    };
+}
+
+function getBranchScopeLabelMap(root) {
+    if (!root) {
+        return new Map();
+    }
+
+    if (!root.__branchScopeLabelMap) {
+        root.__branchScopeLabelMap = new Map();
+    }
+
+    const labelMap = root.__branchScopeLabelMap;
+    labelMap.clear();
+
+    root.querySelectorAll('[data-branch-scope-option]').forEach((option) => {
+        const checkbox = option.querySelector('[data-branch-scope-checkbox]');
+        const title = option.querySelector('.sa-branch-scope-option-title')?.textContent?.trim() || `Chi nhánh #${checkbox?.value || ''}`;
+        labelMap.set(Number(checkbox?.value || 0), title);
+    });
+
+    return labelMap;
+}
+
+function closeBranchScope(root, options = {}) {
+    const refs = getBranchScopeRefs(root);
+    if (!refs?.panel) {
+        return;
+    }
+
+    refs.panel.hidden = true;
+    refs.panel.classList.remove('align-right');
+    refs.panel.style.maxHeight = '';
+    if (refs.trigger) {
+        refs.trigger.setAttribute('aria-expanded', 'false');
+        if (options.focusTrigger) {
+            refs.trigger.focus();
+        }
+    }
+}
+
+function positionBranchScopePanel(root) {
+    const refs = getBranchScopeRefs(root);
+    if (!refs?.panel || refs.panel.hidden) {
+        return;
+    }
+
+    refs.panel.classList.remove('align-right');
+    refs.panel.style.maxHeight = '';
+
+    const rootRect = root.getBoundingClientRect();
+    const panelRect = refs.panel.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const availableHeight = Math.max(220, viewportHeight - rootRect.bottom - 24);
+
+    if (panelRect.right > viewportWidth - 16) {
+        refs.panel.classList.add('align-right');
+    }
+
+    refs.panel.style.maxHeight = `${Math.min(420, availableHeight)}px`;
+}
+
+function openBranchScope(root) {
+    const refs = getBranchScopeRefs(root);
+    if (!refs?.panel) {
+        return;
+    }
+
+    document.querySelectorAll('[data-branch-scope]').forEach((candidate) => {
+        if (candidate !== root) {
+            closeBranchScope(candidate);
+        }
+    });
+
+    refs.panel.hidden = false;
+    if (refs.trigger) {
+        refs.trigger.setAttribute('aria-expanded', 'true');
+    }
+
+    positionBranchScopePanel(root);
+    refs.search?.focus();
+}
+
+function syncBranchScope(root) {
+    const refs = getBranchScopeRefs(root);
+    if (!refs) {
+        return;
+    }
+
+    const labelMap = getBranchScopeLabelMap(root);
+    const selected = refs.checkboxItems
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => Number(checkbox.value))
+        .filter((id) => Number.isFinite(id) && id > 0);
+
+    if (refs.hiddenContainer) {
+        refs.hiddenContainer.innerHTML = selected.map((id) => {
+            let html = `<input type="hidden" name="${refs.inputName}[]" value="${id}">`;
+            if (refs.mirrorInputName) {
+                html += `<input type="hidden" name="${refs.mirrorInputName}[]" value="${id}">`;
+            }
+            return html;
+        }).join('');
+    }
+
+    const selectedLabels = selected.map((id) => labelMap.get(id) || `Chi nhánh #${id}`);
+    const selectedCount = selected.length;
+    const scopeLabel = selectedCount === 1
+        ? selectedLabels[0]
+        : (selectedCount > 1 ? `Đã chọn ${selectedCount} chi nhánh` : refs.emptyLabel);
+
+    if (refs.summary) {
+        refs.summary.textContent = scopeLabel;
+    }
+
+    if (refs.triggerText) {
+        refs.triggerText.textContent = scopeLabel;
+    }
+
+    if (refs.triggerCount) {
+        refs.triggerCount.textContent = selectedCount > 0 ? String(selectedCount) : '∞';
+    }
+
+    if (refs.chips) {
+        refs.chips.innerHTML = '';
+
+        if (selectedCount === 0) {
+            refs.chips.insertAdjacentHTML('beforeend', '<span class="sa-branch-scope-chip muted">Tất cả chi nhánh</span>');
+        } else {
+            selectedLabels.slice(0, 4).forEach((label) => {
+                refs.chips.insertAdjacentHTML('beforeend', `<span class="sa-branch-scope-chip">${label}</span>`);
+            });
+
+            if (selectedCount > 4) {
+                refs.chips.insertAdjacentHTML('beforeend', `<span class="sa-branch-scope-chip muted">+${selectedCount - 4} chi nhánh</span>`);
+            }
+        }
+    }
+}
+
+function filterBranchScopeOptions(root) {
+    const refs = getBranchScopeRefs(root);
+    if (!refs) {
+        return;
+    }
+
+    const keyword = (refs.search?.value || '').trim().toLowerCase();
+    let visibleCount = 0;
+
+    refs.optionItems.forEach((option) => {
+        const searchText = (option.dataset.branchScopeSearchText || '').toLowerCase();
+        const isVisible = keyword === '' || searchText.includes(keyword);
+        option.hidden = !isVisible;
+        if (isVisible) {
+            visibleCount += 1;
+        }
+    });
+
+    if (refs.emptyState) {
+        refs.emptyState.hidden = visibleCount > 0;
+    }
+}
+
+document.querySelectorAll('[data-branch-scope]').forEach(initBranchScopeControl);
+syncAnalyticsTabFromLocation();
+
+if (!window.__branchScopeGlobalListenersBound) {
+    window.__branchScopeGlobalListenersBound = true;
+
+    document.addEventListener('click', function(event) {
+        const trigger = event.target.closest('[data-branch-scope-trigger]');
+        if (trigger) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const root = trigger.closest('[data-branch-scope]');
+            const panel = root?.querySelector('[data-branch-scope-panel]');
+            if (!root || !panel) {
+                return;
+            }
+
+            if (panel.hidden) {
+                openBranchScope(root);
+            } else {
+                closeBranchScope(root, { focusTrigger: true });
+            }
+            return;
+        }
+
+        const closeButton = event.target.closest('[data-branch-scope-close]');
+        if (closeButton) {
+            event.preventDefault();
+            const root = closeButton.closest('[data-branch-scope]');
+            closeBranchScope(root, { focusTrigger: true });
+            return;
+        }
+
+        const selectAllButton = event.target.closest('[data-branch-scope-select-all]');
+        if (selectAllButton) {
+            event.preventDefault();
+            const root = selectAllButton.closest('[data-branch-scope]');
+            const refs = getBranchScopeRefs(root);
+            refs?.checkboxItems.forEach((checkbox) => {
+                checkbox.checked = true;
+            });
+            syncBranchScope(root);
+            return;
+        }
+
+        const clearButton = event.target.closest('[data-branch-scope-clear]');
+        if (clearButton) {
+            event.preventDefault();
+            const root = clearButton.closest('[data-branch-scope]');
+            const refs = getBranchScopeRefs(root);
+            refs?.checkboxItems.forEach((checkbox) => {
+                checkbox.checked = false;
+            });
+            syncBranchScope(root);
+            return;
+        }
+
+        document.querySelectorAll('[data-branch-scope]').forEach(function(root) {
+            const panel = root.querySelector('[data-branch-scope-panel]');
+            if (panel && panel.hidden === false && !root.contains(event.target)) {
+                closeBranchScope(root);
+            }
+        });
+    });
+
+    document.addEventListener('input', function(event) {
+        const search = event.target.closest('[data-branch-scope-search]');
+        if (!search) {
+            return;
+        }
+
+        filterBranchScopeOptions(search.closest('[data-branch-scope]'));
+    });
+
+    document.addEventListener('change', function(event) {
+        const checkbox = event.target.closest('[data-branch-scope-checkbox]');
+        if (!checkbox) {
+            return;
+        }
+
+        syncBranchScope(checkbox.closest('[data-branch-scope]'));
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            let closedAny = false;
+
+            document.querySelectorAll('[data-branch-scope]').forEach(function(root) {
+                const panel = root.querySelector('[data-branch-scope-panel]');
+                if (panel && panel.hidden === false) {
+                    closeBranchScope(root, { focusTrigger: !closedAny });
+                    closedAny = true;
+                }
+            });
+            return;
+        }
+
+        if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+
+        const trigger = event.target.closest('[data-branch-scope-trigger]');
+        if (!trigger) {
+            return;
+        }
+
+        event.preventDefault();
+        trigger.click();
+    });
+
+    window.addEventListener('resize', function() {
+        document.querySelectorAll('[data-branch-scope]').forEach(positionBranchScopePanel);
+    });
+}
 
 // AJAX form submission for role and branch assignment
 document.addEventListener('submit', async function(e) {

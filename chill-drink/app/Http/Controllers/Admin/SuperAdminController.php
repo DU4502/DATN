@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Requests\Admin\SuperAdminAnalyticsRequest;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Branch;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\SystemLog;
 use App\Models\User;
+use App\Services\AnalyticsPeriodContext;
+use App\Services\SuperAdminAnalyticsService;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -22,7 +27,17 @@ use Throwable;
 
 class SuperAdminController extends Controller
 {
-    public function index(Request $request): View
+    /**
+     * @var array<string, \Illuminate\Support\Collection>
+     */
+    private array $branchChartMetricsCache = [];
+
+    public function __construct(
+        private readonly SuperAdminAnalyticsService $analyticsService
+    ) {
+    }
+
+    public function index(SuperAdminAnalyticsRequest $request): View
     {
         $adminQuery = User::admins();
         $search = trim((string) $request->query('q'));
@@ -32,6 +47,8 @@ class SuperAdminController extends Controller
         $rankingPeriod = in_array($request->query('ranking_period'), ['all', 'week', 'month', 'year'], true)
             ? $request->query('ranking_period')
             : 'all';
+        $analyticsContext = $request->analyticsPeriodContext();
+        $analyticsBranchIds = $analyticsContext->normalizedBranchIds();
 
         if ($search !== '') {
             $adminQuery->where(function ($query) use ($search) {
@@ -75,7 +92,46 @@ class SuperAdminController extends Controller
 
         $allAdmins = User::admins()->get();
         $loginHistoryByAdmin = $this->loginHistoryByAdmin($adminUsers);
-        $orderStats = $this->orderStats();
+        $businessSummary = $this->analyticsService->businessSummary($analyticsContext);
+        $branchSummaryStats = $this->branchSummaryStats($analyticsContext);
+        $branchRankingComparison = $this->analyticsService->branchComparison($analyticsContext, [
+            'ranking_period' => $rankingPeriod,
+            'search' => trim((string) $request->query('branch_search', '')),
+            'sort' => (string) $request->query('branch_sort', 'revenue'),
+            'direction' => (string) $request->query('branch_direction', 'desc'),
+            'performance' => (string) $request->query('branch_performance', 'all'),
+            'per_page' => 5,
+            'page' => (int) $request->query('branch_page', 1),
+            'analytics_branch_ids' => $analyticsBranchIds,
+        ]);
+        $branchRankingStats = $branchRankingComparison['paginator']->getCollection();
+        $branchDetailBranchId = $this->resolveBranchDetailBranchId(
+            $request,
+            $branchRankingStats,
+            $analyticsContext
+        );
+        $branchProductDetail = $this->analyticsService->branchProductDetail($analyticsContext, $branchDetailBranchId ?? 0, [
+            'sort_by' => (string) $request->query('branch_product_sort', 'quantity'),
+            'analytics_branch_ids' => $analyticsBranchIds,
+        ]);
+        $topProductSort = in_array($request->query('analytics_product_sort'), ['quantity', 'revenue'], true)
+            ? (string) $request->query('analytics_product_sort')
+            : 'quantity';
+        $topProducts = $this->analyticsService->topProducts($analyticsContext, $topProductSort, 5);
+        $focusProductSort = in_array($request->query('analytics_focus_product_sort'), ['quantity', 'revenue'], true)
+            ? (string) $request->query('analytics_focus_product_sort')
+            : 'quantity';
+        $focusProductQuery = trim((string) $request->query('analytics_focus_product_query', ''));
+        $focusProductId = $this->resolveFocusProductId($request, $topProducts);
+        $focusProductCandidates = $this->analyticsService->focusProducts($focusProductQuery, 8);
+        $focusProductPerformance = $focusProductId !== null
+            ? $this->analyticsService->productBranchPerformance($analyticsContext, $focusProductId, [
+                'sort_by' => $focusProductSort,
+                'search' => trim((string) $request->query('analytics_focus_branch_search', '')),
+                'page' => (int) $request->query('analytics_focus_branch_page', 1),
+                'analytics_branch_ids' => $analyticsBranchIds,
+            ])
+            : $this->emptyFocusProductPerformance($analyticsContext, $focusProductSort);
 
         return view('admin.super-admin', [
             'adminUsers' => $adminUsers,
@@ -88,10 +144,16 @@ class SuperAdminController extends Controller
             'branchCount' => Schema::hasTable('branches') ? Branch::count() : 0,
             'roleCount' => Schema::hasTable('roles') ? DB::table('roles')->count() : 0,
             'branches' => Schema::hasTable('branches')
-                ? Branch::with(['users'])->withCount(['users', 'orders'])->latest()->get()
+                ? Branch::query()
+                    ->select(['id', 'name', 'code', 'address', 'status'])
+                    ->with([
+                        'users' => static fn ($query) => $query->select(['id', 'name', 'branch_id']),
+                    ])
+                    ->latest()
+                    ->get()
                 : collect(),
-            'orderStats' => $orderStats,
-            'revenueChart' => $this->revenueChart(),
+            'businessSummary' => $businessSummary,
+            'revenueChart' => $this->revenueChart($analyticsContext),
             'userChart' => $this->userChart(),
             'activityLogs' => Schema::hasTable('system_logs')
                 ? SystemLog::latest()->limit(8)->get()
@@ -102,14 +164,399 @@ class SuperAdminController extends Controller
             'notifications' => $request->user()->notifications()->latest()->limit(5)->get(),
             'unreadNotificationCount' => $request->user()->unreadNotifications()->count(),
             'filters' => compact('search', 'status', 'role', 'created'),
-            // Branch Statistics - Phase 1 Data
-            'branchSummaryStats' => $this->branchSummaryStats(),
-            'branchInsightStats' => $this->branchInsightStats(),
-            'branchRevenueChart' => $this->branchRevenueChart(),
-            'branchOrderChart' => $this->branchOrderChart(),
-            'branchRankingStats' => $this->branchRankingStats($rankingPeriod),
+            'branchSummaryStats' => $branchSummaryStats,
+            'branchRankingStats' => $branchRankingStats,
+            'branchRankingComparison' => $branchRankingComparison,
+            'branchProductDetail' => $branchProductDetail,
+            'branchDetailBranchId' => $branchDetailBranchId,
             'rankingPeriod' => $rankingPeriod,
+            'topProductSort' => $topProductSort,
+            'topProducts' => $topProducts,
+            'focusProductSort' => $focusProductSort,
+            'focusProductQuery' => $focusProductQuery,
+            'focusProductId' => $focusProductId,
+            'focusProductCandidates' => $focusProductCandidates,
+            'focusProductPerformance' => $focusProductPerformance,
+            'analyticsContext' => $analyticsContext,
         ]);
+    }
+
+    private function safeDashboardAnalytics(array $filters = []): array
+    {
+        try {
+            return $this->dashboardAnalytics($filters);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return $this->emptyDashboardAnalytics();
+        }
+    }
+
+    private function emptyDashboardAnalytics(): array
+    {
+        return [
+            'period_label' => '30 ngày gần nhất',
+            'compare_label' => 'Kỳ trước',
+            'revenue' => 0,
+            'orders' => 0,
+            'customers' => 0,
+            'units' => 0,
+            'average_order' => 0,
+            'growth' => ['revenue' => 0, 'orders' => 0, 'customers' => 0, 'units' => 0, 'average_order' => 0],
+            'top_products' => collect(),
+            'daily' => ['labels' => collect(), 'values' => collect(), 'previous' => collect()],
+            'branches' => collect(),
+            'highlights' => [
+                'top_revenue_branch' => null,
+                'top_order_branch' => null,
+                'top_units_branch' => null,
+                'average_revenue_per_branch' => 0,
+            ],
+        ];
+    }
+
+    private function buildValidSalesOrdersQuery(
+        ?CarbonInterface $from = null,
+        ?CarbonInterface $to = null,
+        int|array|null $branchScope = null,
+        $orderFilterIds = null
+    ): \Illuminate\Database\Eloquent\Builder {
+        $query = $this->analyticsService->validSalesOrdersQuery();
+
+        $this->analyticsService->applyDateRange($query, $from, $to);
+        $this->analyticsService->applyBranchScope($query, $branchScope);
+
+        if ($orderFilterIds) {
+            $query->whereIn('orders.id', $orderFilterIds);
+        }
+
+        return $query;
+    }
+
+    private function buildValidSalesOrderItemsQuery(
+        ?CarbonInterface $from = null,
+        ?CarbonInterface $to = null,
+        int|array|null $branchScope = null,
+        $orderFilterIds = null
+    ): \Illuminate\Database\Eloquent\Builder {
+        $query = $this->analyticsService->validSalesOrderItemsQuery();
+
+        $this->analyticsService->applyDateRange($query, $from, $to);
+        $this->analyticsService->applyBranchScope($query, $branchScope);
+
+        if ($orderFilterIds) {
+            $query->whereIn('order_items.order_id', $orderFilterIds);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return array<int>
+     */
+    private function analyticsBranchScopeIds(?AnalyticsPeriodContext $context = null, mixed $fallback = null): array
+    {
+        if ($context?->hasBranchScope()) {
+            return $context->normalizedBranchIds();
+        }
+
+        return $this->normalizeBranchScopeSelection($fallback);
+    }
+
+    /**
+     * @return array<int>
+     */
+    private function normalizeBranchScopeSelection(int|array|string|null $branchScope): array
+    {
+        if (is_string($branchScope) && $branchScope !== '') {
+            $branchScope = explode(',', $branchScope);
+        }
+
+        if (! is_array($branchScope)) {
+            $branchScope = $branchScope === null || $branchScope === '' ? [] : [$branchScope];
+        }
+
+        return collect($branchScope)
+            ->filter(static fn ($value) => $value !== null && $value !== '' && is_numeric($value))
+            ->map(static fn ($value) => (int) $value)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    private function dashboardAnalytics(array $filters = []): array
+    {
+        if (! Schema::hasTable('orders')) {
+            return $this->emptyDashboardAnalytics();
+        }
+
+        ['start' => $start, 'end' => $end, 'label' => $periodLabel, 'days' => $periodDays] = $this->analyticsPeriodRange($filters['period'] ?? '30');
+        ['start' => $comparisonStart, 'end' => $comparisonEnd, 'label' => $compareLabel, 'offset_days' => $comparisonOffsetDays] = $this->analyticsComparisonRange(
+            $start,
+            $end,
+            $periodDays,
+            $filters['compare'] ?? 'previous'
+        );
+        $orderColumns = ['orders.id', 'orders.user_id', 'orders.created_at', 'orders.total'];
+        $orderFilterIds = $this->analyticsService->filteredOrderIdsSubquery(
+            $filters['category_id'] ?? null,
+            $filters['product_id'] ?? null
+        );
+        $branchScope = $this->analyticsBranchScopeIds(null, $filters['analytics_branch_ids'] ?? ($filters['branch_ids'] ?? ($filters['branch_id'] ?? null)));
+
+        $currentOrdersQuery = $this->buildValidSalesOrdersQuery(
+            $start,
+            $end,
+            $branchScope,
+            $orderFilterIds ? clone $orderFilterIds : null
+        );
+        $previousOrdersQuery = $this->buildValidSalesOrdersQuery(
+            $comparisonStart,
+            $comparisonEnd,
+            $branchScope,
+            $orderFilterIds ? clone $orderFilterIds : null
+        );
+
+        $current = (clone $currentOrdersQuery)->get($orderColumns);
+        $previous = (clone $previousOrdersQuery)->get($orderColumns);
+
+        $currentMetrics = [
+            'revenue' => $this->analyticsService->revenueSummary(clone $currentOrdersQuery),
+            'orders' => $this->analyticsService->orderSummary(clone $currentOrdersQuery),
+            'customers' => $this->analyticsService->customerSummary(clone $currentOrdersQuery),
+        ];
+        $previousMetrics = [
+            'revenue' => $this->analyticsService->revenueSummary(clone $previousOrdersQuery),
+            'orders' => $this->analyticsService->orderSummary(clone $previousOrdersQuery),
+            'customers' => $this->analyticsService->customerSummary(clone $previousOrdersQuery),
+        ];
+
+        $units = 0;
+        $previousUnits = 0;
+        if (Schema::hasTable('order_items')) {
+            $currentItemsQuery = $this->buildValidSalesOrderItemsQuery(
+                $start,
+                $end,
+                $branchScope,
+                $orderFilterIds ? clone $orderFilterIds : null
+            );
+            $previousItemsQuery = $this->buildValidSalesOrderItemsQuery(
+                $comparisonStart,
+                $comparisonEnd,
+                $branchScope,
+                $orderFilterIds ? clone $orderFilterIds : null
+            );
+
+            $units = $this->analyticsService->itemQuantitySummary($currentItemsQuery);
+            $previousUnits = $this->analyticsService->itemQuantitySummary($previousItemsQuery);
+        }
+
+        $average = $currentMetrics['orders'] > 0 ? (int) round($currentMetrics['revenue'] / $currentMetrics['orders']) : 0;
+        $previousAverage = $previousMetrics['orders'] > 0 ? (int) round($previousMetrics['revenue'] / $previousMetrics['orders']) : 0;
+        $growth = static function (int $currentValue, int $previousValue): float {
+            return $previousValue > 0 ? round((($currentValue - $previousValue) / $previousValue) * 100, 1) : ($currentValue > 0 ? 100 : 0);
+        };
+
+        $days = collect(range($periodDays - 1, 0))->map(fn (int $offset) => $end->copy()->subDays($offset));
+        $dailyValues = $days->map(fn (Carbon $day) => (int) $current->filter(fn ($order) => $order->created_at->isSameDay($day))->sum('total'));
+        $previousDailyValues = $days->map(function (Carbon $day) use ($previous, $comparisonOffsetDays, $comparisonStart): int {
+            $mappedDay = $comparisonOffsetDays !== null
+                ? $day->copy()->subDays($comparisonOffsetDays)
+                : $comparisonStart->copy()->addDays($comparisonStart->diffInDays($day));
+
+            return (int) $previous->filter(fn ($order) => $order->created_at->isSameDay($mappedDay))->sum('total');
+        });
+
+        $branches = $this->analyticsBranchBreakdown($filters, $start, $end, $comparisonStart, $comparisonEnd);
+        $topRevenueBranch = $branches->sortByDesc('revenue')->first();
+        $topOrderBranch = $branches->sortByDesc('orders')->first();
+        $topUnitsBranch = $branches->sortByDesc('units')->first();
+
+        return [
+            'period_label' => $periodLabel,
+            'compare_label' => $compareLabel,
+            'revenue' => $currentMetrics['revenue'],
+            'orders' => $currentMetrics['orders'],
+            'customers' => $currentMetrics['customers'],
+            'units' => $units,
+            'average_order' => $average,
+            'growth' => [
+                'revenue' => $growth($currentMetrics['revenue'], $previousMetrics['revenue']),
+                'orders' => $growth($currentMetrics['orders'], $previousMetrics['orders']),
+                'customers' => $growth($currentMetrics['customers'], $previousMetrics['customers']),
+                'units' => $growth($units, $previousUnits),
+                'average_order' => $growth($average, $previousAverage),
+            ],
+            'top_products' => collect(),
+            'daily' => [
+                'labels' => $days->map(fn (Carbon $day) => $day->format('d/m')),
+                'values' => $dailyValues,
+                'previous' => $previousDailyValues,
+            ],
+            'branches' => $branches,
+            'highlights' => [
+                'top_revenue_branch' => $topRevenueBranch,
+                'top_order_branch' => $topOrderBranch,
+                'top_units_branch' => $topUnitsBranch,
+                'average_revenue_per_branch' => $branches->isNotEmpty() ? (int) round($branches->avg('revenue')) : 0,
+            ],
+        ];
+    }
+
+    private function analyticsPeriodRange(string $period): array
+    {
+        $today = today();
+
+        return match ($period) {
+            'today' => [
+                'start' => $today->copy()->startOfDay(),
+                'end' => $today->copy()->endOfDay(),
+                'label' => 'Hôm nay',
+                'days' => 1,
+            ],
+            '7' => [
+                'start' => $today->copy()->subDays(6)->startOfDay(),
+                'end' => $today->copy()->endOfDay(),
+                'label' => '7 ngày gần nhất',
+                'days' => 7,
+            ],
+            'month' => [
+                'start' => $today->copy()->startOfMonth(),
+                'end' => $today->copy()->endOfDay(),
+                'label' => 'Tháng này',
+                'days' => max(1, $today->copy()->startOfMonth()->diffInDays($today) + 1),
+            ],
+            default => [
+                'start' => $today->copy()->subDays(29)->startOfDay(),
+                'end' => $today->copy()->endOfDay(),
+                'label' => '30 ngày gần nhất',
+                'days' => 30,
+            ],
+        };
+    }
+
+    private function analyticsComparisonRange(Carbon $start, Carbon $end, int $periodDays, string $compare): array
+    {
+        if ($compare === 'year') {
+            return [
+                'start' => $start->copy()->subYear(),
+                'end' => $end->copy()->subYear(),
+                'label' => 'Cùng kỳ năm trước',
+                'offset_days' => null,
+            ];
+        }
+
+        return [
+            'start' => $start->copy()->subDays($periodDays),
+            'end' => $start->copy()->subDay()->endOfDay(),
+            'label' => 'Kỳ trước',
+            'offset_days' => $periodDays,
+        ];
+    }
+
+    private function analyticsBranchBreakdown(
+        array $filters,
+        Carbon $start,
+        Carbon $end,
+        Carbon $comparisonStart,
+        Carbon $comparisonEnd
+    ): Collection {
+        if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
+            return collect();
+        }
+
+        $orderFilterIds = $this->analyticsService->filteredOrderIdsSubquery(
+            $filters['category_id'] ?? null,
+            $filters['product_id'] ?? null
+        );
+        $branchScope = $this->analyticsBranchScopeIds(null, $filters['analytics_branch_ids'] ?? ($filters['branch_ids'] ?? ($filters['branch_id'] ?? null)));
+
+        $currentRows = $this->buildValidSalesOrdersQuery(
+            $start,
+            $end,
+            $branchScope,
+            $orderFilterIds ? clone $orderFilterIds : null
+        )
+            ->join('branches', 'branches.id', '=', 'orders.branch_id')
+            ->selectRaw('branches.id as branch_id, branches.name as branch_name, branches.code as branch_code, SUM(orders.total) as revenue, COUNT(orders.id) as orders')
+            ->groupBy('branches.id', 'branches.name', 'branches.code')
+            ->get()
+            ->keyBy('branch_id');
+
+        $previousRows = $this->buildValidSalesOrdersQuery(
+            $comparisonStart,
+            $comparisonEnd,
+            $branchScope,
+            $orderFilterIds ? clone $orderFilterIds : null
+        )
+            ->join('branches', 'branches.id', '=', 'orders.branch_id')
+            ->selectRaw('branches.id as branch_id, SUM(orders.total) as revenue')
+            ->groupBy('branches.id')
+            ->get()
+            ->keyBy('branch_id');
+
+        $unitsRows = collect();
+        if (Schema::hasTable('order_items')) {
+            $unitsRows = $this->buildValidSalesOrderItemsQuery(
+                $start,
+                $end,
+                $branchScope,
+                $orderFilterIds ? clone $orderFilterIds : null
+            )
+                ->join('branches', 'branches.id', '=', 'orders.branch_id')
+                ->selectRaw('branches.id as branch_id, SUM(order_items.quantity) as units')
+                ->groupBy('branches.id')
+                ->get()
+                ->keyBy('branch_id');
+        }
+
+        $branchIds = $branchScope !== []
+            ? collect($branchScope)->values()
+            : $currentRows->keys()->merge($previousRows->keys())->unique()->values();
+        if ($branchIds->isEmpty()) {
+            $branchIds = Branch::query()
+                ->when($branchScope !== [], fn ($query) => $query->whereIn('id', $branchScope))
+                ->pluck('id');
+        }
+
+        $branches = Branch::withCount('users')
+            ->whereIn('id', $branchIds)
+            ->get()
+            ->keyBy('id');
+
+        $totalRevenue = max(1, (int) $currentRows->sum('revenue'));
+
+        return $branchIds->map(function ($branchId) use ($branches, $currentRows, $previousRows, $unitsRows, $totalRevenue) {
+            $branch = $branches->get($branchId);
+            if (! $branch) {
+                return null;
+            }
+
+            $current = $currentRows->get($branchId);
+            $previous = $previousRows->get($branchId);
+            $revenue = (int) ($current->revenue ?? 0);
+            $orders = (int) ($current->orders ?? 0);
+            $previousRevenue = (int) ($previous->revenue ?? 0);
+            $units = (int) (($unitsRows->get($branchId)->units ?? 0));
+            $growth = $previousRevenue > 0 ? round((($revenue - $previousRevenue) / $previousRevenue) * 100, 1) : ($revenue > 0 ? 100 : 0);
+
+            return [
+                'branch_id' => $branch->id,
+                'branch_name' => $branch->name,
+                'branch_code' => $branch->code,
+                'revenue' => $revenue,
+                'orders' => $orders,
+                'units' => $units,
+                'staff_count' => (int) $branch->users_count,
+                'average_order_value' => $orders > 0 ? (int) round($revenue / $orders) : 0,
+                'growth' => $growth,
+                'performance_percentage' => round(($revenue / $totalRevenue) * 100, 1),
+            ];
+        })
+            ->filter()
+            ->sortByDesc('revenue')
+            ->values();
     }
 
     public function storeAdmin(Request $request): RedirectResponse
@@ -183,34 +630,79 @@ class SuperAdminController extends Controller
         }
     }
 
-    private function orderStats(): array
+    public function enterAdminWorkspace(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
+
+        $branchId = $validated['branch_id'] ?? null;
+
+        $request->session()->put('super_admin_admin_view', true);
+        $request->session()->put('super_admin_preview_branch_id', $branchId);
+
+        return redirect()->route('admin.dashboard', array_filter([
+            'branch_id' => $branchId,
+        ], static fn ($value) => $value !== null));
+    }
+
+    public function exitAdminWorkspace(Request $request): RedirectResponse
+    {
+        $request->session()->forget([
+            'super_admin_admin_view',
+            'super_admin_preview_branch_id',
+        ]);
+
+        return redirect()->route('admin.super-admin');
+    }
+
+    private function orderStats(?AnalyticsPeriodContext $context = null): array
     {
         if (! Schema::hasTable('orders')) {
             return ['today_count' => 0, 'today_revenue' => 0, 'month_revenue' => 0];
         }
 
-        $paidOrders = fn ($query) => $query->where(function ($builder) {
-            $builder->where('payment_status', 'paid')->orWhere('status', 'completed');
-        });
+        $branchScope = $this->analyticsBranchScopeIds($context);
+        $contextStart = $context?->currentStart?->copy()->startOfDay();
+        $contextEnd = $context?->currentEnd?->copy()->endOfDay();
+        $contextOrdersQuery = $this->buildValidSalesOrdersQuery(
+            $contextStart instanceof Carbon ? $contextStart : null,
+            $contextEnd instanceof Carbon ? $contextEnd : null,
+            $branchScope
+        );
+
+        $todayStart = today()->startOfDay();
+        $todayEnd = today()->endOfDay();
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
+
+        $todayMetrics = $this->orderMetricsSummary(
+            $context?->currentStart
+                ? $contextOrdersQuery
+                : $this->buildValidSalesOrdersQuery($todayStart, $todayEnd, $branchScope)
+        );
 
         return [
-            'today_count' => Order::whereDate('created_at', today())->count(),
-            'today_revenue' => $paidOrders(Order::whereDate('created_at', today()))->sum('total'),
-            'month_revenue' => $paidOrders(Order::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]))->sum('total'),
+            'today_count' => $todayMetrics['orders'],
+            'today_revenue' => $todayMetrics['revenue'],
+            'month_revenue' => $this->orderMetricsSummary(
+                $this->buildValidSalesOrdersQuery($monthStart, $monthEnd, $branchScope)
+            )['revenue'],
         ];
     }
 
-    private function revenueChart(): array
+    private function revenueChart(?AnalyticsPeriodContext $context = null): array
     {
+        $branchScope = $this->analyticsBranchScopeIds($context);
         $days = collect(range(6, 0))->map(fn (int $offset) => today()->subDays($offset));
         $orders = Schema::hasTable('orders')
-            ? Order::where('created_at', '>=', $days->first()->copy()->startOfDay())->get(['created_at', 'total', 'status', 'payment_status'])
+            ? $this->buildValidSalesOrdersQuery($days->first()->copy()->startOfDay(), $days->last()->copy()->endOfDay(), $branchScope)
+                ->get(['orders.created_at', 'orders.total'])
             : collect();
 
         $values = $days->map(function (Carbon $day) use ($orders) {
             return (int) $orders
-                ->filter(fn (Order $order) => $order->created_at->isSameDay($day)
-                    && ($order->payment_status === 'paid' || $order->status === 'completed'))
+                ->filter(fn (Order $order) => $order->created_at->isSameDay($day))
                 ->sum('total');
         });
 
@@ -239,7 +731,7 @@ class SuperAdminController extends Controller
         ];
     }
 
-    private function branchSummaryStats(): array
+    private function branchSummaryStats(?AnalyticsPeriodContext $context = null): array
     {
         if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
             return [
@@ -251,26 +743,41 @@ class SuperAdminController extends Controller
                 'today_revenue' => 0,
                 'month_revenue' => 0,
                 'total_branch_staff' => 0,
+                'period_label' => 'Tất cả thời gian',
             ];
         }
 
-        $paidOrders = fn ($query) => $query->where(function ($builder) {
-            $builder->where('payment_status', 'paid')->orWhere('status', 'completed');
-        });
+        $branchScope = $this->analyticsBranchScopeIds($context);
+        $branchCounts = $this->branchCountSummary($branchScope);
+        $periodBranchOrdersQuery = $this->buildValidSalesOrdersQuery(
+            $context?->currentStart,
+            $context?->currentEnd,
+            $branchScope
+        )->whereNotNull('orders.branch_id');
+        $todayBranchOrdersQuery = $this->buildValidSalesOrdersQuery(today()->startOfDay(), today()->endOfDay(), $branchScope)
+            ->whereNotNull('orders.branch_id');
+        $monthBranchOrdersQuery = $this->buildValidSalesOrdersQuery(now()->startOfMonth(), now()->endOfMonth(), $branchScope)
+            ->whereNotNull('orders.branch_id');
+        $periodMetrics = $this->orderMetricsSummary($periodBranchOrdersQuery);
+        $todayMetrics = $this->orderMetricsSummary($todayBranchOrdersQuery);
+        $monthMetrics = $this->orderMetricsSummary($monthBranchOrdersQuery);
 
         return [
-            'total_branches' => Branch::count(),
-            'active_branches' => Branch::where('status', true)->count(),
-            'total_orders' => Order::whereNotNull('branch_id')->count(),
-            'total_revenue' => $paidOrders(Order::whereNotNull('branch_id'))->sum('total'),
-            'today_orders' => Order::whereNotNull('branch_id')->whereDate('created_at', today())->count(),
-            'today_revenue' => $paidOrders(Order::whereNotNull('branch_id')->whereDate('created_at', today()))->sum('total'),
-            'month_revenue' => $paidOrders(Order::whereNotNull('branch_id')->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]))->sum('total'),
-            'total_branch_staff' => User::whereNotNull('branch_id')->count(),
+            'total_branches' => $branchCounts['total_branches'],
+            'active_branches' => $branchCounts['active_branches'],
+            'total_orders' => $periodMetrics['orders'],
+            'total_revenue' => $periodMetrics['revenue'],
+            'today_orders' => $todayMetrics['orders'],
+            'today_revenue' => $todayMetrics['revenue'],
+            'month_revenue' => $monthMetrics['revenue'],
+            'total_branch_staff' => $branchScope !== []
+                ? User::whereIn('branch_id', $branchScope)->count()
+                : User::whereNotNull('branch_id')->count(),
+            'period_label' => $context?->displayLabel ?? 'Tất cả thời gian',
         ];
     }
 
-    private function branchInsightStats(): array
+    private function branchInsightStats(?AnalyticsPeriodContext $context = null, ?int $activeBranchCount = null): array
     {
         if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
             return [
@@ -281,99 +788,85 @@ class SuperAdminController extends Controller
             ];
         }
 
-        $paidOrders = fn ($query) => $query->where(function ($builder) {
-            $builder->where('payment_status', 'paid')->orWhere('status', 'completed');
-        });
+        $validBranchOrders = $this->analyticsService->validSalesOrdersQuery()
+            ->whereNotNull('orders.branch_id');
+        $this->analyticsService->applyDateRange($validBranchOrders, $context?->currentStart?->copy(), $context?->currentEnd?->copy());
+        $branchScope = $this->analyticsBranchScopeIds($context);
+        $this->analyticsService->applyBranchScope($validBranchOrders, $branchScope);
 
-        // Top revenue branch
-        $topRevenueResult = DB::table('orders')
-            ->whereNotNull('branch_id')
-            ->where(function ($q) {
-                $q->where('payment_status', 'paid')->orWhere('status', 'completed');
-            })
+        $branchMetrics = $this->orderMetricsSummary(clone $validBranchOrders);
+
+        $topRevenueResult = (clone $validBranchOrders)
             ->selectRaw('branch_id, SUM(total) as revenue')
             ->groupBy('branch_id')
             ->orderByDesc('revenue')
             ->first();
 
-        $topRevenueBranch = null;
-        $totalRevenue = 0;
-        if ($topRevenueResult) {
-            $topRevenueBranch = Branch::find($topRevenueResult->branch_id);
-            $totalRevenue = $topRevenueResult->revenue;
-        }
-
-        // Top order branch
-        $topOrderResult = DB::table('orders')
-            ->whereNotNull('branch_id')
+        $topOrderResult = (clone $validBranchOrders)
             ->selectRaw('branch_id, COUNT(*) as order_count')
             ->groupBy('branch_id')
             ->orderByDesc('order_count')
             ->first();
 
-        $topOrderBranch = null;
-        $totalOrders = Order::whereNotNull('branch_id')->count();
-        if ($topOrderResult) {
-            $topOrderBranch = Branch::find($topOrderResult->branch_id);
-        }
-
-        // Highest cancelled branch
         $highestCancelledResult = DB::table('orders')
             ->whereNotNull('branch_id')
             ->where('status', 'cancelled')
+            ->when($branchScope !== [], fn ($query) => $query->whereIn('branch_id', $branchScope))
+            ->when($context?->currentStart && $context?->currentEnd, fn ($query) => $query->whereBetween('created_at', [$context->currentStart, $context->currentEnd]))
             ->selectRaw('branch_id, COUNT(*) as cancelled_count')
             ->groupBy('branch_id')
             ->orderByDesc('cancelled_count')
             ->first();
 
-        $highestCancelledBranch = null;
-        if ($highestCancelledResult) {
-            $highestCancelledBranch = Branch::find($highestCancelledResult->branch_id);
-        }
+        $branchIds = collect([
+            $topRevenueResult?->branch_id ?? null,
+            $topOrderResult?->branch_id ?? null,
+            $highestCancelledResult?->branch_id ?? null,
+        ])->filter(fn ($value) => is_numeric($value) && (int) $value > 0)->map(fn ($value) => (int) $value)->unique()->values();
+        $branchesById = $branchIds->isNotEmpty()
+            ? Branch::whereIn('id', $branchIds->all())->get()->keyBy('id')
+            : collect();
 
-        // Average revenue per branch
-        $activeBranchCount = Branch::where('status', true)->count();
-        $averageRevenue = $activeBranchCount > 0 ? (int) ($totalRevenue / $activeBranchCount) : 0;
+        $topRevenueBranch = $topRevenueResult ? $branchesById->get((int) $topRevenueResult->branch_id) : null;
+        $topOrderBranch = $topOrderResult ? $branchesById->get((int) $topOrderResult->branch_id) : null;
+        $highestCancelledBranch = $highestCancelledResult ? $branchesById->get((int) $highestCancelledResult->branch_id) : null;
+
+        $totalRevenue = (int) $branchMetrics['revenue'];
+        $totalOrders = (int) $branchMetrics['orders'];
+        $topRevenueAmount = (int) ($topRevenueResult->revenue ?? 0);
+        $activeBranchCount = $activeBranchCount ?? (int) $this->branchCountSummary($branchScope)['active_branches'];
+        $averageRevenue = $activeBranchCount > 0 ? (int) round($totalRevenue / $activeBranchCount) : 0;
 
         return [
             'top_revenue_branch' => $topRevenueBranch ? [
                 'id' => $topRevenueBranch->id,
                 'name' => $topRevenueBranch->name,
-                'revenue' => $totalRevenue,
-                'percentage' => $totalRevenue > 0 ? round(($totalRevenue / DB::table('orders')->whereNotNull('branch_id')->where(function ($q) { $q->where('payment_status', 'paid')->orWhere('status', 'completed'); })->sum('total')) * 100, 1) : 0,
+                'revenue' => $topRevenueAmount,
+                'percentage' => $totalRevenue > 0 ? round(($topRevenueAmount / $totalRevenue) * 100, 1) : 0,
             ] : null,
             'top_order_branch' => $topOrderBranch ? [
                 'id' => $topOrderBranch->id,
                 'name' => $topOrderBranch->name,
-                'order_count' => $topOrderResult->order_count,
-                'percentage' => $totalOrders > 0 ? round(($topOrderResult->order_count / $totalOrders) * 100, 1) : 0,
+                'order_count' => (int) $topOrderResult->order_count,
+                'percentage' => $totalOrders > 0 ? round(((int) $topOrderResult->order_count / $totalOrders) * 100, 1) : 0,
             ] : null,
             'highest_cancelled_branch' => $highestCancelledBranch ? [
                 'id' => $highestCancelledBranch->id,
                 'name' => $highestCancelledBranch->name,
-                'cancelled_count' => $highestCancelledResult->cancelled_count,
-                'percentage' => $totalOrders > 0 ? round(($highestCancelledResult->cancelled_count / $totalOrders) * 100, 1) : 0,
+                'cancelled_count' => (int) $highestCancelledResult->cancelled_count,
+                'percentage' => $totalOrders > 0 ? round(((int) $highestCancelledResult->cancelled_count / $totalOrders) * 100, 1) : 0,
             ] : null,
             'average_revenue_per_branch' => $averageRevenue,
         ];
     }
 
-    private function branchRevenueChart(): array
+    private function branchRevenueChart(?AnalyticsPeriodContext $context = null): array
     {
         if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
             return ['labels' => [], 'data' => [], 'heights' => []];
         }
 
-        $branchRevenue = DB::table('orders')
-            ->join('branches', 'orders.branch_id', '=', 'branches.id')
-            ->whereNotNull('orders.branch_id')
-            ->where(function ($q) {
-                $q->where('orders.payment_status', 'paid')->orWhere('orders.status', 'completed');
-            })
-            ->selectRaw('branches.name, SUM(orders.total) as revenue')
-            ->groupBy('orders.branch_id', 'branches.name')
-            ->orderByDesc('revenue')
-            ->get();
+        $branchRevenue = $this->branchChartMetrics($context);
 
         $labels = $branchRevenue->pluck('name');
         $values = $branchRevenue->pluck('revenue');
@@ -387,19 +880,13 @@ class SuperAdminController extends Controller
         ];
     }
 
-    private function branchOrderChart(): array
+    private function branchOrderChart(?AnalyticsPeriodContext $context = null): array
     {
         if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
             return ['labels' => [], 'data' => [], 'heights' => []];
         }
 
-        $branchOrders = DB::table('orders')
-            ->join('branches', 'orders.branch_id', '=', 'branches.id')
-            ->whereNotNull('orders.branch_id')
-            ->selectRaw('branches.name, COUNT(*) as order_count')
-            ->groupBy('orders.branch_id', 'branches.name')
-            ->orderByDesc('order_count')
-            ->get();
+        $branchOrders = $this->branchChartMetrics($context);
 
         $labels = $branchOrders->pluck('name');
         $values = $branchOrders->pluck('order_count');
@@ -413,79 +900,288 @@ class SuperAdminController extends Controller
         ];
     }
 
-    private function branchRankingStats(string $rankingPeriod = 'all'): Collection
+    private function branchChartMetrics(?AnalyticsPeriodContext $context = null): Collection
+    {
+        $branchScope = $this->analyticsBranchScopeIds($context);
+        $cacheKey = md5(json_encode([
+            'branch_scope' => $branchScope,
+            'from' => $context?->currentStart?->timestamp,
+            'to' => $context?->currentEnd?->timestamp,
+        ], JSON_THROW_ON_ERROR));
+
+        if (isset($this->branchChartMetricsCache[$cacheKey])) {
+            return $this->branchChartMetricsCache[$cacheKey];
+        }
+
+        $branchMetrics = $this->analyticsService->validSalesOrdersQuery()
+            ->when($context?->currentStart && $context?->currentEnd, fn ($query) => $this->analyticsService->applyDateRange($query, $context->currentStart, $context->currentEnd))
+            ->when($branchScope !== [], fn ($query) => $this->analyticsService->applyBranchScope($query, $branchScope))
+            ->join('branches', 'orders.branch_id', '=', 'branches.id')
+            ->whereNotNull('orders.branch_id')
+            ->selectRaw('branches.name, SUM(orders.total) as revenue, COUNT(*) as order_count')
+            ->groupBy('orders.branch_id', 'branches.name')
+            ->orderByDesc('revenue')
+            ->get();
+
+        return $this->branchChartMetricsCache[$cacheKey] = $branchMetrics;
+    }
+
+    private function resolveBranchDetailBranchId(Request $request, Collection $branchRows, ?AnalyticsPeriodContext $analyticsContext = null): ?int
+    {
+        $branchScopeIds = $analyticsContext?->normalizedBranchIds() ?? [];
+
+        $requestedBranchId = $request->filled('analytics_detail_branch_id')
+            ? (int) $request->query('analytics_detail_branch_id')
+            : null;
+
+        if ($requestedBranchId && ($branchScopeIds === [] || in_array($requestedBranchId, $branchScopeIds, true)) && $branchRows->contains(fn (array $branch) => (int) ($branch['branch_id'] ?? 0) === $requestedBranchId)) {
+            return $requestedBranchId;
+        }
+
+        if ($branchScopeIds !== []) {
+            foreach ($branchScopeIds as $scopeBranchId) {
+                if ($branchRows->contains(fn (array $branch) => (int) ($branch['branch_id'] ?? 0) === (int) $scopeBranchId)) {
+                    return (int) $scopeBranchId;
+                }
+            }
+        }
+
+        if ($branchRows->isNotEmpty()) {
+            return (int) ($branchRows->first()['branch_id'] ?? 0);
+        }
+
+        if (Schema::hasTable('branches')) {
+            $fallbackId = Branch::query()->orderBy('id')->value('id');
+
+            return $fallbackId ? (int) $fallbackId : null;
+        }
+
+        return null;
+    }
+
+    private function resolveFocusProductId(Request $request, Collection $topProducts): ?int
+    {
+        if ($request->filled('analytics_focus_product_id')) {
+            $focusProductId = (int) $request->query('analytics_focus_product_id');
+
+            return $focusProductId > 0 ? $focusProductId : null;
+        }
+
+        if ($topProducts->isNotEmpty()) {
+            $topProductId = (int) ($topProducts->first()['product_id'] ?? 0);
+
+            if ($topProductId > 0) {
+                return $topProductId;
+            }
+        }
+
+        if (Schema::hasTable('products')) {
+            $activeProductId = Product::query()
+                ->where('status', true)
+                ->orderBy('name')
+                ->value('id');
+
+            if ($activeProductId) {
+                return (int) $activeProductId;
+            }
+
+            $firstProductId = Product::query()
+                ->orderBy('name')
+                ->value('id');
+
+            if ($firstProductId) {
+                return (int) $firstProductId;
+            }
+        }
+
+        return null;
+    }
+
+    private function emptyFocusProductPerformance(AnalyticsPeriodContext $context, string $sortBy = 'quantity'): array
+    {
+        return [
+            'product' => [
+                'id' => null,
+                'name' => null,
+                'image' => null,
+                'image_url' => null,
+                'status' => false,
+                'is_deleted' => false,
+                'sku' => null,
+            ],
+            'summary' => [
+                'total_quantity' => 0,
+                'total_revenue' => 0,
+                'branches_with_sales' => 0,
+                'total_branches_in_scope' => Schema::hasTable('branches') ? Branch::count() : 0,
+                'strongest_branch_id' => null,
+                'strongest_branch_name' => 'Chưa có sản phẩm để phân tích',
+                'strongest_branch_quantity' => 0,
+                'strongest_branch_revenue' => 0,
+            ],
+            'comparison' => [
+                'compare_total_quantity' => null,
+                'compare_total_revenue' => null,
+                'quantity_change_percentage' => null,
+                'revenue_change_percentage' => null,
+                'quantity_change_state' => 'unavailable',
+                'revenue_change_state' => 'unavailable',
+                'comparison_label' => $context->hasComparison() ? $context->comparisonLabel : 'Không đối chiếu',
+            ],
+            'branches' => collect(),
+            'pagination' => [
+                'current_page' => 1,
+                'per_page' => 10,
+                'total' => 0,
+                'last_page' => 1,
+            ],
+            'paginator' => null,
+            'sort_by' => $sortBy,
+            'search' => '',
+        ];
+    }
+
+    private function branchRankingStats(string $rankingPeriod = 'all', ?AnalyticsPeriodContext $context = null): Collection
     {
         if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
             return collect();
         }
 
-        $branches = Branch::with('users')->get();
+        $branchScope = $this->analyticsBranchScopeIds($context);
         [$from, $to] = $this->rankingPeriodRange($rankingPeriod);
+        $validSalesOrders = $this->analyticsService->validSalesOrdersQuery()
+            ->whereNotNull('orders.branch_id');
+        $this->analyticsService->applyDateRange($validSalesOrders, $from, $to);
+        $this->analyticsService->applyBranchScope($validSalesOrders, $branchScope);
 
-        $totalNetworkRevenueQuery = DB::table('orders')
-            ->whereNotNull('branch_id')
-            ->where(function ($q) {
-                $q->where('payment_status', 'paid')->orWhere('status', 'completed');
-            });
+        $validOrderMetricsSubquery = (clone $validSalesOrders)
+            ->selectRaw('orders.branch_id, COALESCE(SUM(orders.total), 0) as revenue, COUNT(*) as total_orders')
+            ->groupBy('orders.branch_id');
 
-        if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
-            $totalNetworkRevenueQuery->whereBetween('created_at', [$from, $to]);
+        $orderStatusMetricsSubquery = Order::query()
+            ->whereNotNull('orders.branch_id');
+        $this->analyticsService->applyDateRange($orderStatusMetricsSubquery, $from, $to);
+        $this->analyticsService->applyBranchScope($orderStatusMetricsSubquery, $branchScope);
+        $orderStatusMetricsSubquery = $orderStatusMetricsSubquery
+            ->selectRaw(
+                'orders.branch_id, ' .
+                'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as completed_orders, ' .
+                'COALESCE(SUM(CASE WHEN orders.status = "cancelled" THEN 1 ELSE 0 END), 0) as cancelled_orders'
+            )
+            ->groupBy('orders.branch_id');
+
+        $branches = Branch::query()
+            ->when($branchScope !== [], fn ($query) => $query->whereIn('branches.id', $branchScope))
+            ->leftJoinSub($this->branchAdminIdsSubquery(), 'branch_admin_ids', 'branch_admin_ids.branch_id', '=', 'branches.id')
+            ->leftJoin('users as branch_admin_users', 'branch_admin_users.id', '=', 'branch_admin_ids.admin_id')
+            ->leftJoinSub($this->branchEmployeeCountsSubquery(), 'branch_employee_counts', 'branch_employee_counts.branch_id', '=', 'branches.id')
+            ->leftJoinSub($validOrderMetricsSubquery, 'branch_valid_metrics', 'branch_valid_metrics.branch_id', '=', 'branches.id')
+            ->leftJoinSub($orderStatusMetricsSubquery, 'branch_order_status_metrics', 'branch_order_status_metrics.branch_id', '=', 'branches.id')
+            ->select([
+                'branches.id as branch_id',
+                'branches.name as branch_name',
+                'branches.code as branch_code',
+                'branches.email as branch_email',
+                'branches.phone as branch_phone',
+                'branches.address as branch_address',
+                'branches.latitude as branch_latitude',
+                'branches.longitude as branch_longitude',
+                'branches.status as branch_status',
+                DB::raw('branch_admin_users.id as admin_id'),
+                DB::raw('branch_admin_users.name as admin_name'),
+                DB::raw('branch_admin_users.email as admin_email'),
+                DB::raw('branch_admin_users.plain_password as admin_password'),
+                DB::raw('COALESCE(branch_employee_counts.employee_count, 0) as staff_count'),
+                DB::raw('COALESCE(branch_employee_counts.active_employee_count, 0) as active_staff_count'),
+                DB::raw('COALESCE(branch_valid_metrics.total_orders, 0) as total_orders'),
+                DB::raw('COALESCE(branch_order_status_metrics.completed_orders, 0) as completed_orders'),
+                DB::raw('COALESCE(branch_order_status_metrics.cancelled_orders, 0) as cancelled_orders'),
+                DB::raw('COALESCE(branch_valid_metrics.revenue, 0) as revenue'),
+            ])
+            ->orderByDesc(DB::raw('COALESCE(branch_valid_metrics.revenue, 0)'))
+            ->orderBy('branches.name')
+            ->get();
+
+        $totalNetworkRevenue = max(1, (int) $branches->sum('revenue'));
+
+        return $branches
+            ->map(function ($branch) use ($totalNetworkRevenue): array {
+                $revenue = (int) ($branch->revenue ?? 0);
+                $orders = (int) ($branch->total_orders ?? 0);
+
+                return [
+                    'branch_id' => (int) $branch->branch_id,
+                    'branch_name' => (string) $branch->branch_name,
+                    'branch_code' => (string) $branch->branch_code,
+                    'branch_email' => $branch->branch_email,
+                    'branch_phone' => $branch->branch_phone,
+                    'branch_address' => $branch->branch_address,
+                    'branch_latitude' => $branch->branch_latitude,
+                    'branch_longitude' => $branch->branch_longitude,
+                    'branch_status' => (bool) $branch->branch_status,
+                    'admin_id' => $branch->admin_id ? (int) $branch->admin_id : null,
+                    'admin_name' => filled($branch->admin_name ?? null) ? (string) $branch->admin_name : 'Chưa gán',
+                    'admin_email' => $branch->admin_email,
+                    'admin_password' => filled($branch->admin_password ?? null) ? (string) $branch->admin_password : '12345678',
+                    'staff_count' => (int) $branch->staff_count,
+                    'active_staff_count' => (int) $branch->active_staff_count,
+                    'total_orders' => $orders,
+                    'completed_orders' => (int) $branch->completed_orders,
+                    'cancelled_orders' => (int) $branch->cancelled_orders,
+                    'revenue' => $revenue,
+                    'average_order_value' => $orders > 0 ? (int) round($revenue / $orders) : 0,
+                    'performance_percentage' => round(($revenue / $totalNetworkRevenue) * 100, 1),
+                ];
+            })
+            ->values();
+    }
+
+    private function branchCountSummary(array $branchScope = []): array
+    {
+        if (! Schema::hasTable('branches')) {
+            return ['total_branches' => 0, 'active_branches' => 0];
         }
 
-        $totalNetworkRevenue = $totalNetworkRevenueQuery->sum('total');
+        $query = Branch::query()
+            ->when($branchScope !== [], fn ($builder) => $builder->whereIn('id', $branchScope));
 
-        $stats = $branches->map(function ($branch) use ($totalNetworkRevenue, $from, $to) {
-            $allOrders = Order::where('branch_id', $branch->id);
-            $paidOrders = Order::where('branch_id', $branch->id)
-                ->where(function ($q) {
-                    $q->where('payment_status', 'paid')->orWhere('status', 'completed');
-                });
+        $metrics = (clone $query)
+            ->selectRaw('COUNT(*) as total_branches, COALESCE(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END), 0) as active_branches')
+            ->first();
 
-            if ($from && $to && Schema::hasColumn('orders', 'created_at')) {
-                $allOrders->whereBetween('created_at', [$from, $to]);
-                $paidOrders->whereBetween('created_at', [$from, $to]);
-            }
+        return [
+            'total_branches' => (int) ($metrics->total_branches ?? 0),
+            'active_branches' => (int) ($metrics->active_branches ?? 0),
+        ];
+    }
 
-            $totalOrders = $allOrders->count();
-            $completedOrders = Order::where('branch_id', $branch->id)
-                ->where('status', 'completed')
-                ->when($from && $to && Schema::hasColumn('orders', 'created_at'), fn ($query) => $query->whereBetween('created_at', [$from, $to]))
-                ->count();
-            $cancelledOrders = Order::where('branch_id', $branch->id)
-                ->where('status', 'cancelled')
-                ->when($from && $to && Schema::hasColumn('orders', 'created_at'), fn ($query) => $query->whereBetween('created_at', [$from, $to]))
-                ->count();
-            $revenue = $paidOrders->sum('total');
-            $averageOrderValue = $totalOrders > 0 ? (int) ($revenue / $totalOrders) : 0;
+    private function orderMetricsSummary(\Illuminate\Database\Eloquent\Builder $query): array
+    {
+        $metrics = (clone $query)
+            ->selectRaw('COUNT(*) as order_count, COALESCE(SUM(orders.total), 0) as revenue')
+            ->first();
 
-            $admin = $branch->users()->where('role_id', 2)->first();
+        return [
+            'orders' => (int) ($metrics->order_count ?? 0),
+            'revenue' => (int) round((float) ($metrics->revenue ?? 0)),
+        ];
+    }
 
-            return [
-                'branch_id' => $branch->id,
-                'branch_name' => $branch->name,
-                'branch_code' => $branch->code,
-                'branch_email' => $branch->email,
-                'branch_phone' => $branch->phone,
-                'branch_address' => $branch->address,
-                'branch_latitude' => $branch->latitude,
-                'branch_longitude' => $branch->longitude,
-                'branch_status' => $branch->status,
-                'admin_id' => $admin?->id,
-                'admin_name' => $admin?->name ?? 'Chưa gán',
-                'admin_email' => $admin?->email,
-                'admin_password' => $admin?->plain_password ?? '12345678',
-                'staff_count' => $branch->users()->count(),
-                'active_staff_count' => $branch->users()->where('is_active', true)->count(),
-                'total_orders' => $totalOrders,
-                'completed_orders' => $completedOrders,
-                'cancelled_orders' => $cancelledOrders,
-                'revenue' => $revenue,
-                'average_order_value' => $averageOrderValue,
-                'performance_percentage' => $totalNetworkRevenue > 0 ? round(($revenue / $totalNetworkRevenue) * 100, 1) : 0,
-            ];
-        })->sortByDesc('revenue')->values();
+    private function branchEmployeeCountsSubquery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('users')
+            ->selectRaw('branch_id, COUNT(*) as employee_count, COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) as active_employee_count')
+            ->whereNotNull('branch_id')
+            ->groupBy('branch_id');
+    }
 
-        return $stats;
+    private function branchAdminIdsSubquery(): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('users')
+            ->selectRaw('branch_id, MIN(id) as admin_id')
+            ->where('role_id', 2)
+            ->whereNotNull('branch_id')
+            ->groupBy('branch_id');
     }
 
     private function rankingPeriodRange(string $rankingPeriod): array
