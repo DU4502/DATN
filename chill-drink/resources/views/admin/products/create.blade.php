@@ -1,4 +1,4 @@
-@extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('title', 'Thêm sản phẩm mới')
 @section('page-title', 'Thêm sản phẩm')
