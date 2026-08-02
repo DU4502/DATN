@@ -177,6 +177,10 @@ class DashboardController extends Controller
         if ($user->isSuperAdmin()) {
             $branchId = $request->query('branch_id');
 
+            if (! is_numeric($branchId) && $user->isViewingAdminWorkspace()) {
+                $branchId = $user->adminWorkspaceBranchId();
+            }
+
             if (is_numeric($branchId) && Branch::query()->whereKey((int) $branchId)->exists()) {
                 $this->dashboardUseBranchScope = true;
                 $this->dashboardBranchId = (int) $branchId;
