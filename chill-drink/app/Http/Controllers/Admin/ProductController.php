@@ -93,10 +93,8 @@ class ProductController extends Controller
     {
         $categories = Category::orderBy('name')->get();
 
-        if (\App\Models\Size::count() === 0) {
-            foreach (['L', 'M', 'S'] as $s) {
-                \App\Models\Size::firstOrCreate(['name' => $s]);
-            }
+        foreach (['S', 'M', 'L'] as $s) {
+            \App\Models\Size::firstOrCreate(['name' => $s]);
         }
 
         $allSizes = \App\Models\Size::all()->sortBy(function ($size) {
@@ -196,10 +194,8 @@ class ProductController extends Controller
         $product = $this->findProduct($id);
         $categories = Category::orderBy('name')->get();
 
-        if (\App\Models\Size::count() === 0) {
-            foreach (['L', 'M', 'S'] as $s) {
-                \App\Models\Size::firstOrCreate(['name' => $s]);
-            }
+        foreach (['S', 'M', 'L'] as $s) {
+            \App\Models\Size::firstOrCreate(['name' => $s]);
         }
 
         $allSizes = \App\Models\Size::all()->sortBy(function ($size) {

@@ -1368,8 +1368,10 @@
                             <div class="quick-section-label"><i class="bi bi-droplet"></i> Mức đường</div>
                             <div class="d-flex flex-wrap gap-2" data-quick-group="sugar">
                                 <button type="button" class="quick-choice" data-value="0">0%</button>
-                                <button type="button" class="quick-choice active" data-value="50">50%</button>
-                                <button type="button" class="quick-choice" data-value="100">100%</button>
+                                <button type="button" class="quick-choice" data-value="30">30%</button>
+                                <button type="button" class="quick-choice" data-value="50">50%</button>
+                                <button type="button" class="quick-choice" data-value="70">70%</button>
+                                <button type="button" class="quick-choice active" data-value="100">100% (Tiêu chuẩn)</button>
                             </div>
                         </div>
                         <div>
@@ -1377,7 +1379,7 @@
                             <div class="d-flex flex-wrap gap-2" data-quick-group="ice">
                                 <button type="button" class="quick-choice" data-value="0">Không đá</button>
                                 <button type="button" class="quick-choice" data-value="50">Ít đá</button>
-                                <button type="button" class="quick-choice active" data-value="100">Thường</button>
+                                <button type="button" class="quick-choice active" data-value="100">100% (Tiêu chuẩn)</button>
                             </div>
                         </div>
                     </div>
