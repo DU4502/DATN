@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\ProductImage;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -552,7 +553,7 @@ class SuperAdminAnalyticsService
         $performance = in_array(Arr::get($options, 'performance'), ['all', 'increased', 'decreased', 'unchanged', 'new_activity', 'no_orders'], true)
             ? (string) Arr::get($options, 'performance')
             : 'all';
-        $perPage = 5;
+        $perPage = max(1, min(50, (int) Arr::get($options, 'per_page', 5)));
         $page = max(1, (int) Arr::get($options, 'page', 1));
         $scopeBranchIds = $this->contextBranchScopeIds($context, Arr::get($options, 'analytics_branch_ids', Arr::get($options, 'branch_ids')));
 
@@ -726,6 +727,528 @@ class SuperAdminAnalyticsService
             'per_page' => $perPage,
             'page' => $page,
             'ranking_period' => $legacyRankingPeriod,
+        ];
+    }
+
+    public function branchTimeComparison(AnalyticsPeriodContext $context, array $options = []): array
+    {
+        if (! Schema::hasTable('branches') || ! Schema::hasTable('orders')) {
+            return $this->emptyBranchTimeComparison($context, $options);
+        }
+
+        $indicator = in_array(Arr::get($options, 'indicator', 'both'), ['both', 'revenue', 'orders'], true)
+            ? (string) Arr::get($options, 'indicator', 'both')
+            : 'both';
+
+        $scopeBranchIds = $this->contextBranchScopeIds(
+            $context,
+            Arr::get($options, 'analytics_branch_ids', Arr::get($options, 'branch_ids'))
+        );
+
+        $periodSetup = $this->resolveBranchTimeComparisonSetup($context, $options);
+        $periods = $periodSetup['periods'];
+
+        if ($periods->isEmpty()) {
+            return $this->emptyBranchTimeComparison($context, $options);
+        }
+
+        $periodKeys = $periods->pluck('key')->values()->all();
+        $periodLookup = collect($periodKeys)->flip()->all();
+        $periodStart = $periods->last()['start'];
+        $periodEnd = $periods->first()['end'];
+        $latestPeriod = $periods->first();
+        $previousPeriod = $periods->get(1);
+
+        $ordersQuery = $this->validSalesOrdersQuery()
+            ->whereNotNull('orders.branch_id');
+        $this->applyDateRange($ordersQuery, $periodStart, $periodEnd);
+        $this->applyBranchScope($ordersQuery, $scopeBranchIds);
+
+        $orders = $ordersQuery->get(['orders.id', 'orders.branch_id', 'orders.total', 'orders.created_at']);
+        $ordersByBranch = $orders->groupBy(static fn (object $order): int => (int) ($order->branch_id ?? 0));
+        $branches = $this->loadBranchMetadata($scopeBranchIds);
+
+        if ($branches->isEmpty()) {
+            return $this->emptyBranchTimeComparison($context, $options);
+        }
+
+        $branchBuckets = [];
+        foreach ($branches as $branch) {
+            $branchId = (int) $branch->id;
+            $branchBuckets[$branchId] = [
+                'branch_id' => $branchId,
+                'branch_code' => (string) ($branch->code ?? ''),
+                'branch_name' => (string) ($branch->name ?? ''),
+                'periods' => array_fill_keys($periodKeys, ['revenue' => 0, 'valid_order_count' => 0]),
+            ];
+        }
+
+        $periodTotals = array_fill_keys($periodKeys, ['revenue' => 0, 'valid_order_count' => 0]);
+
+        foreach ($orders as $order) {
+            $branchId = (int) ($order->branch_id ?? 0);
+            if ($branchId <= 0 || ! isset($branchBuckets[$branchId])) {
+                continue;
+            }
+
+            $createdAt = $order->created_at instanceof CarbonInterface
+                ? CarbonImmutable::instance($order->created_at)
+                : CarbonImmutable::parse((string) $order->created_at, $context->timezone);
+
+            $periodKey = $this->branchTimeComparisonPeriodKey($createdAt, $periodSetup['group_type']);
+            if (! isset($periodLookup[$periodKey])) {
+                continue;
+            }
+
+            $revenue = (int) round((float) ($order->total ?? 0));
+
+            $branchBuckets[$branchId]['periods'][$periodKey]['revenue'] += $revenue;
+            $branchBuckets[$branchId]['periods'][$periodKey]['valid_order_count'] += 1;
+            $periodTotals[$periodKey]['revenue'] += $revenue;
+            $periodTotals[$periodKey]['valid_order_count'] += 1;
+        }
+
+        $branchRows = collect(array_values($branchBuckets))
+            ->map(function (array $branch) use ($periods, $latestPeriod, $previousPeriod): array {
+                $totalRevenue = 0;
+                $totalOrders = 0;
+
+                foreach ($periods as $period) {
+                    $bucket = $branch['periods'][$period['key']] ?? ['revenue' => 0, 'valid_order_count' => 0];
+                    $totalRevenue += (int) ($bucket['revenue'] ?? 0);
+                    $totalOrders += (int) ($bucket['valid_order_count'] ?? 0);
+                }
+
+                $latestBucket = $latestPeriod ? ($branch['periods'][$latestPeriod['key']] ?? ['revenue' => 0, 'valid_order_count' => 0]) : ['revenue' => 0, 'valid_order_count' => 0];
+                $previousBucket = $previousPeriod ? ($branch['periods'][$previousPeriod['key']] ?? null) : null;
+
+                return [
+                    'branch_id' => $branch['branch_id'],
+                    'branch_code' => $branch['branch_code'],
+                    'branch_name' => $branch['branch_name'],
+                    'periods' => $branch['periods'],
+                    'total_revenue' => $totalRevenue,
+                    'total_valid_orders' => $totalOrders,
+                    'latest_revenue_change' => $previousBucket !== null
+                        ? $this->comparisonSnapshot(
+                            (int) ($latestBucket['revenue'] ?? 0),
+                            (int) ($previousBucket['revenue'] ?? 0),
+                        )
+                        : $this->comparisonSnapshot((int) ($latestBucket['revenue'] ?? 0), null),
+                    'latest_order_change' => $previousBucket !== null
+                        ? $this->comparisonSnapshot(
+                            (int) ($latestBucket['valid_order_count'] ?? 0),
+                            (int) ($previousBucket['valid_order_count'] ?? 0),
+                        )
+                        : $this->comparisonSnapshot((int) ($latestBucket['valid_order_count'] ?? 0), null),
+                ];
+            })
+            ->sort(function (array $left, array $right): int {
+                if ($left['total_revenue'] !== $right['total_revenue']) {
+                    return $right['total_revenue'] <=> $left['total_revenue'];
+                }
+
+                if ($left['total_valid_orders'] !== $right['total_valid_orders']) {
+                    return $right['total_valid_orders'] <=> $left['total_valid_orders'];
+                }
+
+                return strcasecmp($left['branch_name'], $right['branch_name']);
+            })
+            ->values();
+
+        $summaryRevenue = (int) $branchRows->sum('total_revenue');
+        $summaryOrders = (int) $branchRows->sum('total_valid_orders');
+
+        return [
+            'period_type' => $context->periodType,
+            'group_type' => $periodSetup['group_type'],
+            'group_label' => $periodSetup['group_label'],
+            'indicator' => $indicator,
+            'indicator_label' => match ($indicator) {
+                'revenue' => 'Doanh thu',
+                'orders' => 'Số đơn',
+                default => 'Cả hai',
+            },
+            'period_count' => $periods->count(),
+            'period_count_options' => $periodSetup['period_count_options'],
+            'period_count_selected' => $periodSetup['period_count_selected'],
+            'periods' => $periods->values(),
+            'totals' => [
+                'periods' => collect($periodTotals)->map(function (array $bucket, string $key) use ($periods): array {
+                    $period = $periods->firstWhere('key', $key);
+
+                    return [
+                        'period_key' => $key,
+                        'label' => $period['label'] ?? $key,
+                        'display_label' => $period['display_label'] ?? $key,
+                        'revenue' => (int) ($bucket['revenue'] ?? 0),
+                        'valid_order_count' => (int) ($bucket['valid_order_count'] ?? 0),
+                    ];
+                })->values(),
+                'total_revenue' => $summaryRevenue,
+                'total_valid_orders' => $summaryOrders,
+                'branch_count' => $branchRows->count(),
+            ],
+            'branches' => $branchRows,
+            'pagination' => [
+                'current_page' => 1,
+                'per_page' => $branchRows->count(),
+                'total' => $branchRows->count(),
+                'last_page' => 1,
+            ],
+            'branch_scope_label' => $context->branchScopeLabel,
+            'search' => '',
+            'error' => null,
+        ];
+    }
+
+    private function emptyBranchTimeComparison(AnalyticsPeriodContext $context, array $options = []): array
+    {
+        $indicator = in_array(Arr::get($options, 'indicator', 'both'), ['both', 'revenue', 'orders'], true)
+            ? (string) Arr::get($options, 'indicator', 'both')
+            : 'both';
+
+        return [
+            'period_type' => $context->periodType,
+            'group_type' => $context->periodType === 'range' ? 'day' : $context->periodType,
+            'group_label' => match ($context->periodType) {
+                'day' => 'Ngày',
+                'week' => 'Tuần',
+                'month' => 'Tháng',
+                'year' => 'Năm',
+                default => 'Tự động',
+            },
+            'indicator' => $indicator,
+            'indicator_label' => match ($indicator) {
+                'revenue' => 'Doanh thu',
+                'orders' => 'Số đơn',
+                default => 'Cả hai',
+            },
+            'period_count' => 0,
+            'period_count_options' => [],
+            'period_count_selected' => null,
+            'periods' => collect(),
+            'totals' => [
+                'periods' => collect(),
+                'total_revenue' => 0,
+                'total_valid_orders' => 0,
+                'branch_count' => 0,
+            ],
+            'branches' => collect(),
+            'pagination' => [
+                'current_page' => 1,
+                'per_page' => 0,
+                'total' => 0,
+                'last_page' => 1,
+            ],
+            'branch_scope_label' => $context->branchScopeLabel,
+            'search' => '',
+            'error' => null,
+        ];
+    }
+
+    private function resolveBranchTimeComparisonSetup(AnalyticsPeriodContext $context, array $options): array
+    {
+        $periodType = $context->periodType;
+        $timezoneNow = CarbonImmutable::now($context->timezone);
+        $baseStart = $context->currentStart
+            ? CarbonImmutable::instance($context->currentStart)
+            : $timezoneNow->startOfDay();
+        $baseEnd = $context->currentEnd
+            ? CarbonImmutable::instance($context->currentEnd)
+            : $timezoneNow;
+
+        if ($periodType === 'range') {
+            $groupType = $this->resolveBranchTimeComparisonRangeGroupType($context);
+
+            return [
+                'group_type' => $groupType,
+                'group_label' => match ($groupType) {
+                    'day' => 'Ngày',
+                    'week' => 'Tuần',
+                    default => 'Tháng',
+                },
+                'period_count' => null,
+                'period_count_selected' => null,
+                'period_count_options' => [],
+                'periods' => $this->buildBranchTimeComparisonRangePeriods($baseStart, $baseEnd, $groupType),
+            ];
+        }
+
+        $defaultCounts = [
+            'day' => [7, [7, 14, 30]],
+            'week' => [8, [4, 8, 12, 26]],
+            'month' => [12, [6, 12, 24]],
+            'year' => [5, [3, 5, 10]],
+        ];
+        [$defaultCount, $countOptions] = $defaultCounts[$periodType] ?? [7, [7, 14, 30]];
+
+        $requestedCount = (int) Arr::get($options, 'period_count', $defaultCount);
+        $periodCount = in_array($requestedCount, $countOptions, true) ? $requestedCount : $defaultCount;
+
+        return [
+            'group_type' => $periodType,
+            'group_label' => match ($periodType) {
+                'day' => 'Ngày',
+                'week' => 'Tuần',
+                'month' => 'Tháng',
+                'year' => 'Năm',
+                default => 'Ngày',
+            },
+            'period_count' => $periodCount,
+            'period_count_selected' => $periodCount,
+            'period_count_options' => $countOptions,
+            'periods' => $this->buildBranchTimeComparisonFixedPeriods($baseStart, $baseEnd, $periodType, $periodCount),
+        ];
+    }
+
+    private function resolveBranchTimeComparisonRangeGroupType(AnalyticsPeriodContext $context): string
+    {
+        if (! $context->currentStart || ! $context->currentEnd) {
+            return 'day';
+        }
+
+        $days = max(1, $context->currentStart->startOfDay()->diffInDays($context->currentEnd->startOfDay()) + 1);
+
+        return match (true) {
+            $days <= 31 => 'day',
+            $days <= 180 => 'week',
+            default => 'month',
+        };
+    }
+
+    private function buildBranchTimeComparisonFixedPeriods(CarbonImmutable $baseStart, CarbonImmutable $baseEnd, string $groupType, int $periodCount): Collection
+    {
+        $periods = collect();
+
+        for ($offset = max(1, $periodCount) - 1; $offset >= 0; $offset--) {
+            $start = match ($groupType) {
+                'week' => $baseStart->subWeeks($offset)->startOfWeek(Carbon::MONDAY),
+                'month' => $baseStart->subMonthsNoOverflow($offset)->startOfMonth(),
+                'year' => $baseStart->subYearsNoOverflow($offset)->startOfYear(),
+                default => $baseStart->subDays($offset)->startOfDay(),
+            };
+            $naturalEnd = match ($groupType) {
+                'week' => $start->endOfWeek(Carbon::SUNDAY),
+                'month' => $start->endOfMonth(),
+                'year' => $start->endOfYear(),
+                default => $start->endOfDay(),
+            };
+            $isLatest = $offset === 0;
+            $end = $isLatest ? $baseEnd : $naturalEnd;
+            $isPartial = $isLatest && $end->lessThan($naturalEnd);
+
+            $periods->push([
+                'key' => $this->branchTimeComparisonPeriodKey($start, $groupType),
+                'label' => $isPartial
+                    ? 'Đang diễn ra'
+                    : $this->branchTimeComparisonPeriodLabel($start, $end, $groupType),
+                'display_label' => $this->branchTimeComparisonPeriodDisplayLabel($start, $end, $groupType),
+                'start' => $start,
+                'end' => $end,
+                'is_partial' => $isPartial,
+            ]);
+        }
+
+        return $periods->reverse()->values();
+    }
+
+    private function buildBranchTimeComparisonRangePeriods(CarbonImmutable $rangeStart, CarbonImmutable $rangeEnd, string $groupType): Collection
+    {
+        $periods = collect();
+
+        if ($groupType === 'day') {
+            $cursor = $rangeStart->startOfDay();
+            $lastDate = $rangeEnd->startOfDay();
+
+            while ($cursor->lessThanOrEqualTo($lastDate)) {
+                $naturalEnd = $cursor->endOfDay();
+                $end = $naturalEnd->greaterThan($rangeEnd) ? $rangeEnd : $naturalEnd;
+                $isPartial = $end->lessThan($naturalEnd) || $cursor->lessThan($rangeStart->startOfDay());
+
+                $periods->push([
+                    'key' => $this->branchTimeComparisonPeriodKey($cursor, $groupType),
+                    'label' => $isPartial && $cursor->isSameDay($lastDate) ? 'Đang diễn ra' : $this->branchTimeComparisonPeriodLabel($cursor, $end, $groupType),
+                    'display_label' => $this->branchTimeComparisonPeriodDisplayLabel($cursor, $end, $groupType),
+                    'start' => $cursor,
+                    'end' => $end,
+                    'is_partial' => $isPartial,
+                ]);
+
+                $cursor = $cursor->addDay();
+            }
+
+            return $periods->reverse()->values();
+        }
+
+        $cursor = $groupType === 'month'
+            ? $rangeStart->startOfMonth()
+            : $rangeStart->startOfWeek(Carbon::MONDAY);
+        $step = $groupType === 'month' ? 'month' : 'week';
+
+        while ($cursor->lessThanOrEqualTo($rangeEnd)) {
+            $naturalEnd = $step === 'month' ? $cursor->endOfMonth() : $cursor->endOfWeek(Carbon::SUNDAY);
+            $start = $cursor->greaterThan($rangeStart) ? $cursor : $rangeStart;
+            $end = $naturalEnd->greaterThan($rangeEnd) ? $rangeEnd : $naturalEnd;
+            $isPartial = $end->lessThan($naturalEnd) || $start->greaterThan($cursor);
+
+            $periods->push([
+                'key' => $this->branchTimeComparisonPeriodKey($cursor, $groupType),
+                'label' => $isPartial && $naturalEnd->greaterThan($rangeEnd) ? 'Đang diễn ra' : $this->branchTimeComparisonPeriodLabel($cursor, $end, $groupType),
+                'display_label' => $this->branchTimeComparisonPeriodDisplayLabel($cursor, $end, $groupType),
+                'start' => $start,
+                'end' => $end,
+                'is_partial' => $isPartial,
+            ]);
+
+            $cursor = $step === 'month'
+                ? $cursor->addMonthNoOverflow()->startOfMonth()
+                : $cursor->addWeek()->startOfWeek(Carbon::MONDAY);
+        }
+
+        return $periods->reverse()->values();
+    }
+
+    /**
+     * @return array{current_start: CarbonImmutable, current_end: CarbonImmutable, previous_start: CarbonImmutable, previous_end: CarbonImmutable}
+     */
+    private function branchTimeComparisonPreviousWindow(CarbonImmutable $currentStart, CarbonImmutable $currentEnd, string $groupType): array
+    {
+        $durationSeconds = max(0, $currentStart->diffInSeconds($currentEnd));
+
+        $previousStart = match ($groupType) {
+            'week' => $currentStart->subWeek()->startOfWeek(Carbon::MONDAY),
+            'month' => $currentStart->subMonthNoOverflow()->startOfMonth(),
+            'year' => $currentStart->subYearNoOverflow()->startOfYear(),
+            default => $currentStart->subDay()->startOfDay(),
+        };
+
+        $previousEnd = $previousStart->addSeconds($durationSeconds);
+
+        return [
+            'current_start' => $currentStart,
+            'current_end' => $currentEnd,
+            'previous_start' => $previousStart,
+            'previous_end' => $previousEnd,
+        ];
+    }
+
+    /**
+     * @param Collection<int, object> $orders
+     * @return array{revenue: int, valid_order_count: int}
+     */
+    private function branchTimeComparisonWindowMetrics(Collection $orders, CarbonImmutable $start, CarbonImmutable $end, string $timezone): array
+    {
+        $revenue = 0;
+        $validOrderCount = 0;
+
+        foreach ($orders as $order) {
+            $createdAt = $order->created_at instanceof CarbonInterface
+                ? CarbonImmutable::instance($order->created_at)
+                : CarbonImmutable::parse((string) $order->created_at, $timezone);
+
+            if ($createdAt->lessThan($start) || $createdAt->greaterThan($end)) {
+                continue;
+            }
+
+            $revenue += (int) round((float) ($order->total ?? 0));
+            $validOrderCount += 1;
+        }
+
+        return [
+            'revenue' => $revenue,
+            'valid_order_count' => $validOrderCount,
+        ];
+    }
+
+    private function branchTimeComparisonPeriodKey(CarbonImmutable $date, string $groupType): string
+    {
+        return match ($groupType) {
+            'week' => $date->format('o-\WW'),
+            'month' => $date->format('Y-m'),
+            'year' => $date->format('Y'),
+            default => $date->format('Y-m-d'),
+        };
+    }
+
+    private function branchTimeComparisonPeriodLabel(CarbonImmutable $start, CarbonImmutable $end, string $groupType): string
+    {
+        return match ($groupType) {
+            'week' => 'Tuần '.$start->format('d/m').' - '.$end->format('d/m'),
+            'month' => 'Tháng '.$start->format('m/Y'),
+            'year' => 'Năm '.$start->format('Y'),
+            default => $start->format('d/m/Y'),
+        };
+    }
+
+    private function branchTimeComparisonPeriodDisplayLabel(CarbonImmutable $start, CarbonImmutable $end, string $groupType): string
+    {
+        return match ($groupType) {
+            'week' => $start->format('d/m').' - '.$end->format('d/m/Y'),
+            'month' => $start->format('m/Y'),
+            'year' => $start->format('Y'),
+            default => $start->format('d/m/Y'),
+        };
+    }
+
+    private function comparisonSnapshot(int $currentValue, ?int $previousValue): array
+    {
+        if ($previousValue === null) {
+            return [
+                'current_value' => $currentValue,
+                'previous_value' => null,
+                'absolute_change' => null,
+                'percentage_change' => null,
+                'state' => 'unavailable',
+                'label' => 'Chưa đủ dữ liệu',
+            ];
+        }
+
+        if ($previousValue === 0 && $currentValue === 0) {
+            return [
+                'current_value' => 0,
+                'previous_value' => 0,
+                'absolute_change' => 0,
+                'percentage_change' => 0.0,
+                'state' => 'unchanged',
+                'label' => 'Không đổi',
+            ];
+        }
+
+        if ($previousValue === 0 && $currentValue > 0) {
+            return [
+                'current_value' => $currentValue,
+                'previous_value' => 0,
+                'absolute_change' => $currentValue,
+                'percentage_change' => 100.0,
+                'state' => 'new_activity',
+                'label' => 'Phát sinh mới',
+            ];
+        }
+
+        if ($currentValue === 0 && $previousValue > 0) {
+            return [
+                'current_value' => 0,
+                'previous_value' => $previousValue,
+                'absolute_change' => -$previousValue,
+                'percentage_change' => -100.0,
+                'state' => 'decreased',
+                'label' => 'Giảm',
+            ];
+        }
+
+        $absoluteChange = $currentValue - $previousValue;
+        $percentageChange = $previousValue !== 0
+            ? round(($absoluteChange / $previousValue) * 100, 1)
+            : 0.0;
+
+        return [
+            'current_value' => $currentValue,
+            'previous_value' => $previousValue,
+            'absolute_change' => $absoluteChange,
+            'percentage_change' => $percentageChange,
+            'state' => $absoluteChange > 0 ? 'increased' : ($absoluteChange < 0 ? 'decreased' : 'unchanged'),
+            'label' => $absoluteChange > 0 ? 'Tăng' : ($absoluteChange < 0 ? 'Giảm' : 'Không đổi'),
         ];
     }
 

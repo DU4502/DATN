@@ -33,7 +33,8 @@
 <section class="sa-panel" id="branch-ranking" data-branch-ranking-region>
     <div class="sa-panel-header sa-branch-compare-header">
         <div class="sa-branch-compare-header-copy">
-            <h2 class="sa-branch-compare-title">So sánh chi nhánh</h2>
+            <h2 class="sa-branch-compare-title">Lọc trong bảng chi nhánh</h2>
+            <p class="sa-panel-note" style="margin: 0.25rem 0 0;">Chỉ áp dụng cho bảng này.</p>
             <div class="sa-branch-compare-meta">
                 <span class="sa-state sa-state-active" style="background:#eafaf5; color:var(--sa-green);">{{ $branchComparison['period_label'] }}</span>
                 <span class="sa-state" style="background:#eef2ff; color:#4338ca;">{{ $branchComparison['comparison_label'] }}</span>
@@ -94,7 +95,7 @@
             </div>
         </div>
         <div class="sa-table-wrap">
-            <table class="sa-table">
+            <table class="sa-table sa-branch-ranking-table">
                 <thead>
                     <tr>
                         <th style="position: sticky; top: 0; z-index: 1;">Hạng</th>
@@ -130,20 +131,12 @@
                             <td style="font-weight:800; color:var(--sa-green);">{{ $branch['rank'] }}</td>
                             <td data-branch-name-cell style="min-width: 250px;">
                                 <div style="font-weight:800; color:var(--sa-ink);">{{ $branch['branch_name'] }}</div>
-                                <div style="margin-top:0.2rem; color:var(--sa-muted); font-size:0.72rem; line-height:1.45;">
-                                    <span>{{ $branch['branch_code'] }}</span>
-                                    <span style="margin:0 0.25rem;">•</span>
-                                    <span>
-                                        @if($branch['admin_id'])
-                                            {{ $branch['admin_name'] ?? 'Chưa gán admin' }}{{ !empty($branch['admin_email'] ?? null) ? ' · '.$branch['admin_email'] : '' }}
-                                        @else
-                                            Chưa gán admin
-                                        @endif
-                                    </span>
-                                    <span style="margin:0 0.25rem;">•</span>
-                                    <span>{{ number_format($branch['active_employee_count']) }}/{{ number_format($branch['employee_count']) }} nhân sự</span>
-                                    <span style="margin:0 0.25rem;">•</span>
-                                    <span>Hoàn thành {{ number_format($branch['completed_order_count']) }} · Hủy {{ number_format($branch['cancelled_order_count']) }}</span>
+                                <div style="margin-top:0.16rem; color:var(--sa-muted); font-size:0.7rem; line-height:1.35;">
+                                    @if($branch['admin_id'])
+                                        {{ $branch['admin_name'] ?? 'Chưa gán admin' }}
+                                    @else
+                                        Chưa gán admin
+                                    @endif
                                 </div>
                             </td>
                             <td style="font-weight:800; color:var(--sa-green); white-space:nowrap;">{{ number_format($branch['revenue'], 0, ',', '.') }}đ</td>

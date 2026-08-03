@@ -178,6 +178,16 @@
                             <span class="focus-product-candidate-thumb" style="width: 48px; height: 48px; border-radius: 12px;"><i class="bi bi-cup-straw"></i></span>
                         @endif
                     </div>
+                    <div class="focus-product-selected-stats" aria-label="Thông tin sản phẩm đã chọn">
+                        <div class="focus-product-selected-stat">
+                            <div class="focus-product-selected-stat-label">Doanh thu</div>
+                            <div class="focus-product-selected-stat-value">{{ number_format((int) ($focusSummary['total_revenue'] ?? 0), 0, ',', '.') }}đ</div>
+                        </div>
+                        <div class="focus-product-selected-stat">
+                            <div class="focus-product-selected-stat-label">Bán được</div>
+                            <div class="focus-product-selected-stat-value">{{ number_format((int) ($focusSummary['total_quantity'] ?? 0)) }} cốc</div>
+                        </div>
+                    </div>
                     <div class="focus-product-selected-chiprow">
                         <span class="sa-state" style="background:#ecfdf5; color:#15803d;">{{ number_format((int) ($focusSummary['total_quantity'] ?? 0)) }} sản phẩm</span>
                         <span class="sa-state" style="background:#eefbf7; color:#0d9373;">{{ number_format((int) ($focusSummary['total_revenue'] ?? 0), 0, ',', '.') }}đ</span>
@@ -196,13 +206,14 @@
 
                     @forelse($focusCandidates as $candidate)
                         @php
-                            $candidateUrl = route('admin.super-admin', array_merge($focusCurrentQuery, [
+                            $candidateQuery = array_filter(array_merge($focusCurrentQuery, [
                                 'analytics_focus_product_id' => $candidate['id'],
-                                'analytics_focus_product_query' => $candidate['name'],
+                                'analytics_focus_product_query' => null,
                                 'analytics_focus_product_sort' => $focusProductSort,
                                 'analytics_focus_branch_search' => $focusBranchSearch !== '' ? $focusBranchSearch : null,
                                 'analytics_focus_branch_page' => 1,
-                            ])) . '#focus-product-section';
+                            ]), static fn ($value) => $value !== null && $value !== '');
+                            $candidateUrl = route('admin.super-admin', $candidateQuery) . '#focus-product-section';
                         @endphp
                         <a href="{{ $candidateUrl }}" class="focus-product-candidate {{ (int) ($candidate['id'] ?? 0) === $focusSelectedProductId ? 'active' : '' }}" data-focus-product-link>
                             <div class="focus-product-candidate-thumb">

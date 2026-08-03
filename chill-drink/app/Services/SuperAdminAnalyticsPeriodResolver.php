@@ -400,26 +400,60 @@ class SuperAdminAnalyticsPeriodResolver
     {
         $payload = [
             'analytics_period_type' => $periodType,
-            'analytics_date' => Arr::get($input, 'analytics_date'),
-            'analytics_week' => Arr::get($input, 'analytics_week'),
-            'analytics_month' => Arr::get($input, 'analytics_month'),
-            'analytics_year' => Arr::get($input, 'analytics_year'),
-            'analytics_start_date' => Arr::get($input, 'analytics_start_date'),
-            'analytics_end_date' => Arr::get($input, 'analytics_end_date'),
             'analytics_compare_type' => $compareType,
-            'analytics_compare_date' => Arr::get($input, 'analytics_compare_date'),
-            'analytics_compare_month' => Arr::get($input, 'analytics_compare_month'),
-            'analytics_compare_year' => Arr::get($input, 'analytics_compare_year'),
-            'analytics_compare_start_date' => Arr::get($input, 'analytics_compare_start_date'),
-            'analytics_compare_end_date' => Arr::get($input, 'analytics_compare_end_date'),
             'analytics_product_sort' => Arr::get($input, 'analytics_product_sort', 'quantity'),
         ];
+
+        foreach ($this->activePeriodKeys($periodType) as $key) {
+            $value = Arr::get($input, $key);
+            if ($value !== null && $value !== '') {
+                $payload[$key] = $value;
+            }
+        }
+
+        if ($compareType === 'custom') {
+            foreach ($this->activeCompareKeys($periodType) as $key) {
+                $value = Arr::get($input, $key);
+                if ($value !== null && $value !== '') {
+                    $payload[$key] = $value;
+                }
+            }
+        }
 
         if ($branchIds !== []) {
             $payload['analytics_branch_ids'] = array_values($branchIds);
         }
 
         return array_filter($payload, static fn ($value) => $value !== null && $value !== '');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function activePeriodKeys(string $periodType): array
+    {
+        return match ($periodType) {
+            'day' => ['analytics_date'],
+            'week' => ['analytics_week'],
+            'month' => ['analytics_month'],
+            'year' => ['analytics_year'],
+            'range' => ['analytics_start_date', 'analytics_end_date'],
+            default => [],
+        };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function activeCompareKeys(string $periodType): array
+    {
+        return match ($periodType) {
+            'day' => ['analytics_compare_date'],
+            'week', 'range' => ['analytics_compare_start_date', 'analytics_compare_end_date'],
+            'month' => ['analytics_compare_month'],
+            'year' => ['analytics_compare_year'],
+            default => [],
+        };
     }
 
     private function timezone(): string
