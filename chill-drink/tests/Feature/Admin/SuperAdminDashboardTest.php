@@ -42,6 +42,33 @@ class SuperAdminDashboardTest extends TestCase
             ->assertDontSee('Không có quản trị viên phù hợp');
     }
 
+    public function test_super_admin_actions_are_disabled_for_super_admin_rows(): void
+    {
+        $superAdmin = User::factory()->create([
+            'email' => User::SUPER_ADMIN_EMAIL,
+            'role_id' => 3,
+        ]);
+        $targetSuperAdmin = User::factory()->create([
+            'name' => 'Super Admin Khác',
+            'email' => 'super-other@chilldrink.com',
+            'role_id' => 3,
+        ]);
+        $admin = User::factory()->create([
+            'name' => 'Admin Hệ thống',
+            'email' => 'admin-system@chilldrink.com',
+            'role_id' => 2,
+        ]);
+
+        $response = $this->actingAs($superAdmin)->get('/admin/super-admin');
+
+        $response->assertOk()
+            ->assertSee('data-admin-actions-locked="'.$targetSuperAdmin->id.'"', false)
+            ->assertSee('title="Không áp dụng cho quản trị cấp cao"', false)
+            ->assertDontSee('data-bs-target="#adminActionsModal'.$targetSuperAdmin->id.'"', false)
+            ->assertSee('data-bs-target="#adminActionsModal'.$admin->id.'"', false)
+            ->assertSee('title="Thao tác"', false);
+    }
+
     public function test_super_admin_dashboard_renders_five_business_kpis(): void
     {
         $superAdmin = User::factory()->create([

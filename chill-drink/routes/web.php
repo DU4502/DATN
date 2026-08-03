@@ -200,6 +200,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export', [DashboardController::class, 'exportTimeComparison'])->name('dashboard.export');
 
     // JSON endpoint for dashboard data (AJAX)
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('admin.dashboard.data');

@@ -42,18 +42,18 @@
     .sa-header-copy {
         flex: 1 1 0;
         min-width: 0;
-        max-width: 700px;
+        max-width: 600px;
         display: grid;
-        gap: 0.18rem;
-        padding-top: 0.12rem;
+        gap: 0.12rem;
+        padding-top: 0.05rem;
     }
     .sa-kicker { margin: 0; color: var(--sa-green); font-size: 0.76rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.2; }
-    .sa-title { margin: 0; color: var(--sa-ink); font-size: clamp(1.82rem, 2.1vw, 2.38rem); font-weight: 900; letter-spacing: -0.035em; line-height: 1.03; }
+    .sa-title { margin: 0; color: var(--sa-ink); font-size: clamp(1.5rem, 1.6vw, 1.95rem); font-weight: 900; letter-spacing: -0.035em; line-height: 1.02; }
     .sa-subtitle {
         margin: 0.16rem 0 0;
         color: var(--sa-muted);
-        font-size: 0.9rem;
-        line-height: 1.4;
+        font-size: 0.8rem;
+        line-height: 1.32;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -84,20 +84,20 @@
 
     .sa-alert { margin: 0; border-radius: 10px; font-size: 0.84rem; }
 
-    .sa-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; }
-    .sa-stat { min-height: 150px; padding: 1.3rem 1.15rem; border: 1px solid var(--sa-border); border-radius: var(--sa-card-radius); background: #fff; }
+    .sa-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; }
+    .sa-stat { min-height: 124px; padding: 0.9rem 0.92rem 0.85rem; border: 1px solid var(--sa-border); border-radius: var(--sa-card-radius); background: #fff; }
     .sa-stat-top { justify-content: space-between; gap: 0.7rem; }
-    .sa-stat-icon { width: 46px; height: 46px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); font-size: 1.15rem; }
-    .sa-stat-note { color: var(--sa-muted); font-size: 0.78rem; font-weight: 700; }
-    .sa-stat-value { margin-top: 0.8rem; color: var(--sa-ink); font-size: 1.92rem; font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; }
-    .sa-stat-label { margin-top: 0.32rem; color: var(--sa-muted); font-size: 0.9rem; font-weight: 700; }
+    .sa-stat-icon { width: 40px; height: 40px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green); font-size: 1rem; }
+    .sa-stat-note { color: var(--sa-muted); font-size: 0.72rem; font-weight: 700; }
+    .sa-stat-value { margin-top: 0.58rem; color: var(--sa-ink); font-size: 1.55rem; font-weight: 900; line-height: 1.03; letter-spacing: -0.03em; }
+    .sa-stat-label { margin-top: 0.22rem; color: var(--sa-muted); font-size: 0.8rem; font-weight: 700; }
 
     .sa-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; }
     .sa-grid-main { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(320px, 0.72fr); gap: 1.1rem; align-items: start; }
     .sa-panel { border: 1px solid var(--sa-border); border-radius: var(--sa-card-radius); background: #fff; overflow: hidden; scroll-margin-top: 96px; box-shadow: 0 16px 36px rgba(17, 24, 39, 0.04); }
-    .sa-panel-header { min-height: 74px; padding: 1rem 1.1rem; border-bottom: 1px solid var(--sa-border); justify-content: space-between; gap: 0.9rem; }
-    .sa-panel-title { margin: 0; color: var(--sa-ink); font-size: 1.14rem; font-weight: 900; line-height: 1.25; }
-    .sa-panel-note { margin: 0.18rem 0 0; color: var(--sa-muted); font-size: 0.82rem; line-height: 1.45; }
+    .sa-panel-header { min-height: 58px; padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--sa-border); justify-content: space-between; gap: 0.7rem; }
+    .sa-panel-title { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 900; line-height: 1.22; }
+    .sa-panel-note { margin: 0.12rem 0 0; color: var(--sa-muted); font-size: 0.74rem; line-height: 1.35; }
 
     .sa-chart { height: 294px; padding: 1.1rem; display: flex; flex-direction: column; }
     .sa-chart-meta { justify-content: space-between; margin-bottom: 0.9rem; color: var(--sa-muted); font-size: 0.88rem; }
@@ -109,22 +109,102 @@
     .sa-chart-bar.alt { background: #4f8fd9; }
     .sa-chart-label { padding-top: 0.45rem; color: var(--sa-muted); font-size: 0.74rem; font-weight: 700; }
 
+    .sa-time-matrix-panel { overflow: hidden; }
+    .sa-time-matrix-header { min-height: 0; align-items: flex-start; gap: 0.75rem; }
+    .sa-time-matrix-header-copy { display: grid; gap: 0.18rem; }
+    .sa-time-matrix-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; justify-content: flex-end; }
+    .sa-time-matrix-meta .sa-state { padding: 0.26rem 0.52rem; font-size: 0.68rem; line-height: 1.15; }
+    .sa-time-matrix-toolbar { padding: 0.95rem 1rem; display: grid; grid-template-columns: minmax(160px, 1.1fr) minmax(220px, 1fr) minmax(190px, 0.9fr) minmax(140px, 0.6fr) auto; gap: 0.75rem; align-items: end; border-bottom: 1px solid var(--sa-border); background: linear-gradient(180deg, #ffffff, #fbfffd); }
+    .sa-time-matrix-field { min-width: 0; display: grid; gap: 0.35rem; }
+    .sa-time-matrix-label { margin: 0; color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; }
+    .sa-time-matrix-control { width: 100%; }
+    .sa-time-matrix-pills { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .sa-time-matrix-pill { min-height: 40px; padding: 0.5rem 0.78rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; color: var(--sa-muted); font-size: 0.8rem; font-weight: 800; }
+    .sa-time-matrix-pill.active { border-color: var(--sa-green); background: var(--sa-green); color: #fff; }
+    .sa-time-matrix-export { position: relative; align-self: end; }
+    .sa-time-matrix-export details { position: relative; }
+    .sa-time-matrix-export summary { list-style: none; }
+    .sa-time-matrix-export summary::-webkit-details-marker { display: none; }
+    .sa-time-matrix-export-menu { position: absolute; right: 0; top: calc(100% + 0.45rem); z-index: 20; min-width: 170px; padding: 0.35rem; border: 1px solid var(--sa-border); border-radius: 14px; background: #fff; box-shadow: 0 14px 34px rgba(17, 24, 39, 0.12); display: none; }
+    .sa-time-matrix-export[open] .sa-time-matrix-export-menu { display: grid; }
+    .sa-time-matrix-export-item { min-height: 40px; padding: 0.48rem 0.72rem; border-radius: 10px; color: var(--sa-ink); font-size: 0.82rem; font-weight: 750; text-decoration: none; display: flex; align-items: center; }
+    .sa-time-matrix-export-item:hover { background: var(--sa-green-soft); color: var(--sa-green-dark); }
+    .sa-time-matrix-body { padding: 0.95rem 1rem 1rem; display: grid; gap: 0.75rem; }
+    .sa-time-matrix-summary { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+    .sa-time-matrix-summary-text { color: var(--sa-muted); font-size: 0.76rem; font-weight: 700; }
+    .sa-time-matrix-summary-meta { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+    .sa-time-matrix-summary-meta .sa-state { padding: 0.25rem 0.5rem; font-size: 0.68rem; }
+    .sa-time-matrix-table-wrap { overflow-x: auto; border: 1px solid var(--sa-border); border-radius: 0; background: #fff; box-shadow: none; }
+    .sa-time-matrix-table { width: max(100%, 1160px); border-collapse: separate; border-spacing: 0; table-layout: auto; }
+    .sa-time-matrix-table th,
+    .sa-time-matrix-table td { padding: 0.68rem 0.76rem; border-bottom: 1px solid #edf1ef; border-right: 1px solid rgba(148, 163, 184, 0.08); color: #374151; font-size: 0.82rem; vertical-align: middle; text-align: center; }
+    .sa-time-matrix-table thead th { position: sticky; top: 0; z-index: 5; background: #f8faf9; color: var(--sa-muted); font-weight: 850; text-align: center; white-space: nowrap; border-bottom: 1px solid #e6ede8; }
+    .sa-time-matrix-table thead tr:first-child th { padding-top: 0.82rem; padding-bottom: 0.56rem; vertical-align: bottom; }
+    .sa-time-matrix-table thead tr:first-child th.sa-time-matrix-period-group { background: #fbfdfc; color: #334155; font-size: 0.74rem; font-weight: 900; letter-spacing: 0.01em; border-left: 1px solid rgba(148, 163, 184, 0.1); border-right: 1px solid rgba(148, 163, 184, 0.1); border-top: 1px solid rgba(148, 163, 184, 0.08); border-radius: 0; }
+    .sa-time-matrix-table thead tr:first-child th.sa-time-matrix-period-group span { display: block; line-height: 1.1; }
+    .sa-time-matrix-table thead tr:first-child th.sa-time-matrix-period-group small { display: inline-flex; align-items: center; justify-content: center; margin-top: 0.32rem; padding: 0.14rem 0.42rem; border-radius: 999px; background: #ecfdf5; color: var(--sa-green-dark); font-size: 0.61rem; font-weight: 900; letter-spacing: 0; }
+    .sa-time-matrix-table thead tr:first-child th.sa-time-matrix-period-single { background: #fbfcfd; }
+    .sa-time-matrix-table thead tr:nth-child(2) th { top: 44px; z-index: 4; padding-top: 0.52rem; padding-bottom: 0.52rem; font-size: 0.69rem; letter-spacing: 0.01em; }
+    .sa-time-matrix-subhead { min-width: 76px; }
+    .sa-time-matrix-subhead-revenue { color: var(--sa-green-dark); background: #f3fbf7 !important; }
+    .sa-time-matrix-subhead-orders { color: #475569; background: #fafbfc !important; }
+    .sa-time-matrix-table thead th small { display: block; margin-top: 0.15rem; color: var(--sa-green); font-size: 0.66rem; font-weight: 800; }
+    .sa-time-matrix-table .sticky-col-1,
+    .sa-time-matrix-table .sticky-col-2 { position: sticky; z-index: 7; background: #fff; background-clip: padding-box; border-right: 1px solid rgba(148, 163, 184, 0.18); }
+    .sa-time-matrix-table .sticky-col-1 { left: 0; width: 72px; min-width: 72px; max-width: 72px; box-shadow: none; }
+    .sa-time-matrix-table .sticky-col-2 { left: 72px; width: 280px; min-width: 280px; max-width: 280px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-shadow: none; }
+    .sa-time-matrix-table tbody tr:nth-child(even) td { background: #fcfdfc; }
+    .sa-time-matrix-table tbody tr:hover td { background: #f4fbf8; }
+    .sa-time-matrix-table td.text-end { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .sa-time-matrix-table td.sticky-col-1,
+    .sa-time-matrix-table td.sticky-col-2 { z-index: 6; }
+    .sa-time-matrix-total-row td,
+    .sa-time-matrix-total-row .sticky-col-1,
+    .sa-time-matrix-total-row .sticky-col-2 { background: #effaf5; font-weight: 800; }
+    .sa-time-matrix-table tbody tr td.sticky-col-1,
+    .sa-time-matrix-table tbody tr td.sticky-col-2 { box-shadow: none; }
+    .sa-time-matrix-branch-name { color: var(--sa-ink); font-size: 0.84rem; font-weight: 850; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+    .sa-time-matrix-branch-code { margin-top: 0.1rem; color: var(--sa-muted); font-size: 0.68rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+    .sa-time-matrix-sticky-stack { min-width: 0; overflow: hidden; }
+    .sa-time-matrix-period-cell { min-width: 78px; }
+    .sa-time-matrix-period-revenue,
+    .sa-time-matrix-period-single { border-left: 1px solid rgba(148, 163, 184, 0.08); }
+    .sa-time-matrix-period-revenue { color: var(--sa-green-dark); font-weight: 850; background: #fcfffd; }
+    .sa-time-matrix-period-orders { color: #475569; font-weight: 800; background: #ffffff; }
+    .sa-time-matrix-summary-col,
+    .sa-time-matrix-summary-cell,
+    .sa-time-matrix-change-cell { background: #fbfcfd; }
+    .sa-time-matrix-summary-cell { color: var(--sa-ink); font-weight: 850; }
+    .sa-time-matrix-change-cell { min-width: 124px; }
+    .sa-time-matrix-change { color: var(--sa-green-dark); font-weight: 800; }
+    .sa-time-matrix-empty,
+    .sa-time-matrix-error { min-height: 164px; padding: 1.1rem; border: 1px dashed var(--sa-border); border-radius: 14px; display: grid; place-items: center; text-align: center; color: var(--sa-muted); background: #fff; }
+    .sa-time-matrix-empty i,
+    .sa-time-matrix-error i { margin-bottom: 0.35rem; color: var(--sa-green); font-size: 1.4rem; }
+    .sa-time-matrix-empty strong,
+    .sa-time-matrix-error strong { color: var(--sa-ink); font-size: 0.84rem; }
+    .sa-time-matrix-pagination { min-height: 52px; padding-top: 0.15rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; color: var(--sa-muted); font-size: 0.74rem; }
+
     .sa-filter-form { padding: 1rem 1.1rem; border-bottom: 1px solid var(--sa-border); display: grid; grid-template-columns: minmax(220px, 1.45fr) repeat(3, minmax(140px, 0.68fr)) auto; gap: 0.85rem; }
     .sa-control { min-width: 0; height: var(--sa-control-height); border: 1px solid var(--sa-border); border-radius: 12px; padding: 0 0.9rem; background: #fff; color: var(--sa-ink); font-size: 0.9rem; outline: 0; }
     .sa-control:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,0.1); }
     .sa-filter-actions { display: flex; gap: 0.7rem; }
-    .sa-branch-compare-header { min-height: 0; padding: 0.95rem 1rem 0.8rem; align-items: center; gap: 0.85rem; }
-    .sa-branch-compare-header-copy { min-width: 0; display: grid; gap: 0.35rem; }
-    .sa-branch-compare-title { margin: 0; color: var(--sa-ink); font-size: 1rem; font-weight: 900; line-height: 1.25; }
-    .sa-branch-compare-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .sa-branch-compare-header { min-height: 0; padding: 0.7rem 0.85rem 0.55rem; align-items: flex-start; gap: 0.65rem; }
+    .sa-branch-compare-header-copy { min-width: 0; display: grid; gap: 0.24rem; }
+    .sa-branch-compare-title { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 900; line-height: 1.2; }
+    .sa-branch-compare-meta { display: flex; flex-wrap: wrap; gap: 0.28rem; }
+    .sa-branch-compare-meta .sa-state { padding: 0.26rem 0.5rem; font-size: 0.68rem; line-height: 1.1; }
     .sa-branch-compare-tools { display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.45rem; flex-wrap: nowrap; margin-left: auto; }
     .sa-branch-period-switcher { display: inline-flex; align-items: center; gap: 0.22rem; padding: 0.18rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; white-space: nowrap; }
-    .sa-branch-period-link { min-height: 40px; padding: 0.42rem 0.82rem; border-radius: 999px; font-size: 0.82rem; line-height: 1; }
-    .sa-branch-compare-form { padding: 0.85rem 1rem; grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(120px, 0.62fr)) auto; gap: 0.75rem; align-items: end; }
+    .sa-branch-period-link { min-height: 34px; padding: 0.34rem 0.72rem; border-radius: 999px; font-size: 0.76rem; line-height: 1; }
+    .sa-branch-compare-form { padding: 0.7rem 0.85rem; grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(120px, 0.62fr)) auto; gap: 0.55rem; align-items: end; }
     .sa-branch-compare-actions { justify-content: flex-end; align-self: end; white-space: nowrap; }
-    .sa-branch-compare-summary { padding: 0.7rem 1rem 0.25rem; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: nowrap; }
-    .sa-branch-compare-summary-text { color: var(--sa-muted); font-size: 0.78rem; white-space: nowrap; }
-    .sa-branch-compare-summary-meta { display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: nowrap; white-space: nowrap; }
+    .sa-branch-compare-summary { padding: 0.5rem 0.85rem 0.2rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: nowrap; }
+    .sa-branch-compare-summary-text { color: var(--sa-muted); font-size: 0.72rem; white-space: nowrap; }
+    .sa-branch-compare-summary-meta { display: inline-flex; align-items: center; gap: 0.28rem; flex-wrap: nowrap; white-space: nowrap; }
+    .sa-branch-compare-summary-meta .sa-state { padding: 0.25rem 0.48rem; font-size: 0.68rem; line-height: 1.1; }
+    .sa-branch-ranking-table th { padding: 0.62rem 0.72rem; background: #f8faf9; color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; text-align: left; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.15; vertical-align: middle; }
+    .sa-branch-ranking-table td { padding: 0.68rem 0.72rem; border-top: 1px solid #edf1ef; color: #374151; font-size: 0.84rem; vertical-align: middle; }
 
     .sa-table-wrap { overflow-x: auto; }
     .sa-table { width: 100%; min-width: 970px; border-collapse: collapse; }
@@ -148,6 +228,13 @@
     .sa-action-btn { width: 34px; height: 34px; border: 1px solid var(--sa-border); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: #fff; color: var(--sa-muted); text-decoration: none; }
     .sa-action-btn:hover { border-color: var(--sa-green); color: var(--sa-green); }
     .sa-action-btn.danger:hover { border-color: #dc2626; color: #dc2626; }
+    .sa-action-btn:disabled,
+    .sa-action-btn[aria-disabled="true"],
+    .sa-action-btn.sa-action-btn-disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
 
     .sa-pagination { min-height: 58px; padding: 0.8rem 1rem; border-top: 1px solid var(--sa-border); justify-content: space-between; gap: 1rem; color: var(--sa-muted); font-size: 0.74rem; }
     .sa-page-links { display: flex; gap: 0.3rem; }
@@ -266,21 +353,45 @@
     .analytics-table { min-width: 760px; }
     .analytics-table th { background: #fbfcfc; text-transform: none; font-size: .62rem; }
     .analytics-table td { font-size: .66rem; }
-    .branch-product-layout { display: grid; grid-template-columns: minmax(0, 0.34fr) minmax(0, 0.66fr); gap: 1rem; padding: 1rem; }
+    .branch-product-layout { display: grid; grid-template-columns: minmax(0, 0.36fr) minmax(0, 0.64fr); gap: 0.85rem; padding: 0.9rem; }
     .branch-product-panel { min-width: 0; border: 1px solid var(--sa-border); border-radius: 14px; background: #fff; overflow: hidden; }
-    .branch-product-panel-header { padding: 1rem 1rem 0.85rem; border-bottom: 1px solid var(--sa-border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-    .branch-product-panel-title { margin: 0; color: var(--sa-ink); font-size: 1rem; font-weight: 900; }
-    .branch-product-panel-note { margin: 0.16rem 0 0; color: var(--sa-muted); font-size: 0.76rem; line-height: 1.45; }
-    .branch-product-list-wrap { max-height: 560px; overflow: auto; }
-    .branch-product-list-table { width: 100%; border-collapse: collapse; }
-    .branch-product-list-table th { padding: 0.82rem 0.85rem; background: #f8faf9; color: var(--sa-muted); font-size: 0.72rem; font-weight: 850; text-align: left; text-transform: uppercase; letter-spacing: 0.02em; }
-    .branch-product-list-table td { padding: 0.85rem 0.85rem; border-top: 1px solid #edf1ef; font-size: 0.78rem; vertical-align: top; }
-    .branch-product-select { display: block; width: 100%; border: 0; background: transparent; padding: 0; text-align: left; color: inherit; cursor: pointer; text-decoration: none; }
+    .branch-product-panel-header { padding: 0.84rem 0.9rem 0.7rem; border-bottom: 1px solid var(--sa-border); display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+    .branch-product-panel-title { margin: 0; color: var(--sa-ink); font-size: 0.84rem; font-weight: 900; line-height: 1.2; }
+    .branch-product-panel-note { margin: 0.12rem 0 0; color: var(--sa-muted); font-size: 0.68rem; line-height: 1.4; }
+    .branch-product-controls { border: 1px solid var(--sa-border); border-radius: 18px; background: linear-gradient(180deg, #fbfffe 0%, #ffffff 100%); box-shadow: 0 12px 28px rgba(17, 24, 39, 0.035); overflow: hidden; }
+    .branch-product-toolbar { padding: 0.88rem 0.95rem 0.72rem; display: flex; align-items: center; justify-content: space-between; gap: 0.9rem; border-bottom: 1px solid #eef3f1; }
+    .branch-product-toolbar-copy { min-width: 0; display: grid; gap: 0.14rem; }
+    .branch-product-toolbar-title { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 900; line-height: 1.2; letter-spacing: -0.01em; }
+    .branch-product-toolbar-note { margin: 0; color: var(--sa-muted); font-size: 0.72rem; line-height: 1.4; }
+    .branch-product-toolbar-meta { display: flex; flex-wrap: wrap; gap: 0.28rem; margin-top: 0.28rem; }
+    .branch-product-toolbar-meta .sa-state { padding: 0.23rem 0.5rem; font-size: 0.64rem; line-height: 1.15; }
+    .branch-product-toolbar-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.48rem; flex-wrap: wrap; margin-left: auto; }
+    .branch-product-period-switcher { display: inline-flex; align-items: center; gap: 0.16rem; padding: 0.18rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; white-space: nowrap; }
+    .branch-product-period-link { min-height: 32px; padding: 0.3rem 0.66rem; border-radius: 999px; font-size: 0.74rem; line-height: 1; }
+    .branch-product-add-btn { min-height: 32px; padding: 0.3rem 0.72rem; border-radius: 999px; white-space: nowrap; font-size: 0.76rem; }
+    .branch-product-filterbar { padding: 0.76rem 0.95rem 0.88rem; display: grid; grid-template-columns: minmax(240px, 1.45fr) repeat(3, minmax(136px, 0.82fr)) minmax(150px, auto); gap: 0.62rem 0.7rem; align-items: end; background: linear-gradient(180deg, #fff 0%, #fcfefe 100%); }
+    .branch-product-filter-field { min-width: 0; }
+    .branch-product-filter-label { display: block; margin: 0 0 0.3rem; color: #475569; font-size: 0.7rem; font-weight: 800; line-height: 1.2; }
+    .branch-product-filter-actions { display: flex; gap: 0.45rem; justify-content: flex-end; align-items: end; white-space: nowrap; }
+    .branch-product-filterbar .sa-control { height: 38px; border-radius: 10px; font-size: 0.78rem; }
+    .branch-product-list-wrap { max-height: 560px; overflow-y: auto; overflow-x: hidden; }
+    .branch-product-list-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .branch-product-list-table th { padding: 0.58rem 0.62rem; background: #f8faf9; color: var(--sa-muted); font-size: 0.6rem; font-weight: 850; text-align: left; text-transform: none; letter-spacing: 0; line-height: 1.15; }
+    .branch-product-list-table td { padding: 0.62rem 0.62rem; border-top: 1px solid #edf1ef; font-size: 0.7rem; vertical-align: top; min-width: 0; }
+    .branch-product-list-table th:first-child,
+    .branch-product-list-table td:first-child { width: 38px; }
+    .branch-product-list-table th:nth-child(2),
+    .branch-product-list-table td:nth-child(2) { width: 43%; }
+    .branch-product-list-table th:nth-child(3),
+    .branch-product-list-table td:nth-child(3) { width: 31%; }
+    .branch-product-list-table th:nth-child(4),
+    .branch-product-list-table td:nth-child(4) { width: 84px; }
+    .branch-product-select { display: block; width: 100%; border: 0; background: transparent; padding: 0; text-align: left; color: inherit; cursor: pointer; text-decoration: none; min-width: 0; }
     .branch-product-select:hover .branch-product-name { color: var(--sa-green-dark); }
     .branch-product-select.active { background: #f0fdf4; }
-    .branch-product-name { margin: 0; color: var(--sa-ink); font-size: 0.82rem; font-weight: 850; line-height: 1.35; }
-    .branch-product-code { margin-top: 0.14rem; color: var(--sa-muted); font-size: 0.78rem; font-weight: 700; }
-    .branch-product-subtext { margin-top: 0.18rem; color: var(--sa-muted); font-size: 0.78rem; line-height: 1.45; }
+    .branch-product-name { margin: 0; color: var(--sa-ink); font-size: 0.73rem; font-weight: 850; line-height: 1.25; overflow-wrap: anywhere; }
+    .branch-product-code { margin-top: 0.06rem; color: var(--sa-muted); font-size: 0.62rem; font-weight: 700; overflow-wrap: anywhere; }
+    .branch-product-subtext { margin-top: 0.1rem; color: var(--sa-muted); font-size: 0.66rem; line-height: 1.3; overflow-wrap: anywhere; }
     .branch-product-badge { border-radius: 999px; padding: 0.24rem 0.55rem; display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.66rem; font-weight: 800; white-space: nowrap; }
     .branch-product-badge.up { background: #ecfdf5; color: #15803d; }
     .branch-product-badge.down { background: #fef2f2; color: #b91c1c; }
@@ -292,12 +403,12 @@
     .branch-product-detail-chiprow { display: flex; flex-wrap: wrap; gap: 0.35rem; }
     .branch-product-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; }
     .branch-product-summary-card { min-width: 0; padding: 0.9rem; border: 1px solid #e9eeec; border-radius: 12px; background: linear-gradient(180deg, #fff, #fbfffd); }
-    .branch-product-summary-label { color: var(--sa-muted); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
+    .branch-product-summary-label { color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; line-height: 1.2; }
     .branch-product-summary-value { margin-top: 0.34rem; color: var(--sa-ink); font-size: 1.15rem; font-weight: 900; white-space: nowrap; }
     .branch-product-summary-note { margin-top: 0.2rem; color: var(--sa-green); font-size: 0.72rem; font-weight: 750; }
     .branch-product-mini-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
     .branch-product-mini { padding: 0.75rem 0.8rem; border: 1px solid #edf1ef; border-radius: 12px; background: #f8fcfb; }
-    .branch-product-mini-label { color: var(--sa-muted); font-size: 0.66rem; font-weight: 800; text-transform: uppercase; }
+    .branch-product-mini-label { color: var(--sa-muted); font-size: 0.68rem; font-weight: 800; line-height: 1.2; }
     .branch-product-mini-value { margin-top: 0.2rem; color: var(--sa-ink); font-size: 0.92rem; font-weight: 850; white-space: nowrap; }
     .branch-product-toplist { display: grid; gap: 0.65rem; }
     .branch-product-toprow { padding: 0.9rem 0.95rem; border: 1px solid #edf1ef; border-radius: 12px; display: grid; grid-template-columns: 30px 52px minmax(0, 1fr) 96px 96px 100px; gap: 0.85rem; align-items: center; background: #fff; }
@@ -335,6 +446,10 @@
     .focus-product-selected-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
     .focus-product-selected-title { margin: 0; color: var(--sa-ink); font-size: 0.9rem; font-weight: 900; line-height: 1.35; }
     .focus-product-selected-subtitle { margin: 0.12rem 0 0; color: var(--sa-muted); font-size: 0.62rem; line-height: 1.4; }
+    .focus-product-selected-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.55rem; }
+    .focus-product-selected-stat { min-width: 0; padding: 0.58rem 0.7rem; border: 1px solid #edf1ef; border-radius: 10px; background: #f8fcfb; }
+    .focus-product-selected-stat-label { color: var(--sa-muted); font-size: 0.66rem; font-weight: 800; line-height: 1.2; text-transform: uppercase; }
+    .focus-product-selected-stat-value { margin-top: 0.12rem; color: var(--sa-ink); font-size: 0.92rem; font-weight: 900; line-height: 1.2; white-space: nowrap; }
     .focus-product-selected-chiprow { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
     .focus-product-summary-grid { padding: 0 0.9rem 0.1rem; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.85rem; }
     .focus-product-summary-card { min-width: 0; padding: 0.82rem; border: 1px solid #e9eeec; border-radius: 12px; background: linear-gradient(180deg, #fff, #fbfffd); }
@@ -389,22 +504,55 @@
     .analytics-table-total td { background: #f5fbf8; color: var(--sa-ink); font-weight: 850; }
     .analytics-positive { color: var(--sa-green); font-weight: 800; }
     .analytics-empty { padding: 2rem 1rem; color: var(--sa-muted); text-align: center; font-size: .7rem; }
-    .legacy-analytics-bar { margin-bottom: 1rem; padding: 1rem 1.1rem 1.05rem; border: 1px solid var(--sa-border); border-radius: 12px; background: linear-gradient(180deg, #fbfffd, #fff); box-shadow: 0 8px 24px rgba(17, 24, 39, 0.03); }
-    .legacy-analytics-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.75rem; }
-    .legacy-analytics-pill { padding: 0.34rem 0.7rem; border-radius: 999px; background: #eefbf7; color: var(--sa-green-dark); font-size: 0.74rem; font-weight: 800; white-space: nowrap; }
-    .legacy-analytics-form { display: grid; grid-template-columns: minmax(180px, 0.74fr) minmax(180px, 0.74fr) minmax(250px, 1.08fr) minmax(180px, 0.72fr) auto; gap: 0.8rem; align-items: end; }
+    .legacy-analytics-bar { margin-bottom: 0; padding: 1rem 1.1rem 1.05rem; border: 1px solid var(--sa-border); border-radius: 16px; background: linear-gradient(180deg, #fbfffd, #fff); box-shadow: 0 8px 24px rgba(17, 24, 39, 0.03); }
+    .legacy-analytics-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.85rem; align-items: start; margin-bottom: 0.85rem; }
+    .legacy-analytics-head-copy { min-width: 0; }
+    .legacy-analytics-head-copy .sa-panel-title { margin: 0; }
+    .legacy-analytics-head-copy .sa-panel-note { margin: 0.25rem 0 0; }
+    .legacy-analytics-presets { display: inline-flex; flex-wrap: nowrap; gap: 0.2rem; padding: 0.22rem; border: 1px solid var(--sa-border); border-radius: 16px; background: #fff; max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+    .legacy-analytics-presets::-webkit-scrollbar { display: none; }
+    .legacy-analytics-period-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0.58rem 0.9rem;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--sa-muted);
+        font-size: 0.82rem;
+        font-weight: 800;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
+        cursor: pointer;
+    }
+    .legacy-analytics-period-btn.active { background: var(--sa-green); color: #fff; box-shadow: 0 10px 20px rgba(13,147,115,.18); }
+    .legacy-analytics-form { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0.7rem 0.75rem; align-items: end; grid-auto-flow: row dense; }
     .legacy-analytics-field { min-width: 0; }
-    .legacy-analytics-field--branch { min-width: min(100%, 320px); }
-    .legacy-analytics-label { display: block; margin: 0 0 0.3rem; color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; }
-    .legacy-analytics-control { width: 100%; height: 44px; border: 1px solid var(--sa-border); border-radius: 10px; padding: 0 0.85rem; background: #fff; color: var(--sa-ink); font-size: 0.84rem; outline: 0; }
+    .legacy-analytics-field--branch { min-width: 0; }
+    .legacy-analytics-field--compare { min-width: 0; }
+    .legacy-analytics-label { display: block; margin: 0 0 0.26rem; color: var(--sa-muted); font-size: 0.7rem; font-weight: 800; line-height: 1.2; }
+    .legacy-analytics-control { width: 100%; min-width: 0; height: 42px; border: 1px solid var(--sa-border); border-radius: 10px; padding: 0 0.8rem; background: #fff; color: var(--sa-ink); font-size: 0.82rem; outline: 0; }
     .legacy-analytics-control:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,0.1); }
-    .legacy-analytics-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; grid-column: 1 / -1; }
+    .legacy-analytics-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; grid-column: 1 / -1; }
     .legacy-analytics-actions { display: inline-flex; gap: 0.5rem; align-items: center; justify-content: flex-end; white-space: nowrap; }
     .legacy-analytics-actions .sa-btn { min-width: 0; }
+    .legacy-analytics-period-row { display: grid; gap: 0.55rem; }
+    .legacy-analytics-summary { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #ebf1ef; color: var(--sa-muted); font-size: 0.8rem; font-weight: 750; line-height: 1.5; }
+    .legacy-analytics-summary-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @media (min-width: 1400px) {
+        .legacy-analytics-form > .legacy-analytics-field--compare { grid-column: 1 / span 4; grid-row: 1; }
+        .legacy-analytics-form > .legacy-analytics-field--branch { grid-column: 5 / span 5; grid-row: 1; }
+        .legacy-analytics-form > .legacy-analytics-actions { grid-column: 10 / -1; grid-row: 1; width: auto; align-self: end; justify-self: end; }
+        .legacy-analytics-form > .legacy-analytics-period-row { grid-column: 1 / -1; grid-row: 2; }
+        .legacy-analytics-form > .legacy-analytics-compare-grid { grid-column: 1 / -1; grid-row: 3; }
+    }
     .sa-branch-scope { position: relative; min-width: 0; }
     .sa-branch-scope-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0 0.85rem; text-align: left; }
     .sa-branch-scope-trigger-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
-    .sa-branch-scope-trigger-count { flex: 0 0 auto; min-width: 32px; height: 22px; padding: 0 0.42rem; border-radius: 999px; background: #eefbf7; color: var(--sa-green-dark); display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900; }
+    .sa-branch-scope-trigger-count { flex: 0 0 auto; min-width: 54px; height: 22px; padding: 0 0.5rem; border-radius: 999px; background: #eefbf7; color: var(--sa-green-dark); display: inline-flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 900; white-space: nowrap; }
     .sa-branch-scope-panel { position: absolute; z-index: 40; top: calc(100% + 0.5rem); left: 0; width: min(100%, 420px); min-width: 320px; max-height: 420px; padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 14px; background: #fff; box-shadow: 0 20px 42px rgba(17,24,39,.16); overflow: hidden; }
     .sa-branch-scope-panel[hidden] { display: none !important; }
     .sa-branch-scope-panel.align-right { left: auto; right: 0; }
@@ -432,24 +580,24 @@
     .sa-branch-scope-chip.muted { background: #f3f4f6; color: var(--sa-muted); }
     .legacy-analytics-hidden { display: none !important; }
     .legacy-top-products { margin-bottom: 1rem; overflow: hidden; border: 1px solid var(--sa-border); border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(17, 24, 39, 0.03); display: flex; flex-direction: column; }
-    .legacy-top-products-header { padding: 1rem 1.05rem 0.85rem; display: flex; align-items: center; justify-content: space-between; gap: 0.85rem; border-bottom: 1px solid var(--sa-border); }
-    .legacy-top-products-title { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 850; }
+    .legacy-top-products-header { padding: 0.8rem 0.9rem 0.65rem; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; border-bottom: 1px solid var(--sa-border); }
+    .legacy-top-products-title { margin: 0; color: var(--sa-ink); font-size: 0.84rem; font-weight: 850; }
     .legacy-top-products-actions { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; justify-content: flex-end; }
-    .legacy-top-products-action { min-height: 40px; padding: 0.42rem 0.85rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; color: var(--sa-muted); font-size: 0.76rem; font-weight: 800; text-decoration: none; }
+    .legacy-top-products-action { min-height: 36px; padding: 0.34rem 0.75rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; text-decoration: none; }
     .legacy-top-products-action.active { border-color: var(--sa-green); background: var(--sa-green); color: #fff; }
-    .legacy-top-products-list { padding: 0.8rem 1rem 1rem; display: grid; gap: 0.55rem; }
-    .legacy-top-products-row { display: grid; grid-template-columns: 32px 50px minmax(0, 1fr) minmax(180px, 0.92fr); gap: 0.85rem; align-items: center; padding: 0.82rem 0.9rem; border: 1px solid #edf1ef; border-radius: 12px; background: linear-gradient(180deg, #ffffff, #fbfffd); }
-    .legacy-top-products-rank { width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.72rem; font-weight: 900; }
-    .legacy-top-products-thumb { width: 46px; height: 46px; border-radius: 10px; overflow: hidden; background: #f3f4f6; flex: 0 0 auto; }
+    .legacy-top-products-list { padding: 0.65rem 0.85rem 0.85rem; display: grid; gap: 0.4rem; }
+    .legacy-top-products-row { display: grid; grid-template-columns: 28px 40px minmax(0, 1fr) minmax(150px, 0.9fr); gap: 0.65rem; align-items: center; padding: 0.6rem 0.7rem; border: 1px solid #edf1ef; border-radius: 11px; background: linear-gradient(180deg, #ffffff, #fbfffd); }
+    .legacy-top-products-rank { width: 24px; height: 24px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.68rem; font-weight: 900; }
+    .legacy-top-products-thumb { width: 38px; height: 38px; border-radius: 9px; overflow: hidden; background: #f3f4f6; flex: 0 0 auto; }
     .legacy-top-products-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .legacy-top-products-name { margin: 0; color: var(--sa-ink); font-size: 0.84rem; font-weight: 850; line-height: 1.35; }
-    .legacy-top-products-meta { margin-top: 0.18rem; display: flex; flex-wrap: wrap; gap: 0.42rem 0.75rem; color: var(--sa-muted); font-size: 0.72rem; font-weight: 650; }
+    .legacy-top-products-name { margin: 0; color: var(--sa-ink); font-size: 0.78rem; font-weight: 850; line-height: 1.3; }
+    .legacy-top-products-meta { margin-top: 0.1rem; display: flex; flex-wrap: wrap; gap: 0.32rem 0.55rem; color: var(--sa-muted); font-size: 0.68rem; font-weight: 650; }
     .legacy-top-products-meta span { white-space: nowrap; }
     .legacy-top-products-branch { min-width: 0; text-align: right; }
-    .legacy-top-products-branch strong { display: block; color: var(--sa-ink); font-size: 0.78rem; font-weight: 850; line-height: 1.35; }
-    .legacy-top-products-branch span { display: block; margin-top: 0.12rem; color: var(--sa-muted); font-size: 0.78rem; line-height: 1.35; }
-    .legacy-top-products-empty { padding: 1.45rem 1.1rem 1.3rem; color: var(--sa-muted); text-align: center; font-size: 0.8rem; }
-    .legacy-overview { display: grid; gap: var(--sa-section-gap); width: 100%; min-width: 0; }
+    .legacy-top-products-branch strong { display: block; color: var(--sa-ink); font-size: 0.72rem; font-weight: 850; line-height: 1.3; }
+    .legacy-top-products-branch span { display: block; margin-top: 0.08rem; color: var(--sa-muted); font-size: 0.7rem; line-height: 1.3; }
+    .legacy-top-products-empty { padding: 1rem 0.95rem 0.95rem; color: var(--sa-muted); text-align: center; font-size: 0.76rem; }
+    .legacy-overview { display: grid; gap: 0.75rem; width: 100%; min-width: 0; padding: 0.75rem; border: 1px solid var(--sa-border); border-radius: 24px; background: linear-gradient(180deg, #ffffff 0%, #f8fffd 100%); box-shadow: 0 20px 52px rgba(17, 24, 39, 0.05); overflow: hidden; }
     .legacy-page-header { display: flex; }
     .legacy-page-header { align-items: flex-start; }
     .legacy-overview > * { min-width: 0; }
@@ -513,48 +661,52 @@
     .sa-quick-section { order: 3; }
     .sa-business-section { order: 4; }
     .sa-supplemental-section { order: 5; }
-    .legacy-analytics-head { gap: 1rem; margin-bottom: 0.6rem; align-items: center; flex-wrap: nowrap; }
-    .legacy-analytics-pill { padding: 0.4rem 0.78rem; font-size: 0.78rem; }
-    .legacy-analytics-form { grid-template-columns: minmax(170px, 0.72fr) minmax(170px, 0.72fr) minmax(240px, 1.05fr) minmax(170px, 0.68fr) auto; gap: 0.75rem; }
-    .legacy-analytics-label { margin: 0 0 0.42rem; font-size: 0.8rem; }
-    .legacy-analytics-control { height: 48px; border-radius: 12px; font-size: 0.9rem; }
-    .legacy-analytics-range { gap: 0.85rem; }
+    .legacy-analytics-head { gap: 1rem; margin-bottom: 0.75rem; align-items: center; flex-wrap: nowrap; }
+    .legacy-analytics-presets { gap: 0.16rem; padding: 0.2rem; }
+    .legacy-analytics-period-btn { padding: 0.56rem 0.74rem; font-size: 0.78rem; }
+    .legacy-analytics-form { gap: 0.6rem 0.7rem; }
+    .legacy-analytics-label { margin: 0 0 0.3rem; font-size: 0.72rem; }
+    .legacy-analytics-control { height: 42px; border-radius: 10px; font-size: 0.82rem; }
+    .legacy-analytics-range { gap: 0.45rem; }
     .legacy-analytics-actions { gap: 0.6rem; }
     .legacy-analytics-form,
     .legacy-analytics-range,
+    .legacy-analytics-period-row,
     .legacy-analytics-compare-grid,
     .legacy-analytics-actions { min-width: 0; width: 100%; }
-    .legacy-analytics-form > .legacy-analytics-range { display: contents; }
-    .legacy-analytics-form > .legacy-analytics-range > .legacy-analytics-field { grid-column: auto; }
-    .legacy-analytics-form > .legacy-analytics-range > .legacy-analytics-field[data-analytics-period-group="range"] { grid-column: 1 / -2; }
-    .legacy-analytics-form > .legacy-analytics-range > .legacy-analytics-field[data-analytics-period-group="range"] .legacy-analytics-range { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .legacy-analytics-actions { width: auto; align-self: end; }
+    .legacy-analytics-form > .legacy-analytics-field--compare { grid-column: 1 / span 4; grid-row: 1; }
+    .legacy-analytics-form > .legacy-analytics-field--branch { grid-column: 5 / span 5; grid-row: 1; }
+    .legacy-analytics-form > .legacy-analytics-actions { grid-column: 10 / -1; grid-row: 1; width: auto; align-self: end; justify-self: end; }
+    .legacy-analytics-form > .legacy-analytics-period-row { grid-column: 1 / -1; grid-row: 2; }
+    .legacy-analytics-form > .legacy-analytics-compare-grid { grid-column: 1 / -1; grid-row: 3; }
     .legacy-analytics-compare-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; grid-column: 1 / -1; }
     .legacy-analytics-compare-grid .legacy-analytics-field[data-analytics-compare-group="range"],
     .legacy-analytics-compare-grid .legacy-analytics-field[data-analytics-compare-group="week"] { grid-column: 1 / -1; }
-    .sa-section { display: grid; gap: 1rem; }
-    .sa-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
-    .sa-section-kicker { margin: 0 0 0.25rem; color: var(--sa-green); font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
-    .sa-section-title { margin: 0; color: var(--sa-ink); font-size: clamp(1.22rem, 1.4vw, 1.45rem); font-weight: 900; letter-spacing: -0.02em; }
-    .sa-section-copy { max-width: 880px; margin: 0.25rem 0 0; color: var(--sa-muted); font-size: 0.92rem; }
-    .sa-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; align-items: stretch; }
+    .legacy-analytics-period-row .legacy-analytics-range { gap: 0.4rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .legacy-analytics-period-row .legacy-analytics-control { height: 40px; border-radius: 9px; font-size: 0.78rem; }
+    .sa-section { display: grid; gap: 0.8rem; }
+    .sa-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 0.85rem; }
+    .sa-section-kicker { margin: 0 0 0.2rem; color: var(--sa-green); font-size: 0.74rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
+    .sa-section-title { margin: 0; color: var(--sa-ink); font-size: clamp(1.06rem, 1.25vw, 1.25rem); font-weight: 900; letter-spacing: -0.02em; }
+    .sa-section-copy { max-width: 840px; margin: 0.2rem 0 0; color: var(--sa-muted); font-size: 0.84rem; }
+    .sa-overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; align-items: stretch; }
     .sa-overview-grid > .sa-panel,
     .sa-overview-grid > .legacy-top-products { height: 100%; }
-    .sa-overview-card-header { min-height: 0; padding: 0 0 0.85rem; margin-bottom: 0.1rem; border-bottom: 1px solid var(--sa-border); align-items: center; }
-    .sa-quick-branches { display: flex; flex-direction: column; padding: 1.05rem; }
-    .sa-quick-branch-list { display: grid; gap: 0.65rem; }
-    .sa-quick-branch-row { padding: 0.85rem 0.9rem; border: 1px solid #edf2ef; border-radius: 14px; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 0.8rem; align-items: center; background: linear-gradient(180deg, #fff, #fbfffd); }
-    .sa-quick-branch-rank { width: 38px; height: 38px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.82rem; font-weight: 900; }
-    .sa-quick-branch-name { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 850; }
-    .sa-quick-branch-meta { margin-top: 0.16rem; color: var(--sa-muted); font-size: 0.78rem; line-height: 1.4; }
+    .sa-overview-card-header { min-height: 0; padding: 0 0 0.6rem; margin-bottom: 0.08rem; border-bottom: 1px solid var(--sa-border); align-items: center; }
+    .sa-quick-branches { display: flex; flex-direction: column; padding: 0.8rem; }
+    .sa-quick-branch-list { display: grid; gap: 0.42rem; }
+    .sa-quick-branch-row { padding: 0.62rem 0.72rem; border: 1px solid #edf2ef; border-radius: 12px; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 0.6rem; align-items: center; background: linear-gradient(180deg, #fff, #fbfffd); }
+    .sa-quick-branch-rank { width: 30px; height: 30px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; background: var(--sa-green-soft); color: var(--sa-green-dark); font-size: 0.72rem; font-weight: 900; }
+    .sa-quick-branch-name { margin: 0; color: var(--sa-ink); font-size: 0.82rem; font-weight: 850; }
+    .sa-quick-branch-meta { margin-top: 0.1rem; color: var(--sa-muted); font-size: 0.7rem; line-height: 1.32; }
     .sa-quick-branch-metric { text-align: right; }
-    .sa-quick-branch-metric strong { display: block; color: var(--sa-green); font-size: 1.02rem; font-weight: 900; }
-    .sa-quick-branch-metric span { display: block; margin-top: 0.14rem; color: var(--sa-muted); font-size: 0.8rem; }
-    .sa-analytics-shell { padding: 1.2rem; background: linear-gradient(180deg, #fbfffd 0%, #ffffff 100%); }
-    .sa-analytics-tabs { display: flex; flex-wrap: wrap; gap: 0.55rem; padding-bottom: 0.2rem; border-bottom: 1px solid #ebf1ef; }
-    .sa-analytics-tab { min-height: 48px; padding: 0.72rem 1.05rem; border: 1px solid var(--sa-border); border-radius: 13px; background: #f7faf9; color: var(--sa-muted); font-size: 0.89rem; font-weight: 800; cursor: pointer; transition: all 0.18s ease; }
+    .sa-quick-branch-metric strong { display: block; color: var(--sa-green); font-size: 0.88rem; font-weight: 900; }
+    .sa-quick-branch-metric span { display: block; margin-top: 0.08rem; color: var(--sa-muted); font-size: 0.7rem; }
+    .sa-analytics-shell { padding: 1rem; background: linear-gradient(180deg, #fbfffd 0%, #ffffff 100%); }
+    .sa-analytics-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-bottom: 0.15rem; border-bottom: 1px solid #ebf1ef; }
+    .sa-analytics-tab { min-height: 42px; padding: 0.6rem 0.88rem; border: 1px solid var(--sa-border); border-radius: 12px; background: #f7faf9; color: var(--sa-muted); font-size: 0.8rem; font-weight: 800; cursor: pointer; transition: all 0.18s ease; }
     .sa-analytics-tab.active { border-color: rgba(13,147,115,.25); background: var(--sa-green-soft); color: var(--sa-green-dark); }
-    .sa-analytics-panels { margin-top: 1rem; }
+    .sa-analytics-panels { margin-top: 0.8rem; }
     .sa-analytics-panel[hidden] { display: none !important; }
     .sa-analytics-panel > .sa-panel { box-shadow: none; }
     .sa-analytics-panel > .sa-panel,
@@ -567,10 +719,6 @@
     .sa-health-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr); gap: 1rem; }
 
     @media (max-width: 1519.98px) {
-        .legacy-analytics-head { align-items: flex-start; flex-direction: column; }
-        .legacy-analytics-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .legacy-analytics-actions { grid-column: 1 / -1; justify-content: flex-start; }
-        .legacy-analytics-field--branch { grid-column: 1 / -1; }
         .sa-branch-compare-header { align-items: flex-start; flex-wrap: wrap; }
         .sa-branch-compare-tools { margin-left: 0; width: 100%; justify-content: space-between; }
         .sa-branch-compare-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -604,6 +752,14 @@
         .sa-overview-grid, .sa-health-grid, .sa-charts-grid { grid-template-columns: 1fr; }
         .sa-supplemental-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .legacy-analytics-field--branch { grid-column: auto; }
+        .sa-time-matrix-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .sa-time-matrix-export { grid-column: 1 / -1; }
+    }
+    @media (max-width: 1199.98px) {
+        .branch-product-toolbar { flex-direction: column; align-items: stretch; }
+        .branch-product-toolbar-actions { width: 100%; justify-content: flex-start; }
+        .branch-product-filterbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .branch-product-filter-actions { grid-column: 1 / -1; justify-content: flex-end; }
     }
     @media (max-width: 1366.98px) {
         .sa-header {
@@ -646,16 +802,29 @@
         .sa-branch-compare-summary { align-items: flex-start; }
         .sa-branch-compare-summary-text,
         .sa-branch-compare-summary-meta { white-space: normal; }
-        .legacy-analytics-form, .legacy-analytics-range { grid-template-columns: 1fr; }
+        .legacy-analytics-form { grid-template-columns: 1fr; }
+        .legacy-analytics-period-row,
+        .legacy-analytics-range { grid-template-columns: 1fr; }
         .legacy-analytics-compare-grid { grid-template-columns: 1fr; }
         .legacy-analytics-actions { justify-content: stretch; }
+        .legacy-analytics-form > .legacy-analytics-field--compare,
+        .legacy-analytics-form > .legacy-analytics-field--branch,
+        .legacy-analytics-form > .legacy-analytics-actions,
+        .legacy-analytics-form > .legacy-analytics-period-row,
+        .legacy-analytics-form > .legacy-analytics-compare-grid { grid-column: auto; grid-row: auto; justify-self: stretch; width: 100%; }
+        .branch-product-toolbar-meta { gap: 0.25rem; }
+        .branch-product-toolbar-actions { justify-content: flex-start; }
+        .branch-product-period-switcher { width: 100%; overflow-x: auto; }
+        .branch-product-filterbar { grid-template-columns: 1fr; }
+        .branch-product-filter-actions { justify-content: flex-start; flex-wrap: wrap; }
+        .branch-product-filter-actions .sa-btn { flex: 1 1 140px; }
         .legacy-top-products-row { grid-template-columns: 24px 40px minmax(0, 1fr); }
         .sa-pagination { align-items: flex-start; flex-direction: column; }
         .sa-header-actions { justify-items: stretch; }
         .sa-header-action-row { flex-wrap: wrap; }
         .sa-header-action-row .sa-btn { flex: 1 1 calc(50% - 0.3rem); }
-        .sa-period-shortcuts { width: 100%; }
-        .sa-period-shortcut { text-align: center; }
+        .legacy-analytics-presets { width: 100%; }
+        .legacy-analytics-period-btn { text-align: center; }
         .sa-kpi-grid { grid-template-columns: 1fr; }
         .sa-quick-branch-row { grid-template-columns: 42px minmax(0, 1fr); }
         .sa-quick-branch-metric { grid-column: 1 / -1; text-align: left; }
@@ -682,42 +851,25 @@
         }
 
         $analyticsCompareType = (string) request('analytics_compare_type', $analyticsContext->periodType === 'all' ? 'none' : 'previous');
-        $topBranchHighlights = collect($branchRankingStats ?? [])->take(5)->values();
-        $periodShortcutBase = request()->except([
-            'analytics_period_type',
-            'analytics_date',
-            'analytics_week',
-            'analytics_month',
-            'analytics_year',
-            'analytics_start_date',
-            'analytics_end_date',
-        ]);
-        $periodShortcuts = [
-            'day' => [
-                'label' => 'Hôm nay',
-                'query' => ['analytics_period_type' => 'day', 'analytics_date' => now()->format('Y-m-d')],
-            ],
-            'week' => [
-                'label' => 'Tuần này',
-                'query' => ['analytics_period_type' => 'week', 'analytics_week' => now()->format('o-\WW')],
-            ],
-            'month' => [
-                'label' => 'Tháng này',
-                'query' => ['analytics_period_type' => 'month', 'analytics_month' => now()->format('Y-m')],
-            ],
-            'year' => [
-                'label' => 'Năm nay',
-                'query' => ['analytics_period_type' => 'year', 'analytics_year' => now()->format('Y')],
-            ],
-            'range' => [
-                'label' => 'Tùy chọn',
-                'query' => [
-                    'analytics_period_type' => 'range',
-                    'analytics_start_date' => now()->startOfMonth()->format('Y-m-d'),
-                    'analytics_end_date' => now()->format('Y-m-d'),
-                ],
-            ],
+        $analyticsPeriodType = (string) $analyticsContext->periodType;
+        $analyticsPeriodPresets = [
+            'day' => 'Hôm nay',
+            'week' => 'Tuần này',
+            'month' => 'Tháng này',
+            'year' => 'Năm nay',
+            'range' => 'Tùy chọn',
         ];
+        $analyticsSummaryPeriod = match ($analyticsPeriodType) {
+            'day', 'week', 'month', 'year' => $analyticsPeriodPresets[$analyticsPeriodType] ?? ($analyticsContext->displayLabel ?? 'Tất cả thời gian'),
+            'range' => $analyticsContext->currentStart && $analyticsContext->currentEnd
+                ? ($analyticsContext->currentStart->isSameDay($analyticsContext->currentEnd)
+                    ? $analyticsContext->currentStart->format('d/m/Y')
+                    : $analyticsContext->currentStart->format('d/m/Y').' – '.$analyticsContext->currentEnd->format('d/m/Y'))
+                : ($analyticsPeriodPresets[$analyticsPeriodType] ?? ($analyticsContext->displayLabel ?? 'Tất cả thời gian')),
+            default => $analyticsContext->displayLabel ?? 'Tất cả thời gian',
+        };
+        $analyticsSummaryLine = $analyticsSummaryPeriod.' · '.($analyticsContext->comparisonLabel ?? 'Không so sánh').' · '.($analyticsBranchScopeLabel ?? 'Tất cả chi nhánh');
+        $topBranchHighlights = collect($branchRankingStats ?? [])->take(5)->values();
     @endphp
 
     <header class="sa-header legacy-page-header">
@@ -747,24 +899,33 @@
 
     {{-- LEGACY OVERVIEW - CURRENTLY ACTIVE --}}
     <div class="legacy-overview">
-        <section class="legacy-analytics-bar" aria-label="Bộ lọc thống kê">
+        <section class="legacy-analytics-bar" aria-label="Bộ lọc dữ liệu kinh doanh">
             <div class="legacy-analytics-head">
-                <div>
-                    <h2 class="sa-panel-title">Bộ lọc thống kê</h2>
+                <div class="legacy-analytics-head-copy">
+                    <h2 class="sa-panel-title">Bộ lọc dữ liệu kinh doanh</h2>
+                    <p class="sa-panel-note">Áp dụng cho KPI, chi nhánh và sản phẩm bên dưới.</p>
                 </div>
-                <div class="sa-period-shortcuts" aria-label="Chọn nhanh khoảng thời gian">
-                    @foreach($periodShortcuts as $periodKey => $shortcut)
-                        <a
-                            href="{{ route('admin.super-admin', array_merge($periodShortcutBase, $shortcut['query'])) }}"
-                            class="sa-period-shortcut {{ $analyticsContext->periodType === $periodKey ? 'active' : '' }}"
+                <div class="legacy-analytics-presets" role="group" aria-label="Chọn khoảng thời gian">
+                    @foreach($analyticsPeriodPresets as $periodValue => $periodLabel)
+                        <button
+                            type="button"
+                            class="legacy-analytics-period-btn {{ $analyticsPeriodType === $periodValue ? 'active' : '' }}"
+                            data-analytics-period-preset="{{ $periodValue }}"
+                            aria-pressed="{{ $analyticsPeriodType === $periodValue ? 'true' : 'false' }}"
                         >
-                            {{ $shortcut['label'] }}
-                        </a>
+                            {{ $periodLabel }}
+                        </button>
                     @endforeach
                 </div>
             </div>
 
-            <form class="legacy-analytics-form" method="GET" action="{{ route('admin.super-admin') }}">
+            <form class="legacy-analytics-form" method="GET" action="{{ route('admin.super-admin') }}" data-legacy-analytics-form
+                data-analytics-default-date="{{ now()->format('Y-m-d') }}"
+                data-analytics-default-week="{{ now()->format('o-\WW') }}"
+                data-analytics-default-month="{{ now()->format('Y-m') }}"
+                data-analytics-default-year="{{ now()->format('Y') }}"
+                data-analytics-default-range-start="{{ now()->startOfMonth()->format('Y-m-d') }}"
+                data-analytics-default-range-end="{{ now()->format('Y-m-d') }}">
                 <input type="hidden" name="q" value="{{ $filters['search'] }}">
                 <input type="hidden" name="status" value="{{ $filters['status'] }}">
                 <input type="hidden" name="role" value="{{ $filters['role'] }}">
@@ -776,21 +937,14 @@
                 <input type="hidden" name="branch_direction" value="{{ request('branch_direction', 'desc') }}">
                 <input type="hidden" name="branch_performance" value="{{ request('branch_performance', 'all') }}">
                 <input type="hidden" name="branch_per_page" value="{{ request('branch_per_page', 5) }}">
-                <input type="hidden" name="branch_page" value="{{ request('branch_page') }}">
+                <input type="hidden" name="branch_page" value="1">
+                <input type="hidden" name="analytics_period_type" value="{{ $analyticsPeriodType }}" data-analytics-period-type-input>
+                <input type="hidden" name="analytics_date" value="{{ now()->format('Y-m-d') }}" data-analytics-period-value="day">
+                <input type="hidden" name="analytics_week" value="{{ now()->format('o-\WW') }}" data-analytics-period-value="week">
+                <input type="hidden" name="analytics_month" value="{{ now()->format('Y-m') }}" data-analytics-period-value="month">
+                <input type="hidden" name="analytics_year" value="{{ now()->format('Y') }}" data-analytics-period-value="year">
 
-                <div class="legacy-analytics-field">
-                    <label class="legacy-analytics-label" for="analytics-period-type">Khoảng thời gian</label>
-                    <select id="analytics-period-type" name="analytics_period_type" class="legacy-analytics-control" data-analytics-period-selector>
-                        <option value="all" @selected($analyticsContext->periodType === 'all')>Tất cả thời gian</option>
-                        <option value="day" @selected($analyticsContext->periodType === 'day')>Ngày</option>
-                        <option value="week" @selected($analyticsContext->periodType === 'week')>Tuần</option>
-                        <option value="month" @selected($analyticsContext->periodType === 'month')>Tháng</option>
-                        <option value="year" @selected($analyticsContext->periodType === 'year')>Năm</option>
-                        <option value="range" @selected($analyticsContext->periodType === 'range')>Tùy chọn</option>
-                    </select>
-                </div>
-
-                <div class="legacy-analytics-field">
+                <div class="legacy-analytics-field legacy-analytics-field--compare">
                     <label class="legacy-analytics-label" for="analytics-compare-type">So sánh với</label>
                     <select id="analytics-compare-type" name="analytics_compare_type" class="legacy-analytics-control" data-analytics-compare-selector>
                         <option value="none" @selected($analyticsCompareType === 'none')>Không so sánh</option>
@@ -813,28 +967,15 @@
                     ])
                 </div>
 
-                <div class="legacy-analytics-range">
-                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="day">
-                        <label class="legacy-analytics-label" for="analytics-date">Ngày</label>
-                        <input id="analytics-date" type="date" name="analytics_date" value="{{ $analyticsContext->currentStart?->format('Y-m-d') ?? now()->format('Y-m-d') }}" class="legacy-analytics-control">
-                    </div>
-                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="week">
-                        <label class="legacy-analytics-label" for="analytics-week">Tuần</label>
-                        <input id="analytics-week" type="week" name="analytics_week" value="{{ $analyticsContext->currentStart?->format('o-\WW') ?? now()->format('o-\WW') }}" class="legacy-analytics-control">
-                    </div>
-                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="month">
-                        <label class="legacy-analytics-label" for="analytics-month">Tháng</label>
-                        <input id="analytics-month" type="month" name="analytics_month" value="{{ $analyticsContext->currentStart?->format('Y-m') ?? now()->format('Y-m') }}" class="legacy-analytics-control">
-                    </div>
-                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="year">
-                        <label class="legacy-analytics-label" for="analytics-year">Năm</label>
-                        <input id="analytics-year" type="number" name="analytics_year" min="2000" max="{{ now()->addYear()->year }}" value="{{ $analyticsContext->currentStart?->format('Y') ?? now()->format('Y') }}" class="legacy-analytics-control">
-                    </div>
-                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-period-group="range" style="grid-column: 1 / -1;">
-                        <label class="legacy-analytics-label">Khoảng ngày tùy chọn</label>
-                        <div class="legacy-analytics-range">
-                            <input type="date" name="analytics_start_date" value="{{ $analyticsContext->currentStart?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d') }}" class="legacy-analytics-control">
-                            <input type="date" name="analytics_end_date" value="{{ $analyticsContext->currentEnd?->format('Y-m-d') ?? now()->format('Y-m-d') }}" class="legacy-analytics-control">
+                <div class="legacy-analytics-period-row legacy-analytics-hidden" data-analytics-period-group="range">
+                    <div class="legacy-analytics-range">
+                        <div class="legacy-analytics-field">
+                            <label class="legacy-analytics-label" for="analytics-start-date">Từ ngày</label>
+                            <input id="analytics-start-date" type="date" name="analytics_start_date" value="{{ $analyticsContext->currentStart?->format('Y-m-d') ?? now()->startOfMonth()->format('Y-m-d') }}" class="legacy-analytics-control" data-analytics-period-range-input>
+                        </div>
+                        <div class="legacy-analytics-field">
+                            <label class="legacy-analytics-label" for="analytics-end-date">Đến ngày</label>
+                            <input id="analytics-end-date" type="date" name="analytics_end_date" value="{{ $analyticsContext->currentEnd?->format('Y-m-d') ?? now()->format('Y-m-d') }}" class="legacy-analytics-control" data-analytics-period-range-input>
                         </div>
                     </div>
                 </div>
@@ -847,33 +988,36 @@
                 <div class="legacy-analytics-compare-grid">
                     <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="day">
                         <label class="legacy-analytics-label" for="analytics-compare-date">Ngày đối chiếu</label>
-                        <input id="analytics-compare-date" type="date" name="analytics_compare_date" value="{{ request('analytics_compare_date') }}" class="legacy-analytics-control">
+                        <input id="analytics-compare-date" type="date" name="analytics_compare_date" value="{{ request('analytics_compare_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
                     </div>
                     <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="month">
                         <label class="legacy-analytics-label" for="analytics-compare-month">Tháng đối chiếu</label>
-                        <input id="analytics-compare-month" type="month" name="analytics_compare_month" value="{{ request('analytics_compare_month') }}" class="legacy-analytics-control">
+                        <input id="analytics-compare-month" type="month" name="analytics_compare_month" value="{{ request('analytics_compare_month') }}" class="legacy-analytics-control" data-analytics-compare-input>
                     </div>
                     <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="year">
                         <label class="legacy-analytics-label" for="analytics-compare-year">Năm đối chiếu</label>
-                        <input id="analytics-compare-year" type="number" name="analytics_compare_year" min="2000" max="{{ now()->addYear()->year }}" value="{{ request('analytics_compare_year') }}" class="legacy-analytics-control">
+                        <input id="analytics-compare-year" type="number" name="analytics_compare_year" min="2000" max="{{ now()->addYear()->year }}" value="{{ request('analytics_compare_year') }}" class="legacy-analytics-control" data-analytics-compare-input>
                     </div>
                     <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="week">
                         <label class="legacy-analytics-label">Khoảng đối chiếu cho tuần</label>
                         <div class="legacy-analytics-range">
-                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control">
-                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
                         </div>
                     </div>
                     <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="range">
                         <label class="legacy-analytics-label">Khoảng ngày đối chiếu</label>
                         <div class="legacy-analytics-range">
-                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control">
-                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
                         </div>
                     </div>
                 </div>
 
             </form>
+            <div class="legacy-analytics-summary" aria-live="polite">
+                <span class="legacy-analytics-summary-line">{{ $analyticsSummaryLine }}</span>
+            </div>
         </section>
 
     @php
@@ -1015,18 +1159,34 @@
                 <h2 class="legacy-top-products-title">Bán chạy toàn hệ thống</h2>
             </div>
             <div class="legacy-top-products-actions" role="tablist" aria-label="Chọn cách xếp hạng sản phẩm">
-                <a href="{{ $topProductSortLinks['quantity'] }}" class="legacy-top-products-action {{ $topProductSort === 'quantity' ? 'active' : '' }}">Theo số lượng</a>
-                <a href="{{ $topProductSortLinks['revenue'] }}" class="legacy-top-products-action {{ $topProductSort === 'revenue' ? 'active' : '' }}">Theo doanh thu</a>
+                <button
+                    type="button"
+                    class="legacy-top-products-action {{ $topProductSort === 'quantity' ? 'active' : '' }}"
+                    data-top-products-sort="quantity"
+                    aria-pressed="{{ $topProductSort === 'quantity' ? 'true' : 'false' }}"
+                >Theo số lượng</button>
+                <button
+                    type="button"
+                    class="legacy-top-products-action {{ $topProductSort === 'revenue' ? 'active' : '' }}"
+                    data-top-products-sort="revenue"
+                    aria-pressed="{{ $topProductSort === 'revenue' ? 'true' : 'false' }}"
+                >Theo doanh thu</button>
             </div>
         </div>
 
         @if($topProducts->isEmpty())
             <div class="legacy-top-products-empty">Chưa có sản phẩm được bán trong kỳ đã chọn.</div>
         @else
-            <div class="legacy-top-products-list">
+            <div class="legacy-top-products-list" data-top-products-list data-current-sort="{{ $topProductSort }}">
                 @foreach($topProducts as $topProduct)
-                    <article class="legacy-top-products-row" data-top-product-row>
-                        <span class="legacy-top-products-rank">{{ $topProduct['rank'] }}</span>
+                    <article
+                        class="legacy-top-products-row"
+                        data-top-product-row
+                        data-top-product-rank="{{ $topProduct['rank'] }}"
+                        data-top-product-quantity="{{ (int) ($topProduct['total_quantity'] ?? 0) }}"
+                        data-top-product-revenue="{{ (int) ($topProduct['total_revenue'] ?? 0) }}"
+                    >
+                        <span class="legacy-top-products-rank" data-top-product-rank-label>{{ $topProduct['rank'] }}</span>
                         <div class="legacy-top-products-thumb">
                             <img src="{{ $topProduct['product_image_url'] }}" alt="{{ $topProduct['product_name'] }}" loading="lazy">
                         </div>
@@ -1203,15 +1363,18 @@
         }
 
         function syncLegacyAnalyticsPeriodFields() {
-            const selector = document.querySelector('[data-analytics-period-selector]');
-            if (!selector) {
+            const form = document.querySelector('[data-legacy-analytics-form]');
+            const periodInput = form?.querySelector('[data-analytics-period-type-input]');
+            if (!form || !periodInput) {
                 return;
             }
 
-            const periodType = selector.value || 'all';
-            document.querySelectorAll('[data-analytics-period-group]').forEach((field) => {
-                const shouldShow = field.getAttribute('data-analytics-period-group') === periodType;
-                field.classList.toggle('legacy-analytics-hidden', !shouldShow);
+            const periodType = periodInput.value || 'all';
+            const presetValues = form.dataset || {};
+            document.querySelectorAll('[data-analytics-period-preset]').forEach((button) => {
+                const isActive = button.getAttribute('data-analytics-period-preset') === periodType;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             });
 
             const compareSelector = document.querySelector('[data-analytics-compare-selector]');
@@ -1225,36 +1388,184 @@
                 }
             }
 
+            document.querySelectorAll('[data-analytics-period-value]').forEach((input) => {
+                const inputPeriod = input.getAttribute('data-analytics-period-value');
+                const shouldEnable = inputPeriod === periodType;
+                input.disabled = !shouldEnable;
+
+                if (shouldEnable) {
+                    const defaultValueMap = {
+                        day: presetValues.analyticsDefaultDate,
+                        week: presetValues.analyticsDefaultWeek,
+                        month: presetValues.analyticsDefaultMonth,
+                        year: presetValues.analyticsDefaultYear,
+                    };
+                    const defaultValue = defaultValueMap[inputPeriod];
+                    if (defaultValue) {
+                        input.value = defaultValue;
+                    }
+                }
+            });
+
+            const rangeInputs = form.querySelectorAll('[data-analytics-period-range-input]');
+            rangeInputs.forEach((input) => {
+                const shouldEnable = periodType === 'range';
+                input.disabled = !shouldEnable;
+                if (shouldEnable) {
+                    if (!input.value) {
+                        input.value = input.name === 'analytics_start_date'
+                            ? (presetValues.analyticsDefaultRangeStart || '')
+                            : (presetValues.analyticsDefaultRangeEnd || '');
+                    }
+                }
+            });
+
+            document.querySelectorAll('[data-analytics-period-group]').forEach((field) => {
+                const shouldShow = field.getAttribute('data-analytics-period-group') === 'range' && periodType === 'range';
+                field.classList.toggle('legacy-analytics-hidden', !shouldShow);
+                field.querySelectorAll('input, select, textarea, button').forEach((control) => {
+                    if (control.type !== 'hidden') {
+                        control.disabled = !shouldShow;
+                    }
+                });
+            });
+
             syncLegacyAnalyticsCompareFields();
         }
 
-        function syncLegacyAnalyticsCompareFields() {
-            const compareSelector = document.querySelector('[data-analytics-compare-selector]');
-            const periodSelector = document.querySelector('[data-analytics-period-selector]');
+function syncLegacyAnalyticsCompareFields() {
+            const form = document.querySelector('[data-legacy-analytics-form]');
+            const compareSelector = form?.querySelector('[data-analytics-compare-selector]');
+            const periodInput = form?.querySelector('[data-analytics-period-type-input]');
 
-            if (!compareSelector || !periodSelector) {
+            if (!form || !compareSelector || !periodInput) {
                 return;
             }
 
             const compareType = compareSelector.value || 'none';
-            const periodType = periodSelector.value || 'all';
+            const periodType = periodInput.value || 'all';
 
             document.querySelectorAll('[data-analytics-compare-group]').forEach((field) => {
                 const fieldPeriod = field.getAttribute('data-analytics-compare-group');
                 const shouldShow = compareType === 'custom' && fieldPeriod === periodType;
                 field.classList.toggle('legacy-analytics-hidden', !shouldShow);
+                field.querySelectorAll('input, select, textarea, button').forEach((control) => {
+                    if (control.type !== 'hidden') {
+                        control.disabled = !shouldShow;
+                    }
+                });
             });
+}
+
+function buildFormSearchParams(form, submitter = null) {
+    const params = new URLSearchParams();
+    const formData = new FormData(form);
+    const submitterName = submitter && submitter.name ? submitter.name : null;
+    const isSubmitButton = submitter && ['submit', 'button'].includes((submitter.type || '').toLowerCase());
+
+    for (const [key, value] of formData.entries()) {
+        if (isSubmitButton && submitterName && key === submitterName) {
+            continue;
+        }
+
+        params.append(key, value);
+    }
+
+    if (isSubmitButton && submitterName) {
+        params.set(submitterName, submitter.value ?? '');
+    }
+
+    return params;
+}
+
+function normalizeLegacyAnalyticsForm(form) {
+            if (!form) {
+                return null;
+            }
+
+            const params = new URLSearchParams(new FormData(form));
+            const periodType = params.get('analytics_period_type') || 'all';
+            const compareType = params.get('analytics_compare_type') || (periodType === 'all' ? 'none' : 'previous');
+            const activePeriodKeys = {
+                day: ['analytics_date'],
+                week: ['analytics_week'],
+                month: ['analytics_month'],
+                year: ['analytics_year'],
+                range: ['analytics_start_date', 'analytics_end_date'],
+            };
+            const activeCompareKeys = {
+                day: ['analytics_compare_date'],
+                week: ['analytics_compare_start_date', 'analytics_compare_end_date'],
+                month: ['analytics_compare_month'],
+                year: ['analytics_compare_year'],
+                range: ['analytics_compare_start_date', 'analytics_compare_end_date'],
+            };
+
+            ['analytics_date', 'analytics_week', 'analytics_month', 'analytics_year', 'analytics_start_date', 'analytics_end_date'].forEach((key) => params.delete(key));
+            ['analytics_compare_date', 'analytics_compare_month', 'analytics_compare_year', 'analytics_compare_start_date', 'analytics_compare_end_date'].forEach((key) => params.delete(key));
+
+            (activePeriodKeys[periodType] || []).forEach((key) => {
+                const control = form.querySelector(`[name="${key}"]`);
+                if (control && control.value !== '') {
+                    params.set(key, control.value);
+                }
+            });
+
+            if (periodType === 'all') {
+                params.set('analytics_compare_type', 'none');
+            } else if (compareType === 'custom') {
+                (activeCompareKeys[periodType] || []).forEach((key) => {
+                    const control = form.querySelector(`[name="${key}"]`);
+                    if (control && control.value !== '') {
+                        params.set(key, control.value);
+                    }
+                });
+            }
+
+            params.set('branch_page', '1');
+
+            return params;
         }
 
         document.addEventListener('change', function (event) {
-            if (event.target && event.target.matches('[data-analytics-period-selector]')) {
-                syncLegacyAnalyticsPeriodFields();
-                return;
-            }
-
             if (event.target && event.target.matches('[data-analytics-compare-selector]')) {
                 syncLegacyAnalyticsCompareFields();
             }
+        });
+
+        document.addEventListener('click', function (event) {
+            const periodButton = event.target && event.target.closest('[data-analytics-period-preset]');
+            if (!periodButton) {
+                return;
+            }
+
+            const form = document.querySelector('[data-legacy-analytics-form]');
+            const periodInput = form?.querySelector('[data-analytics-period-type-input]');
+            if (!periodInput) {
+                return;
+            }
+
+            periodInput.value = periodButton.getAttribute('data-analytics-period-preset') || 'all';
+            syncLegacyAnalyticsPeriodFields();
+        });
+
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (!form || !form.matches('[data-legacy-analytics-form]')) {
+                return;
+            }
+
+            event.preventDefault();
+            syncLegacyAnalyticsPeriodFields();
+
+            const params = normalizeLegacyAnalyticsForm(form);
+            if (!params) {
+                return;
+            }
+
+            const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
+            url.search = params.toString();
+            window.location.href = url.toString();
         });
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1263,42 +1574,7 @@
         });
     </script>
 
-    <!-- System Charts -->
-    <section class="sa-charts-grid" aria-label="Biểu đồ hệ thống">
-        <!-- System Revenue Chart (7-day) -->
-        <article class="sa-panel">
-            <div class="sa-panel-header"><div><h2 class="sa-panel-title">Doanh thu 7 ngày</h2><p class="sa-panel-note">Đơn đã thanh toán hoặc hoàn thành</p></div><i class="bi bi-graph-up-arrow text-success"></i></div>
-            <div class="sa-chart">
-                <div class="sa-chart-meta"><span>VNĐ</span><span>{{ number_format(collect($revenueChart['values'])->sum(), 0, ',', '.') }}đ</span></div>
-                <div class="sa-chart-bars">
-                    @foreach($revenueChart['labels'] as $index => $label)
-                        <div class="sa-chart-column">
-                            <span class="sa-chart-value">{{ $revenueChart['values'][$index] > 0 ? number_format($revenueChart['values'][$index] / 1000, 0).'k' : '0' }}</span>
-                            <span class="sa-chart-bar" style="height: {{ $revenueChart['heights'][$index] }}%"></span>
-                            <span class="sa-chart-label">{{ $label }}</span>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </article>
-
-        <!-- System User Chart -->
-        <article class="sa-panel">
-            <div class="sa-panel-header"><div><h2 class="sa-panel-title">Người dùng mới</h2><p class="sa-panel-note">Sáu tháng gần nhất</p></div><i class="bi bi-person-plus text-primary"></i></div>
-            <div class="sa-chart">
-                <div class="sa-chart-meta"><span>Tài khoản</span><span>{{ collect($userChart['values'])->sum() }} mới</span></div>
-                <div class="sa-chart-bars six">
-                    @foreach($userChart['labels'] as $index => $label)
-                        <div class="sa-chart-column">
-                            <span class="sa-chart-value">{{ $userChart['values'][$index] }}</span>
-                            <span class="sa-chart-bar alt" style="height: {{ $userChart['heights'][$index] }}%"></span>
-                            <span class="sa-chart-label">{{ $label }}</span>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </article>
-    </section>
+    @include('admin.super-admin.partials.branch-time-comparison')
 
     </section>
 
@@ -1501,15 +1777,27 @@
                             <td><span class="sa-presence sa-presence-{{ $presence }}">{{ $presenceLabel }}</span></td>
                             <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}">{{ $adminUser->is_active ? 'Hoạt động' : 'Đã khóa' }}</span></td>
                             <td>
-                                <div class="sa-actions">
+                                <div class="sa-actions" @if($adminUser->isSuperAdmin()) data-admin-actions-locked="{{ $adminUser->id }}" @endif>
                                     @if($adminUser->isSuperAdmin())
-                                        <a class="sa-action-btn" href="{{ route('admin.preview-admin') }}" title="Vào trang admin bằng quyền super admin"><i class="bi bi-eye"></i></a>
+                                        <span class="sa-action-btn sa-action-btn-disabled" aria-disabled="true" title="Không áp dụng cho quản trị cấp cao"><i class="bi bi-eye"></i></span>
                                     @elseif($adminUser->branch_id)
                                         <a class="sa-action-btn" href="{{ route('admin.preview-admin', ['branch_id' => $adminUser->branch_id]) }}" title="Vào trang admin của chi nhánh bằng quyền super admin"><i class="bi bi-eye"></i></a>
                                     @else
                                         <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                     @endif
-                                    <button class="sa-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#adminActionsModal{{ $adminUser->id }}" title="Thao tác"><i class="bi bi-gear"></i></button>
+                                    <button
+                                        class="sa-action-btn {{ $adminUser->isSuperAdmin() ? 'sa-action-btn-disabled' : '' }}"
+                                        type="button"
+                                        @if($adminUser->isSuperAdmin())
+                                            disabled
+                                            aria-disabled="true"
+                                            title="Không áp dụng cho quản trị cấp cao"
+                                        @else
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#adminActionsModal{{ $adminUser->id }}"
+                                            title="Thao tác"
+                                        @endif
+                                    ><i class="bi bi-gear"></i></button>
                                 </div>
                             </td>
                         </tr>
@@ -2191,6 +2479,68 @@ function syncAnalyticsTabFromLocation() {
     setAnalyticsTab(window.location.hash || 'branch-ranking');
 }
 
+function syncLegacyTopProducts(sort, options = {}) {
+    const normalizedSort = sort === 'revenue' ? 'revenue' : 'quantity';
+    const list = document.querySelector('[data-top-products-list]');
+    if (!list) {
+        return;
+    }
+
+    const buttons = Array.from(document.querySelectorAll('[data-top-products-sort]'));
+    const rows = Array.from(list.querySelectorAll('[data-top-product-row]')).map((row, index) => ({
+        row,
+        index,
+        rankLabel: row.querySelector('[data-top-product-rank-label]'),
+    }));
+
+    rows.sort((a, b) => {
+        const aQuantity = Number(a.row.dataset.topProductQuantity || 0);
+        const bQuantity = Number(b.row.dataset.topProductQuantity || 0);
+        const aRevenue = Number(a.row.dataset.topProductRevenue || 0);
+        const bRevenue = Number(b.row.dataset.topProductRevenue || 0);
+
+        const primary = normalizedSort === 'revenue'
+            ? (bRevenue - aRevenue)
+            : (bQuantity - aQuantity);
+
+        if (primary !== 0) {
+            return primary;
+        }
+
+        const secondary = normalizedSort === 'revenue'
+            ? (bQuantity - aQuantity)
+            : (bRevenue - aRevenue);
+
+        if (secondary !== 0) {
+            return secondary;
+        }
+
+        return a.index - b.index;
+    });
+
+    rows.forEach(({ row, rankLabel }, index) => {
+        list.appendChild(row);
+        row.dataset.topProductRank = String(index + 1);
+        if (rankLabel) {
+            rankLabel.textContent = String(index + 1);
+        }
+    });
+
+    list.dataset.currentSort = normalizedSort;
+
+    buttons.forEach((button) => {
+        const isActive = button.getAttribute('data-top-products-sort') === normalizedSort;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    if (options.updateUrl !== false) {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set('analytics_product_sort', normalizedSort);
+        window.history.replaceState({}, '', nextUrl.toString());
+    }
+}
+
 async function loadSuperAdminAnalyticsRegions(url, options = {}) {
     if (branchSectionLoading) {
         return;
@@ -2281,6 +2631,14 @@ async function loadBranchRankingRegion(url, options = {}) {
     });
 }
 
+async function loadBranchTimeComparisonRegion(url, options = {}) {
+    return loadSuperAdminAnalyticsRegions(url, {
+        ...options,
+        hash: 'branch-time-matrix',
+        regionSelectors: ['[data-branch-time-comparison-region]'],
+    });
+}
+
 async function loadFocusProductRegion(url, options = {}) {
     return loadSuperAdminAnalyticsRegions(url, {
         ...options,
@@ -2313,7 +2671,7 @@ document.addEventListener('submit', function(e) {
         e.preventDefault();
 
         const form = e.target;
-        const params = new URLSearchParams(new FormData(form));
+        const params = buildFormSearchParams(form, e.submitter || null);
         const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
         url.search = params.toString();
 
@@ -2325,7 +2683,7 @@ document.addEventListener('submit', function(e) {
         e.preventDefault();
 
         const form = e.target;
-        const params = new URLSearchParams(new FormData(form));
+        const params = buildFormSearchParams(form, e.submitter || null);
         const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
         url.search = params.toString();
 
@@ -2338,11 +2696,23 @@ document.addEventListener('submit', function(e) {
         return;
     }
 
+    if (e.target && e.target.matches('[data-branch-time-matrix-form]')) {
+        e.preventDefault();
+
+        const form = e.target;
+        const params = buildFormSearchParams(form, e.submitter || null);
+        const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
+        url.search = params.toString();
+
+        loadBranchTimeComparisonRegion(url.toString());
+        return;
+    }
+
     if (e.target && e.target.matches('[data-product-branch-performance-form]')) {
         e.preventDefault();
 
         const form = e.target;
-        const params = new URLSearchParams(new FormData(form));
+        const params = buildFormSearchParams(form, e.submitter || null);
         const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
         url.search = params.toString();
 
@@ -2391,6 +2761,13 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    const topProductsSortButton = e.target.closest('[data-top-products-sort]');
+    if (topProductsSortButton) {
+        e.preventDefault();
+        syncLegacyTopProducts(topProductsSortButton.getAttribute('data-top-products-sort') || 'quantity');
+        return;
+    }
+
     const resetLink = e.target.closest('[data-admins-reset]');
     if (resetLink) {
         e.preventDefault();
@@ -2400,6 +2777,18 @@ document.addEventListener('click', function(e) {
 
     const pageLink = e.target.closest('.sa-page-link');
     if (!pageLink) {
+        return;
+    }
+
+    const timeMatrixRegion = pageLink.closest('[data-branch-time-comparison-region]');
+    if (timeMatrixRegion) {
+        if (pageLink.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
+
+        e.preventDefault();
+        loadBranchTimeComparisonRegion(pageLink.getAttribute('href'));
         return;
     }
 
@@ -2454,7 +2843,7 @@ document.addEventListener('click', function(e) {
 });
 
 window.addEventListener('popstate', function() {
-    if (document.querySelector('[data-branch-ranking-region]') || document.querySelector('[data-branch-product-detail-region]') || document.querySelector('[data-product-branch-performance-region]')) {
+    if (document.querySelector('[data-branch-ranking-region]') || document.querySelector('[data-branch-product-detail-region]') || document.querySelector('[data-branch-time-comparison-region]') || document.querySelector('[data-product-branch-performance-region]')) {
         loadSuperAdminAnalyticsRegions(window.location.href, { updateHistory: false });
         return;
     }
@@ -2620,7 +3009,7 @@ function syncBranchScope(root) {
     }
 
     if (refs.triggerCount) {
-        refs.triggerCount.textContent = selectedCount > 0 ? String(selectedCount) : '∞';
+        refs.triggerCount.textContent = selectedCount > 0 ? String(selectedCount) : 'Tất cả';
     }
 
     if (refs.chips) {
@@ -2665,6 +3054,7 @@ function filterBranchScopeOptions(root) {
 
 document.querySelectorAll('[data-branch-scope]').forEach(initBranchScopeControl);
 syncAnalyticsTabFromLocation();
+syncLegacyTopProducts(document.querySelector('[data-top-products-list]')?.dataset.currentSort || 'quantity', { updateUrl: false });
 
 if (!window.__branchScopeGlobalListenersBound) {
     window.__branchScopeGlobalListenersBound = true;

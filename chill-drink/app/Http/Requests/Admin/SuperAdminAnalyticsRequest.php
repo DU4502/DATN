@@ -6,6 +6,7 @@ use App\Services\AnalyticsPeriodContext;
 use App\Services\SuperAdminAnalyticsPeriodResolver;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
 class SuperAdminAnalyticsRequest extends FormRequest
@@ -19,46 +20,67 @@ class SuperAdminAnalyticsRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $periodType = $this->input('analytics_period_type', 'all');
-        $analyticsBranchIds = $this->normalizeBranchIds(
-            $this->input('analytics_branch_ids', $this->input('branch_ids', []))
-        );
+        $data = $this->all();
 
-        $defaults = [
-            'analytics_period_type' => $periodType,
-            'analytics_compare_type' => $this->input('analytics_compare_type', $periodType === 'all' ? 'none' : 'previous'),
-            'analytics_product_sort' => $this->input('analytics_product_sort', 'quantity'),
-        ];
-
-        if ($periodType === 'day' && ! $this->filled('analytics_date')) {
-            $defaults['analytics_date'] = now()->format('Y-m-d');
+        $periodType = (string) Arr::get($data, 'analytics_period_type', 'all');
+        if (! in_array($periodType, ['all', 'day', 'week', 'month', 'year', 'range'], true)) {
+            $periodType = 'all';
         }
 
-        if ($periodType === 'week' && ! $this->filled('analytics_week')) {
-            $defaults['analytics_week'] = now()->format('o-\WW');
+        $compareType = (string) Arr::get($data, 'analytics_compare_type', $periodType === 'all' ? 'none' : 'previous');
+        if (! in_array($compareType, ['none', 'previous', 'previous_year', 'custom'], true)) {
+            $compareType = $periodType === 'all' ? 'none' : 'previous';
         }
 
-        if ($periodType === 'month' && ! $this->filled('analytics_month')) {
-            $defaults['analytics_month'] = now()->format('Y-m');
+        $analyticsBranchIds = $this->normalizeBranchIds(Arr::get($data, 'analytics_branch_ids', Arr::get($data, 'branch_ids', [])));
+
+        $data['analytics_period_type'] = $periodType;
+        $data['analytics_compare_type'] = $periodType === 'all' ? 'none' : $compareType;
+        $data['analytics_product_sort'] = (string) Arr::get($data, 'analytics_product_sort', 'quantity') ?: 'quantity';
+
+        $this->keepOnlyActivePeriodFields($data, $periodType);
+        $this->keepOnlyActiveCompareFields($data, $periodType, $data['analytics_compare_type']);
+
+        if ($periodType === 'day' && ! array_key_exists('analytics_date', $data)) {
+            $data['analytics_date'] = now()->format('Y-m-d');
         }
 
-        if ($periodType === 'year' && ! $this->filled('analytics_year')) {
-            $defaults['analytics_year'] = now()->format('Y');
+        if ($periodType === 'week' && ! array_key_exists('analytics_week', $data)) {
+            $data['analytics_week'] = now()->format('o-\\WW');
+        }
+
+        if ($periodType === 'month' && ! array_key_exists('analytics_month', $data)) {
+            $data['analytics_month'] = now()->format('Y-m');
+        }
+
+        if ($periodType === 'year' && ! array_key_exists('analytics_year', $data)) {
+            $data['analytics_year'] = now()->format('Y');
         }
 
         if ($periodType === 'range') {
-            if (! $this->filled('analytics_start_date')) {
-                $defaults['analytics_start_date'] = now()->startOfMonth()->format('Y-m-d');
+            if (! array_key_exists('analytics_start_date', $data)) {
+                $data['analytics_start_date'] = now()->startOfMonth()->format('Y-m-d');
             }
 
-            if (! $this->filled('analytics_end_date')) {
-                $defaults['analytics_end_date'] = now()->format('Y-m-d');
+            if (! array_key_exists('analytics_end_date', $data)) {
+                $data['analytics_end_date'] = now()->format('Y-m-d');
             }
         }
 
-        $defaults['analytics_branch_ids'] = $analyticsBranchIds;
+        if ($analyticsBranchIds !== []) {
+            $data['analytics_branch_ids'] = $analyticsBranchIds;
+            unset($data['branch_ids']);
+        } else {
+            unset($data['analytics_branch_ids']);
+            $legacyBranchIds = $this->normalizeBranchIds(Arr::get($data, 'branch_ids', []));
+            if ($legacyBranchIds !== []) {
+                $data['branch_ids'] = $legacyBranchIds;
+            } else {
+                unset($data['branch_ids']);
+            }
+        }
 
-        $this->merge($defaults);
+        $this->replace($data);
     }
 
     /**
@@ -174,5 +196,57 @@ class SuperAdminAnalyticsRequest extends FormRequest
             ->sort()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function keepOnlyActivePeriodFields(array &$data, string $periodType): void
+    {
+        foreach (['analytics_date', 'analytics_week', 'analytics_month', 'analytics_year', 'analytics_start_date', 'analytics_end_date'] as $key) {
+            unset($data[$key]);
+        }
+
+        if ($periodType === 'all') {
+            return;
+        }
+
+        foreach ([
+            'day' => ['analytics_date'],
+            'week' => ['analytics_week'],
+            'month' => ['analytics_month'],
+            'year' => ['analytics_year'],
+            'range' => ['analytics_start_date', 'analytics_end_date'],
+        ][$periodType] ?? [] as $key) {
+            if (Arr::exists($this->all(), $key)) {
+                $data[$key] = $this->input($key);
+            }
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function keepOnlyActiveCompareFields(array &$data, string $periodType, string $compareType): void
+    {
+        foreach (['analytics_compare_date', 'analytics_compare_month', 'analytics_compare_year', 'analytics_compare_start_date', 'analytics_compare_end_date'] as $key) {
+            unset($data[$key]);
+        }
+
+        if ($compareType !== 'custom') {
+            return;
+        }
+
+        foreach ([
+            'day' => ['analytics_compare_date'],
+            'week' => ['analytics_compare_start_date', 'analytics_compare_end_date'],
+            'month' => ['analytics_compare_month'],
+            'year' => ['analytics_compare_year'],
+            'range' => ['analytics_compare_start_date', 'analytics_compare_end_date'],
+        ][$periodType] ?? [] as $key) {
+            if (Arr::exists($this->all(), $key)) {
+                $data[$key] = $this->input($key);
+            }
+        }
     }
 }

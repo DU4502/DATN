@@ -42,62 +42,62 @@
 @endphp
 
 <section class="sa-panel" id="branch-product-detail" data-branch-product-detail-region>
-    <div class="sa-panel-header" style="gap: 0.85rem; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;">
-        <div style="min-width: 0;">
-            <h2 class="sa-panel-title" style="font-size: 1.08rem;">Bán chạy theo chi nhánh</h2>
-            <p class="sa-panel-note">Xem hiệu quả và sản phẩm nổi bật của từng chi nhánh trong kỳ đã chọn.</p>
-            <div style="display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.45rem;">
-                <span class="sa-state sa-state-active" style="background:#eafaf5; color:var(--sa-green);">{{ $branchComparison['period_label'] }}</span>
-                <span class="sa-state" style="background:#eef2ff; color:#4338ca;">{{ $branchComparison['comparison_label'] }}</span>
-                <span class="sa-state" style="background:#fff7ed; color:#9a3412;">So sánh chi nhánh</span>
-                <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ number_format($branchTotal) }} chi nhánh</span>
+    <div class="branch-product-controls">
+        <div class="branch-product-toolbar">
+            <div class="branch-product-toolbar-copy">
+                <h2 class="branch-product-toolbar-title">Bán chạy theo chi nhánh</h2>
+                <p class="branch-product-toolbar-note">Tổng hợp chi nhánh và sản phẩm nổi bật trong kỳ đã chọn.</p>
+                <div class="branch-product-toolbar-meta">
+                    <span class="sa-state sa-state-active" style="background:#eafaf5; color:var(--sa-green);">{{ $branchComparison['period_label'] }}</span>
+                    <span class="sa-state" style="background:#eef2ff; color:#4338ca;">{{ $branchComparison['comparison_label'] }}</span>
+                    <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ number_format($branchTotal) }} chi nhánh</span>
+                </div>
+            </div>
+            <div class="branch-product-toolbar-actions">
+                <div class="branch-product-period-switcher" role="tablist" aria-label="Chọn kỳ phân tích">
+                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'all', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="all" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'all' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'all' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tất cả</a>
+                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'week', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="week" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'week' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'week' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tuần</a>
+                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'month', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="month" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
+                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'year', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="year" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
+                </div>
+                <button type="button" class="sa-btn sa-btn-primary branch-product-add-btn" data-bs-toggle="modal" data-bs-target="#createBranchModal"><i class="bi bi-plus-circle"></i> Thêm chi nhánh</button>
             </div>
         </div>
-        <div style="display:flex; align-items:center; gap:0.4rem; flex-wrap:wrap; justify-content:flex-end; margin-left:auto;">
-            <div style="display:flex; flex-wrap:wrap; gap:0.25rem; padding:0.2rem; border:1px solid var(--sa-border); border-radius:999px; background:#fff;">
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'all', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="all" class="sa-btn {{ $rankingPeriod === 'all' ? 'sa-btn-primary' : '' }}" style="min-height:40px; padding:0.42rem 0.82rem; border-radius:999px; font-size:0.82rem; line-height:1; {{ $rankingPeriod === 'all' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tất cả</a>
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'week', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="week" class="sa-btn {{ $rankingPeriod === 'week' ? 'sa-btn-primary' : '' }}" style="min-height:40px; padding:0.42rem 0.82rem; border-radius:999px; font-size:0.82rem; line-height:1; {{ $rankingPeriod === 'week' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tuần</a>
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'month', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="month" class="sa-btn {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="min-height:40px; padding:0.42rem 0.82rem; border-radius:999px; font-size:0.82rem; line-height:1; {{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'year', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="year" class="sa-btn {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="min-height:40px; padding:0.42rem 0.82rem; border-radius:999px; font-size:0.82rem; line-height:1; {{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
+        <form method="GET" action="{{ route('admin.super-admin', $branchQueryBase) }}#branch-product-detail" class="branch-product-filterbar sa-filter-form" data-branch-ranking-form>
+            <input type="hidden" name="analytics_detail_branch_id" value="{{ $selectedBranchId }}">
+            <div class="branch-product-filter-field">
+                <label class="branch-product-filter-label" for="branch_search">Tìm chi nhánh</label>
+                <input id="branch_search" class="sa-control" type="search" name="branch_search" value="{{ $branchSearch }}" placeholder="Tên chi nhánh, mã, admin..." aria-label="Tìm chi nhánh">
             </div>
-            <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal" style="min-height:40px; padding:0.42rem 0.9rem; border-radius:999px; white-space:nowrap; font-size:0.84rem;"><i class="bi bi-plus-circle"></i> Thêm chi nhánh</button>
-        </div>
+            <div class="branch-product-filter-field">
+                <label class="branch-product-filter-label" for="branch_sort">Sắp xếp</label>
+                <select id="branch_sort" class="sa-control" name="branch_sort" aria-label="Sắp xếp chi nhánh">
+                    @foreach($branchSortOptions as $value => $label)
+                        <option value="{{ $value }}" @selected($branchSort === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="branch-product-filter-field">
+                <label class="branch-product-filter-label" for="branch_direction">Hướng</label>
+                <select id="branch_direction" class="sa-control" name="branch_direction" aria-label="Hướng sắp xếp">
+                    <option value="desc" @selected($branchDirection === 'desc')>Giảm dần</option>
+                    <option value="asc" @selected($branchDirection === 'asc')>Tăng dần</option>
+                </select>
+            </div>
+            <div class="branch-product-filter-field">
+                <label class="branch-product-filter-label" for="branch_performance">Hiệu suất</label>
+                <select id="branch_performance" class="sa-control" name="branch_performance" aria-label="Lọc hiệu suất">
+                    @foreach($branchPerformanceOptions as $value => $label)
+                        <option value="{{ $value }}" @selected($branchPerformance === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="branch-product-filter-actions">
+                <a class="sa-btn" href="{{ route('admin.super-admin', array_merge($branchQueryBase, ['analytics_detail_branch_id' => $selectedBranchId, 'branch_search' => null, 'branch_sort' => null, 'branch_direction' => null, 'branch_performance' => null, 'branch_page' => null])) }}#branch-product-detail" title="Xóa bộ lọc"><i class="bi bi-arrow-counterclockwise"></i> Xóa lọc</a>
+                <button class="sa-btn sa-btn-primary" type="submit"><i class="bi bi-funnel"></i> Áp dụng</button>
+            </div>
+        </form>
     </div>
-
-    <form method="GET" action="{{ route('admin.super-admin', $branchQueryBase) }}#branch-product-detail" class="sa-filter-form" data-branch-ranking-form style="border-top: 0;">
-        <input type="hidden" name="analytics_detail_branch_id" value="{{ $selectedBranchId }}">
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Tìm chi nhánh</label>
-            <input class="sa-control" type="search" name="branch_search" value="{{ $branchSearch }}" placeholder="Tên chi nhánh, mã, admin..." aria-label="Tìm chi nhánh">
-        </div>
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Sắp xếp</label>
-            <select class="sa-control" name="branch_sort" aria-label="Sắp xếp chi nhánh">
-                @foreach($branchSortOptions as $value => $label)
-                    <option value="{{ $value }}" @selected($branchSort === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Hướng</label>
-            <select class="sa-control" name="branch_direction" aria-label="Hướng sắp xếp">
-                <option value="desc" @selected($branchDirection === 'desc')>Giảm dần</option>
-                <option value="asc" @selected($branchDirection === 'asc')>Tăng dần</option>
-            </select>
-        </div>
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Hiệu suất</label>
-            <select class="sa-control" name="branch_performance" aria-label="Lọc hiệu suất">
-                @foreach($branchPerformanceOptions as $value => $label)
-                    <option value="{{ $value }}" @selected($branchPerformance === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="sa-filter-actions" style="align-self:end;">
-            <a class="sa-btn" href="{{ route('admin.super-admin', array_merge($branchQueryBase, ['analytics_detail_branch_id' => $selectedBranchId, 'branch_search' => null, 'branch_sort' => null, 'branch_direction' => null, 'branch_performance' => null, 'branch_page' => null])) }}#branch-product-detail" title="Xóa bộ lọc"><i class="bi bi-arrow-counterclockwise"></i> Xóa lọc</a>
-            <button class="sa-btn sa-btn-primary" type="submit"><i class="bi bi-funnel"></i> Áp dụng</button>
-        </div>
-    </form>
 
     @if($branchRows->isNotEmpty())
         <div style="padding:0.85rem 1rem 0.35rem; display:flex; align-items:center; justify-content:space-between; gap:0.85rem; flex-wrap:wrap;">
@@ -120,63 +120,38 @@
                     <table class="branch-product-list-table">
                         <thead>
                             <tr>
-                                <th style="width: 52px;">Hạng</th>
+                                <th style="width: 44px;">Hạng</th>
                                 <th>Chi nhánh</th>
-                                <th style="width: 110px;">Doanh thu</th>
-                                <th style="width: 164px;">Top 1</th>
-                                <th style="width: 92px;">Tăng/giảm</th>
-                                <th style="width: 72px;">Thao tác</th>
+                                <th style="width: 30%;">Top 1</th>
+                                <th style="width: 92px;">Doanh thu</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($branchRows as $branch)
                                 @php
-                                    $revenueGrowth = $branch['revenue_change_percentage'];
-                                    $growthState = $branch['change_state'] ?? 'unavailable';
-                                    $growthTone = match ($growthState) {
-                                        'increased', 'new_activity' => 'up',
-                                        'decreased' => 'down',
-                                        default => 'flat',
-                                    };
-                                    $growthLabel = $growthState === 'unavailable'
-                                        ? 'N/A'
-                                        : (($revenueGrowth ?? 0) > 0 ? '+'.number_format($revenueGrowth, 1).'%' : number_format((float) $revenueGrowth, 1).'%');
                                     $isSelectedBranch = (int) ($branch['branch_id'] ?? 0) === $selectedBranchId;
                                     $detailUrl = route('admin.super-admin', array_merge($branchDetailQueryBase, ['analytics_detail_branch_id' => $branch['branch_id']])) . '#branch-product-detail';
                                 @endphp
                                 <tr @if($isSelectedBranch) style="background:#f0fdf4;" @endif>
                                     <td style="font-weight:800; color:var(--sa-green);">{{ $branch['rank'] }}</td>
-                                    <td style="min-width: 220px;">
+                                    <td>
                                         <a href="{{ $detailUrl }}" class="branch-product-select {{ $isSelectedBranch ? 'active' : '' }}" data-branch-detail-link data-branch-id="{{ $branch['branch_id'] }}" aria-current="{{ $isSelectedBranch ? 'true' : 'false' }}">
                                             <div class="branch-product-name">{{ $branch['branch_name'] }}</div>
                                             <div class="branch-product-code">{{ $branch['branch_code'] }}</div>
                                             <div class="branch-product-subtext">
                                                 @if($branch['admin_id'])
-                                                    {{ $branch['admin_name'] }}{{ $branch['admin_email'] ? ' · '.$branch['admin_email'] : '' }}
+                                                    {{ $branch['admin_name'] }}
                                                 @else
                                                     Chưa gán admin
                                                 @endif
                                             </div>
                                         </a>
                                     </td>
-                                    <td style="font-weight:800; color:var(--sa-green); white-space:nowrap;">{{ number_format($branch['revenue'], 0, ',', '.') }}đ</td>
-                                    <td style="min-width: 164px;">
+                                    <td>
                                         <div class="branch-product-name">{{ $branch['top_product_name'] }}</div>
                                         <div class="branch-product-subtext">{{ number_format($branch['top_product_quantity']) }} ly</div>
                                     </td>
-                                    <td style="white-space:nowrap;">
-                                        <span class="branch-product-badge {{ $growthTone }}">
-                                            <i class="bi {{ in_array($growthState, ['increased', 'new_activity'], true) ? 'bi-arrow-up-right' : (in_array($growthState, ['decreased'], true) ? 'bi-arrow-down-right' : 'bi-dash') }}"></i>
-                                            {{ $growthLabel }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="sa-actions">
-                                            <button class="sa-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#branchEditModal{{ $branch['branch_id'] }}" title="Sửa chi nhánh">
-                                                <i class="bi bi-gear"></i>
-                                            </button>
-                                        </div>
-                                    </td>
+                                    <td style="font-weight:800; color:var(--sa-green); white-space:nowrap;">{{ number_format($branch['revenue'], 0, ',', '.') }}đ</td>
                                 </tr>
                             @endforeach
                         </tbody>

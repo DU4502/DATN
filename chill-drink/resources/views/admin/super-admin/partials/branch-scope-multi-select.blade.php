@@ -22,7 +22,7 @@
     <div class="sa-branch-scope-trigger-wrap">
         <button type="button" class="sa-control sa-branch-scope-trigger" data-branch-scope-trigger aria-expanded="false" aria-controls="{{ $controlId }}-panel">
             <span class="sa-branch-scope-trigger-text" data-branch-scope-trigger-text>{{ $summaryLabel }}</span>
-            <span class="sa-branch-scope-trigger-count" data-branch-scope-trigger-count>{{ $selectedIds->count() > 0 ? $selectedIds->count() : '∞' }}</span>
+            <span class="sa-branch-scope-trigger-count" data-branch-scope-trigger-count>{{ $selectedIds->count() > 0 ? $selectedIds->count() : 'Tất cả' }}</span>
             <i class="bi bi-chevron-down"></i>
         </button>
     </div>

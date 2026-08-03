@@ -13,14 +13,17 @@ use App\Models\SystemLog;
 use App\Models\User;
 use App\Services\AnalyticsPeriodContext;
 use App\Services\SuperAdminAnalyticsService;
+use App\Support\SimpleXlsxWriter;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Throwable;
@@ -37,7 +40,7 @@ class SuperAdminController extends Controller
     ) {
     }
 
-    public function index(SuperAdminAnalyticsRequest $request): View
+    public function index(SuperAdminAnalyticsRequest $request)
     {
         $adminQuery = User::admins();
         $search = trim((string) $request->query('q'));
@@ -118,6 +121,81 @@ class SuperAdminController extends Controller
             ? (string) $request->query('analytics_product_sort')
             : 'quantity';
         $topProducts = $this->analyticsService->topProducts($analyticsContext, $topProductSort, 5);
+        $branchTimeIndicator = in_array($request->query('branch_time_indicator'), ['both', 'revenue', 'orders'], true)
+            ? (string) $request->query('branch_time_indicator')
+            : 'both';
+        $branchTimeComparison = $this->analyticsService->branchTimeComparison($analyticsContext, [
+            'indicator' => $branchTimeIndicator,
+            'period_count' => $request->query('branch_time_period_count'),
+            'analytics_branch_ids' => $analyticsBranchIds,
+        ]);
+        $branchTimeSearch = trim((string) $request->query('branch_time_search', ''));
+        $branchTimePerPage = in_array((int) $request->query('branch_time_per_page', 10), [10, 25, 50], true)
+            ? (int) $request->query('branch_time_per_page', 10)
+            : 10;
+        $branchTimePage = max(1, (int) $request->query('branch_time_page', 1));
+        $branchTimeRows = $branchTimeComparison['branches'] instanceof Collection
+            ? $branchTimeComparison['branches']
+            : collect($branchTimeComparison['branches'] ?? []);
+        if ($branchTimeSearch !== '') {
+            $searchNeedle = Str::lower($branchTimeSearch);
+            $branchTimeRows = $branchTimeRows->filter(function (array $branch) use ($searchNeedle): bool {
+                return Str::contains(Str::lower((string) ($branch['branch_name'] ?? '')), $searchNeedle)
+                    || Str::contains(Str::lower((string) ($branch['branch_code'] ?? '')), $searchNeedle);
+            })->values();
+        }
+        $branchTimeLastPage = max(1, (int) ceil(max(1, $branchTimeRows->count()) / $branchTimePerPage));
+        $branchTimePage = min($branchTimePage, $branchTimeLastPage);
+        $branchTimePaginator = new LengthAwarePaginator(
+            $branchTimeRows->forPage($branchTimePage, $branchTimePerPage)->values(),
+            $branchTimeRows->count(),
+            $branchTimePerPage,
+            $branchTimePage,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'branch_time_page',
+            ]
+        );
+        $branchTimePaginator->withQueryString();
+        $branchTimeComparison['filtered_branches'] = $branchTimeRows;
+        $branchTimeComparison['visible_branches'] = $branchTimePaginator->getCollection();
+        $branchTimeComparison['paginator'] = $branchTimePaginator;
+        $branchTimeComparison['search'] = $branchTimeSearch;
+        $branchTimeComparison['per_page'] = $branchTimePerPage;
+        $branchTimeComparison['page'] = $branchTimePage;
+        $branchTimeComparison['total_filtered'] = $branchTimeRows->count();
+        $branchTimeComparison['period_count_selected'] = $branchTimeComparison['period_count_selected'] ?? null;
+        $branchTimeExportBase = array_filter(
+            array_merge($request->query(), $analyticsContext->normalizedQueryParameters),
+            static fn ($value) => $value !== null && $value !== ''
+        );
+        $branchTimeComparison['export_current_url'] = route('admin.super-admin', array_filter(array_merge(
+            $branchTimeExportBase,
+            [
+                'branch_time_search' => $branchTimeSearch !== '' ? $branchTimeSearch : null,
+                'branch_time_per_page' => $branchTimePerPage,
+                'branch_time_indicator' => $branchTimeIndicator,
+                'branch_time_period_count' => $branchTimeComparison['period_count_selected'],
+                'branch_time_page' => $branchTimePage,
+                'analytics_time_matrix_export' => 'current',
+            ]
+        ), static fn ($value) => $value !== null && $value !== ''));
+        $branchTimeComparison['export_all_url'] = route('admin.super-admin', array_filter(array_merge(
+            $branchTimeExportBase,
+            [
+                'branch_time_search' => null,
+                'branch_time_per_page' => $branchTimePerPage,
+                'branch_time_indicator' => $branchTimeIndicator,
+                'branch_time_period_count' => $branchTimeComparison['period_count_selected'],
+                'branch_time_page' => null,
+                'analytics_time_matrix_export' => 'all',
+            ]
+        ), static fn ($value) => $value !== null && $value !== ''));
+        $branchTimeComparison['period_count_query_value'] = $branchTimeComparison['period_count_selected'] ?? $branchTimeComparison['period_count'];
+
+        if ($request->filled('analytics_time_matrix_export')) {
+            return $this->downloadBranchTimeComparisonExport($request, $analyticsContext, $branchTimeComparison);
+        }
         $focusProductSort = in_array($request->query('analytics_focus_product_sort'), ['quantity', 'revenue'], true)
             ? (string) $request->query('analytics_focus_product_sort')
             : 'quantity';
@@ -153,8 +231,7 @@ class SuperAdminController extends Controller
                     ->get()
                 : collect(),
             'businessSummary' => $businessSummary,
-            'revenueChart' => $this->revenueChart($analyticsContext),
-            'userChart' => $this->userChart(),
+            'branchTimeComparison' => $branchTimeComparison,
             'activityLogs' => Schema::hasTable('system_logs')
                 ? SystemLog::latest()->limit(8)->get()
                 : collect(),
@@ -283,6 +360,299 @@ class SuperAdminController extends Controller
             ->sort()
             ->values()
             ->all();
+    }
+
+    /**
+     * @param array<string, mixed> $branchTimeComparison
+     */
+    private function downloadBranchTimeComparisonExport(Request $request, AnalyticsPeriodContext $context, array $branchTimeComparison)
+    {
+        $exportScope = $request->query('analytics_time_matrix_export') === 'all' ? 'all' : 'current';
+        $fileName = sprintf(
+            'so-sanh-chi-nhanh-theo-thoi-gian-%s-%s.xlsx',
+            $exportScope,
+            now($context->timezone)->format('Ymd_His')
+        );
+        $tempPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.Str::random(24).'.xlsx';
+
+        $writer = new SimpleXlsxWriter();
+        $writer->write($tempPath, $this->buildBranchTimeComparisonWorkbook($branchTimeComparison, $context, $exportScope));
+
+        return response()->download($tempPath, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * @param array<string, mixed> $branchTimeComparison
+     * @return array<int, array{name: string, rows: array<int, array<int, mixed>>}>
+     */
+    private function buildBranchTimeComparisonWorkbook(array $branchTimeComparison, AnalyticsPeriodContext $context, string $exportScope): array
+    {
+        $periods = collect($branchTimeComparison['periods'] ?? []);
+        $sourceBranches = $exportScope === 'all'
+            ? collect($branchTimeComparison['branches'] ?? [])
+            : collect($branchTimeComparison['visible_branches'] ?? $branchTimeComparison['filtered_branches'] ?? []);
+        $rows = $sourceBranches->values();
+        $totalBranchCount = $exportScope === 'all'
+            ? $rows->count()
+            : (int) ($branchTimeComparison['total_filtered'] ?? $rows->count());
+        $totals = $branchTimeComparison['totals'] ?? [];
+        $branchScopeLabel = (string) ($branchTimeComparison['branch_scope_label'] ?? $context->branchScopeLabel);
+        $indicatorLabel = (string) ($branchTimeComparison['indicator_label'] ?? 'Cả hai');
+        $groupLabel = (string) ($branchTimeComparison['group_label'] ?? 'Ngày');
+        $periodCount = (int) ($branchTimeComparison['period_count'] ?? $periods->count());
+        $search = (string) ($branchTimeComparison['search'] ?? '');
+        $generatedAt = now($context->timezone)->format('d/m/Y H:i:s');
+
+        return [
+            [
+                'name' => 'So sánh',
+                'rows' => $this->buildComparisonSheetRows($rows, $periods, $totals, $indicatorLabel, $groupLabel, $periodCount, $branchScopeLabel, $search, $exportScope, $generatedAt, $totalBranchCount),
+            ],
+            [
+                'name' => 'Dữ liệu chuẩn',
+                'rows' => $this->buildStandardDataSheetRows($rows, $periods, $branchTimeComparison, $context, $exportScope, $generatedAt),
+            ],
+            [
+                'name' => 'Điều kiện báo cáo',
+                'rows' => $this->buildReportConditionSheetRows($branchTimeComparison, $context, $exportScope, $generatedAt),
+            ],
+        ];
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, array<string, mixed>> $branches
+     * @param \Illuminate\Support\Collection<int, array<string, mixed>> $periods
+     * @param array<string, mixed> $totals
+     * @return array<int, array<int, mixed>>
+     */
+    private function buildComparisonSheetRows(Collection $branches, Collection $periods, array $totals, string $indicatorLabel, string $groupLabel, int $periodCount, string $branchScopeLabel, string $search, string $exportScope, string $generatedAt, int $totalBranchCount): array
+    {
+        $rows = [
+            ['So sánh chi nhánh theo thời gian'],
+            [
+                'Phạm vi chi nhánh',
+                $branchScopeLabel,
+                'Kỳ',
+                $groupLabel,
+                'Số kỳ',
+                $periodCount > 0 ? $periodCount : $periods->count(),
+                'Chỉ số',
+                $indicatorLabel,
+                'Tìm chi nhánh',
+                $search !== '' ? $search : 'Không',
+                'Xuất',
+                $exportScope === 'all' ? 'Toàn bộ dữ liệu' : 'Bảng đang xem',
+                'Tạo lúc',
+                $generatedAt,
+            ],
+            [],
+        ];
+
+        $headerRow = ['STT', 'Chi nhánh'];
+        $subHeaderRow = ['', ''];
+
+        foreach ($periods as $period) {
+            $periodLabel = (string) ($period['display_label'] ?? $period['label'] ?? $period['key'] ?? '');
+
+            if ($indicatorLabel === 'Cả hai') {
+                $headerRow[] = $periodLabel;
+                $headerRow[] = '';
+                $subHeaderRow[] = 'Doanh thu';
+                $subHeaderRow[] = 'Đơn';
+            } else {
+                $headerRow[] = $periodLabel;
+                $subHeaderRow[] = $indicatorLabel;
+            }
+        }
+
+        $headerRow[] = 'Tổng doanh thu';
+        $headerRow[] = 'Tổng đơn';
+        $headerRow[] = 'Thay đổi gần nhất doanh thu';
+        $headerRow[] = 'Thay đổi gần nhất số đơn';
+
+        if ($indicatorLabel === 'Cả hai') {
+            $subHeaderRow[] = '';
+            $subHeaderRow[] = '';
+            $subHeaderRow[] = '';
+            $subHeaderRow[] = '';
+            $rows[] = $headerRow;
+            $rows[] = $subHeaderRow;
+        } else {
+            $rows[] = $headerRow;
+        }
+
+        $rows[] = $this->buildComparisonTotalRow($branches, $periods, $totals, $indicatorLabel, $totalBranchCount);
+
+        foreach ($branches as $index => $branch) {
+            $rows[] = $this->buildComparisonBranchRow($branch, $periods, $indicatorLabel, $index + 1);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param array<string, mixed> $branch
+     * @param \Illuminate\Support\Collection<int, array<string, mixed>> $periods
+     * @return array<int, mixed>
+     */
+    private function buildComparisonTotalRow(Collection $branches, Collection $periods, array $totals, string $indicatorLabel, int $totalBranchCount): array
+    {
+        $row = ['Tổng '.number_format($totalBranchCount).' chi nhánh', ''];
+        $periodTotals = collect($totals['periods'] ?? [])->keyBy('period_key');
+
+        foreach ($periods as $period) {
+            $periodTotalsRow = $periodTotals->get($period['key']) ?? [];
+            if ($indicatorLabel === 'Cả hai') {
+                $row[] = (int) ($periodTotalsRow['revenue'] ?? 0);
+                $row[] = (int) ($periodTotalsRow['valid_order_count'] ?? 0);
+            } else {
+                $row[] = (int) ($periodTotalsRow[$indicatorLabel === 'Doanh thu' ? 'revenue' : 'valid_order_count'] ?? 0);
+            }
+        }
+
+        $row[] = (int) ($totals['total_revenue'] ?? 0);
+        $row[] = (int) ($totals['total_valid_orders'] ?? 0);
+        $row[] = 'Không áp dụng';
+        $row[] = 'Không áp dụng';
+
+        return $row;
+    }
+
+    /**
+     * @param array<string, mixed> $branch
+     * @param \Illuminate\Support\Collection<int, array<string, mixed>> $periods
+     * @return array<int, mixed>
+     */
+    private function buildComparisonBranchRow(array $branch, Collection $periods, string $indicatorLabel, int $rank): array
+    {
+        $row = [
+            $rank,
+            filled($branch['branch_name'] ?? null) ? (string) $branch['branch_name'] : 'Chưa rõ',
+        ];
+
+        foreach ($periods as $period) {
+            $bucket = $branch['periods'][$period['key']] ?? ['revenue' => 0, 'valid_order_count' => 0];
+
+            if ($indicatorLabel === 'Cả hai') {
+                $row[] = (int) ($bucket['revenue'] ?? 0);
+                $row[] = (int) ($bucket['valid_order_count'] ?? 0);
+            } else {
+                $row[] = (int) ($bucket[$indicatorLabel === 'Doanh thu' ? 'revenue' : 'valid_order_count'] ?? 0);
+            }
+        }
+
+        $row[] = (int) ($branch['total_revenue'] ?? 0);
+        $row[] = (int) ($branch['total_valid_orders'] ?? 0);
+        $row[] = (string) ($branch['latest_revenue_change']['label'] ?? 'Không đổi');
+        $row[] = (string) ($branch['latest_order_change']['label'] ?? 'Không đổi');
+
+        return $row;
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, array<string, mixed>> $branches
+     * @param \Illuminate\Support\Collection<int, array<string, mixed>> $periods
+     * @param array<string, mixed> $branchTimeComparison
+     * @return array<int, array<int, mixed>>
+     */
+    private function buildStandardDataSheetRows(Collection $branches, Collection $periods, array $branchTimeComparison, AnalyticsPeriodContext $context, string $exportScope, string $generatedAt): array
+    {
+        $rows = [
+            ['Dữ liệu chuẩn'],
+            [
+                'Xuất',
+                $exportScope === 'all' ? 'Toàn bộ dữ liệu' : 'Bảng đang xem',
+                'Kỳ',
+                (string) ($branchTimeComparison['group_label'] ?? 'Ngày'),
+                'Phạm vi chi nhánh',
+                (string) ($branchTimeComparison['branch_scope_label'] ?? $context->branchScopeLabel),
+                'Tạo lúc',
+                $generatedAt,
+            ],
+            [],
+            ['STT', 'Branch ID', 'Mã chi nhánh', 'Chi nhánh', 'Mã kỳ', 'Nhãn kỳ', 'Bắt đầu', 'Kết thúc', 'Doanh thu', 'Số đơn', 'Tổng doanh thu', 'Tổng đơn', 'Thay đổi doanh thu', 'Thay đổi số đơn'],
+        ];
+
+        foreach ($branches as $index => $branch) {
+            foreach ($periods as $period) {
+                $bucket = is_array(($branch['periods'][$period['key']] ?? null))
+                    ? $branch['periods'][$period['key']]
+                    : ['revenue' => 0, 'valid_order_count' => 0];
+                $rows[] = [
+                    $index + 1,
+                    $branch['branch_id'] ?? '',
+                    $branch['branch_code'] ?? '',
+                    $branch['branch_name'] ?? '',
+                    $period['key'] ?? '',
+                    $period['display_label'] ?? ($period['label'] ?? ''),
+                    $this->formatDateTimeForExport($period['start'] ?? null),
+                    $this->formatDateTimeForExport($period['end'] ?? null),
+                    (int) ($bucket['revenue'] ?? 0),
+                    (int) ($bucket['valid_order_count'] ?? 0),
+                    (int) ($branch['total_revenue'] ?? 0),
+                    (int) ($branch['total_valid_orders'] ?? 0),
+                    (string) ($branch['latest_revenue_change']['label'] ?? 'Không đổi'),
+                    (string) ($branch['latest_order_change']['label'] ?? 'Không đổi'),
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param array<string, mixed> $branchTimeComparison
+     * @return array<int, array<int, mixed>>
+     */
+    private function buildReportConditionSheetRows(array $branchTimeComparison, AnalyticsPeriodContext $context, string $exportScope, string $generatedAt): array
+    {
+        $rows = [
+            ['Điều kiện báo cáo'],
+            ['Xuất', $exportScope === 'all' ? 'Toàn bộ dữ liệu' : 'Bảng đang xem'],
+            ['Loại kỳ', (string) ($branchTimeComparison['period_type'] ?? $context->periodType)],
+            ['Nhóm kỳ', (string) ($branchTimeComparison['group_label'] ?? 'Ngày')],
+            ['Số kỳ', (int) ($branchTimeComparison['period_count'] ?? 0)],
+            ['Chỉ số', (string) ($branchTimeComparison['indicator_label'] ?? 'Cả hai')],
+            ['Phạm vi chi nhánh', (string) ($branchTimeComparison['branch_scope_label'] ?? $context->branchScopeLabel)],
+            ['Tìm chi nhánh', (string) ($branchTimeComparison['search'] ?? '')],
+            ['Trang hiện tại', (int) ($branchTimeComparison['page'] ?? 1)],
+            ['Kích thước trang', (int) ($branchTimeComparison['per_page'] ?? 0)],
+            ['Tổng chi nhánh lọc', (int) ($branchTimeComparison['total_filtered'] ?? 0)],
+            ['Tạo lúc', $generatedAt],
+            [],
+            ['Mã kỳ', 'Nhãn', 'Bắt đầu', 'Kết thúc', 'Đang diễn ra'],
+        ];
+
+        foreach (collect($branchTimeComparison['periods'] ?? []) as $period) {
+            $rows[] = [
+                $period['key'] ?? '',
+                $period['display_label'] ?? ($period['label'] ?? ''),
+                $this->formatDateTimeForExport($period['start'] ?? null),
+                $this->formatDateTimeForExport($period['end'] ?? null),
+                ! empty($period['is_partial']) ? 'Có' : 'Không',
+            ];
+        }
+
+        return $rows;
+    }
+
+    private function formatDateTimeForExport(mixed $value): string
+    {
+        if ($value instanceof CarbonInterface) {
+            return $value->format('d/m/Y H:i:s');
+        }
+
+        if (is_string($value) && $value !== '') {
+            try {
+                return Carbon::parse($value)->format('d/m/Y H:i:s');
+            } catch (Throwable) {
+                return $value;
+            }
+        }
+
+        return '';
     }
 
     private function dashboardAnalytics(array $filters = []): array
