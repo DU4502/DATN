@@ -19,6 +19,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
         'plain_password',
         'google_id',
@@ -118,6 +119,29 @@ class User extends Authenticatable implements MustVerifyEmail
             || strcasecmp((string) $this->email, self::SUPER_ADMIN_EMAIL) === 0;
     }
 
+    public function isViewingAdminWorkspace(): bool
+    {
+        return $this->isSuperAdmin() && (bool) session('super_admin_admin_view', false);
+    }
+
+    public function adminWorkspaceBranchId(): ?int
+    {
+        if (! $this->isViewingAdminWorkspace()) {
+            return null;
+        }
+
+        $branchId = session('super_admin_preview_branch_id');
+
+        return is_numeric($branchId) ? (int) $branchId : null;
+    }
+
+    public function preferredAdminLayout(): string
+    {
+        return $this->isSuperAdmin() && ! $this->isViewingAdminWorkspace()
+            ? 'layouts.super-admin'
+            : 'layouts.admin';
+    }
+
     public function canMonitorChat(): bool
     {
         return $this->isSuperAdmin();
@@ -133,9 +157,33 @@ class User extends Authenticatable implements MustVerifyEmail
         return (int) ($this->role_id ?? 1) === 4;
     }
 
+    /**
+     * Nhân viên (role_id = 5): có quyền chat, đổi trạng thái đơn hàng/đơn nhóm
+     */
+    public function isStaffOnly(): bool
+    {
+        return (int) ($this->role_id ?? 1) === 5;
+    }
+
     public function isStaff(): bool
     {
-        return in_array((int) ($this->role_id ?? 1), [2, 3, 4], true);
+        return in_array((int) ($this->role_id ?? 1), [2, 3, 4, 5], true);
+    }
+
+    /**
+     * Có thể quản lý đơn hàng: admin (2,3) hoặc nhân viên (5)
+     */
+    public function canManageOrders(): bool
+    {
+        return in_array((int) ($this->role_id ?? 1), [2, 3, 5], true);
+    }
+
+    /**
+     * Có thể truy cập khu vực staff panel
+     */
+    public function canAccessStaffPanel(): bool
+    {
+        return $this->isStaffOnly();
     }
 
     public function isCustomer(): bool
@@ -228,6 +276,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
         // For staff: chỉ đếm tin nhắn từ KHÁCH HÀNG (role_id = 1) chưa đọc.
         // Không đếm tin nhắn từ staff khác để tránh đếm nhầm sau khi fix markMessagesAsRead.
+        if (!$this->isSuperAdmin() && !$this->branch_id) {
+            return 0;
+        }
+
         $query = Conversation::whereHas('user', fn ($c) => $c->customers())
             ->where('status', 'open');
 
@@ -235,7 +287,7 @@ class User extends Authenticatable implements MustVerifyEmail
             if ($this->branch_id) {
                 $query->where('branch_id', $this->branch_id);
             }
-            if ($this->isCskh() && !$this->isAdmin()) {
+            if (($this->isCskh() || $this->isStaffOnly()) && !$this->isAdmin()) {
                 $query->where(function ($inner) {
                     $inner->whereNull('cskh_id')
                         ->orWhere('cskh_id', $this->id);

@@ -1475,10 +1475,12 @@
     </footer>
     @endunless
 
+    @if(!auth()->check() || auth()->user()?->isCustomer())
+        @include('components.chatbox')
+    @endif
+
     @auth
         @if(auth()->user()->isCustomer())
-            @include('components.chatbox')
-
             {{-- Banner xin quyền vị trí -- chỉ hiện khi permission chưa được cấp --}}
             <div
                 id="location-permission-banner"
@@ -1901,6 +1903,8 @@
         });
     </script>
     <script>
+        /* Automatic branch switching is intentionally disabled. */
+        /*
         document.addEventListener('DOMContentLoaded', function () {
             const activeGroupTimer = document.querySelector('[data-active-group-countdown]');
             if (!activeGroupTimer) return;
@@ -1937,6 +1941,7 @@
             window.addEventListener('pagehide', stopTimer, { once: true });
             startTimer();
         });
+        */
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -1964,11 +1969,10 @@
                 .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
             }
 
-            // Kiểm tra trạng thái quyền vị trí
+            // Kiểm tra và tự động gửi tọa độ nếu đã được cấp quyền trước đó
             if (navigator.permissions) {
                 navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
                     if (result.state === 'granted') {
-                        // Đã cấp quyền trước đó → lấy ngay, không hỏi nữa
                         navigator.geolocation.getCurrentPosition(
                             pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
                             err => console.warn("Lỗi GPS:", err),
@@ -1979,16 +1983,9 @@
                         var banner = document.getElementById('location-permission-banner');
                         if (banner) banner.style.display = 'flex';
                     }
-                    // 'denied' → không làm gì
                 });
-            } else {
-                // Browser không hỗ trợ Permissions API → thử lấy thẳng
-                navigator.geolocation.getCurrentPosition(
-                    pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
-                    err => console.warn("Lỗi GPS:", err),
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-                );
             }
+
 
             // Nút "Cho phép" trên banner
             var allowBtn = document.getElementById('location-allow-btn');
@@ -2015,6 +2012,8 @@
             @endauth
         });
     </script>
+    {{-- Disabled automatic branch switching on page load.
+         Branch selection now only happens when the user explicitly chooses it. --}}
     @include('partials.realtime')
     @include('partials.client-notifications')
 </body>

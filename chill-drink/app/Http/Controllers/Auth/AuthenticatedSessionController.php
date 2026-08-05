@@ -41,6 +41,18 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
+        if ($request->user()->isCskh()) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->route('admin.chat.index');
+        }
+
+        if ($request->user()->isStaffOnly()) {
+            $request->session()->forget('url.intended');
+
+            return redirect()->route('staff.dashboard');
+        }
+
         if (str_contains(session('url.intended', ''), '/chat')) {
             $request->session()->forget('url.intended');
         }

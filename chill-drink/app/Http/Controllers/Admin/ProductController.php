@@ -28,7 +28,7 @@ class ProductController extends Controller
         $categories = Category::query()
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
-        $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
+        $categoryIds = $categories->pluck('id')->map(fn($id) => (string) $id)->all();
 
         $productsQuery = Product::query()
             ->with('category')
@@ -37,25 +37,25 @@ class ProductController extends Controller
 
                 $query->where(function ($builder) use ($keyword) {
                     $builder
-                        ->where('name', 'like', '%'.$keyword.'%')
-                        ->orWhere('slug', 'like', '%'.$keyword.'%')
-                        ->orWhere('description', 'like', '%'.$keyword.'%')
+                        ->where('name', 'like', '%' . $keyword . '%')
+                        ->orWhere('slug', 'like', '%' . $keyword . '%')
+                        ->orWhere('description', 'like', '%' . $keyword . '%')
                         ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                            $categoryQuery->where('name', 'like', '%'.$keyword.'%');
+                            $categoryQuery->where('name', 'like', '%' . $keyword . '%');
                         });
 
                     if (Schema::hasColumn('products', 'sku')) {
-                        $builder->orWhere('sku', 'like', '%'.$keyword.'%');
+                        $builder->orWhere('sku', 'like', '%' . $keyword . '%');
                     }
                 });
             })
             ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
                 $query->where('category_id', (int) $filters['category']);
             })
-            ->when($filters['status'] === 'active', fn ($query) => $query->where('status', true))
-            ->when($filters['status'] === 'hidden', fn ($query) => $query->where('status', false))
-            ->when($filters['stock'] === 'low', fn ($query) => $query->where('stock', '>', 0)->where('stock', '<=', 5))
-            ->when($filters['stock'] === 'out', fn ($query) => $query->where('stock', '<=', 0));
+            ->when($filters['status'] === 'active', fn($query) => $query->where('status', true))
+            ->when($filters['status'] === 'hidden', fn($query) => $query->where('status', false))
+            ->when($filters['stock'] === 'low', fn($query) => $query->where('stock', '>', 0)->where('stock', '<=', 5))
+            ->when($filters['stock'] === 'out', fn($query) => $query->where('stock', '<=', 0));
 
         match ($filters['sort']) {
             'name' => $productsQuery->orderBy('name'),
@@ -69,10 +69,10 @@ class ProductController extends Controller
         $totalProducts = Product::count();
         $lowStockProducts = Product::where('stock', '>', 0)->where('stock', '<=', 5)->count();
         $activeFiltersCount = collect($filters)
-            ->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
+            ->filter(fn($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
             ->count();
         $quickCategories = $categories
-            ->filter(fn ($category) => in_array($category->name, ['Trà Sữa', 'Cà Phê', 'Nước Ép'], true))
+            ->filter(fn($category) => in_array($category->name, ['Trà Sữa', 'Cà Phê', 'Nước Ép'], true))
             ->values();
 
         return view('admin.products.index', compact(
@@ -93,14 +93,12 @@ class ProductController extends Controller
     {
         $categories = Category::orderBy('name')->get();
 
-        if (\App\Models\Size::count() === 0) {
-            foreach (['L', 'M', 'S'] as $s) {
-                \App\Models\Size::firstOrCreate(['name' => $s]);
-            }
+        foreach (['S', 'M', 'L'] as $s) {
+            \App\Models\Size::firstOrCreate(['name' => $s]);
         }
 
-        $allSizes = \App\Models\Size::all()->sortBy(function($size) {
-            return match(strtoupper(trim($size->name))) {
+        $allSizes = \App\Models\Size::all()->sortBy(function ($size) {
+            return match (strtoupper(trim($size->name))) {
                 'S' => 1,
                 'M' => 2,
                 'L' => 3,
@@ -157,14 +155,7 @@ class ProductController extends Controller
 
         $product = Product::create($data);
 
-        if ($request->has('sizes')) {
-            $sizeData = [];
-            foreach ($request->input('sizes') as $sizeId) {
-                $sizePrice = $request->input("size_prices.{$sizeId}", 0);
-                $sizeData[$sizeId] = ['price' => $sizePrice ?: 0];
-            }
-            $product->sizes()->sync($sizeData);
-        }
+        $this->syncProductSizes($product, $request);
 
         if ($request->has('toppings')) {
             $product->toppings()->sync($request->input('toppings'));
@@ -203,14 +194,12 @@ class ProductController extends Controller
         $product = $this->findProduct($id);
         $categories = Category::orderBy('name')->get();
 
-        if (\App\Models\Size::count() === 0) {
-            foreach (['L', 'M', 'S'] as $s) {
-                \App\Models\Size::firstOrCreate(['name' => $s]);
-            }
+        foreach (['S', 'M', 'L'] as $s) {
+            \App\Models\Size::firstOrCreate(['name' => $s]);
         }
 
-        $allSizes = \App\Models\Size::all()->sortBy(function($size) {
-            return match(strtoupper(trim($size->name))) {
+        $allSizes = \App\Models\Size::all()->sortBy(function ($size) {
+            return match (strtoupper(trim($size->name))) {
                 'S' => 1,
                 'M' => 2,
                 'L' => 3,
@@ -290,16 +279,7 @@ class ProductController extends Controller
 
         $product->update($data);
 
-        if ($request->has('sizes')) {
-            $sizeData = [];
-            foreach ($request->input('sizes') as $sizeId) {
-                $sizePrice = $request->input("size_prices.{$sizeId}", 0);
-                $sizeData[$sizeId] = ['price' => $sizePrice ?: 0];
-            }
-            $product->sizes()->sync($sizeData);
-        } else {
-            $product->sizes()->detach();
-        }
+        $this->syncProductSizes($product, $request);
 
         if ($request->has('toppings')) {
             $product->toppings()->sync($request->input('toppings'));
@@ -338,7 +318,7 @@ class ProductController extends Controller
         $categories = Category::query()
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
-        $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
+        $categoryIds = $categories->pluck('id')->map(fn($id) => (string) $id)->all();
 
         $productsQuery = Product::onlyTrashed()
             ->with('category')
@@ -347,15 +327,15 @@ class ProductController extends Controller
 
                 $query->where(function ($builder) use ($keyword) {
                     $builder
-                        ->where('name', 'like', '%'.$keyword.'%')
-                        ->orWhere('slug', 'like', '%'.$keyword.'%')
-                        ->orWhere('description', 'like', '%'.$keyword.'%')
+                        ->where('name', 'like', '%' . $keyword . '%')
+                        ->orWhere('slug', 'like', '%' . $keyword . '%')
+                        ->orWhere('description', 'like', '%' . $keyword . '%')
                         ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                            $categoryQuery->where('name', 'like', '%'.$keyword.'%');
+                            $categoryQuery->where('name', 'like', '%' . $keyword . '%');
                         });
 
                     if (Schema::hasColumn('products', 'sku')) {
-                        $builder->orWhere('sku', 'like', '%'.$keyword.'%');
+                        $builder->orWhere('sku', 'like', '%' . $keyword . '%');
                     }
                 });
             })
@@ -373,7 +353,7 @@ class ProductController extends Controller
         $products = $productsQuery->paginate(12)->withQueryString();
         $totalProducts = Product::onlyTrashed()->count();
         $activeFiltersCount = collect($filters)
-            ->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
+            ->filter(fn($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
             ->count();
 
         return view('admin.products.trash', compact(
@@ -398,6 +378,15 @@ class ProductController extends Controller
     public function forceDelete(string $id)
     {
         $product = Product::withTrashed()->whereKey($id)->orWhere('slug', $id)->firstOrFail();
+
+        $hasOrders = \Illuminate\Support\Facades\DB::table('order_items')
+            ->where('product_id', $product->id)
+            ->exists();
+
+        if ($hasOrders) {
+            return redirect()->route('admin.products.trash')
+                ->with('error', 'Không thể xóa vĩnh viễn! Sản phẩm này đã tồn tại trong lịch sử đơn hàng của khách hàng. Vui lòng duy trì lưu trữ trong thùng rác.');
+        }
 
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
@@ -424,7 +413,7 @@ class ProductController extends Controller
 
         return collect($request->file('gallery_images'))
             ->filter()
-            ->map(fn ($file) => $file->store('products/gallery', 'public'))
+            ->map(fn($file) => $file->store('products/gallery', 'public'))
             ->values()
             ->all();
     }
@@ -446,7 +435,7 @@ class ProductController extends Controller
         return array_filter(array_merge(
             request()->only(['q', 'category', 'status', 'stock', 'sort']),
             $page > 1 ? ['page' => $page] : []
-        ), fn ($value) => $value !== null && $value !== '');
+        ), fn($value) => $value !== null && $value !== '');
     }
 
     private function findProduct(string $id): Product
@@ -476,5 +465,24 @@ class ProductController extends Controller
         }
 
         return null;
+    }
+
+    private function syncProductSizes(Product $product, Request $request): void
+    {
+        $sizeData = [];
+        $sizeS = \App\Models\Size::where('name', 'S')->first();
+        if ($sizeS) {
+            $sizeData[$sizeS->id] = ['price' => 0];
+        }
+
+        $sizesInput = (array) $request->input('sizes', []);
+        $sizePricesInput = (array) $request->input('size_prices', []);
+
+        foreach ($sizesInput as $sizeId) {
+            $sizePrice = (int) ($sizePricesInput[$sizeId] ?? 0);
+            $sizeData[$sizeId] = ['price' => $sizePrice];
+        }
+
+        $product->sizes()->sync($sizeData);
     }
 }

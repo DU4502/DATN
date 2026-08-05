@@ -9,6 +9,9 @@ class Topping extends Model
 {
     use HasFactory;
 
+    // The toppings table has created_at only; it does not have updated_at.
+    public $timestamps = false;
+
     protected $fillable = [
         'name',
         'price',

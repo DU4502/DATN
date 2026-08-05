@@ -11,9 +11,12 @@
     $defaultZoom = $defaultZoom ?? 5;
     $autoFillAreaTarget = $autoFillAreaTarget ?? null;
     $autoFillStreetTarget = $autoFillStreetTarget ?? null;
+    $showSearch = $showSearch ?? false;
+    $searchValue = $searchValue ?? '';
+    $searchPlaceholder = $searchPlaceholder ?? 'Tìm số nhà, tên đường, phường/xã...';
 @endphp
 
-<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}" data-address-target="{{ $addressTarget ?? '' }}" @if($autoFillAreaTarget) data-auto-fill-area-target="{{ $autoFillAreaTarget }}" @endif @if($autoFillStreetTarget) data-auto-fill-street-target="{{ $autoFillStreetTarget }}" @endif>
+<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}" data-address-target="{{ $addressTarget ?? '' }}" @if($autoFillAreaTarget) data-auto-fill-area-target="{{ $autoFillAreaTarget }}" @endif @if($autoFillStreetTarget) data-auto-fill-street-target="{{ $autoFillStreetTarget }}" @endif @if($showSearch) data-location-search-enabled="1" @endif>
     <div class="location-picker-head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <div>
             <div class="location-picker-label">{{ $label }}</div>
@@ -34,6 +37,21 @@
             </button>
         </div>
     </div>
+
+    @if($showSearch)
+        <div class="location-picker-search mb-2">
+            <input
+                type="search"
+                class="form-control form-control-sm"
+                value="{{ $searchValue }}"
+                placeholder="{{ $searchPlaceholder }}"
+                autocomplete="off"
+                data-location-search-input
+            >
+            <i class="bi bi-search location-picker-search-icon"></i>
+            <div class="location-picker-suggestions d-none" data-location-search-suggestions></div>
+        </div>
+    @endif
 
     <div class="location-picker-map" data-location-map></div>
 

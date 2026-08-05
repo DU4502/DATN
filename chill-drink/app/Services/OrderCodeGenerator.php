@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Branch;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Sinh mã đơn hàng theo định dạng:
@@ -35,6 +36,10 @@ class OrderCodeGenerator
         $typeCode   = static::resolveTypeCode($fulfillmentType);
         $dateStr    = now()->timezone('Asia/Ho_Chi_Minh')->format('Ymd');
         $prefix     = "{$branchCode}-{$typeCode}-{$dateStr}";
+
+        if (! Schema::hasTable('orders') || ! Schema::hasColumn('orders', 'order_code')) {
+            return $prefix;
+        }
 
         // Dùng SELECT ... FOR UPDATE để lock các row có cùng prefix trong ngày,
         // ngăn race condition khi nhiều request đồng thời.

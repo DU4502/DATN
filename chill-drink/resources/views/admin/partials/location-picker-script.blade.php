@@ -24,6 +24,79 @@
             border-radius: 10px;
         }
 
+        .location-picker-search {
+            position: relative;
+        }
+
+        .location-picker-search .form-control {
+            border-color: rgba(148, 163, 184, 0.36);
+            border-radius: 10px;
+            min-height: 40px;
+            padding-right: 2.6rem;
+            font-weight: 600;
+        }
+
+        .location-picker-search .form-control:focus {
+            border-color: #0d9373;
+            box-shadow: 0 0 0 0.16rem rgba(13, 147, 115, 0.12);
+        }
+
+        .location-picker-search-icon {
+            position: absolute;
+            top: 50%;
+            right: 0.9rem;
+            transform: translateY(-50%);
+            color: #0d9373;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .location-picker-suggestions {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: calc(100% + 6px);
+            z-index: 1040;
+            max-height: 260px;
+            overflow-y: auto;
+            border: 1px solid rgba(13, 147, 115, 0.18);
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.14);
+        }
+
+        .location-picker-suggestion {
+            width: 100%;
+            border: 0;
+            border-bottom: 1px solid #eef2f7;
+            background: #fff;
+            padding: 0.75rem 0.9rem;
+            text-align: left;
+        }
+
+        .location-picker-suggestion:last-child {
+            border-bottom: 0;
+        }
+
+        .location-picker-suggestion:hover,
+        .location-picker-suggestion:focus-visible {
+            background: #eefbf7;
+            outline: none;
+        }
+
+        .location-picker-suggestion-title {
+            color: #111827;
+            font-size: 0.86rem;
+            font-weight: 800;
+        }
+
+        .location-picker-suggestion-subtitle {
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.12rem;
+        }
+
         .location-picker-map {
             height: 250px;
             border: 1px solid rgba(148, 163, 184, 0.26);
@@ -47,6 +120,8 @@
         return;
     }
 
+    const ADDRESS_LOOKUP_ENDPOINT = @json(\Illuminate\Support\Facades\Route::has('api.address-lookup') ? route('api.address-lookup') : null);
+
     const DEFAULT_CENTER = {
         lat: 16.047079,
         lng: 108.206230,
@@ -62,6 +137,109 @@
         return `Tọa độ: ${Number(lat).toFixed(6)}, ${Number(lng).toFixed(6)}`;
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;',
+        })[char]);
+    }
+
+    function compactAddress(parts) {
+        return parts.map((part) => String(part || '').trim()).filter(Boolean).join(', ');
+    }
+
+    function uniqueAddressParts(parts) {
+        const seen = new Set();
+
+        return parts
+            .map((part) => String(part || '').trim())
+            .filter((part) => {
+                if (!part) {
+                    return false;
+                }
+
+                const key = part.toLocaleLowerCase('vi-VN');
+                if (seen.has(key)) {
+                    return false;
+                }
+
+                seen.add(key);
+                return true;
+            });
+    }
+
+    function debounce(callback, delay = 450) {
+        let timer = null;
+
+        return (...args) => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(() => callback(...args), delay);
+        };
+    }
+
+    function distanceMeters(lat1, lng1, lat2, lng2) {
+        const earthRadius = 6371000;
+        const latDelta = (lat2 - lat1) * Math.PI / 180;
+        const lngDelta = (lng2 - lng1) * Math.PI / 180;
+        const startLat = lat1 * Math.PI / 180;
+        const endLat = lat2 * Math.PI / 180;
+        const a = Math.sin(latDelta / 2) ** 2
+            + Math.cos(startLat) * Math.cos(endLat) * Math.sin(lngDelta / 2) ** 2;
+
+        return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function normalizePhotonSuggestion(feature) {
+        const properties = feature?.properties || {};
+        const coordinates = feature?.geometry?.coordinates || [];
+        const longitude = Number.parseFloat(coordinates[0]);
+        const latitude = Number.parseFloat(coordinates[1]);
+        const street = compactAddress(uniqueAddressParts([
+            properties.housenumber,
+            properties.street,
+            properties.name,
+        ]));
+        const area = compactAddress(uniqueAddressParts([
+            properties.district,
+            properties.city,
+            properties.county,
+            properties.state,
+            properties.country,
+        ]));
+        const displayName = compactAddress(uniqueAddressParts([street, area]));
+
+        return {
+            latitude,
+            longitude,
+            street: street || displayName,
+            area,
+            title: street || properties.name || displayName || 'Địa chỉ được gợi ý',
+            subtitle: area || displayName || '',
+            displayName,
+            canAutofillCoordinates: true,
+        };
+    }
+
+    function normalizeInternalSuggestion(item) {
+        const latitude = Number.parseFloat(item?.latitude);
+        const longitude = Number.parseFloat(item?.longitude);
+        const displayName = item?.full_address || item?.name || '';
+
+        return {
+            latitude,
+            longitude,
+            street: displayName,
+            area: '',
+            title: item?.name || displayName || 'Địa chỉ Chill Drink đã ghi nhận',
+            subtitle: item?.full_address || 'Dữ liệu địa chỉ đã lưu trong hệ thống',
+            displayName,
+            canAutofillCoordinates: item?.can_autofill_coordinates !== false,
+        };
+    }
+
     function mountPicker(container) {
         if (!container || container.dataset.locationPickerMounted === '1') {
             return container?.__locationPicker ?? null;
@@ -73,6 +251,9 @@
         const previewEl = container.querySelector('[data-location-preview]');
         const statusEl = container.querySelector('[data-location-status]');
         const locateBtn = container.querySelector('[data-location-use-geolocation]');
+        const searchInput = container.querySelector('[data-location-search-input]');
+        const suggestionsEl = container.querySelector('[data-location-search-suggestions]');
+        const addressTargetSelector = container.dataset.addressTarget;
 
         if (!mapEl || !latInput || !lngInput) {
             return null;
@@ -137,6 +318,156 @@
 
         };
 
+        const getAddressTargets = () => {
+            const selectors = addressTargetSelector ? addressTargetSelector.split(',') : [];
+
+            return {
+                streetInput: selectors[0] ? document.querySelector(selectors[0].trim()) : null,
+                areaInput: selectors[1] ? document.querySelector(selectors[1].trim()) : null,
+            };
+        };
+
+        const hideSuggestions = () => {
+            if (!suggestionsEl) {
+                return;
+            }
+
+            suggestionsEl.classList.add('d-none');
+            suggestionsEl.innerHTML = '';
+        };
+
+        const applySuggestion = (item) => {
+            if (!item || !Number.isFinite(item.latitude) || !Number.isFinite(item.longitude)) {
+                return;
+            }
+
+            const { streetInput, areaInput } = getAddressTargets();
+
+            if (searchInput) {
+                searchInput.value = item.displayName || item.title || '';
+            }
+
+            if (streetInput) {
+                streetInput.value = item.street || item.displayName || item.title || '';
+                streetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (areaInput) {
+                areaInput.value = item.area || '';
+                areaInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            setCoordinates(item.latitude, item.longitude, 'Đã chọn địa chỉ từ gợi ý.', 'search');
+            hideSuggestions();
+        };
+
+        const renderSuggestions = (items) => {
+            if (!suggestionsEl) {
+                return;
+            }
+
+            if (!items.length) {
+                suggestionsEl.innerHTML = '<div class="location-picker-suggestion-title px-3 py-2">Không tìm thấy gợi ý phù hợp.</div>';
+                suggestionsEl.classList.remove('d-none');
+                return;
+            }
+
+            suggestionsEl.innerHTML = items.map((item, index) => `
+                <button type="button" class="location-picker-suggestion" data-location-search-suggestion="${index}">
+                    <div class="location-picker-suggestion-title">${escapeHtml(item.title)}</div>
+                    <div class="location-picker-suggestion-subtitle">${escapeHtml(item.subtitle || item.displayName)}</div>
+                </button>
+            `).join('');
+            suggestionsEl.classList.remove('d-none');
+
+            suggestionsEl.querySelectorAll('[data-location-search-suggestion]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    applySuggestion(items[Number(button.dataset.locationSearchSuggestion)]);
+                });
+            });
+        };
+
+        const searchAddress = async () => {
+            const query = String(searchInput?.value || '').trim();
+            if (query.length < 3) {
+                hideSuggestions();
+                return;
+            }
+
+            try {
+                const currentLat = parseNumber(latInput.value);
+                const currentLng = parseNumber(lngInput.value);
+                const requests = [];
+
+                if (ADDRESS_LOOKUP_ENDPOINT) {
+                    const internalUrl = new URL(ADDRESS_LOOKUP_ENDPOINT, window.location.origin);
+                    internalUrl.searchParams.set('q', query);
+                    internalUrl.searchParams.set('limit', '8');
+                    if (Number.isFinite(currentLat) && Number.isFinite(currentLng)) {
+                        internalUrl.searchParams.set('latitude', String(currentLat));
+                        internalUrl.searchParams.set('longitude', String(currentLng));
+                    }
+
+                    requests.push(
+                        fetch(internalUrl.toString(), {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                        }).then((response) => response.ok ? response.json() : { data: [] })
+                    );
+                } else {
+                    requests.push(Promise.resolve({ data: [] }));
+                }
+
+                const photonUrl = new URL('https://photon.komoot.io/api/');
+                photonUrl.searchParams.set('q', query);
+                photonUrl.searchParams.set('limit', '10');
+                requests.push(fetch(photonUrl.toString()).then((response) => response.ok ? response.json() : { features: [] }));
+
+                const [internalResult, photonResult] = await Promise.allSettled(requests);
+                const internalItems = internalResult.status === 'fulfilled'
+                    ? (internalResult.value.data || [])
+                        .map(normalizeInternalSuggestion)
+                        .filter((item) => item.canAutofillCoordinates && Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+                    : [];
+                const photonItems = photonResult.status === 'fulfilled'
+                    ? (photonResult.value.features || [])
+                        .map(normalizePhotonSuggestion)
+                        .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude))
+                        .filter((item) => !internalItems.some((internalItem) => (
+                            distanceMeters(item.latitude, item.longitude, internalItem.latitude, internalItem.longitude) <= 80
+                        )))
+                    : [];
+                const seen = new Set();
+                const items = internalItems.concat(photonItems).filter((item) => {
+                    const key = `${item.title}|${item.latitude.toFixed(4)}|${item.longitude.toFixed(4)}`.toLocaleLowerCase('vi-VN');
+                    if (seen.has(key)) {
+                        return false;
+                    }
+
+                    seen.add(key);
+                    return true;
+                }).slice(0, 16);
+
+                renderSuggestions(items);
+            } catch (error) {
+                console.error('Lỗi khi tìm địa chỉ:', error);
+                hideSuggestions();
+            }
+        };
+
+        if (searchInput && suggestionsEl) {
+            const debouncedSearch = debounce(searchAddress);
+            searchInput.addEventListener('input', debouncedSearch);
+            searchInput.addEventListener('focus', debouncedSearch);
+            document.addEventListener('click', (event) => {
+                if (!container.contains(event.target)) {
+                    hideSuggestions();
+                }
+            });
+        }
+
         marker.on('dragend', () => {
             const position = marker.getLatLng();
             setCoordinates(position.lat, position.lng, 'Đã cập nhật vị trí đã chọn.');
@@ -171,7 +502,6 @@
             });
         });
 
-        const addressTargetSelector = container.dataset.addressTarget;
         const getAddressBtn = container.querySelector('[data-location-get-address]');
 
         getAddressBtn?.addEventListener('click', async () => {
@@ -185,9 +515,7 @@
                 return;
             }
 
-            const selectors = addressTargetSelector ? addressTargetSelector.split(',') : [];
-            const streetInput = selectors[0] ? document.querySelector(selectors[0].trim()) : null;
-            const areaInput = selectors[1] ? document.querySelector(selectors[1].trim()) : null;
+            const { streetInput, areaInput } = getAddressTargets();
 
             const originalText = getAddressBtn.innerHTML;
             getAddressBtn.disabled = true;

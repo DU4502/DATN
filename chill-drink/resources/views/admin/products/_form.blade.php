@@ -249,10 +249,11 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                     @php
                     $sName = strtoupper(trim($size->name));
                     $isChecked = array_key_exists($size->id, $selectedSizes);
-                    $priceVal = $isChecked ? (int)$selectedSizes[$size->id] : '';
+                    $defaultPrice = $sName === 'M' ? 5000 : 10000;
+                    $priceVal = $isChecked ? (int)$selectedSizes[$size->id] : $defaultPrice;
                     @endphp
                     <div class="col-sm-6">
-                        <div class="size-card {{ $isChecked ? 'active' : '' }}">
+                        <div class="size-card {{ $isChecked ? 'active' : '' }}" id="size_card_{{ $sName }}">
                             <div class="form-check mb-2.5">
                                 <input class="form-check-input custom-check-green size-checkbox" type="checkbox" name="sizes[]" value="{{ $size->id }}" id="size_{{ $size->id }}" data-size-name="{{ $sName }}" {{ $isChecked ? 'checked' : '' }}>
                                 <label class="form-check-label fw-bold text-dark fs-6" for="size_{{ $size->id }}">
@@ -268,7 +269,8 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                                     placeholder="Giá cộng thêm Size {{ $size->name }}"
                                     min="0"
                                     step="1000"
-                                    value="{{ old('size_prices.'.$size->id, $priceVal) }}">
+                                    value="{{ old('size_prices.'.$size->id, $priceVal) }}"
+                                    {{ !$isChecked ? 'disabled' : '' }}>
                                 <span class="input-group-text rounded-end-2">đ</span>
                             </div>
                             <div class="text-danger small mt-1 fw-bold size-error-msg" id="size_error_{{ $sName }}" style="display:none;"></div>
@@ -293,13 +295,13 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                     @endphp
                     @forelse($allToppings as $topping)
                     @php $isTopChecked = in_array($topping->id, $selectedToppings); @endphp
-                    <div class="col-6 col-md-3">
-                        <label class="topping-chip w-100 mb-0" for="topping_{{ $topping->id }}">
-                            <div class="d-flex align-items-center gap-2">
-                                <input class="form-check-input custom-check-green mt-0" type="checkbox" name="toppings[]" value="{{ $topping->id }}" id="topping_{{ $topping->id }}" {{ $isTopChecked ? 'checked' : '' }}>
-                                <span class="topping-label small text-truncate" style="max-width: 85px;">{{ $topping->name }}</span>
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <label class="topping-chip w-100 mb-0 d-flex align-items-center justify-content-between p-2 rounded border" for="topping_{{ $topping->id }}">
+                            <div class="d-flex align-items-center gap-2 overflow-hidden me-1">
+                                <input class="form-check-input custom-check-green mt-0 flex-shrink-0" type="checkbox" name="toppings[]" value="{{ $topping->id }}" id="topping_{{ $topping->id }}" {{ $isTopChecked ? 'checked' : '' }}>
+                                <span class="topping-label small text-dark fw-semibold" title="{{ $topping->name }}">{{ $topping->name }}</span>
                             </div>
-                            <span class="text-success small fw-bold">+{{ (int)$topping->price >= 1000 ? (int)($topping->price/1000).'k' : number_format($topping->price).'đ' }}</span>
+                            <span class="text-success small fw-bold flex-shrink-0">+{{ number_format((int)$topping->price, 0, ',', '.') }}đ</span>
                         </label>
                     </div>
                     @empty
@@ -346,7 +348,7 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
         <!-- 2. Hình ảnh xem trước trực tiếp vào các ô vuông kèm nút xóa -->
         <div class="form-card">
             <div class="form-card-header">
-                <i class="bi bi-image text-primary fs-5"></i>
+                <i class="bi bi-image text-success fs-5"></i>
                 <span>Hình ảnh</span>
             </div>
             <div class="form-card-body">
@@ -355,12 +357,12 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                     <input type="file" class="d-none @error('image') is-invalid @enderror"
                         id="image" name="image" accept="image/jpeg,image/jpg,image/png,image/webp">
 
-                    <div class="dropzone-box w-100" id="editProductImageDropzone">
+                    <div class="dropzone-box w-100" id="editProductImageDropzone" style="border: 2px dashed #cbd5e1; background: #f8fafc; border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; min-height: 140px;">
                         @php $hasMainImage = !empty($product->image_url); @endphp
-                        <div id="mainImageEmptyState" class="{{ $hasMainImage ? 'd-none' : '' }} d-flex flex-column align-items-center justify-content-center">
-                            <i class="bi bi-cloud-arrow-up text-primary" style="font-size: 2.2rem;"></i>
-                            <span class="fw-bold text-dark mt-1" style="font-size: 0.9rem;">Thay ảnh đại diện</span>
-                            <span class="text-secondary small" style="font-size: 0.75rem;">Max 10MB</span>
+                        <div id="mainImageEmptyState" class="{{ $hasMainImage ? 'd-none' : '' }} d-flex flex-column align-items-center justify-content-center py-2">
+                            <i class="bi bi-cloud-arrow-up" style="font-size: 2.5rem; color: #0D9373;"></i>
+                            <span class="fw-bold text-dark mt-1" style="font-size: 0.95rem;">Ảnh đại diện</span>
+                            <span class="text-secondary small" style="font-size: 0.8rem;">Max 2MB</span>
                         </div>
                         <div id="mainImagePreviewState" class="{{ $hasMainImage ? '' : 'd-none' }} w-100 h-100 position-relative d-flex align-items-center justify-content-center">
                             <img id="mainImageTag" src="{{ $hasMainImage ? $product->image_url : '' }}" alt="{{ $product->name }}" style="max-height: 120px; max-width: 100%; object-fit: contain;" class="rounded">
@@ -381,10 +383,10 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                         accept="image/jpeg,image/jpg,image/png,image/webp"
                         multiple>
 
-                    <div class="small fw-bold text-secondary mb-1">Ảnh gallery slide chi tiết</div>
-                    <div class="thumb-grid" id="editGalleryThumbGrid"></div>
+                    <div class="small fw-bold text-dark mb-1">Ảnh gallery slide chi tiết</div>
+                    <div class="thumb-grid mb-2" id="editGalleryThumbGrid"></div>
                     <div id="removedGalleryInputs"></div>
-                    <small class="text-muted d-block mt-2" style="font-size: 0.73rem;">Bấm `+` để thêm nhiều ảnh khác nhau cho slide sản phẩm.</small>
+                    <small class="text-muted d-block" style="font-size: 0.75rem;">Bấm `+` để thêm nhiều ảnh khác nhau cho slide sản phẩm.</small>
                     @error('gallery_images.*') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
             </div>
@@ -404,12 +406,38 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Live Size Price Validation (Size L phải lớn hơn Size M)
         const inputM = document.getElementById('size_price_input_M');
         const inputL = document.getElementById('size_price_input_L');
         const checkM = document.querySelector('.size-checkbox[data-size-name="M"]');
         const checkL = document.querySelector('.size-checkbox[data-size-name="L"]');
         const errorL = document.getElementById('size_error_L');
+        // Tự động tích chọn Checkbox khi Admin gõ giá cộng thêm vào ô nhập
+        document.querySelectorAll('.size-price-field').forEach(function(priceInput) {
+            const sName = priceInput.dataset.sizeName;
+            const checkbox = document.querySelector(`.size-checkbox[data-size-name="${sName}"]`);
+            const card = priceInput.closest('.size-card');
+
+            const handlePriceChange = function() {
+                if (!checkbox) return;
+                const val = priceInput.value.trim();
+                if (val !== '') {
+                    checkbox.checked = true;
+                    if (card) card.classList.add('active');
+                }
+            };
+
+            priceInput.addEventListener('input', handlePriceChange);
+            priceInput.addEventListener('change', handlePriceChange);
+        });
+
+        document.querySelectorAll('.size-checkbox').forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                const card = checkbox.closest('.size-card');
+                if (card) {
+                    card.classList.toggle('active', checkbox.checked);
+                }
+            });
+        });
 
         function validateSizePricesLive() {
             if (!inputM || !inputL || !errorL) return true;
@@ -442,6 +470,21 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                 return true;
             }
         }
+
+        document.querySelectorAll('.size-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                const sName = cb.dataset.sizeName;
+                const priceInput = document.getElementById('size_price_input_' + sName);
+                const card = document.getElementById('size_card_' + sName);
+                if (priceInput) {
+                    priceInput.disabled = !cb.checked;
+                }
+                if (card) {
+                    card.classList.toggle('active', cb.checked);
+                }
+                validateSizePricesLive();
+            });
+        });
 
         if (inputM && inputL) {
             inputM.addEventListener('input', validateSizePricesLive);
@@ -518,48 +561,50 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
 
             const addBtn = document.createElement('div');
             addBtn.className = 'thumb-slot';
-            addBtn.style.cssText = 'background:#f0fdf4; border-color:#bbf7d0; color:#0D9373;';
+            addBtn.style.cssText = 'background:#f0fdf4; border: 1.5px solid #bbf7d0; color:#0D9373; cursor:pointer;';
             addBtn.title = 'Bấm để thêm ảnh slide';
-            addBtn.innerHTML = '<i class="bi bi-plus-lg"></i>';
+            addBtn.innerHTML = '<i class="bi bi-plus-lg fs-4"></i>';
             addBtn.onclick = () => galleryInput.click();
             gridContainer.appendChild(addBtn);
 
-            if (galleryItems.length > 0) {
-                galleryItems.forEach((item, index) => {
+            galleryItems.forEach((item, index) => {
+                const slot = document.createElement('div');
+                slot.className = 'thumb-slot';
+                slot.style.cssText = 'border: 1px solid #0D9373; position:relative;';
+
+                const img = document.createElement('img');
+                img.src = item.url;
+                slot.appendChild(img);
+
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'delete-img-btn';
+                delBtn.title = 'Xóa ảnh này';
+                delBtn.innerHTML = '<i class="bi bi-x"></i>';
+                delBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    if (item.isExisting && removedContainer) {
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = 'remove_gallery_images[]';
+                        hiddenInput.value = item.path;
+                        removedContainer.appendChild(hiddenInput);
+                    }
+                    galleryItems.splice(index, 1);
+                    updateFileInput();
+                    renderEditGalleryGrid();
+                };
+                slot.appendChild(delBtn);
+                gridContainer.appendChild(slot);
+            });
+
+            const totalSlots = 1 + galleryItems.length;
+            if (totalSlots < 4) {
+                for (let i = totalSlots; i < 4; i++) {
                     const slot = document.createElement('div');
                     slot.className = 'thumb-slot';
-                    slot.style.cssText = 'border: 1px solid #0D9373;';
-
-                    const img = document.createElement('img');
-                    img.src = item.url;
-                    slot.appendChild(img);
-
-                    const delBtn = document.createElement('button');
-                    delBtn.type = 'button';
-                    delBtn.className = 'delete-img-btn';
-                    delBtn.title = 'Xóa ảnh này';
-                    delBtn.innerHTML = '<i class="bi bi-x"></i>';
-                    delBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        if (item.isExisting && removedContainer) {
-                            const hiddenInput = document.createElement('input');
-                            hiddenInput.type = 'hidden';
-                            hiddenInput.name = 'remove_gallery_images[]';
-                            hiddenInput.value = item.path;
-                            removedContainer.appendChild(hiddenInput);
-                        }
-                        galleryItems.splice(index, 1);
-                        updateFileInput();
-                        renderEditGalleryGrid();
-                    };
-                    slot.appendChild(delBtn);
-                    gridContainer.appendChild(slot);
-                });
-            } else {
-                for (let i = 0; i < 3; i++) {
-                    const slot = document.createElement('div');
-                    slot.className = 'thumb-slot';
-                    slot.innerHTML = '<i class="bi bi-image text-muted"></i>';
+                    slot.style.cssText = 'background:#f8fafc; border: 1px dashed #cbd5e1; color:#94a3b8; cursor:pointer;';
+                    slot.innerHTML = '<i class="bi bi-image fs-4"></i>';
                     slot.onclick = () => galleryInput.click();
                     gridContainer.appendChild(slot);
                 }

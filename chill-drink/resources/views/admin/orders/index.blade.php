@@ -1,4 +1,4 @@
-@extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Đơn hàng')
 
@@ -346,6 +346,17 @@
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">{{ strtoupper(\App\Support\OrderStatus::label((string) $order->status)) }}</strong>
                                                     </div>
+                                                    @if($order->status_changed_at)
+                                                        @php
+                                                            $changedByUser = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
+                                                        @endphp
+                                                        <div class="mt-1 text-muted" style="font-size:0.75rem;">
+                                                            <i class="bi bi-clock-history me-1"></i>Cập nhật: <strong>{{ $order->status_changed_at->format('H:i · d/m/Y') }}</strong>
+                                                            @if($changedByUser)
+                                                                bởi <strong>{{ $changedByUser->name }}</strong> <span class="badge {{ $changedByUser->isStaffOnly() ? 'bg-warning text-dark' : ($changedByUser->isAdmin() ? 'bg-primary' : 'bg-secondary') }}" style="font-size:0.62rem;">{{ $changedByUser->isStaffOnly() ? 'Nhân viên' : ($changedByUser->isAdmin() ? 'Admin' : 'Hệ thống') }}</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </div>
 
@@ -559,6 +570,12 @@
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</strong>
                                                     </div>
+                                                    ${payload.status_changed_at ? `
+                                                        <div class="mt-1 text-muted" style="font-size:0.75rem;">
+                                                            <i class="bi bi-clock-history me-1"></i>Cập nhật: <strong>${escapeHtml(payload.status_changed_at)}</strong>
+                                                            ${payload.status_changed_by_name ? `bởi <strong>${escapeHtml(payload.status_changed_by_name)}</strong>` : ''}
+                                                        </div>
+                                                    ` : ''}
                                                 </div>
                                             </div>
 

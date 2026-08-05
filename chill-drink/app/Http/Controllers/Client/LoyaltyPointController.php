@@ -83,8 +83,8 @@ class LoyaltyPointController extends Controller
         // Check if user already has this voucher (not used)
         $existingVoucher = UserVoucher::query()
             ->where('user_id', $user->id)
-            ->where('voucher_id', $voucher->id)
-            ->whereNull('used_at')
+            ->where('coupon_id', $voucher->id)
+            ->where('is_used', 0)
             ->first();
             
         if ($existingVoucher) {
@@ -111,9 +111,10 @@ class LoyaltyPointController extends Controller
             // Give voucher to user
             UserVoucher::create([
                 'user_id' => $user->id,
-                'voucher_id' => $voucher->id,
-                'received_at' => now(),
-                'used_at' => null,
+                'coupon_id' => $voucher->id,
+                'code' => $voucher->code,
+                'is_used' => 0,
+                'redeemed_at' => now(),
                 'guest_identifier' => null,
             ]);
             

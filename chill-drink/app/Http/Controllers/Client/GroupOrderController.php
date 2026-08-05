@@ -37,7 +37,7 @@ class GroupOrderController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'address']);
 
-        $selectedBranchId = old('branch_id', session('nearest_branch_id'));
+        $selectedBranchId = old('branch_id');
 
         return view('client.group-orders.create', compact('branches', 'selectedBranchId'));
     }

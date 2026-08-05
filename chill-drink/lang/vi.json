@@ -12,6 +12,8 @@
     "Log Out": "Đăng xuất",
     "Name": "Họ và tên",
     "New Password": "Mật khẩu mới",
+    "password-updated": "Mật khẩu đã được cập nhật.",
+    "profile-updated": "Hồ sơ đã được cập nhật.",
     "Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.": "Sau khi tài khoản bị xóa, toàn bộ dữ liệu liên quan sẽ bị xóa vĩnh viễn. Hãy lưu lại những thông tin bạn muốn giữ trước khi xóa tài khoản.",
     "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Sau khi tài khoản bị xóa, toàn bộ dữ liệu liên quan sẽ bị xóa vĩnh viễn. Vui lòng nhập mật khẩu để xác nhận xóa tài khoản.",
     "Password": "Mật khẩu",
@@ -19,6 +21,7 @@
     "Profile Information": "Thông tin hồ sơ",
     "Save": "Lưu",
     "Saved.": "Đã lưu.",
+    "verification-link-sent": "Một liên kết xác thực mới đã được gửi đến địa chỉ email của bạn.",
     "Update Password": "Đổi mật khẩu",
     "Update your account's profile information and email address.": "Cập nhật thông tin hồ sơ và địa chỉ email của tài khoản.",
     "Your email address is unverified.": "Địa chỉ email của bạn chưa được xác thực."

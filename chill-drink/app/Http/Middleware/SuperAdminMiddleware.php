@@ -10,7 +10,16 @@ class SuperAdminMiddleware
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user()?->isSuperAdmin()) {
+        $user = $request->user();
+        $isLocked = $user && ($user->is_active === false || $user->is_active === 0 || $user->is_active === '0');
+
+        if (!$user || $isLocked || !$user->isSuperAdmin()) {
+            if ($user && $isLocked) {
+                auth()->logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+                return redirect()->route('login')->with('error', 'Tài khoản của bạn đã bị khóa hoặc ngưng hoạt động.');
+            }
             return redirect()->route('admin.dashboard')
                 ->with('error', 'Bạn không có quyền truy cập khu vực Super Admin.');
         }

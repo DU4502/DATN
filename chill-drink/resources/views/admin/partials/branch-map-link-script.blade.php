@@ -6,6 +6,7 @@
 
     const reverseGeocodeUrl = @json(route('api.reverse-geocode'));
     const resolveMapLinkUrl = @json(route('api.map-link.resolve'));
+    const MANUAL_LOADING_MIN_MS = 600;
     const COORD_PATTERNS = [
         /@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(?:,|$)/,
         /[?&](?:q|query|ll|center)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)(?:&|$)/,
@@ -160,6 +161,7 @@
         const latInput = container.querySelector('[data-branch-map-link-lat]');
         const lngInput = container.querySelector('[data-branch-map-link-lng]');
         const previewEl = container.querySelector('[data-branch-map-link-preview]');
+        const statusEl = container.querySelector('[data-branch-map-link-status]');
         const addressInput = resolveAddressTarget(container);
         const buttonHtmlCache = new WeakMap();
 
@@ -243,6 +245,38 @@
             button.removeAttribute('aria-busy');
         };
 
+        const setStatus = (type, message) => {
+            if (!statusEl) {
+                return;
+            }
+
+            statusEl.textContent = message || '';
+            statusEl.className = 'form-text mt-2';
+
+            if (!message) {
+                statusEl.classList.add('d-none');
+                linkInput.classList.remove('is-invalid');
+                return;
+            }
+
+            statusEl.classList.remove('d-none');
+
+            if (type === 'error') {
+                statusEl.classList.add('text-danger', 'fw-semibold');
+                linkInput.classList.add('is-invalid');
+                return;
+            }
+
+            linkInput.classList.remove('is-invalid');
+
+            if (type === 'success') {
+                statusEl.classList.add('text-success', 'fw-semibold');
+                return;
+            }
+
+            statusEl.classList.add('text-secondary');
+        };
+
         const setPickerBusy = (busy, activeButton = null) => {
             isBusy = busy;
 
@@ -299,15 +333,22 @@
         };
 
         const performLinkLookup = async (rawLink) => {
+            if (!rawLink) {
+                latInput.value = '';
+                lngInput.value = '';
+                updatePreview();
+                setStatus('error', 'Vui lòng dán link Google Maps có chứa tọa độ.');
+                return false;
+            }
+
+            setStatus('muted', 'Đang phân tích link Google Maps...');
             const coordinates = await resolveCoordinatesFromLink(rawLink);
 
             if (!coordinates) {
                 latInput.value = '';
                 lngInput.value = '';
                 updatePreview();
-                if (previewEl && rawLink) {
-                    previewEl.textContent = 'Không đọc được tọa độ từ link này.';
-                }
+                setStatus('error', 'Không đọc được tọa độ từ link này. Hãy dán link Google Maps có dạng chứa @lat,lng hoặc ?q=lat,lng.');
                 return false;
             }
 
@@ -316,40 +357,61 @@
             updatePreview();
             lastAnalyzedLink = rawLink;
             await fillAddressFromCoordinates(coordinates.latitude, coordinates.longitude);
+            setStatus('success', 'Đã lấy tọa độ từ link Google Maps.');
             return true;
         };
 
-        const runWithLoading = async (task, activeButton = null) => {
+        const runWithLoading = async (task, activeButton = null, showPopup = false) => {
             if (isBusy) {
                 return false;
             }
 
             setPickerBusy(true, activeButton);
 
-            if (activeButton && activeButton.hasAttribute('data-branch-map-link-analyze')) {
+            const shouldShowPopup = showPopup || (activeButton && activeButton.hasAttribute('data-branch-map-link-analyze'));
+            const popupStartedAt = performance.now();
+
+            if (shouldShowPopup) {
                 showProcessingPopup();
             }
 
             try {
                 return await task();
             } finally {
+                if (shouldShowPopup) {
+                    const elapsed = performance.now() - popupStartedAt;
+                    const remaining = MANUAL_LOADING_MIN_MS - elapsed;
+                    if (remaining > 0) {
+                        await new Promise((resolve) => setTimeout(resolve, remaining));
+                    }
+                }
+
                 setPickerBusy(false);
                 hideProcessingPopup();
             }
         };
 
-        const applyLink = async (activeButton = null) => {
+        const applyLink = async (activeButton = null, options = {}) => {
             const rawLink = normalizeLink(linkInput.value);
             const hasCoordinates = parseNumber(latInput.value) !== null && parseNumber(lngInput.value) !== null;
+            const showPopup = options.showPopup !== false;
 
             if (rawLink && rawLink === lastAnalyzedLink && hasCoordinates) {
+                if (showPopup) {
+                    return runWithLoading(async () => {
+                        updatePreview();
+                        setStatus('success', 'Link này đã được phân tích và có tọa độ.');
+                        return true;
+                    }, activeButton, true);
+                }
+
                 updatePreview();
                 return true;
             }
 
             return runWithLoading(async () => {
                 return performLinkLookup(rawLink);
-            }, activeButton);
+            }, activeButton, showPopup);
         };
 
         applyButtons.forEach((button) => {
@@ -359,21 +421,21 @@
         });
 
         linkInput.addEventListener('change', () => {
-            applyLink();
+            applyLink(null, { showPopup: true });
         });
 
         linkInput.addEventListener('blur', () => {
-            applyLink();
+            applyLink(null, { showPopup: true });
         });
 
         container.addEventListener('paste', () => {
-            setTimeout(() => applyLink(), 0);
+            setTimeout(() => applyLink(null, { showPopup: true }), 0);
         });
 
         updatePreview();
 
         if (linkInput.value.trim() && (!latInput.value || !lngInput.value)) {
-            applyLink();
+            applyLink(null, { showPopup: true });
         }
 
         container.dataset.branchMapLinkMounted = '1';
