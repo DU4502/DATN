@@ -33,4 +33,21 @@ class ProfileUpdateRequest extends FormRequest
             ],
         ];
     }
+
+    /**
+     * Get custom validation messages.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required'   => 'Vui lòng nhập họ tên.',
+            'email.required'  => 'Vui lòng nhập email.',
+            'email.lowercase' => 'Email phải viết thường.',
+            'email.email'     => 'Email không đúng định dạng.',
+            'email.max'       => 'Email không được vượt quá :max ký tự.',
+            'email.unique'    => 'Email đã được sử dụng.',
+        ];
+    }
 }

@@ -67,7 +67,7 @@ class RegisterRequest extends FormRequest
             'email.lowercase' => 'Email phải viết thường.',
             'email.email' => 'Email không đúng định dạng.',
             'email.max' => 'Email không được vượt quá :max ký tự.',
-            'email.unique' => 'Email này đã được đăng ký.',
+            'email.unique' => 'Email đã được sử dụng.',
             'area.string' => 'Khu vực không hợp lệ.',
             'area.max' => 'Khu vực không được vượt quá :max ký tự.',
             'address.string' => 'Địa chỉ không hợp lệ.',

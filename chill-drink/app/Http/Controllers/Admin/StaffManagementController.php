@@ -81,19 +81,32 @@ class StaffManagementController extends Controller
     {
         $authUser = auth()->user();
 
+        // Normalize email về chữ thường TRƯỚC validate — đảm bảo unique check khớp DB
+        $normalizedEmail = strtolower(trim((string) $request->input('email', '')));
+        $request->merge(['email' => $normalizedEmail]);
+
         $validated = $request->validateWithBag('createStaff', [
             'name'      => ['required', 'string', 'max:150'],
-            'email'     => ['required', 'email', 'max:150', Rule::unique('users', 'email')],
+            'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
             'branch_id' => ['nullable', 'exists:branches,id'],
         ], [
             'name.required'      => 'Vui lòng nhập tên nhân viên.',
             'email.required'     => 'Vui lòng nhập email.',
-            'email.unique'       => 'Email này đã được sử dụng.',
+            'email.email'        => 'Email không đúng định dạng.',
+            'email.unique'       => 'Email đã được sử dụng.',
             'password.required'  => 'Vui lòng nhập mật khẩu.',
             'password.min'       => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
         ]);
+
+        // Double-check: kiểm tra lại email trùng ngay trước khi insert
+        if (User::where('email', $validated['email'])->exists()) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['email' => 'Email đã được sử dụng.'], 'createStaff');
+        }
 
         // Admin thường chỉ có thể tạo nhân viên thuộc chi nhánh của mình
         $branchId = $validated['branch_id'] ?? null;
@@ -104,7 +117,7 @@ class StaffManagementController extends Controller
 
         $staff = User::create([
             'name'      => $validated['name'],
-            'email'     => strtolower($validated['email']),
+            'email'     => $validated['email'], // đã lowercase từ bước merge trước validate
             'password'  => Hash::make($validated['password']),
             'role_id'   => 5,
             'branch_id' => $branchId,
@@ -130,16 +143,29 @@ class StaffManagementController extends Controller
     {
         $this->ensureCanManage($user);
 
-        $validated = $request->validate([
+        // Normalize email về chữ thường trước khi validate
+        $request->merge(['email' => strtolower(trim((string) $request->input('email', '')))]);
+
+        // Dùng bag riêng cho từng staff để view biết mở đúng modal
+        $bag = 'editStaff' . $user->id;
+
+        $validated = $request->validateWithBag($bag, [
             'name'      => ['required', 'string', 'max:150'],
-            'email'     => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
+            'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
             'branch_id' => ['nullable', 'exists:branches,id'],
             'password'  => ['nullable', 'string', 'min:8', 'confirmed'],
+        ], [
+            'name.required'      => 'Vui lòng nhập tên nhân viên.',
+            'email.required'     => 'Vui lòng nhập email.',
+            'email.email'        => 'Email không đúng định dạng.',
+            'email.unique'       => 'Email đã được sử dụng.',
+            'password.min'       => 'Mật khẩu phải có ít nhất 8 ký tự.',
+            'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
         ]);
 
         $data = [
-            'name'      => $validated['name'],
-            'email'     => strtolower($validated['email']),
+            'name'  => $validated['name'],
+            'email' => $validated['email'],
         ];
 
         // Chỉ Super Admin mới được thay đổi chi nhánh của nhân viên
