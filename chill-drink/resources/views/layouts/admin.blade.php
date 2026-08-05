@@ -17,9 +17,17 @@
     @include('admin.partials.styles')
 </head>
 <body>
+    @php
+        $currentAdminUser = auth()->user();
+        $adminPreviewMode = $currentAdminUser?->isViewingAdminWorkspace() ?? false;
+        $adminPreviewBranchId = $currentAdminUser?->adminWorkspaceBranchId();
+        $adminRouteParams = $adminPreviewMode && $adminPreviewBranchId
+            ? ['branch_id' => $adminPreviewBranchId]
+            : [];
+    @endphp
     <div class="admin-shell">
         <aside class="admin-sidebar">
-            <a href="{{ route('admin.dashboard') }}" class="admin-logo">
+            <a href="{{ route('admin.dashboard', $adminRouteParams) }}" class="admin-logo">
                 <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 2px;">
                 <span>
                     <span class="admin-logo-title d-block">Chill Drink</span>
@@ -28,30 +36,33 @@
             </a>
 
             <nav class="nav flex-column">
-                <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-grid-1x2"></i> Tổng quát</a>
-                <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
-                <a href="{{ route('admin.toppings.index') }}" class="nav-link {{ request()->routeIs('admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
-                <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
-                <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.slides.index') }}" class="nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
-                <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
-                <a href="{{ route('admin.group-orders.index') }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
-                <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
-                <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
-                <a href="{{ route('admin.staff.index') }}" class="nav-link {{ request()->routeIs('admin.staff.*') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Quản lý Staff</a>
-                @if(auth()->user()?->isSuperAdmin())
+                <a href="{{ route('admin.dashboard', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-grid-1x2"></i> Tổng quát</a>
+                <a href="{{ route('admin.vouchers.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
+                <a href="{{ route('admin.toppings.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
+                <a href="{{ route('admin.products.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
+                <a href="{{ route('admin.categories.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
+                <a href="{{ route('admin.slides.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
+                <a href="{{ route('admin.orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.group-orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
+                <a href="{{ route('admin.reviews.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
+                <a href="{{ route('admin.users.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
+                <a href="{{ route('admin.staff.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.staff.*') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Quản lý Staff</a>
+                @if($currentAdminUser?->isSuperAdmin() && ! $adminPreviewMode)
                     <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock-fill"></i> Quản trị cấp cao</a>
                 @endif
-                <a href="{{ route('admin.chat.index') }}" class="nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.chat.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}">
                     <i class="bi bi-chat-dots"></i> Chat CSKH
                     @php
-                        $unreadChatMessages = auth()->user()?->unreadConversationMessagesCount() ?? 0;
+                        $unreadChatMessages = $currentAdminUser?->unreadConversationMessagesCount() ?? 0;
                     @endphp
                     <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
             </nav>
 
             <div class="admin-sidebar-footer">
+                @if($adminPreviewMode)
+                    <a href="{{ route('admin.preview-admin.exit') }}" class="nav-link mb-1"><i class="bi bi-arrow-counterclockwise"></i> Quay lại cấp cao</a>
+                @endif
                 <a href="{{ route('home') }}" class="nav-link mb-1"><i class="bi bi-arrow-left-square"></i> Về trang chủ</a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
@@ -66,6 +77,11 @@
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
+                    @if($adminPreviewMode)
+                        <a href="{{ route('admin.preview-admin.exit') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                            <i class="bi bi-arrow-left me-1"></i>Quay lại cấp cao
+                        </a>
+                    @endif
 
 
                     @unless(View::hasSection('hide-topbar-search'))

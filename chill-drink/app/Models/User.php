@@ -119,6 +119,29 @@ class User extends Authenticatable implements MustVerifyEmail
             || strcasecmp((string) $this->email, self::SUPER_ADMIN_EMAIL) === 0;
     }
 
+    public function isViewingAdminWorkspace(): bool
+    {
+        return $this->isSuperAdmin() && (bool) session('super_admin_admin_view', false);
+    }
+
+    public function adminWorkspaceBranchId(): ?int
+    {
+        if (! $this->isViewingAdminWorkspace()) {
+            return null;
+        }
+
+        $branchId = session('super_admin_preview_branch_id');
+
+        return is_numeric($branchId) ? (int) $branchId : null;
+    }
+
+    public function preferredAdminLayout(): string
+    {
+        return $this->isSuperAdmin() && ! $this->isViewingAdminWorkspace()
+            ? 'layouts.super-admin'
+            : 'layouts.admin';
+    }
+
     public function canMonitorChat(): bool
     {
         return $this->isSuperAdmin();

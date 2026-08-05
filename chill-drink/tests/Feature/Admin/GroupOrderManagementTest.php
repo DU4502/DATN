@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin;
 use App\Models\GroupOrder;
 use App\Models\GroupOrderMember;
 use App\Models\Branch;
+use App\Models\GroupOrderMessage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -31,11 +32,16 @@ class GroupOrderManagementTest extends TestCase
             'status' => 'open',
             'closes_at' => now()->addMinutes(30),
         ]);
-        GroupOrderMember::create([
+        $ownerMember = GroupOrderMember::create([
             'group_order_id' => $group->id,
             'user_id' => $owner->id,
             'name' => 'Chủ nhóm',
             'member_token' => 'admin-group-owner',
+        ]);
+        GroupOrderMessage::create([
+            'group_order_id' => $group->id,
+            'sender_member_id' => $ownerMember->id,
+            'content' => 'Tin nhắn để Super Admin giám sát',
         ]);
 
         $this->actingAs($admin)
@@ -47,7 +53,9 @@ class GroupOrderManagementTest extends TestCase
         $this->get(route('admin.group-orders.show', $group))
             ->assertOk()
             ->assertSee('Chủ nhóm')
-            ->assertSee('1 / 20 thành viên');
+            ->assertSee('1 / 20 thành viên')
+            ->assertSee('Lịch sử trò chuyện')
+            ->assertSee('Tin nhắn để Super Admin giám sát');
     }
 
     public function test_admin_cannot_view_group_order_from_another_branch_or_without_branch(): void

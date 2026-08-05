@@ -10,6 +10,7 @@ use App\Services\OrderCodeGenerator;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\ShippingFee;
+use App\Support\AddressLearning;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use App\Support\ScheduledDelivery;
 use Throwable;
 
@@ -58,15 +60,27 @@ class GuestCheckoutController extends CheckoutController
         $cart = $this->hydrateCheckoutCart($cart);
         $subtotal = $this->cartSubtotal($cart);
         $branches = Branch::query()->where('status', true)->orderBy('name')->get();
+        $branchesData = $branches->map(fn (Branch $branch) => [
+            'id' => $branch->id,
+            'name' => $branch->name,
+            'address' => $branch->address,
+            'latitude' => $branch->latitude,
+            'longitude' => $branch->longitude,
+        ])->values()->all();
         $guestInfo = session('guest_checkout', []);
         $shippingDistanceOptions = ShippingFee::distanceOptions();
+        $shouldPromptLocation = $request->boolean('require_location')
+            || (bool) session('guest_checkout_require_location');
+        session()->forget('guest_checkout_require_location');
 
         return view('client.checkout.guest.index', compact(
             'cart',
             'subtotal',
             'branches',
+            'branchesData',
             'guestInfo',
-            'shippingDistanceOptions'
+            'shippingDistanceOptions',
+            'shouldPromptLocation'
         ));
     }
 
@@ -82,13 +96,24 @@ class GuestCheckoutController extends CheckoutController
 
         $validated = $request->validate([
             'guest_name' => ['required', 'string', 'max:255'],
-            'guest_phone' => ['required', 'string', 'max:30', 'regex:/^0[0-9]{9,10}$/'],
+            'guest_phone' => [
+                'required',
+                'string',
+                'max:30',
+                function ($attribute, $value, $fail) {
+                    if (! $this->isValidVietnameseMobilePhone($value)) {
+                        $fail('Số điện thoại phải là số di động Việt Nam hợp lệ (ví dụ 0912345678 hoặc 84912345678).');
+                    }
+                },
+            ],
             'guest_email' => ['required', 'string', 'email', 'max:255'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
+            'shipping_area_ui' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_if:fulfillment_type,delivery'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_if:fulfillment_type,delivery'],
             'branch_id' => [
-                'nullable',
-                'required_if:fulfillment_type,pickup',
+                'required',
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
             ],
@@ -105,14 +130,34 @@ class GuestCheckoutController extends CheckoutController
         ], [
             'guest_name.required' => 'Vui lòng nhập họ tên.',
             'guest_phone.required' => 'Vui lòng nhập số điện thoại.',
-            'guest_phone.regex' => 'Số điện thoại phải bắt đầu bằng 0 và có 10-11 chữ số.',
             'guest_email.required' => 'Vui lòng nhập email.',
             'guest_email.email' => 'Email không đúng định dạng.',
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
-            'branch_id.required_if' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.required' => 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
+            'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
+            'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
             'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
         ]);
+
+        $validated['guest_phone'] = $this->normalizeVietnamesePhoneNumber($validated['guest_phone']);
+
+        if (
+            ($validated['fulfillment_type'] ?? null) === 'delivery'
+            && ! $this->hasHouseNumber($validated['shipping_address_ui'] ?? '')
+            && blank($validated['note'] ?? null)
+        ) {
+            throw ValidationException::withMessages([
+                'note' => 'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng để shipper dễ tìm.',
+            ]);
+        }
+
+        $this->validateOrderServiceRadius(
+            $validated['fulfillment_type'],
+            $validated['branch_id'],
+            $validated['latitude'] ?? null,
+            $validated['longitude'] ?? null
+        );
 
         session(['guest_checkout' => $validated]);
 
@@ -129,6 +174,10 @@ class GuestCheckoutController extends CheckoutController
 
         if (empty($guestInfo)) {
             return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng nhập thông tin nhận hàng trước.');
+        }
+
+        if (empty($guestInfo['branch_id'])) {
+            return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.');
         }
 
         $fullCart = session()->get('cart', []);
@@ -183,6 +232,10 @@ class GuestCheckoutController extends CheckoutController
 
         if (empty($guestInfo)) {
             return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng nhập thông tin nhận hàng trước.');
+        }
+
+        if (empty($guestInfo['branch_id'])) {
+            return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.');
         }
 
         $request->validate([
@@ -259,7 +312,6 @@ class GuestCheckoutController extends CheckoutController
             }
 
             $orderData = [
-                'order_code'     => OrderCodeGenerator::generate($branchId, $deliveryType),
                 'user_id'        => null,
                 'guest_name'     => $guestInfo['guest_name'],
                 'guest_phone'    => $guestInfo['guest_phone'],
@@ -278,6 +330,22 @@ class GuestCheckoutController extends CheckoutController
                 'confirmation_token_expires_at'  => now()->addMinutes(15),
                 'note' => $note,
             ];
+
+            if (Schema::hasColumn('orders', 'order_code')) {
+                $orderData['order_code'] = OrderCodeGenerator::generate($branchId, $deliveryType);
+            }
+
+            if (Schema::hasColumn('orders', 'shipping_address_text')) {
+                $orderData['shipping_address_text'] = $addressText ?: null;
+            }
+
+            if (Schema::hasColumn('orders', 'shipping_latitude')) {
+                $orderData['shipping_latitude'] = $guestInfo['latitude'] ?? null;
+            }
+
+            if (Schema::hasColumn('orders', 'shipping_longitude')) {
+                $orderData['shipping_longitude'] = $guestInfo['longitude'] ?? null;
+            }
 
             if (Schema::hasColumn('orders', 'total_price')) {
                 $orderData['total_price'] = $grandTotal;
@@ -304,6 +372,7 @@ class GuestCheckoutController extends CheckoutController
             }
 
             $order = Order::create($orderData);
+            app(AddressLearning::class)->recordOrderSubmitted($order);
 
             foreach ($orderItems as $item) {
                 $orderItem = \App\Models\OrderItem::create($this->orderItemData($order->id, $item));
@@ -525,5 +594,34 @@ class GuestCheckoutController extends CheckoutController
                 'message'  => $e->getMessage(),
             ]);
         }
+    }
+
+    protected function normalizeVietnamesePhoneNumber(mixed $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', trim((string) $value));
+
+        if ($digits === '') {
+            return null;
+        }
+
+        if (str_starts_with($digits, '84') && strlen($digits) === 11) {
+            return '0'.substr($digits, 2);
+        }
+
+        return $digits;
+    }
+
+    protected function isValidVietnameseMobilePhone(mixed $value): bool
+    {
+        $phone = $this->normalizeVietnamesePhoneNumber($value) ?? '';
+
+        return (bool) preg_match('/^(?:0(?:3|5|7|8|9)\d{8}|84(?:3|5|7|8|9)\d{8})$/', $phone);
+    }
+
+    protected function hasHouseNumber(mixed $value): bool
+    {
+        $address = trim((string) $value);
+
+        return (bool) preg_match('/(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b)/iu', $address);
     }
 }

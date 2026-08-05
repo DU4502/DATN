@@ -57,7 +57,15 @@ class GroupOrderController extends Controller
             }
         }
 
-        $groupOrder->load(['owner', 'order', 'members.items.product.category']);
+        // Super Admin chỉ giám sát: xem được lịch sử chat nhưng không có
+        // endpoint gửi tin nhắn trong khu vực quản trị.
+        $groupOrder->load([
+            'owner',
+            'order',
+            'members.items.product.category',
+            'messages.sender',
+            'messages.recipient',
+        ]);
 
         return view('admin.group-orders.show', compact('groupOrder'));
     }

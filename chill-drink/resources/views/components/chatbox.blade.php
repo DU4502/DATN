@@ -39,6 +39,10 @@
 
         async init() {
             this.groupChatAvailable = Boolean(document.querySelector('[data-vue-group-chat]'));
+            localStorage.removeItem('support_chat_open');
+            this.isOpen = false;
+            this.menuOpen = false;
+            this.groupChatOpen = false;
             // Đọc guest_token từ localStorage
             this.guestToken = localStorage.getItem('chat_guest_token') || null;
             window.addEventListener('group-chat-unread', (event) => {
@@ -564,6 +568,10 @@
     class="fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;">
     <!-- Custom Scrollbar Styles for Chatbox -->
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         .chatbox-window {
             display: grid;
             grid-template-rows: auto minmax(0, 1fr) auto;
@@ -601,34 +609,35 @@
     <button
         @click="toggleUnifiedChat()"
         class="flex items-center justify-center w-16 h-16 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
-        style="position:relative; background: #00a870;">
-        <svg x-show="!isOpen && !groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        style="position:relative; width:60px; height:60px; min-width:60px; min-height:60px; padding:0; border:0; border-radius:50%; background:#00a870; color:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 18px 38px rgba(0, 168, 112, 0.28); cursor:pointer; overflow:hidden;">
+        <svg x-show="!isOpen && !groupChatOpen" x-cloak xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" style="width:28px; height:28px; color:#ffffff; flex:0 0 auto;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
-        <svg x-show="isOpen || groupChatOpen" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg x-show="isOpen || groupChatOpen" x-cloak xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" style="width:28px; height:28px; color:#ffffff; flex:0 0 auto;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
-        <span x-show="groupUnread > 0 && supportUnread === 0" x-text="groupUnread > 99 ? '99+' : groupUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
-        <span x-show="supportUnread > 0" x-text="supportUnread > 99 ? '99+' : supportUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
+        <span x-show="groupUnread > 0 && supportUnread === 0" x-cloak x-text="groupUnread > 99 ? '99+' : groupUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
+        <span x-show="supportUnread > 0" x-cloak x-text="supportUnread > 99 ? '99+' : supportUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
     </button>
 
     <!-- Unified Menu -->
-    <div x-show="menuOpen && groupChatAvailable" x-transition style="position:absolute;right:0;bottom:5rem;width:230px;padding:.55rem;border-radius:16px;background:#fff;border:1px solid #e1ebe8;box-shadow:0 18px 48px rgba(7,52,58,.2);display:grid;gap:.4rem;">
+    <div x-show="menuOpen && groupChatAvailable" x-cloak x-transition style="position:absolute;right:0;bottom:5rem;width:230px;padding:.55rem;border-radius:16px;background:#fff;border:1px solid #e1ebe8;box-shadow:0 18px 48px rgba(7,52,58,.2);display:grid;gap:.4rem;">
         <button type="button" @click="openGroupChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#f1f0ff;color:#4f46c8;font-weight:800;text-align:left;">
             <span style="width:36px;height:36px;border-radius:50%;background:#5b50d6;color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-people-fill"></i></span>
             <span style="flex:1;">Trò chuyện trong đơn nhóm</span>
-            <span x-show="groupUnread > 0" x-text="groupUnread" class="badge rounded-pill bg-danger"></span>
+            <span x-show="groupUnread > 0" x-cloak x-text="groupUnread" class="badge rounded-pill bg-danger"></span>
         </button>
         <button type="button" @click="openSupportChat()" style="display:flex;align-items:center;gap:.7rem;width:100%;padding:.75rem;border:0;border-radius:12px;background:#ecfaf6;color:#087c63;font-weight:800;text-align:left;">
             <span style="width:36px;height:36px;border-radius:50%;background:#00a870;color:#fff;display:flex;align-items:center;justify-content:center;"><i class="bi bi-headset"></i></span>
             <span style="flex:1;">Hỗ trợ khách hàng</span>
-            <span x-show="supportUnread > 0" x-text="supportUnread > 99 ? '99+' : supportUnread" class="badge rounded-pill bg-danger"></span>
+            <span x-show="supportUnread > 0" x-cloak x-text="supportUnread > 99 ? '99+' : supportUnread" class="badge rounded-pill bg-danger"></span>
         </button>
     </div>
 
     <!-- Chat Window Card -->
     <div
         x-show="isOpen"
+        x-cloak
         x-transition:enter="transition ease-out duration-300"
         x-transition:enter-start="opacity-0 translate-y-4"
         x-transition:enter-end="opacity-100 translate-y-0"
@@ -648,14 +657,14 @@
                     </div>
                     <div>
                         <h3 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: white;">Hỗ trợ khách hàng</h3>
-                        <p x-show="branchId" style="margin: 0; font-size: 0.72rem; color: rgba(255,255,255,0.85);">
+                        <p x-show="branchId" x-cloak style="margin: 0; font-size: 0.72rem; color: rgba(255,255,255,0.85);">
                             Đang hỗ trợ bởi: <span x-text="branchNameDisplay"></span>
                             <button
                                 @click="openEndSessionModal()"
                                 type="button"
                                 style="background: none; border: none; padding: 0; margin-left: 0.4rem; color: #ffffff; text-decoration: underline; font-weight: 700; cursor: pointer;">[Đổi chi nhánh]</button>
                         </p>
-                        <p x-show="!branchId" style="margin: 0; font-size: 0.72rem; color: rgba(255,255,255,0.85);">
+                        <p x-show="!branchId" x-cloak style="margin: 0; font-size: 0.72rem; color: rgba(255,255,255,0.85);">
                             Vui lòng chọn chi nhánh bên dưới
                         </p>
                     </div>
@@ -671,6 +680,7 @@
         <!-- STATE 1: Màn hình chọn Chi nhánh (Khi chưa có branchId) -->
         <div
             x-show="!branchId"
+            x-cloak
             class="chatbox-scroll"
             style="padding: 0.9rem; background: #f8faf9; display: flex; flex-direction: column; gap: 0.8rem;">
             <!-- Card banner xin chào -->
@@ -719,7 +729,7 @@
                                         <p style="margin: 0.2rem 0 0 0; font-size: 0.75rem; color: #6b7280; line-height: 1.35;" x-text="b.address"></p>
                                     </div>
                                 </div>
-                                <span x-show="b.distance_text" style="background: #e6f7f2; color: #00a870; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 999px; white-space: nowrap;" x-text="b.distance_text"></span>
+                                <span x-show="b.distance_text" x-cloak style="background: #e6f7f2; color: #00a870; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 999px; white-space: nowrap;" x-text="b.distance_text"></span>
                             </div>
                             <button
                                 @click="selectBranchItem(b.id)"
@@ -736,6 +746,7 @@
         <!-- STATE 2: Danh sách tin nhắn (cuộn trong khung cố định) -->
         <div
             x-show="branchId"
+            x-cloak
             x-ref="messageList"
             class="chatbox-scroll"
             style="padding: 0.9rem; background: #ffffff;">
@@ -761,7 +772,7 @@
                             :style="(isLoggedIn ? (message.sender_id == {{ auth()->id() ?? 0 }}) : message.is_guest_message)
                                 ? 'max-width: 82%; background: #00a870; color: white; border-radius: 1rem 1rem 0 1rem; padding: 0.6rem 0.8rem; font-size: 0.83rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);'
                                 : 'max-width: 82%; background: #f1f5f9; color: #1e293b; border-radius: 1rem 1rem 1rem 0; padding: 0.6rem 0.8rem; font-size: 0.83rem; border: 1px solid #e2e8f0;'">
-                            <div x-text="message.content" x-show="message.content" style="white-space: pre-line;"></div>
+                            <div x-text="message.content" x-show="message.content" x-cloak style="white-space: pre-line;"></div>
                             <div
                                 x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
                                 :style="(isLoggedIn ? (message.sender_id == {{ auth()->id() ?? 0 }}) : message.is_guest_message) ? 'font-size: 0.68rem; opacity: 0.8; text-align: right; margin-top: 0.25rem;' : 'font-size: 0.68rem; opacity: 0.6; text-align: left; margin-top: 0.25rem;'"></div>
@@ -774,6 +785,7 @@
         <!-- Input Chat (cố định dưới cùng) -->
         <div
             x-show="branchId"
+            x-cloak
             style="padding: 0.75rem 0.85rem; border-top: 1px solid #e2e8f0; background: #ffffff;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <input
@@ -797,6 +809,7 @@
         <!-- Confirmation Overlay đè gọn trực tiếp trên khung Chatbox -->
         <div
             x-show="showEndSessionModal"
+            x-cloak
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100"
@@ -818,8 +831,8 @@
                         :disabled="endingSession"
                         type="button"
                         style="width: 100%; background: #dc2626; color: white; border: none; border-radius: 0.65rem; padding: 0.65rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: background 0.2s;">
-                        <span x-show="!endingSession">Kết thúc & Chọn chi nhánh mới</span>
-                        <span x-show="endingSession" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                        <span x-show="!endingSession" x-cloak>Kết thúc & Chọn chi nhánh mới</span>
+                        <span x-show="endingSession" x-cloak style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
                             <span class="spinner-border spinner-border-sm" role="status"></span> Đang xử lý...
                         </span>
                     </button>
@@ -836,6 +849,7 @@
         <!-- Guest Info Modal — Hiện khi khách vãng lai mở chatbox lần đầu -->
         <div
             x-show="showGuestModal && !isLoggedIn"
+            x-cloak
             x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0 scale-95"
             x-transition:enter-end="opacity-100 scale-100"
@@ -877,7 +891,7 @@
                     </div>
 
                     <!-- Error message -->
-                    <div x-show="guestFormError" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.5rem 0.7rem;">
+                    <div x-show="guestFormError" x-cloak style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.5rem 0.7rem;">
                         <p style="margin: 0; font-size: 0.75rem; color: #dc2626;" x-text="guestFormError"></p>
                     </div>
 
@@ -887,8 +901,8 @@
                         :disabled="guestFormLoading"
                         type="button"
                         style="width: 100%; background: #00a870; color: white; border: none; border-radius: 0.65rem; padding: 0.65rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s; margin-top: 0.25rem;">
-                        <span x-show="!guestFormLoading">Bắt đầu chat ngay</span>
-                        <span x-show="guestFormLoading" style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                        <span x-show="!guestFormLoading" x-cloak>Bắt đầu chat ngay</span>
+                        <span x-show="guestFormLoading" x-cloak style="display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
                             <span class="spinner-border spinner-border-sm" role="status"></span> Đang xử lý...
                         </span>
                     </button>

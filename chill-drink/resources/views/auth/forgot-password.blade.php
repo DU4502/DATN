@@ -14,7 +14,7 @@
                         <p class="small text-secondary mb-4">Liên kết có hiệu lực trong 60 phút.</p>
 
                         @if(session('status'))
-                            <div class="alert alert-success">{{ session('status') }}</div>
+                            <div class="alert alert-success">{{ __((string) session('status')) }}</div>
                         @endif
 
                         <form method="POST" action="{{ route('password.email') }}">

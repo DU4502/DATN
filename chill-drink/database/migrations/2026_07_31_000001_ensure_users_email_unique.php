@@ -37,7 +37,10 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             // Kiểm tra xem unique index đã tồn tại chưa trước khi tạo
             $indexes = collect(
-                DB::select("SHOW INDEX FROM users WHERE Column_name = 'email' AND Non_unique = 0")
+                collect(Schema::getIndexes('users'))
+                    ->filter(static fn (array $index): bool => (bool) ($index['unique'] ?? false)
+                        && in_array('email', $index['columns'] ?? [], true))
+                    ->all()
             );
 
             if ($indexes->isEmpty()) {

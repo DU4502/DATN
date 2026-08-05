@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
@@ -83,6 +84,11 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Test Street',
                 'shipping_area_ui' => 'Test Area',
+                'shipping_phone_ui' => '0912345678',
+                'fulfillment_type' => 'delivery',
+                'branch_id' => $this->activeBranch()->id,
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
             ]);
 
         $order = Order::latest()->first();
@@ -157,7 +163,7 @@ class CheckoutVoucherTest extends TestCase
 
         $shippingAddress = '123 Test Street';
         $shippingArea = 'Test Area';
-        $shippingFee = ShippingFee::quoteForAddress($shippingAddress, $shippingArea, 'standard')['total_fee'];
+        $shippingFee = ShippingFee::calculate(0, 'standard')['total_fee'];
 
         $response = $this
             ->actingAs($user)
@@ -180,6 +186,11 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => $shippingAddress,
                 'shipping_area_ui' => $shippingArea,
+                'shipping_phone_ui' => '0912345678',
+                'fulfillment_type' => 'delivery',
+                'branch_id' => $this->activeBranch()->id,
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
                 'voucher_code' => 'TESTCHILL10',
                 'note' => '',
             ]);
@@ -236,6 +247,11 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '123 Test Street',
                 'shipping_area_ui' => 'Test Area',
+                'shipping_phone_ui' => '0912345678',
+                'fulfillment_type' => 'delivery',
+                'branch_id' => $this->activeBranch()->id,
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
                 'voucher_code' => 'MIN200',
             ])
             ->assertRedirect(route('checkout.index'))
@@ -244,12 +260,13 @@ class CheckoutVoucherTest extends TestCase
         $this->assertSame($ordersBefore, Order::count());
     }
 
-    public function test_checkout_accepts_area_only_shipping_address(): void
+    public function test_checkout_requires_specific_shipping_address_for_delivery_radius(): void
     {
         $user = $this->customer();
         [$product, $productSize] = $this->sellableProduct();
+        $ordersBefore = Order::count();
 
-        $response = $this
+        $this
             ->actingAs($user)
             ->withSession([
                 'cart' => [
@@ -270,13 +287,16 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => '',
                 'shipping_area_ui' => 'Hà Nội',
+                'shipping_phone_ui' => '0912345678',
+                'fulfillment_type' => 'delivery',
+                'branch_id' => $this->activeBranch()->id,
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
                 'voucher_code' => '',
-            ]);
+            ])
+            ->assertSessionHasErrors('shipping_address_ui');
 
-        $order = Order::latest()->first();
-
-        $this->assertNotNull($order);
-        $response->assertRedirect(route('checkout.success', $order));
+        $this->assertSame($ordersBefore, Order::count());
     }
 
     public function test_checkout_uses_current_database_price_instead_of_session_price(): void
@@ -295,7 +315,7 @@ class CheckoutVoucherTest extends TestCase
 
         $shippingAddress = '123 Test Street';
         $shippingArea = 'Test Area';
-        $shippingFee = ShippingFee::quoteForAddress($shippingAddress, $shippingArea, 'standard')['total_fee'];
+        $shippingFee = ShippingFee::calculate(0, 'standard')['total_fee'];
 
         $response = $this
             ->actingAs($user)
@@ -316,6 +336,11 @@ class CheckoutVoucherTest extends TestCase
                 'shipping_method_ui' => 'standard',
                 'shipping_address_ui' => $shippingAddress,
                 'shipping_area_ui' => $shippingArea,
+                'shipping_phone_ui' => '0912345678',
+                'fulfillment_type' => 'delivery',
+                'branch_id' => $this->activeBranch()->id,
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
                 'voucher_code' => 'DBPRICE',
             ]);
 
@@ -345,6 +370,20 @@ class CheckoutVoucherTest extends TestCase
             'is_active' => 1,
             'email_verified_at' => now(),
         ]);
+    }
+
+    private function activeBranch(): Branch
+    {
+        return Branch::query()->firstOrCreate(
+            ['code' => 'TEST-BRANCH'],
+            [
+                'name' => 'Chi nhánh kiểm thử',
+                'address' => 'Quận 1',
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
+                'status' => true,
+            ]
+        );
     }
 
     private function sellableProduct(): array

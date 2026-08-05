@@ -41,9 +41,9 @@ class RegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30', 'regex:/^[0-9+\-\s().]{9,30}$/'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'area' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'email_verification_code' => ['required', 'digits:6'],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'terms' => ['accepted'],
         ];
     }
 
@@ -72,10 +72,14 @@ class RegisterRequest extends FormRequest
             'area.max' => 'Khu vực không được vượt quá :max ký tự.',
             'address.string' => 'Địa chỉ không hợp lệ.',
             'address.max' => 'Địa chỉ không được vượt quá :max ký tự.',
+            'email.unique' => 'Email này đã được đăng ký.',
+            'email_verification_code.required' => 'Vui lòng nhập mã xác minh email.',
+            'email_verification_code.digits' => 'Mã xác minh email phải gồm 6 chữ số.',
             'password.required' => 'Vui lòng nhập mật khẩu.',
             'password.string' => 'Mật khẩu không hợp lệ.',
             'password.confirmed' => 'Mật khẩu nhập lại không khớp.',
             'password.min' => 'Mật khẩu phải có ít nhất :min ký tự.',
+            'terms.accepted' => 'Vui lòng đồng ý với điều khoản dịch vụ và chính sách bảo mật.',
         ];
     }
 }

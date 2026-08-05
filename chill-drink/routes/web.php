@@ -97,6 +97,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
     Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
     Route::post('/group-orders/join/{code}/leave', [GroupOrderController::class, 'leave'])->name('group-orders.leave');
+    Route::post('/group-orders/join/{code}/leave-room', [GroupOrderController::class, 'leaveRoom'])->name('group-orders.leave-room');
     Route::get('/group-orders/join/{code}/messages', [GroupOrderController::class, 'messages'])->name('group-orders.messages');
     Route::post('/group-orders/join/{code}/messages', [GroupOrderController::class, 'sendMessage'])->name('group-orders.messages.send');
     Route::post('/group-orders/join/{code}/messages/read', [GroupOrderController::class, 'readMessages'])->name('group-orders.messages.read');
@@ -210,6 +211,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::patch('/super-admin/staff/{user}/branch', [SuperAdminController::class, 'updateStaffBranch'])->name('super-admin.staff.update-branch');
     Route::patch('/super-admin/staff/{user}/toggle-status', [SuperAdminController::class, 'toggleStaffStatus'])->name('super-admin.staff.toggle-status');
     Route::delete('/super-admin/staff/{user}', [SuperAdminController::class, 'destroyStaff'])->name('super-admin.staff.destroy');
+    Route::get('/preview/admin', [SuperAdminController::class, 'enterAdminWorkspace'])->name('preview-admin');
+    Route::get('/preview/admin/exit', [SuperAdminController::class, 'exitAdminWorkspace'])->name('preview-admin.exit');
+
     
     // Branch Management
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
@@ -223,6 +227,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export', [DashboardController::class, 'exportTimeComparison'])->name('dashboard.export');
 
     // JSON endpoint for dashboard data (AJAX)
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('admin.dashboard.data');

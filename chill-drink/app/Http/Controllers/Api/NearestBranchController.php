@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Support\OrderDistancePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,10 +35,17 @@ class NearestBranchController extends Controller
         foreach ($branches as $branch) {
             $distance = $branch->distanceTo($latitude, $longitude);
 
-            if ($distance < $minDistance) {
+            if (OrderDistancePolicy::isInsideServiceRadius($distance) && $distance < $minDistance) {
                 $minDistance = $distance;
                 $nearestBranch = $branch;
             }
+        }
+
+        if (! $nearestBranch) {
+            return response()->json([
+                'success' => false,
+                'message' => OrderDistancePolicy::message(),
+            ], 422);
         }
 
         return response()->json([
@@ -70,16 +78,24 @@ class NearestBranchController extends Controller
         $result = Branch::availableForLocation()
             ->get()
             ->map(function (Branch $branch) use ($latitude, $longitude) {
+                $distance = $branch->distanceTo($latitude, $longitude);
+
                 return [
                     'id' => $branch->id,
                     'name' => $branch->name,
                     'code' => $branch->code,
                     'address' => $branch->address,
                     'phone' => $branch->phone,
-                    'distance_km' => round($branch->distanceTo($latitude, $longitude), 2),
+                    'distance_km' => $distance,
                 ];
             })
+            ->filter(fn (array $branch) => OrderDistancePolicy::isInsideServiceRadius((float) $branch['distance_km']))
             ->sortBy('distance_km')
+            ->map(function (array $branch) {
+                $branch['distance_km'] = round((float) $branch['distance_km'], 2);
+
+                return $branch;
+            })
             ->values();
 
         return response()->json([

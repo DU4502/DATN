@@ -1903,6 +1903,8 @@
         });
     </script>
     <script>
+        /* Automatic branch switching is intentionally disabled. */
+        /*
         document.addEventListener('DOMContentLoaded', function () {
             const activeGroupTimer = document.querySelector('[data-active-group-countdown]');
             if (!activeGroupTimer) return;
@@ -1939,6 +1941,7 @@
             window.addEventListener('pagehide', stopTimer, { once: true });
             startTimer();
         });
+        */
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -2009,6 +2012,8 @@
             @endauth
         });
     </script>
+    {{-- Disabled automatic branch switching on page load.
+         Branch selection now only happens when the user explicitly chooses it. --}}
     @include('partials.realtime')
     @include('partials.client-notifications')
 </body>
