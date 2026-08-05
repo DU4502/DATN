@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\PhoneAuthController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,9 @@ Route::middleware('guest')->group(function () {
 
     Route::get('auth/facebook/callback', [FacebookController::class, 'callback'])
         ->name('auth.facebook.callback');
+
+    Route::post('auth/phone/verify', [PhoneAuthController::class, 'verifyPhone'])
+        ->name('auth.phone.verify');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');

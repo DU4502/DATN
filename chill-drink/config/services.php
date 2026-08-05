@@ -42,6 +42,21 @@ return [
         'stateless' => env('FACEBOOK_STATELESS', true),
     ],
 
+    'firebase' => [
+        'phone_auth' => [
+            'project_id' => env('FIREBASE_PROJECT_ID', 'chill-drink-d51d3'),
+            'web_config' => [
+                'apiKey' => env('FIREBASE_API_KEY', 'AIzaSyAFOsExSbQtGJuBCVlCcFwetBRg7FYNqro'),
+                'authDomain' => env('FIREBASE_AUTH_DOMAIN', 'chill-drink-d51d3.firebaseapp.com'),
+                'projectId' => env('FIREBASE_PROJECT_ID', 'chill-drink-d51d3'),
+                'storageBucket' => env('FIREBASE_STORAGE_BUCKET', 'chill-drink-d51d3.firebasestorage.app'),
+                'messagingSenderId' => env('FIREBASE_MESSAGING_SENDER_ID', '594007225015'),
+                'appId' => env('FIREBASE_APP_ID', '1:594007225015:web:2133cc417cd0d8ac285332'),
+                'measurementId' => env('FIREBASE_MEASUREMENT_ID', 'G-96EY02QVS4'),
+            ],
+        ],
+    ],
+
     'vnpay' => [
         'tmn_code' => env('VNPAY_TMN_CODE'),
         'hash_secret' => env('VNPAY_HASH_SECRET'),
@@ -71,7 +86,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/auth/google/callback'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://127.0.0.1:8000'), '/').'/auth/google/callback'),
     ],
 
 ];
