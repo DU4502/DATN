@@ -133,6 +133,8 @@
     .group-chat-compose .group-input { min-height: 44px; padding: .55rem .75rem; border-radius: 13px; }
     .group-chat-send { width: 44px; height: 44px; padding: 0 !important; border-radius: 50% !important; flex: 0 0 44px; }
     .group-chat-send { background: #5b5fd2 !important; border-color: #5b5fd2 !important; }
+    .group-chat-scroll-latest { position: absolute; left: 50%; bottom: 70px; z-index: 4; width: 42px; height: 42px; border: 0; border-radius: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #5264ce, #7048d7); color: #fff; box-shadow: 0 8px 20px rgba(63,75,180,.32); transition: transform .18s ease; }
+    .group-chat-scroll-latest:hover { transform: translateX(-50%) scale(1.08); }
     .group-chat-read { display: block; margin-top: .35rem; text-align: right; color: rgba(255,255,255,.82); font-size: .7rem; }
     .group-chat-recipient-bar { display: flex; align-items: center; gap: .5rem; padding: .55rem 1rem; border-bottom: 1px solid #e5e8f1; background: #f3f4ff; cursor: pointer; flex-shrink: 0; transition: background .15s ease; }
     .group-chat-recipient-bar:hover { background: #e9ebff; }

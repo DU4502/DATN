@@ -19,7 +19,7 @@
         branchName: '',
         nearestBranches: [],
         loadingLocation: false,
-        locationState: 'prompt', // 'prompt' | 'granted' | 'denied'
+        locationState: 'prompt',
         needLogin: false,
         selectingBranch: false,
         selectedBranchNameTemp: '',
@@ -41,6 +41,11 @@
         guestFormEmail: '',
         guestFormLoading: false,
         guestFormError: '',
+        showEndSessionModal: false,
+        endingSession: false,
+        conversationStatus: 'open',
+        showScrollToLatest: false,
+        supportIssue: null,
 
         get hasUserSentMessage() {
             return this.messages.some(m => Number(m.sender_id) === Number(this.currentUserId));
@@ -51,7 +56,6 @@
             window.__groupChatHostReady = true;
             window.dispatchEvent(new CustomEvent('group-chat-host-ready'));
 
-            // Đọc guest_token từ localStorage
             this.guestToken = localStorage.getItem('chat_guest_token') || null;
             window.addEventListener('group-chat-unread', (event) => {
                 this.groupUnread = Number(event.detail?.count || 0);
@@ -66,7 +70,7 @@
                 this.groupChatOpen = false;
             });
 
-            if (!this.isCustomer) {
+            if (!this.isCustomer && this.isLoggedIn) {
                 return;
             }
 
@@ -100,16 +104,13 @@
                     this.showEndSessionModal = false;
                     this.showGuestModal = false;
                     this.stopPolling();
-                    // Giữ Echo subscribe để nhận thông báo unread real-time khi chat đóng
                     this.startUnreadPolling();
                 }
             });
 
-            // Nếu chat đang mở (từ localStorage) → kích hoạt ngược lại
             if (this.isOpen) {
                 this.activateSupportChat();
             } else {
-                // Chat đóng: lấy conversationId + đếm unread để hiện badge
                 await this.fetchUnreadCount();
                 this.subscribeEchoChannel();
                 this.startUnreadPolling();
@@ -138,7 +139,7 @@
                 return;
             }
             window.dispatchEvent(new CustomEvent('group-chat-close'));
-            this.isOpen = true; // $watch sẽ tự gọi activateSupportChat()
+            this.isOpen = true;
             localStorage.setItem('support_chat_open', 'true');
         },
 
@@ -168,7 +169,7 @@
                 }
                 return;
             }
-            if (this.isCustomer) {
+            if (this.isCustomer || !this.isLoggedIn) {
                 await this.openSupportChat();
             }
         },
@@ -177,10 +178,8 @@
             if (document.hidden || !this.isOpen || this._activating) return;
             this._activating = true;
 
-            // Chỉ hiện spinner nếu chưa nạp conversation hoặc tin nhắn
             if (document.hidden || !this.isOpen) return;
 
-            // Nếu chưa đăng nhập và chưa có guest_token -> hiện Modal nhập thông tin guest
             if (!this.isLoggedIn && !this.guestToken) {
                 this.showGuestModal = true;
                 return;
@@ -194,14 +193,13 @@
             }
 
             try {
-                // Gọi server để lấy conversation của user hiện tại
                 if (!this.needLogin) {
                     await this.getOrCreateConversation();
                 }
                 if (!this.conversationId || !this.isOpen || this.needLogin) return;
 
                 if (this.branchId) {
-                    await this.fetchMessages(true); // true = mark as read
+                    await this.fetchMessages(true);
                     this.subscribeEchoChannel();
                     this.startPolling();
                 } else {
@@ -352,7 +350,6 @@
                     this.conversationId = null;
                     this.messages = [];
 
-                    // Nếu là guest: xóa guest_token khỏi localStorage
                     if (!this.isLoggedIn) {
                         localStorage.removeItem('chat_guest_token');
                         this.guestToken = null;
@@ -376,12 +373,10 @@
 
             this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
                 .listen('.message-sent', (payload) => {
-                    // Bỏ qua tin nhắn do chính user này gửi (tránh duplicate với sendMessage)
                     const alreadyExists = this.messages.some(m => m.id === payload.message_id);
                     if (alreadyExists) return;
 
-                    // Tin từ admin/CSKH (không phải user đang đăng nhập)
-                    const isFromAdmin = payload.sender_id !== {{ auth()->id() }};
+                    const isFromAdmin = payload.sender_id !== {{ auth()->id() ?? 0 }};
 
                     this.messages.push({
                         id: payload.message_id,
@@ -396,24 +391,22 @@
                         sender: { id: payload.sender_id, name: payload.sender_name },
                     });
 
-                    // Chat đang đóng → tăng badge unread
                     if (!this.isOpen && isFromAdmin) {
                         this.supportUnread++;
                     }
 
                     if (this.isOpen) {
-                        this.$nextTick(() => { this.scrollToBottom(); });
+                    this.$nextTick(() => { this.scrollToBottom(); });
                     }
                 });
         },
 
-        // Fetch unread count từ server (fallback khi Reverb chưa kết nối)
         async fetchUnreadCount() {
             if (this.isOpen) {
                 this.supportUnread = 0;
                 return;
             }
-            if (!this.isLoggedIn) return; // Guest: không cần fetch unread count
+            if (!this.isLoggedIn) return;
             if (!this.conversationId) {
                 try {
                     const res = await fetch('{{ route('chat.index', [], false) }}');
@@ -422,7 +415,6 @@
                         this.conversationId = data.conversation_id;
                         this.branchId       = data.branch_id;
                         this.branchName     = data.branch_name || '';
-                        // Có conversationId → subscribe WebSocket ngay
                         this.subscribeEchoChannel();
                     }
                 } catch (e) { return; }
@@ -489,13 +481,13 @@
                     this.branchId       = data.branch_id;
                     this.branchName     = data.branch_name || '';
                     this.conversationStatus = data.status || 'open';
+                    this.supportIssue = data.support_issue || null;
                     if (data.guest_token) {
                         this.guestToken = data.guest_token;
                         localStorage.setItem('chat_guest_token', data.guest_token);
                     }
                     if (data.guest_name) this.guestName = data.guest_name;
                 } else if (data.requires_guest_init) {
-                    // Guest token invalid/expired - clear and show modal
                     localStorage.removeItem('chat_guest_token');
                     this.guestToken = null;
                     this.showGuestModal = true;
@@ -520,10 +512,10 @@
                 const data = await res.json();
                 if (data.success && Array.isArray(data.messages)) {
                     this.messages = data.messages;
+                    this.supportIssue = data.support_issue || this.supportIssue;
                     this.$nextTick(() => {
-                        this.scrollToBottom();
+                        this.scrollToBottom(markRead);
                     });
-                    // Reset badge unread khi đã đọc
                     if (markRead) this.supportUnread = 0;
                 }
             } catch (e) {
@@ -533,11 +525,32 @@
             }
         },
 
-        scrollToBottom() {
+        isNearMessageBottom() {
             const el = this.$refs.messageList;
-            if (el) {
-                el.scrollTop = el.scrollHeight;
+            return !el || (el.scrollHeight - el.scrollTop - el.clientHeight) < 72;
+        },
+
+        handleMessageScroll() {
+            this.showScrollToLatest = !this.isNearMessageBottom();
+        },
+
+        scrollToBottom(force = false) {
+            const el = this.$refs.messageList;
+            if (!el) return;
+            if (!force && !this.isNearMessageBottom()) {
+                this.showScrollToLatest = true;
+                return;
             }
+            el.scrollTop = el.scrollHeight;
+            this.showScrollToLatest = false;
+        },
+
+        scrollToLatest() {
+            this.scrollToBottom(true);
+        },
+
+        isOrderSupportMessage(message) {
+            return /^\[(CẬP NHẬT|YÊU CẦU) HỖ TRỢ ĐƠN/.test(message?.content || '');
         },
 
         async sendMessage() {
@@ -565,7 +578,7 @@
                 _pending: true,
             };
             this.messages.push(tempMsg);
-            this.$nextTick(() => { this.scrollToBottom(); });
+            this.$nextTick(() => { this.scrollToBottom(true); });
 
             this.loading = true;
             const formData = new FormData();
@@ -589,7 +602,7 @@
                     this.messages = this.messages.filter(m => m.id !== tempId);
                     this.messages.push(data.message);
                     this.$nextTick(() => {
-                        this.scrollToBottom();
+                        this.scrollToBottom(true);
                     });
                 } else {
                     console.error('Server error:', data.message);
@@ -642,7 +655,6 @@
                     this.guestName = data.guest_name;
                     localStorage.setItem('chat_guest_token', data.guest_token);
                     this.showGuestModal = false;
-                    // Tiếp tục luồng chọn chi nhánh
                     if (!this.branchId) {
                         await this.requestLocationAndFetchBranches();
                     } else {
@@ -659,7 +671,7 @@
             }
         },
     }"
-    x-show="isCustomer || groupChatAvailable"
+    x-show="!isLoggedIn || isCustomer || groupChatAvailable"
     class="fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;">
     <!-- Floating Toggle Button (Always visible at bottom right, z-index 1060 above modal window) -->
     <button
@@ -767,6 +779,7 @@
         <!-- Messages & Branch Selector Area (Solid Pure White Background) -->
         <div
             x-ref="messageList"
+            @scroll.passive="handleMessageScroll()"
             class="flex-1 p-3 overflow-y-auto space-y-3"
             style="min-height: 0; background: #ffffff !important;">
             <!-- Case: Unauthenticated User Prompt -->
@@ -883,35 +896,43 @@
                             </div>
                         </div>
                     </template>
-
-                    <!-- STEP 3: Connected Chat Message Stream -->
-                    <template x-if="!loadingConversation && conversationId && branchId && !needLogin && (!loadingMessages || messages.length > 0)">
-                        <div class="space-y-3">
-                            <!-- Message list -->
-                            <template x-for="message in messages" :key="message.id">
-                                <div
-                                    :class="[
-                                        'flex w-full mb-2',
-                                        (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'justify-end' : 'justify-start'
-                                    ]">
-                                    <div
-                                        :class="[
-                                            'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm break-words',
-                                            (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'rounded-tr-none' : 'rounded-tl-none'
-                                        ]"
-                                        :style="(isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : (message.content && message.content.includes('🤖 Hệ thống') ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;')">
-                                        <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
-                                        <div
-                                            x-text="message.created_at ? new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''"
-                                            class="text-[11px] opacity-70"
-                                            :title="message.created_at ? new Date(message.created_at).toLocaleString('vi-VN') : ''"></div>
-                                    </div>
-                                </div>
-                            </template>
-                        </div>
-                    </template>
                 </div>
             </template>
+
+            <!-- Danh sách tin nhắn luôn được gắn vào DOM để cập nhật ngay sau khi gửi. -->
+            <div class="space-y-3">
+                <template x-for="message in messages" :key="message.id">
+                    <div
+                        :class="[
+                            'flex w-full mb-2',
+                            (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'justify-end' : 'justify-start'
+                        ]">
+                        <div
+                            :class="[
+                                'max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-sm text-sm break-words',
+                                (isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'rounded-tr-none' : 'rounded-tl-none'
+                            ]"
+                                :style="(isLoggedIn ? (message.sender_id == currentUserId) : message.is_guest_message) ? 'background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;' : (message.content && message.content.includes('🤖 Hệ thống') ? 'background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;' : 'background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0;')">
+                                <div x-text="message.content" x-show="message.content" class="mb-1" style="white-space: pre-line;"></div>
+                                <template x-if="isOrderSupportMessage(message) && supportIssue">
+                                    <a :href="supportIssue.url" class="mt-2 flex items-center gap-2 rounded-xl p-2 text-decoration-none" style="background: #ffffff; border: 1px solid #cbe9df; color: #153d34;">
+                                        <img x-show="supportIssue.image_url" :src="supportIssue.image_url" :alt="supportIssue.product_name" class="h-12 w-12 flex-shrink-0 rounded-lg object-cover" style="background: #edf8f4;">
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate text-[11px] font-bold" x-text="supportIssue.product_name"></span>
+                                            <span class="block text-[10px]" style="color: #6b7c76;"><span x-text="supportIssue.type"></span> · <span x-text="supportIssue.status_label"></span></span>
+                                            <span class="mt-1 inline-block text-[10px] font-bold" style="color: #008b70;">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
+                                        </span>
+                                    </a>
+                                </template>
+                                <div
+                                x-text="message.created_at ? new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''"
+                                class="text-[11px] opacity-70"
+                                :title="message.created_at ? new Date(message.created_at).toLocaleString('vi-VN') : ''"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
 
         <!-- Input Area (Only visible AFTER branch is selected & authenticated) -->
         <template x-if="conversationId && branchId && !needLogin">
@@ -938,7 +959,18 @@
                 </div>
             </div>
         </template>
-        </div>
+
+        <button
+            type="button"
+            x-show="showScrollToLatest"
+            x-cloak
+            @click="scrollToLatest()"
+            aria-label="Cuộn xuống tin nhắn mới nhất"
+            title="Tin nhắn mới nhất"
+            class="rounded-full shadow-lg transition-transform hover:scale-105"
+            style="position: absolute; left: 50%; bottom: 4.75rem; transform: translateX(-50%); width: 42px; height: 42px; border: 0; background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: #fff; z-index: 10;">
+            <i class="bi bi-arrow-down" style="font-size: 1.25rem;"></i>
+        </button>
 
         <!-- Guest Info Modal — Hiện khi khách vãng lai mở chatbox lần đầu -->
         <div

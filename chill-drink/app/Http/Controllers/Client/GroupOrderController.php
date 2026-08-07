@@ -112,6 +112,12 @@ class GroupOrderController extends Controller
         $group = GroupOrder::where('code', $code)->firstOrFail();
         $group->closeIfExpired();
 
+        // Sau khi chủ nhóm đã tạo đơn chính thức, thành viên không còn được
+        // ở lại hoặc mở lại phòng cũ để thao tác tiếp.
+        if ($group->status === 'ordered' && $group->owner_id !== auth()->id()) {
+            return redirect()->route('home')->with('success', 'Đơn nhóm "'.$group->name.'" đã được chủ nhóm đặt thành công. Phòng đã đóng.');
+        }
+
         // Khôi phục dữ liệu các phòng đã được tạo trước khi chủ phòng được tự
         // thêm vào danh sách thành viên. Nhờ đó chủ phòng cũ vẫn xem/chat được
         // cả khi phòng đã đóng.
@@ -142,6 +148,15 @@ class GroupOrderController extends Controller
     {
         $group = GroupOrder::where('code', $code)->firstOrFail();
         $group->closeIfExpired();
+
+        if ($group->status === 'ordered' && $group->owner_id !== auth()->id()) {
+            session()->flash('success', 'Đơn nhóm "'.$group->name.'" đã được chủ nhóm đặt thành công. Phòng đã đóng.');
+
+            return response()->json([
+                'is_open' => false,
+                'redirect_url' => route('home'),
+            ]);
+        }
 
         if ($group->owner_id === auth()->id() && $group->isOpen()) {
             $group->update(['owner_last_seen_at' => now()]);
@@ -548,7 +563,7 @@ class GroupOrderController extends Controller
 
         $this->activateGroupCart($group);
 
-        return redirect()->route('cart.index')->with('success', 'Đã gom toàn bộ món vào giỏ hàng chung.');
+        return redirect()->route('checkout.index')->with('success', 'Đã chốt đơn nhóm. Vui lòng hoàn tất thanh toán.');
     }
 
     private function currentMember(GroupOrder $group): GroupOrderMember
@@ -589,7 +604,37 @@ class GroupOrderController extends Controller
             return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
         }
         $this->activateGroupCart($group);
-        return redirect()->route('cart.index')->with('success', 'Đã khôi phục giỏ hàng đơn nhóm.');
+        return redirect()->route('checkout.index')->with('success', 'Đã khôi phục đơn nhóm. Vui lòng hoàn tất thanh toán.');
+    }
+
+    /**
+     * Khôi phục đơn nhóm chờ thanh toán trên một phiên/trình duyệt khác.
+     */
+    public function resumePendingCheckout()
+    {
+        $group = GroupOrder::with(['items.product.category', 'items.member'])
+            ->where('owner_id', auth()->id())
+            ->where('status', 'closed')
+            ->whereNull('order_id')
+            ->latest('locked_at')
+            ->latest('id')
+            ->firstOrFail();
+
+        if (session()->has('checkout_group_order_id')) {
+            if ((int) session('checkout_group_order_id') === (int) $group->id) {
+                return redirect()->route('checkout.index');
+            }
+
+            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
+        }
+
+        if ($group->items->isEmpty()) {
+            return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
+        }
+
+        $this->activateGroupCart($group);
+
+        return redirect()->route('checkout.index')->with('success', 'Đã khôi phục đơn nhóm chờ thanh toán.');
     }
 
     private function restorePersonalCart(): void

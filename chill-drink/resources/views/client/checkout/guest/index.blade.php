@@ -415,7 +415,7 @@
 
                         <div class="mb-4">
                             <label for="note" class="form-label fw-semibold">
-                                Ghi chú giao hàng <span class="text-danger d-none" data-note-required-indicator>*</span>
+                                Ghi chú giao hàng <span class="text-secondary fw-normal">(không bắt buộc)</span>
                             </label>
                             <textarea id="note" name="note" rows="2" class="form-control guest-input @error('note') is-invalid @enderror" placeholder="Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...">{{ old('note', $guestInfo['note'] ?? '') }}</textarea>
                             @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -551,7 +551,6 @@
         const shippingAreaInput = document.getElementById('shipping_area_ui');
         const noteInput = document.getElementById('note');
         const addressHouseNumberWarning = document.querySelector('[data-address-house-number-warning]');
-        const noteRequiredIndicator = document.querySelector('[data-note-required-indicator]');
         const summaryFulfillment = document.querySelector('[data-summary-fulfillment]');
         const summaryAddress = document.querySelector('[data-summary-address]');
         const summaryBranch = document.querySelector('[data-summary-branch]');
@@ -632,30 +631,15 @@
             }
         }
 
-        function syncNoteRequirement(isRequired) {
-            noteRequiredIndicator?.classList.toggle('d-none', !isRequired);
-        }
-
         function syncAddressHouseNumberNotice(shouldScroll = false) {
             if (!addressHouseNumberWarning || !deliveryInput?.checked) {
                 addressHouseNumberWarning?.classList.add('d-none');
-                syncNoteRequirement(false);
                 return;
             }
 
             const addressText = String(shippingAddressInput?.value || '').trim();
-            const noteValue = String(noteInput?.value || '').trim();
 
             if (addressText && !hasHouseNumber(addressText)) {
-                syncNoteRequirement(true);
-                if (shouldScroll && !noteValue) {
-                    showAddressHouseNumberWarning(
-                        'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Hãy ghi mốc nhận hàng để shipper dễ tìm.',
-                        true
-                    );
-                    return;
-                }
-
                 addressHouseNumberWarning.classList.add('d-none');
                 addressHouseNumberWarning.textContent = '';
                 return;
@@ -663,7 +647,6 @@
 
             addressHouseNumberWarning.classList.add('d-none');
             addressHouseNumberWarning.textContent = '';
-            syncNoteRequirement(false);
         }
 
         function clearAddressHouseNumberWarning() {
@@ -1340,26 +1323,8 @@
                 return;
             }
 
-            if (deliveryInput?.checked && shippingAddressInput && !hasHouseNumber(shippingAddressInput.value)) {
-                const noteValue = String(noteInput?.value || '').trim();
-
-                if (!noteValue) {
-                    event.preventDefault();
-                    clearAddressHouseNumberWarning();
-                    if (noteInput) {
-                        noteInput.setCustomValidity('Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
-                        noteInput.classList.add('is-invalid');
-                        noteInput.placeholder = 'Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...';
-                        noteInput.focus();
-                        noteInput.reportValidity();
-                    }
-                    syncAddressHouseNumberNotice(true);
-                    return;
-                }
-
-                clearAddressHouseNumberWarning();
-                syncAddressHouseNumberNotice();
-            }
+            clearAddressHouseNumberWarning();
+            addressHouseNumberWarning?.classList.add('d-none');
         });
         syncAddressHouseNumberNotice();
         syncGuestSummary();

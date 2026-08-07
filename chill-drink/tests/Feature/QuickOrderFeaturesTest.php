@@ -268,7 +268,7 @@ class QuickOrderFeaturesTest extends TestCase
         $item = GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'M', 'quantity' => 1, 'unit_price' => 1, 'toppings' => []]);
 
-        $this->actingAs($owner)->post(route('group-orders.close', $group->code))->assertRedirect(route('cart.index'));
+        $this->actingAs($owner)->post(route('group-orders.close', $group->code))->assertRedirect(route('checkout.index'));
         $this->assertSame('closed', $group->fresh()->status);
         $this->assertSame(50000, $item->fresh()->unit_price);
         $this->post(route('group-orders.close', $group->code))->assertStatus(422);
@@ -303,11 +303,40 @@ class QuickOrderFeaturesTest extends TestCase
             ->assertRedirect(route('checkout.index'));
     }
 
+    public function test_owner_can_restore_pending_group_checkout_from_another_browser_session(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $member = GroupOrderMember::create([
+            'group_order_id' => $group->id,
+            'user_id' => $owner->id,
+            'name' => 'Chủ nhóm',
+            'member_token' => 'pending-checkout-owner',
+        ]);
+        $product = Product::factory()->create(['status' => true, 'stock' => 10]);
+        GroupOrderItem::create([
+            'group_order_id' => $group->id,
+            'group_order_member_id' => $member->id,
+            'product_id' => $product->id,
+            'size' => 'S',
+            'quantity' => 1,
+            'unit_price' => (int) $product->price,
+        ]);
+        $group->update(['status' => 'closed', 'locked_at' => now()]);
+
+        $this->actingAs($owner)
+            ->post(route('group-orders.pending-checkout.resume'))
+            ->assertRedirect(route('checkout.index'));
+
+        $this->assertSame($group->id, session('checkout_group_order_id'));
+    }
+
     public function test_group_checkout_links_order_deducts_stock_and_restores_personal_cart(): void
     {
         $this->travelTo(now()->startOfDay()->addHours(9));
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
+        $participant = User::factory()->create();
+        GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $participant->id, 'name' => 'Thành viên', 'member_token' => 'checkout-participant']);
         $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
         $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 21.0285, 'longitude' => 105.8542, 'status' => true]);
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
@@ -334,7 +363,24 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame(5, (int) $product->fresh()->stock);
         $this->assertTrue($group->order->scheduled_at->equalTo($scheduledAt));
         $this->assertSame($personalCart, session('cart'));
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $participant->id,
+            'notifiable_type' => User::class,
+            'type' => \App\Notifications\GroupOrderCompletedNotification::class,
+        ]);
         $response->assertRedirect(route('vnpay.payment', $group->order));
+
+        $this->actingAs($participant)
+            ->get(route('group-orders.show', $group->code))
+            ->assertRedirect(route('home'));
+
+        $this->withSession([
+            'checkout_group_order_id' => $group->id,
+            'cart' => ['stale-group-cart' => ['product_id' => $product->id, 'quantity' => 1]],
+            'personal_cart_backup' => ['personal-item' => ['product_id' => $product->id, 'quantity' => 1]],
+        ])->get(route('checkout.index'))
+            ->assertRedirect(route('home'));
+        $this->assertSame(['personal-item' => ['product_id' => $product->id, 'quantity' => 1]], session('cart'));
     }
 
     public function test_scheduled_delivery_requires_prepaid_payment(): void

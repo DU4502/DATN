@@ -16,6 +16,7 @@ use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
 use App\Models\UserVoucher;
+use App\Notifications\GroupOrderCompletedNotification;
 use App\Services\OrderCodeGenerator;
 use App\Support\ShippingFee;
 use App\Support\AddressLearning;
@@ -38,6 +39,23 @@ class CheckoutController extends Controller
      */
     public function index(Request $request)
     {
+        $groupOrderId = session('checkout_group_order_id');
+        if ($groupOrderId) {
+            $groupOrder = \App\Models\GroupOrder::find($groupOrderId);
+            $canContinueGroupCheckout = $groupOrder
+                && (int) $groupOrder->owner_id === (int) auth()->id()
+                && $groupOrder->status === 'closed'
+                && ! $groupOrder->order_id;
+
+            if (! $canContinueGroupCheckout) {
+                session()->put('cart', session()->pull('personal_cart_backup', []));
+                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys', 'group_branch_id']);
+
+                return redirect()->route('home')
+                    ->with('success', 'Đơn nhóm này đã được đặt hoặc không còn chờ thanh toán.');
+            }
+        }
+
         $cart = session()->get('cart', []);
         $cart = $this->normalizeCartForCheckout($cart);
 
@@ -209,6 +227,8 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
+        $groupMemberUserIds = collect();
+        $completedGroupOrder = null;
         if ($request->filled('scheduled_at') && ! $request->filled('delivery_type')) {
             $request->merge([
                 'delivery_type' => 'scheduled',
@@ -290,16 +310,6 @@ class CheckoutController extends Controller
             'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
             'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
         ]);
-
-        if (
-            $request->input('fulfillment_type') === 'delivery'
-            && ! $this->hasHouseNumber($request->input('shipping_address_ui'))
-            && blank($request->input('note'))
-        ) {
-            throw ValidationException::withMessages([
-                'note' => 'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng để shipper dễ tìm.',
-            ]);
-        }
 
         $serviceDistance = $this->validateOrderServiceRadius(
             $request->input('fulfillment_type'),
@@ -459,6 +469,13 @@ class CheckoutController extends Controller
 
             if ($groupOrderId) {
                 $groupOrder->update(['order_id' => $order->id, 'status' => 'ordered']);
+                $completedGroupOrder = $groupOrder->fresh();
+                $groupMemberUserIds = $completedGroupOrder->members()
+                    ->whereNotNull('user_id')
+                    ->where('user_id', '!=', auth()->id())
+                    ->pluck('user_id')
+                    ->unique()
+                    ->values();
             }
 
             // Create order items
@@ -482,6 +499,13 @@ class CheckoutController extends Controller
             }
 
             DB::commit();
+
+            if ($completedGroupOrder && $groupMemberUserIds->isNotEmpty()) {
+                \App\Models\User::query()
+                    ->whereIn('id', $groupMemberUserIds)
+                    ->get()
+                    ->each(fn ($member) => $member->notify(new GroupOrderCompletedNotification($completedGroupOrder)));
+            }
 
             // Chỉ notify admin khi không phải VNPay (VNPay sẽ notify sau khi thanh toán thành công)
             if ($order->payment_method !== 'vnpay') {

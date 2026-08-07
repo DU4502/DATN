@@ -111,6 +111,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/group-orders', [GroupOrderController::class, 'store'])->name('group-orders.store');
     Route::post('/group-orders/{code}/close', [GroupOrderController::class, 'close'])->name('group-orders.close');
     Route::post('/group-orders/{code}/cancel', [GroupOrderController::class, 'cancel'])->name('group-orders.cancel');
+    Route::post('/group-orders/pending-checkout/resume', [GroupOrderController::class, 'resumePendingCheckout'])->name('group-orders.pending-checkout.resume');
     Route::post('/group-orders/{code}/resume', [GroupOrderController::class, 'resume'])->name('group-orders.resume');
     Route::get('/favorites', [QuickOrderController::class, 'favorites'])->name('favorites.index');
     Route::post('/favorites/{product}', [QuickOrderController::class, 'toggleFavorite'])->name('favorites.toggle');

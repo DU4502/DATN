@@ -9,7 +9,7 @@
     $memberCount = $group->members->count();
     $isFull = $memberCount >= \App\Models\GroupOrder::MAX_MEMBERS;
 @endphp
-<section class="group-page" data-vue-group-order-room data-presence-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.presence', $group->code, false) : '' }}" data-leave-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.leave', $group->code, false) : '' }}">
+<section class="group-page" data-vue-group-order-room data-presence-url="{{ $isOpen ? route('group-orders.presence', $group->code, false) : '' }}" data-leave-url="{{ $isOpen && auth()->id() === $group->owner_id ? route('group-orders.leave', $group->code, false) : '' }}">
     <div class="container group-shell">
         @if(session('success'))<div class="alert alert-success rounded-4 border-0 shadow-sm"><i class="bi bi-check-circle me-2"></i>{{ session('success') }}</div>@endif
         @if(session('error'))<div class="alert alert-danger rounded-4 border-0 shadow-sm"><i class="bi bi-exclamation-circle me-2"></i>{{ session('error') }}</div>@endif

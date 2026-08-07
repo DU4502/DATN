@@ -37,6 +37,11 @@ class ChatHelper
                 'subject' => 'Hỗ trợ đơn '.$order->displayCode(),
                 'status' => 'open',
             ]);
+        } else {
+            $conversation->update([
+                'order_id' => $order->id,
+                'subject' => 'Hỗ trợ đơn '.$order->displayCode(),
+            ]);
         }
 
         $typeLabels = [
