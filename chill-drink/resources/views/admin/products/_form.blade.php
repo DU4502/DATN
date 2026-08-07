@@ -253,7 +253,7 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                     $priceVal = $isChecked ? (int)$selectedSizes[$size->id] : $defaultPrice;
                     @endphp
                     <div class="col-sm-6">
-                        <div class="size-card {{ $isChecked ? 'active' : '' }}">
+                        <div class="size-card {{ $isChecked ? 'active' : '' }}" id="size_card_{{ $sName }}">
                             <div class="form-check mb-2.5">
                                 <input class="form-check-input custom-check-green size-checkbox" type="checkbox" name="sizes[]" value="{{ $size->id }}" id="size_{{ $size->id }}" data-size-name="{{ $sName }}" {{ $isChecked ? 'checked' : '' }}>
                                 <label class="form-check-label fw-bold text-dark fs-6" for="size_{{ $size->id }}">
@@ -269,7 +269,8 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                                     placeholder="Giá cộng thêm Size {{ $size->name }}"
                                     min="0"
                                     step="1000"
-                                    value="{{ old('size_prices.'.$size->id, $priceVal) }}">
+                                    value="{{ old('size_prices.'.$size->id, $priceVal) }}"
+                                    {{ !$isChecked ? 'disabled' : '' }}>
                                 <span class="input-group-text rounded-end-2">đ</span>
                             </div>
                             <div class="text-danger small mt-1 fw-bold size-error-msg" id="size_error_{{ $sName }}" style="display:none;"></div>
@@ -294,13 +295,13 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                     @endphp
                     @forelse($allToppings as $topping)
                     @php $isTopChecked = in_array($topping->id, $selectedToppings); @endphp
-                    <div class="col-6 col-md-3">
-                        <label class="topping-chip w-100 mb-0" for="topping_{{ $topping->id }}">
-                            <div class="d-flex align-items-center gap-2">
-                                <input class="form-check-input custom-check-green mt-0" type="checkbox" name="toppings[]" value="{{ $topping->id }}" id="topping_{{ $topping->id }}" {{ $isTopChecked ? 'checked' : '' }}>
-                                <span class="topping-label small text-truncate" style="max-width: 85px;">{{ $topping->name }}</span>
+                    <div class="col-6 col-md-4 col-lg-3">
+                        <label class="topping-chip w-100 mb-0 d-flex align-items-center justify-content-between p-2 rounded border" for="topping_{{ $topping->id }}">
+                            <div class="d-flex align-items-center gap-2 overflow-hidden me-1">
+                                <input class="form-check-input custom-check-green mt-0 flex-shrink-0" type="checkbox" name="toppings[]" value="{{ $topping->id }}" id="topping_{{ $topping->id }}" {{ $isTopChecked ? 'checked' : '' }}>
+                                <span class="topping-label small text-dark fw-semibold" title="{{ $topping->name }}">{{ $topping->name }}</span>
                             </div>
-                            <span class="text-success small fw-bold">+{{ (int)$topping->price >= 1000 ? (int)($topping->price/1000).'k' : number_format($topping->price).'đ' }}</span>
+                            <span class="text-success small fw-bold flex-shrink-0">+{{ number_format((int)$topping->price, 0, ',', '.') }}đ</span>
                         </label>
                     </div>
                     @empty
@@ -469,6 +470,21 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                 return true;
             }
         }
+
+        document.querySelectorAll('.size-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                const sName = cb.dataset.sizeName;
+                const priceInput = document.getElementById('size_price_input_' + sName);
+                const card = document.getElementById('size_card_' + sName);
+                if (priceInput) {
+                    priceInput.disabled = !cb.checked;
+                }
+                if (card) {
+                    card.classList.toggle('active', cb.checked);
+                }
+                validateSizePricesLive();
+            });
+        });
 
         if (inputM && inputL) {
             inputM.addEventListener('input', validateSizePricesLive);

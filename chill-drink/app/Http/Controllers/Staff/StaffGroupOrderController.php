@@ -17,10 +17,7 @@ class StaffGroupOrderController extends Controller
         }
 
         // Đơn nhóm thuộc chi nhánh (qua order.branch_id) hoặc chưa có order
-        return $query->where(function ($q) use ($user) {
-            $q->whereDoesntHave('order')
-              ->orWhereHas('order', fn ($o) => $o->where('branch_id', $user->branch_id));
-        });
+        return $query->where('branch_id', $user->branch_id);
     }
 
     public function index(Request $request)
@@ -65,7 +62,7 @@ class StaffGroupOrderController extends Controller
         $groupOrder->closeIfExpired();
 
         $user = auth()->user();
-        if ($user->branch_id && $groupOrder->order && $groupOrder->order->branch_id !== $user->branch_id) {
+        if (!$user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
             abort(403, 'Bạn không có quyền xem đơn nhóm này.');
         }
 
@@ -85,7 +82,7 @@ class StaffGroupOrderController extends Controller
 
         $user = auth()->user();
 
-        if ($user->branch_id && $groupOrder->order && $groupOrder->order->branch_id !== $user->branch_id) {
+        if (!$user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
             abort(403, 'Bạn không có quyền cập nhật đơn nhóm này.');
         }
 

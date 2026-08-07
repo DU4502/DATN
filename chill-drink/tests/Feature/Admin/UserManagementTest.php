@@ -21,7 +21,7 @@ class UserManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee($user->name);
         $response->assertDontSee('Thêm người dùng');
-        $response->assertSee('Nhân viên');
+        $response->assertSee('Quản trị viên');
     }
 
     public function test_admin_can_change_user_role_only(): void

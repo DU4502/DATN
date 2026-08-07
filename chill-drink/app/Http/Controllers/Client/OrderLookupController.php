@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Support\OrderStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class OrderLookupController extends Controller
 {
@@ -31,14 +32,20 @@ class OrderLookupController extends Controller
 
         $code = trim($request->input('order_code'));
 
-        // Tìm đơn theo order_code (không phân biệt hoa thường)
-        $order = Order::with(['orderItems.product', 'branch'])
-            ->whereRaw('LOWER(order_code) = ?', [strtolower($code)])
-            ->first();
+        $orderQuery = Order::with(['orderItems.product', 'branch']);
+
+        // Tìm theo order_code nếu schema đã có cột này.
+        if (Schema::hasColumn('orders', 'order_code')) {
+            $order = (clone $orderQuery)
+                ->whereRaw('LOWER(order_code) = ?', [strtolower($code)])
+                ->first();
+        } else {
+            $order = null;
+        }
 
         // Fallback: nhập #id cũ (đơn trước khi có order_code)
         if (! $order && preg_match('/^#?(\d+)$/', $code, $m)) {
-            $order = Order::with(['orderItems.product', 'branch'])
+            $order = (clone $orderQuery)
                 ->where('id', (int) $m[1])
                 ->first();
         }

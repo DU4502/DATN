@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class StaffOrderController extends Controller
@@ -88,7 +89,7 @@ class StaffOrderController extends Controller
         $user  = auth()->user();
 
         // Nhân viên chỉ cập nhật đơn hàng thuộc chi nhánh mình
-        if ($user->branch_id && $order->branch_id !== $user->branch_id) {
+        if (!$user->branch_id || (int) $order->branch_id !== (int) $user->branch_id) {
             abort(403, 'Bạn không có quyền cập nhật đơn hàng của chi nhánh khác.');
         }
 
@@ -111,19 +112,39 @@ class StaffOrderController extends Controller
 
         $oldStatus = $order->status;
 
-        $order->status            = $newStatus;
-        $order->status_changed_at = now();
-        $order->status_changed_by = $user->id;
+        DB::transaction(function () use ($order, $newStatus, $oldStatus, $request, $user) {
+            $order->status            = $newStatus;
+            $order->status_changed_at = now();
+            $order->status_changed_by = $user->id;
 
-        if ($newStatus === OrderStatus::CANCELLED) {
-            $order->cancellation_reason = $request->cancellation_reason;
-        }
+            if ($newStatus === OrderStatus::CANCELLED) {
+                $order->cancellation_reason = $request->cancellation_reason;
+            }
 
-        if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
-            $order->delivered_at = now();
-        }
+            if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
+                $order->delivered_at = now();
+            }
 
-        $order->save();
+            $order->save();
+
+            if ($newStatus === OrderStatus::CANCELLED && $oldStatus !== OrderStatus::CANCELLED) {
+                foreach ($order->orderItems as $item) {
+                    if ($item->product) {
+                        $item->product->increment('stock', $item->quantity);
+                    }
+                }
+
+                if ($order->coupon_id) {
+                    \App\Models\Voucher::where('id', $order->coupon_id)
+                        ->where('used_count', '>', 0)
+                        ->decrement('used_count');
+                }
+
+                if ($oldStatus === OrderStatus::COMPLETED) {
+                    $order->revokeLoyaltyPoints();
+                }
+            }
+        });
 
         if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
             $order->payment_status = 'paid';

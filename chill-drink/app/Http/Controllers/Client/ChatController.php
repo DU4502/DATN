@@ -228,8 +228,11 @@ class ChatController extends Controller
             // Tìm staff user để gán làm sender cho tin nhắn Bot
             $staffUser = User::whereIn('role_id', [2, 3, 4])
                 ->where('branch_id', $branch->id)
+                ->where('is_active', true)
                 ->first()
-                ?? User::whereIn('role_id', [2, 3, 4])->first();
+                ?? User::whereIn('role_id', [2, 3, 4])
+                    ->where('is_active', true)
+                    ->first();
 
             if ($staffUser) {
                 $branchNameFormatted = Str::startsWith($branch->name, 'Chi nhánh')
@@ -250,7 +253,12 @@ class ChatController extends Controller
 
                 try {
                     broadcast(new MessageSent($systemMessage))->toOthers();
-                } catch (\Throwable) {}
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('Chat Broadcast Error: ' . $e->getMessage(), [
+                        'message_id' => $systemMessage->id,
+                        'conversation_id' => $conversation->id,
+                    ]);
+                }
             }
         }
 
@@ -277,7 +285,11 @@ class ChatController extends Controller
 
         try {
             broadcast(new ConversationClosed($conversation, 'client'))->toOthers();
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('ConversationClosed Broadcast Error: ' . $e->getMessage(), [
+                'conversation_id' => $conversation->id,
+            ]);
+        }
 
         return response()->json([
             'success' => true,
@@ -365,8 +377,10 @@ class ChatController extends Controller
         $attachmentName = null;
 
         if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')->store('chat-attachments', 'public');
-            $attachmentName = $request->file('attachment')->getClientOriginalName();
+            $file = $request->file('attachment');
+            $cleanName = strip_tags($file->getClientOriginalName());
+            $attachmentName = preg_replace('/[^\w\s\.-]/u', '_', $cleanName);
+            $attachmentPath = $file->store('chat-attachments', 'public');
         }
 
         $messageData = [
@@ -394,7 +408,12 @@ class ChatController extends Controller
 
         try {
             broadcast(new MessageSent($message))->toOthers();
-        } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Chat Broadcast Error: ' . $e->getMessage(), [
+                'message_id' => $message->id,
+                'conversation_id' => $message->conversation_id,
+            ]);
+        }
 
         return response()->json([
             'success' => true,

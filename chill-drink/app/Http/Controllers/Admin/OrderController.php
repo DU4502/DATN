@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
+use App\Support\AddressLearning;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class OrderController extends Controller
@@ -138,11 +140,22 @@ class OrderController extends Controller
     public function recent(Request $request): JsonResponse
     {
         $afterId = max(0, (int) $request->query('after_id', 0));
+        $updatedAfter = $request->query('updated_after');
 
         $orders = Order::query()
             ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
-            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
-            ->when($afterId > 0, fn ($query) => $query->where('id', '>', $afterId));
+            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+
+        if ($afterId > 0 || $updatedAfter) {
+            $orders->where(function ($query) use ($afterId, $updatedAfter) {
+                if ($afterId > 0) {
+                    $query->where('id', '>', $afterId);
+                }
+                if ($updatedAfter && Schema::hasColumn('orders', 'updated_at')) {
+                    $query->orWhere('updated_at', '>', $updatedAfter);
+                }
+            });
+        }
         
         // Apply branch scope
         $orders = $this->applyBranchScope($orders);
@@ -197,7 +210,7 @@ class OrderController extends Controller
                 ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên')
                 : null,
             'next_status' => OrderStatus::nextStatus((string) $order->status, $fulfillmentType),
-            'can_cancel' => ! in_array(OrderStatus::normalize((string) $order->status), [OrderStatus::COMPLETED, OrderStatus::CANCELLED], true),
+            'can_cancel' => OrderStatus::normalize((string) $order->status) !== OrderStatus::CANCELLED,
             'status_options' => OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
             'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
@@ -317,8 +330,10 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
         }
 
-        $oldStatus = $order->status;
-        $order->status = $newStatus;
+        $oldStatus = OrderStatus::normalize((string) $order->status);
+
+        DB::transaction(function () use ($order, $newStatus, $oldStatus, $request) {
+            $order->status = $newStatus;
         
         // Lưu thông tin người thay đổi trạng thái
         $order->status_changed_at = now();
@@ -336,7 +351,33 @@ class OrderController extends Controller
         
         $order->save();
 
+        // Xử lý khi đơn bị hủy: hoàn tồn kho, giảm used_count voucher, thu hồi điểm nếu trước đó completed
+        if ($newStatus === OrderStatus::CANCELLED && $oldStatus !== OrderStatus::CANCELLED) {
+            DB::transaction(function () use ($order, $oldStatus) {
+                foreach ($order->orderItems as $item) {
+                    if ($item->product) {
+                        $item->product->increment('stock', $item->quantity);
+                    }
+                }
+
+                if ($order->coupon_id) {
+                    \App\Models\Voucher::where('id', $order->coupon_id)
+                        ->where('used_count', '>', 0)
+                        ->decrement('used_count');
+                }
+
+                if ($oldStatus === OrderStatus::COMPLETED) {
+                    $order->revokeLoyaltyPoints();
+                }
+            });
+        }
+        if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
+            app(AddressLearning::class)->markOrderDelivered($order->fresh());
+        }
+
         // Nếu chuyển sang COMPLETED, cập nhật payment_status cho COD và cộng điểm thưởng
+        });
+
         if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
             $order->payment_status = 'paid';
             $order->save();
@@ -350,7 +391,7 @@ class OrderController extends Controller
         RealtimeOrderNotifier::orderStatusUpdated($order);
 
         $statusLabel = OrderStatus::label($newStatus);
-        
+
         // Return JSON for AJAX requests
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
@@ -361,7 +402,6 @@ class OrderController extends Controller
                 'status_label' => $statusLabel,
             ]);
         }
-        
         return redirect()->back()->with('success', "Đã cập nhật trạng thái đơn hàng thành: {$statusLabel}");
     }
 

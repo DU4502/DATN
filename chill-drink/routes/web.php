@@ -87,11 +87,11 @@ Broadcast::routes(['middleware' => ['web', 'auth']]);
 
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-    Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-    Route::post('/checkout/addresses', [CheckoutController::class, 'storeAddress'])->name('checkout.addresses.store');
-    Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->name('checkout.addresses.update');
-    Route::patch('/checkout/address/primary', [CheckoutController::class, 'updatePrimaryAddress'])->name('checkout.addresses.primary.update');
+    Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('verified')->name('checkout.index');
+    Route::post('/checkout/process', [CheckoutController::class, 'process'])->middleware('verified')->name('checkout.process');
+    Route::post('/checkout/addresses', [CheckoutController::class, 'storeAddress'])->middleware('verified')->name('checkout.addresses.store');
+    Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->middleware('verified')->name('checkout.addresses.update');
+    Route::patch('/checkout/address/primary', [CheckoutController::class, 'updatePrimaryAddress'])->middleware('verified')->name('checkout.addresses.primary.update');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
 
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
@@ -126,7 +126,9 @@ Route::prefix('chat')->name('chat.')->group(function () {
     Route::post('/guest-init', [ChatController::class, 'guestInit'])->name('guest-init');
     Route::post('/select-branch', [ChatController::class, 'selectBranch'])->name('select-branch');
     Route::get('/messages', [ChatController::class, 'messages'])->name('messages');
-    Route::post('/send', [ChatController::class, 'send'])->name('send');
+    Route::post('/send', [ChatController::class, 'send'])
+        ->middleware('throttle:15,1')
+        ->name('send');
     Route::post('/end-session', [ChatController::class, 'endSession'])->name('end-session');
 });
 
@@ -189,9 +191,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/profile/data-export', [ProfileController::class, 'exportData'])->name('profile.data-export');
     
+    // Address Book Management
+    Route::get('/profile/addresses', [\App\Http\Controllers\Client\ProfileAddressController::class, 'index'])->name('profile.addresses.index');
+    Route::post('/profile/addresses', [\App\Http\Controllers\Client\ProfileAddressController::class, 'store'])->name('profile.addresses.store');
+    Route::put('/profile/addresses/{address}', [\App\Http\Controllers\Client\ProfileAddressController::class, 'update'])->name('profile.addresses.update');
+    Route::delete('/profile/addresses/{address}', [\App\Http\Controllers\Client\ProfileAddressController::class, 'destroy'])->name('profile.addresses.destroy');
+    Route::patch('/profile/addresses/{address}/set-default', [\App\Http\Controllers\Client\ProfileAddressController::class, 'setDefault'])->name('profile.addresses.set-default');
+
     // Loyalty Points
-    Route::get('/loyalty-points', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'index'])->name('loyalty.index');
-    Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
+    Route::middleware('verified')->group(function () {
+        Route::get('/loyalty-points', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'index'])->name('loyalty.index');
+        Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
+    });
 });
 
 Route::view('/dieu-khoan', 'legal.page', ['page' => 'terms'])->name('legal.terms');
@@ -210,9 +221,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::post('/super-admin/staff', [SuperAdminController::class, 'storeStaff'])->name('super-admin.staff.store');
     Route::patch('/super-admin/admins/{user}/branch', [SuperAdminController::class, 'updateBranch'])->name('super-admin.update-branch');
     Route::patch('/super-admin/admins/{user}/role', [SuperAdminController::class, 'updateRole'])->name('super-admin.update-role');
+    Route::post('/super-admin/admins/{user}/reset-password', [SuperAdminController::class, 'resetAdminPassword'])->name('super-admin.reset-password');
+    Route::post('/super-admin/impersonate/{user}', [SuperAdminController::class, 'impersonate'])->name('super-admin.impersonate');
+    Route::post('/super-admin/leave-impersonation', [SuperAdminController::class, 'leaveImpersonation'])->name('super-admin.leave-impersonation');
     Route::patch('/super-admin/staff/{user}/branch', [SuperAdminController::class, 'updateStaffBranch'])->name('super-admin.staff.update-branch');
     Route::patch('/super-admin/staff/{user}/toggle-status', [SuperAdminController::class, 'toggleStaffStatus'])->name('super-admin.staff.toggle-status');
     Route::delete('/super-admin/staff/{user}', [SuperAdminController::class, 'destroyStaff'])->name('super-admin.staff.destroy');
+    Route::get('/preview/admin', [SuperAdminController::class, 'enterAdminWorkspace'])->name('preview-admin');
+    Route::get('/preview/admin/exit', [SuperAdminController::class, 'exitAdminWorkspace'])->name('preview-admin.exit');
+
     
     // Branch Management
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
@@ -226,6 +243,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/export', [DashboardController::class, 'exportTimeComparison'])->name('dashboard.export');
 
     // JSON endpoint for dashboard data (AJAX)
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('admin.dashboard.data');
@@ -260,8 +278,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 
     // Review Management
     Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+    Route::patch('/reviews/{review}/status', [ReviewController::class, 'toggleStatus'])->name('reviews.toggle-status');
 
     // User Management
+    Route::patch('/users/bulk-toggle-status', [UserController::class, 'bulkToggleStatus'])->name('users.bulk-toggle-status');
     Route::patch('/users/{user}/status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
     Route::resource('users', UserController::class)->only(['index', 'show', 'edit', 'update']);
 

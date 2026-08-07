@@ -107,22 +107,12 @@ class GuestConvertController extends Controller
             return;
         }
 
-        $existing = DB::table('loyalty_points')->where('user_id', $userId)->first();
-
-        if ($existing) {
-            DB::table('loyalty_points')
-                ->where('user_id', $userId)
-                ->increment('total_points', $points);
-
-            return;
-        }
-
-        DB::table('loyalty_points')->insert([
-            'user_id' => $userId,
-            'total_points' => $points,
-            'level' => 'bronze',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        \App\Models\LoyaltyPoint::getOrCreateForUser($userId)->addPoints(
+            points: $points,
+            type: 'earn',
+            description: "Tích điểm từ đơn hàng chuyển đổi #{$order->id}",
+            referenceType: 'order',
+            referenceId: $order->id
+        );
     }
 }

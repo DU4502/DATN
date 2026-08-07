@@ -309,7 +309,7 @@ class QuickOrderFeaturesTest extends TestCase
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
         $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
-        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'status' => true]);
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 21.0285, 'longitude' => 105.8542, 'status' => true]);
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
@@ -323,6 +323,7 @@ class QuickOrderFeaturesTest extends TestCase
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
             'shipping_phone_ui' => '0987654321',
+            'latitude' => 21.0285, 'longitude' => 105.8542,
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
 

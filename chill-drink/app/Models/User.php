@@ -19,6 +19,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
         'plain_password',
         'google_id',
@@ -116,6 +117,29 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return (int) ($this->role_id ?? 1) === 3
             || strcasecmp((string) $this->email, self::SUPER_ADMIN_EMAIL) === 0;
+    }
+
+    public function isViewingAdminWorkspace(): bool
+    {
+        return $this->isSuperAdmin() && (bool) session('super_admin_admin_view', false);
+    }
+
+    public function adminWorkspaceBranchId(): ?int
+    {
+        if (! $this->isViewingAdminWorkspace()) {
+            return null;
+        }
+
+        $branchId = session('super_admin_preview_branch_id');
+
+        return is_numeric($branchId) ? (int) $branchId : null;
+    }
+
+    public function preferredAdminLayout(): string
+    {
+        return $this->isSuperAdmin() && ! $this->isViewingAdminWorkspace()
+            ? 'layouts.super-admin'
+            : 'layouts.admin';
     }
 
     public function canMonitorChat(): bool
@@ -252,6 +276,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
         // For staff: chỉ đếm tin nhắn từ KHÁCH HÀNG (role_id = 1) chưa đọc.
         // Không đếm tin nhắn từ staff khác để tránh đếm nhầm sau khi fix markMessagesAsRead.
+        if (!$this->isSuperAdmin() && !$this->branch_id) {
+            return 0;
+        }
+
         $query = Conversation::whereHas('user', fn ($c) => $c->customers())
             ->where('status', 'open');
 

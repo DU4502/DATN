@@ -193,6 +193,10 @@ final class OrderStatus
         $to = self::normalize($to);
 
         // Không thể thay đổi nếu đã ở trạng thái cuối
+        if ($from === self::COMPLETED && $to === self::CANCELLED) {
+            return true;
+        }
+
         if (in_array($from, [self::COMPLETED, self::CANCELLED], true)) {
             return false;
         }
@@ -233,8 +237,15 @@ final class OrderStatus
         $current = self::normalize($current);
         $labels = self::labels();
 
-        if (in_array($current, [self::COMPLETED, self::CANCELLED], true)) {
+        if ($current === self::CANCELLED) {
             return [$current => $labels[$current]];
+        }
+
+        if ($current === self::COMPLETED) {
+            return [
+                $current => $labels[$current],
+                self::CANCELLED => $labels[self::CANCELLED],
+            ];
         }
 
         $sequence = self::getSequence($fulfillmentType);
@@ -253,7 +264,7 @@ final class OrderStatus
         }
 
         // Thêm tùy chọn hủy nếu được phép
-        if (in_array($current, [self::PENDING, self::CONFIRMED, self::PREPARING], true)) {
+        if (in_array($current, [self::PENDING, self::CONFIRMED, self::PREPARING, self::COMPLETED], true)) {
             $options[self::CANCELLED] = $labels[self::CANCELLED];
         }
 
@@ -284,7 +295,12 @@ final class OrderStatus
         $options[$current] = $currentLabel;
         
         // Nếu đã completed hoặc cancelled, không cho phép thay đổi
-        if (in_array($current, [self::COMPLETED, self::CANCELLED], true)) {
+        if ($current === self::COMPLETED) {
+            $options[self::CANCELLED] = $labels[self::CANCELLED];
+            return $options;
+        }
+
+        if ($current === self::CANCELLED) {
             return $options;
         }
         
@@ -314,6 +330,10 @@ final class OrderStatus
         $to = self::normalize($to);
 
         // Không cho phép thay đổi nếu đã hoàn thành hoặc đã hủy
+        if ($from === self::COMPLETED && $to === self::CANCELLED) {
+            return true;
+        }
+
         if (in_array($from, [self::COMPLETED, self::CANCELLED], true)) {
             return $to === $from;
         }
