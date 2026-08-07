@@ -189,23 +189,16 @@
     .sa-control { min-width: 0; height: var(--sa-control-height); border: 1px solid var(--sa-border); border-radius: 12px; padding: 0 0.9rem; background: #fff; color: var(--sa-ink); font-size: 0.9rem; outline: 0; }
     .sa-control:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,0.1); }
     .sa-filter-actions { display: flex; gap: 0.7rem; }
-    .sa-branch-compare-header { min-height: 0; padding: 0.72rem 0.85rem; align-items: center; gap: 0.7rem; border-bottom: 1px solid var(--sa-border); }
-    .sa-branch-compare-header-copy { min-width: 150px; display: grid; gap: 0.14rem; }
-    .sa-branch-compare-title { margin: 0; color: var(--sa-ink); font-size: 0.94rem; font-weight: 900; line-height: 1.2; }
-    .sa-branch-compare-subtitle { color: var(--sa-muted); font-size: 0.7rem; line-height: 1.2; }
-    .sa-branch-compare-tools { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 0.55rem; margin-left: auto; }
-    .sa-branch-period-group { min-width: 0; display: inline-flex; align-items: center; gap: 0.42rem; }
-    .sa-branch-period-label { color: var(--sa-muted); font-size: 0.7rem; font-weight: 800; white-space: nowrap; }
-    .sa-branch-period-switcher { display: inline-flex; align-items: center; gap: 0.12rem; padding: 0.16rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #f8faf9; white-space: nowrap; }
-    .sa-branch-period-link { min-height: 32px; padding: 0.32rem 0.64rem; border-radius: 8px; font-size: 0.74rem; line-height: 1; box-shadow: none; }
-    .sa-branch-compare-form { padding: 0.62rem 0.85rem; gap: 0.55rem; align-items: end; background: #fbfcfb; }
-    .sa-branch-compare-form-compact { grid-template-columns: minmax(280px, 1.6fr) minmax(180px, 0.58fr) auto; }
-    .sa-branch-compare-form-range { grid-template-columns: minmax(138px, 0.46fr) minmax(138px, 0.46fr) minmax(230px, 1.2fr) minmax(170px, 0.58fr) auto; }
-    .sa-branch-filter-field label { display: block; margin: 0 0 0.24rem; color: var(--sa-muted); font-size: 0.68rem; font-weight: 800; line-height: 1; }
-    .sa-branch-filter-field .sa-control { height: 38px; border-radius: 9px; font-size: 0.82rem; }
-    .sa-branch-compare-actions { justify-content: flex-end; align-self: end; gap: 0.42rem; white-space: nowrap; }
-    .sa-branch-compare-actions .sa-btn { min-height: 38px; padding: 0.38rem 0.72rem; border-radius: 9px; font-size: 0.78rem; }
-    .sa-branch-add-btn { min-height: 34px; padding: 0.34rem 0.72rem; border-radius: 9px; white-space: nowrap; font-size: 0.78rem; }
+    .sa-branch-compare-header { min-height: 0; padding: 0.7rem 0.85rem 0.55rem; align-items: flex-start; gap: 0.65rem; }
+    .sa-branch-compare-header-copy { min-width: 0; display: grid; gap: 0.24rem; }
+    .sa-branch-compare-title { margin: 0; color: var(--sa-ink); font-size: 0.92rem; font-weight: 900; line-height: 1.2; }
+    .sa-branch-compare-meta { display: flex; flex-wrap: wrap; gap: 0.28rem; }
+    .sa-branch-compare-meta .sa-state { padding: 0.26rem 0.5rem; font-size: 0.68rem; line-height: 1.1; }
+    .sa-branch-compare-tools { display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.45rem; flex-wrap: nowrap; margin-left: auto; }
+    .sa-branch-period-switcher { display: inline-flex; align-items: center; gap: 0.22rem; padding: 0.18rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; white-space: nowrap; }
+    .sa-branch-period-link { min-height: 34px; padding: 0.34rem 0.72rem; border-radius: 999px; font-size: 0.76rem; line-height: 1; }
+    .sa-branch-compare-form { padding: 0.7rem 0.85rem; grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(120px, 0.62fr)) auto; gap: 0.55rem; align-items: end; }
+    .sa-branch-compare-actions { justify-content: flex-end; align-self: end; white-space: nowrap; }
     .sa-branch-compare-summary { padding: 0.5rem 0.85rem 0.2rem; display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: nowrap; }
     .sa-branch-compare-summary-text { color: var(--sa-muted); font-size: 0.72rem; white-space: nowrap; }
     .sa-branch-compare-summary-meta { display: inline-flex; align-items: center; gap: 0.28rem; flex-wrap: nowrap; white-space: nowrap; }
@@ -549,29 +542,12 @@
     .legacy-analytics-period-row { display: grid; gap: 0.55rem; }
     .legacy-analytics-summary { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #ebf1ef; color: var(--sa-muted); font-size: 0.8rem; font-weight: 750; line-height: 1.5; }
     .legacy-analytics-summary-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .legacy-analytics-bar--compact { padding: 0.62rem 0.78rem; border-radius: 14px; }
-    .legacy-analytics-form--compact { display: block; }
-    .legacy-analytics-toolbar { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
-    .legacy-analytics-toolbar-title { min-width: 185px; display: inline-flex; align-items: center; gap: 0.42rem; color: var(--sa-ink); font-size: 0.82rem; font-weight: 900; white-space: nowrap; }
-    .legacy-analytics-toolbar-title i { color: var(--sa-green); font-size: 0.9rem; }
-    .legacy-analytics-bar--compact .legacy-analytics-presets { margin-left: auto; padding: 0.14rem; border-radius: 12px; }
-    .legacy-analytics-bar--compact .legacy-analytics-period-btn { min-height: 31px; padding: 0.34rem 0.62rem; border-radius: 9px; font-size: 0.72rem; }
-    .legacy-analytics-actions--compact { width: auto !important; margin-left: 0.1rem; gap: 0.35rem; flex: 0 0 auto; }
-    .legacy-analytics-actions--compact .sa-btn { min-height: 33px; padding: 0.34rem 0.62rem; border-radius: 9px; font-size: 0.72rem; }
-    .legacy-analytics-filter-plain { order: 1; width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
-    .legacy-analytics-filter-plain .legacy-analytics-toolbar { justify-content: flex-end; padding: 0; }
-    .legacy-analytics-filter-plain .legacy-analytics-presets { margin-left: 0; }
-    .legacy-analytics-filter-plain .legacy-analytics-range-row { margin-top: 0.45rem; padding: 0.45rem 0 0; }
-    .legacy-overview[data-business-overview-region].is-refreshing,
-    .sa-business-section[data-business-analysis-region].is-refreshing,
-    .legacy-top-products[data-top-products-region].is-refreshing { pointer-events: none; cursor: progress; }
-    .legacy-analytics-range-row { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #edf2f0; }
-    .legacy-analytics-range-row .legacy-analytics-range { max-width: 420px; margin-left: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .legacy-analytics-range-row .legacy-analytics-control { height: 36px; border-radius: 9px; font-size: 0.76rem; }
-    .legacy-analytics-range-row .legacy-analytics-label { margin-bottom: 0.2rem; font-size: 0.66rem; }
     @media (min-width: 1400px) {
+        .legacy-analytics-form > .legacy-analytics-field--compare { grid-column: 1 / span 4; grid-row: 1; }
+        .legacy-analytics-form > .legacy-analytics-field--branch { grid-column: 5 / span 5; grid-row: 1; }
         .legacy-analytics-form > .legacy-analytics-actions { grid-column: 10 / -1; grid-row: 1; width: auto; align-self: end; justify-self: end; }
-        .legacy-analytics-form > .legacy-analytics-period-row { grid-column: 1 / span 8; grid-row: 1; }
+        .legacy-analytics-form > .legacy-analytics-period-row { grid-column: 1 / -1; grid-row: 2; }
+        .legacy-analytics-form > .legacy-analytics-compare-grid { grid-column: 1 / -1; grid-row: 3; }
     }
     .sa-branch-scope { position: relative; min-width: 0; }
     .sa-branch-scope-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0 0.85rem; text-align: left; }
@@ -607,11 +583,6 @@
     .legacy-top-products-header { padding: 0.8rem 0.9rem 0.65rem; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; border-bottom: 1px solid var(--sa-border); }
     .legacy-top-products-title { margin: 0; color: var(--sa-ink); font-size: 0.84rem; font-weight: 850; }
     .legacy-top-products-actions { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; justify-content: flex-end; }
-    .legacy-top-products-branch-filter { position: relative; display: inline-flex; align-items: center; min-width: 158px; }
-    .legacy-top-products-branch-filter i { position: absolute; left: 0.7rem; color: var(--sa-green); font-size: 0.78rem; pointer-events: none; z-index: 1; }
-    .legacy-top-products-branch-select { width: 100%; height: 34px; padding: 0 2rem 0 1.9rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff; color: var(--sa-ink); font-size: 0.72rem; font-weight: 800; outline: 0; cursor: pointer; appearance: auto; }
-    .legacy-top-products-branch-select:hover { border-color: rgba(13,147,115,.38); background: #fbfffd; }
-    .legacy-top-products-branch-select:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,.09); }
     .legacy-top-products-action { min-height: 36px; padding: 0.34rem 0.75rem; border: 1px solid var(--sa-border); border-radius: 999px; background: #fff; color: var(--sa-muted); font-size: 0.72rem; font-weight: 800; text-decoration: none; }
     .legacy-top-products-action.active { border-color: var(--sa-green); background: var(--sa-green); color: #fff; }
     .legacy-top-products-list { padding: 0.65rem 0.85rem 0.85rem; display: grid; gap: 0.4rem; }
@@ -690,8 +661,6 @@
     .sa-quick-section { order: 3; }
     .sa-business-section { order: 4; }
     .sa-supplemental-section { order: 5; }
-    .sa-ops-grid { order: 90; }
-    .sa-health-section { order: 100; }
     .legacy-analytics-head { gap: 1rem; margin-bottom: 0.75rem; align-items: center; flex-wrap: nowrap; }
     .legacy-analytics-presets { gap: 0.16rem; padding: 0.2rem; }
     .legacy-analytics-period-btn { padding: 0.56rem 0.74rem; font-size: 0.78rem; }
@@ -733,52 +702,6 @@
     .sa-quick-branch-metric { text-align: right; }
     .sa-quick-branch-metric strong { display: block; color: var(--sa-green); font-size: 0.88rem; font-weight: 900; }
     .sa-quick-branch-metric span { display: block; margin-top: 0.08rem; color: var(--sa-muted); font-size: 0.7rem; }
-
-    /* Tổng quan nhanh: biểu đồ cột doanh thu theo chi nhánh/thời gian, độc lập với bộ lọc khác. */
-    .sa-revenue-trend-card { position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
-    .sa-revenue-trend-card.is-refreshing { cursor: progress; }
-    .sa-revenue-trend-card.is-refreshing::after { content: ''; position: absolute; z-index: 45; left: 0; top: 0; height: 2px; width: 34%; border-radius: 999px; background: var(--sa-green); animation: saQuickTrendLoading .72s ease-in-out infinite alternate; pointer-events: none; }
-    @keyframes saQuickTrendLoading { from { transform: translateX(-25%); opacity: .4; } to { transform: translateX(220%); opacity: 1; } }
-    .sa-revenue-trend-head { position: relative; display: grid; gap: 0.48rem; padding: 0.72rem 0.78rem 0.62rem; border-bottom: 1px solid var(--sa-border); }
-    .sa-revenue-trend-toolbar { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex-wrap: nowrap; }
-    .sa-revenue-trend-title-wrap { min-width: max-content; margin-right: auto; }
-    .sa-revenue-trend-title { margin: 0; color: var(--sa-ink); font-size: 0.84rem; font-weight: 900; white-space: nowrap; }
-    .sa-revenue-trend-branch { position: relative; flex: 0 0 154px; min-width: 0; }
-    .sa-revenue-trend-branch i { position: absolute; left: 0.62rem; top: 50%; transform: translateY(-50%); color: var(--sa-green); font-size: 0.7rem; pointer-events: none; }
-    .sa-revenue-trend-select { width: 100%; height: 31px; padding: 0 1.65rem 0 1.62rem; border: 1px solid var(--sa-border); border-radius: 9px; background: #fff; color: var(--sa-ink); font-size: 0.67rem; font-weight: 800; outline: 0; }
-    .sa-revenue-trend-select:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,.08); }
-    .sa-revenue-trend-periods { display: flex; align-items: center; gap: 0.08rem; padding: 0.12rem; border: 1px solid #e5ebe8; border-radius: 9px; background: #f7faf9; flex: 0 0 auto; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-    .sa-revenue-trend-periods::-webkit-scrollbar { display: none; }
-    .sa-revenue-trend-period { flex: 0 0 auto; min-height: 27px; padding: 0.28rem 0.46rem; border: 0; border-radius: 7px; background: transparent; color: #4b5563; font-size: 0.64rem; font-weight: 850; cursor: pointer; white-space: nowrap; }
-    .sa-revenue-trend-period:hover { color: var(--sa-green-dark); background: #eef8f4; }
-    .sa-revenue-trend-period.active { background: var(--sa-green); color: #fff; box-shadow: none; }
-    .sa-revenue-trend-range { position: absolute; z-index: 35; top: calc(100% - 0.18rem); right: 0.78rem; width: min(360px, calc(100% - 1.56rem)); padding: 0.72rem; border: 1px solid #dce8e4; border-radius: 12px; background: #fff; box-shadow: 0 16px 36px rgba(15, 23, 42, .14); }
-    .sa-revenue-trend-range::before { content: ''; position: absolute; top: -6px; right: 18px; width: 11px; height: 11px; border-left: 1px solid #dce8e4; border-top: 1px solid #dce8e4; background: #fff; transform: rotate(45deg); }
-    .sa-revenue-trend-range[hidden] { display: none !important; }
-    .sa-revenue-trend-range-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.58rem; }
-    .sa-revenue-trend-range-title { margin: 0; color: var(--sa-ink); font-size: 0.72rem; font-weight: 900; }
-    .sa-revenue-trend-range-close { width: 27px; height: 27px; border: 0; border-radius: 8px; background: #f4f7f6; color: #66736d; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-    .sa-revenue-trend-range-close:hover { background: #eaf5f1; color: var(--sa-green-dark); }
-    .sa-revenue-trend-range-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.48rem; }
-    .sa-revenue-trend-range-field label { display: block; margin-bottom: 0.2rem; color: var(--sa-muted); font-size: 0.62rem; font-weight: 800; }
-    .sa-revenue-trend-range-field input { width: 100%; height: 34px; border: 1px solid var(--sa-border); border-radius: 9px; padding: 0 0.55rem; color: var(--sa-ink); background: #fff; font-size: 0.67rem; outline: 0; }
-    .sa-revenue-trend-range-field input:focus { border-color: var(--sa-green); box-shadow: 0 0 0 3px rgba(13,147,115,.07); }
-    .sa-revenue-trend-range-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.38rem; margin-top: 0.62rem; padding-top: 0.55rem; border-top: 1px solid #edf2f0; }
-    .sa-revenue-trend-range-actions .sa-btn { min-height: 31px; padding: 0.3rem 0.62rem; border-radius: 8px; font-size: 0.67rem; }
-    .sa-revenue-trend-body { padding: 0.72rem 0.78rem 0.78rem; flex: 1; min-height: 0; display: flex; }
-    .sa-revenue-trend-chart { position: relative; width: 100%; height: auto; min-height: 205px; flex: 1 1 auto; padding: 1.15rem 0.7rem 1.9rem; border: 1px dashed #dce6e2; border-radius: 12px; background: linear-gradient(180deg, #f3fbf8 0%, rgba(247,250,249,.38) 100%); overflow: hidden; }
-    .sa-revenue-trend-bars { height: 100%; display: flex; align-items: end; justify-content: space-between; gap: 0.42rem; }
-    .sa-revenue-trend-bars.is-sparse { justify-content: center; gap: clamp(1rem, 4vw, 2.5rem); }
-    .sa-revenue-trend-bars.is-sparse .sa-revenue-trend-col { flex: 0 1 118px; max-width: 118px; }
-    .sa-revenue-trend-bars.is-dense { min-width: max(100%, 760px); }
-    .sa-revenue-trend-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
-    .sa-revenue-trend-bar-wrap { width: min(52px, 72%); height: 100%; display: flex; align-items: end; }
-    .sa-revenue-trend-bar { width: 100%; min-height: 3px; border-radius: 7px 7px 0 0; background: linear-gradient(180deg, #9fdecf 0%, #16a37f 100%); opacity: .88; transition: height .2s ease, transform .16s ease, opacity .16s ease; cursor: pointer; }
-    .sa-revenue-trend-col:hover .sa-revenue-trend-bar { opacity: 1; transform: translateY(-2px); }
-    .sa-revenue-trend-bar.is-zero { height: 3px !important; min-height: 3px; background: #dce8e4; opacity: 1; }
-    .sa-revenue-trend-label { position: absolute; top: calc(100% + 0.48rem); left: 50%; transform: translateX(-50%); max-width: 76px; color: #596660; font-size: 0.59rem; font-weight: 750; line-height: 1.15; white-space: nowrap; }
-    .sa-revenue-trend-empty { width: 100%; min-height: 205px; flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.35rem; border: 1px dashed #dce6e2; border-radius: 12px; background: #f8fbfa; color: var(--sa-muted); font-size: 0.72rem; text-align: center; }
-    .sa-revenue-trend-empty i { color: #9bb8ae; font-size: 1.2rem; }
     .sa-analytics-shell { padding: 1rem; background: linear-gradient(180deg, #fbfffd 0%, #ffffff 100%); }
     .sa-analytics-tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; padding-bottom: 0.15rem; border-bottom: 1px solid #ebf1ef; }
     .sa-analytics-tab { min-height: 42px; padding: 0.6rem 0.88rem; border: 1px solid var(--sa-border); border-radius: 12px; background: #f7faf9; color: var(--sa-muted); font-size: 0.8rem; font-weight: 800; cursor: pointer; transition: all 0.18s ease; }
@@ -795,32 +718,11 @@
     .sa-ops-grid { display: grid; gap: 1rem; }
     .sa-health-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr); gap: 1rem; }
 
-    /* Tổng quan: bộ lọc kinh doanh gọn trên một hàng. */
-    .legacy-analytics-bar.legacy-analytics-bar--compact { padding: 0.58rem 0.72rem; border-radius: 14px; }
-    .legacy-analytics-form.legacy-analytics-form--compact { display: block; width: 100%; }
-    .legacy-analytics-toolbar { display: flex; align-items: center; gap: 0.48rem; width: 100%; min-width: 0; }
-    .legacy-analytics-toolbar-title { min-width: 178px; display: inline-flex; align-items: center; gap: 0.38rem; color: var(--sa-ink); font-size: 0.79rem; font-weight: 900; white-space: nowrap; }
-    .legacy-analytics-bar--compact .legacy-analytics-presets { margin-left: auto; width: auto; flex: 0 1 auto; padding: 0.12rem; border-radius: 11px; }
-    .legacy-analytics-bar--compact .legacy-analytics-period-btn { min-height: 30px; padding: 0.31rem 0.57rem; border-radius: 8px; font-size: 0.69rem; }
-    .legacy-analytics-actions.legacy-analytics-actions--compact { width: auto; flex: 0 0 auto; gap: 0.32rem; margin-left: 0.08rem; }
-    .legacy-analytics-actions--compact .sa-btn { min-height: 32px; padding: 0.31rem 0.56rem; border-radius: 8px; font-size: 0.7rem; }
-    .legacy-analytics-range-row { margin-top: 0.45rem; padding-top: 0.45rem; border-top: 1px solid #edf2f0; }
-    .legacy-analytics-range-row .legacy-analytics-range { width: min(100%, 400px); margin-left: auto; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-    /* Bộ chọn chi nhánh riêng cho card bán chạy; chỉ lọc card này. */
-    .legacy-top-products-header { min-height: 48px; padding: 0.62rem 0.72rem; }
-    .legacy-top-products-actions { flex: 0 0 auto; }
-    .legacy-top-products-branch-filter { min-width: 152px; max-width: 190px; }
-    .legacy-top-products-branch-select { height: 32px; border-radius: 9px; font-size: 0.69rem; }
-
     @media (max-width: 1519.98px) {
         .sa-branch-compare-header { align-items: flex-start; flex-wrap: wrap; }
         .sa-branch-compare-tools { margin-left: 0; width: 100%; justify-content: space-between; }
         .sa-branch-compare-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        .sa-branch-compare-form-compact { grid-template-columns: minmax(220px, 1.35fr) minmax(160px, 0.72fr) auto; }
-        .sa-branch-compare-form-range { grid-template-columns: repeat(2, minmax(150px, 0.75fr)) minmax(220px, 1.25fr); }
-        .sa-branch-compare-form-range .sa-branch-compare-actions { grid-column: 1 / -1; }
-        .sa-branch-compare-actions { justify-content: flex-end; }
+        .sa-branch-compare-actions { grid-column: 1 / -1; justify-content: flex-end; }
         .sa-branch-compare-summary { flex-wrap: wrap; }
     }
     @media (max-width: 1399.98px) {
@@ -841,10 +743,10 @@
         .sa-grid-main { grid-template-columns: 1fr; }
         .sa-filter-form { grid-template-columns: minmax(200px, 1fr) repeat(3, minmax(120px, 0.7fr)); }
         .sa-filter-actions { grid-column: 1 / -1; }
-        .sa-branch-compare-form,
-        .sa-branch-compare-form-compact,
-        .sa-branch-compare-form-range { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .sa-branch-compare-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .sa-branch-compare-actions { grid-column: 1 / -1; justify-content: flex-start; }
+        .legacy-top-products-header { flex-direction: column; }
+        .legacy-top-products-actions { justify-content: flex-start; }
         .legacy-top-products-row { grid-template-columns: 28px 46px minmax(0, 1fr); }
         .legacy-top-products-branch { grid-column: 1 / -1; text-align: left; }
         .sa-overview-grid, .sa-health-grid, .sa-charts-grid { grid-template-columns: 1fr; }
@@ -885,15 +787,6 @@
         .sa-supplemental-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 767.98px) {
-        .sa-revenue-trend-toolbar { align-items: stretch; flex-wrap: wrap; }
-        .sa-revenue-trend-title-wrap { width: 100%; margin-right: 0; }
-        .sa-revenue-trend-branch { flex: 1 1 150px; }
-        .sa-revenue-trend-periods { flex: 1 1 auto; }
-        .sa-revenue-trend-range { position: fixed; top: auto; right: 0.8rem; bottom: 0.8rem; left: 0.8rem; width: auto; max-width: none; }
-        .sa-revenue-trend-range::before { display: none; }
-        .sa-revenue-trend-range-fields { grid-template-columns: 1fr; }
-        .sa-revenue-trend-chart { overflow-x: auto; }
-        .sa-revenue-trend-bars { min-width: 520px; }
         .analytics-filters { grid-template-columns: 1fr 1fr; }
         .analytics-filter-actions { grid-column: span 2; flex-wrap: wrap; }
         .analytics-kpis, .analytics-grid { grid-template-columns: 1fr; }
@@ -903,13 +796,9 @@
         .sa-grid-2 { grid-template-columns: 1fr; }
         .sa-filter-form { grid-template-columns: 1fr; }
         .sa-filter-actions { grid-column: auto; }
-        .sa-branch-compare-header { align-items: flex-start; flex-direction: column; }
-        .sa-branch-compare-tools { width: 100%; flex-wrap: wrap; justify-content: space-between; margin-left: 0; }
-        .sa-branch-period-group { width: 100%; align-items: flex-start; flex-direction: column; gap: 0.28rem; }
+        .sa-branch-compare-tools { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
         .sa-branch-period-switcher { overflow-x: auto; max-width: 100%; }
         .sa-branch-compare-form { grid-template-columns: 1fr; }
-        .sa-branch-compare-actions { justify-content: stretch; }
-        .sa-branch-compare-actions .sa-btn { flex: 1 1 0; justify-content: center; }
         .sa-branch-compare-summary { align-items: flex-start; }
         .sa-branch-compare-summary-text,
         .sa-branch-compare-summary-meta { white-space: normal; }
@@ -940,13 +829,6 @@
         .sa-quick-branch-row { grid-template-columns: 42px minmax(0, 1fr); }
         .sa-quick-branch-metric { grid-column: 1 / -1; text-align: left; }
         .sa-section-heading { align-items: flex-start; flex-direction: column; }
-        .legacy-analytics-toolbar { flex-wrap: wrap; }
-        .legacy-analytics-toolbar-title { width: 100%; min-width: 0; }
-        .legacy-analytics-bar--compact .legacy-analytics-presets { margin-left: 0; flex: 1 1 100%; }
-        .legacy-analytics-actions.legacy-analytics-actions--compact { margin-left: auto; }
-        .legacy-top-products-header { align-items: stretch; flex-direction: column; }
-        .legacy-top-products-actions,
-        .legacy-top-products-branch-filter { width: 100%; max-width: none; }
     }
     @media (max-width: 575.98px) {
         .sa-stats, .sa-security-grid, .sa-permissions { grid-template-columns: 1fr; }
@@ -957,10 +839,18 @@
 
 <div class="sa-page">
     @php
-        // Trang tổng quan luôn dùng toàn bộ chi nhánh và không dùng kỳ đối chiếu.
-        $analyticsSelectedBranchIds = [];
-        $analyticsBranchScopeLabel = 'Tất cả chi nhánh';
-        $analyticsCompareType = 'none';
+        $analyticsSelectedBranchIds = $analyticsContext->normalizedBranchIds();
+        $analyticsBranchScopeLabel = $analyticsContext->branchScopeLabel;
+        if ($analyticsSelectedBranchIds !== []) {
+            if (count($analyticsSelectedBranchIds) === 1) {
+                $analyticsBranchScopeLabel = collect($branches ?? [])->firstWhere('id', $analyticsSelectedBranchIds[0])?->name
+                    ?? $analyticsBranchScopeLabel;
+            } else {
+                $analyticsBranchScopeLabel = count($analyticsSelectedBranchIds).' chi nhánh được chọn';
+            }
+        }
+
+        $analyticsCompareType = (string) request('analytics_compare_type', 'none');
         $analyticsPeriodType = (string) $analyticsContext->periodType;
         $analyticsPeriodPresets = [
             'day' => 'Hôm nay',
@@ -978,7 +868,8 @@
                 : ($analyticsPeriodPresets[$analyticsPeriodType] ?? ($analyticsContext->displayLabel ?? 'Tất cả thời gian')),
             default => $analyticsContext->displayLabel ?? 'Tất cả thời gian',
         };
-        $analyticsSummaryLine = $analyticsSummaryPeriod.' · Tất cả chi nhánh';
+        $analyticsSummaryLine = $analyticsSummaryPeriod.' · '.($analyticsContext->comparisonLabel ?? 'Không so sánh').' · Chi nhánh: '.($analyticsBranchScopeLabel ?? 'Tất cả chi nhánh');
+        $topBranchHighlights = collect($branchRankingStats ?? [])->take(5)->values();
     @endphp
 
     <header class="sa-header legacy-page-header">
@@ -1007,8 +898,28 @@
     @endif
 
     {{-- LEGACY OVERVIEW - CURRENTLY ACTIVE --}}
-    <div class="legacy-overview" data-business-overview-region>
-        <form class="legacy-analytics-form legacy-analytics-form--compact legacy-analytics-filter-plain" method="GET" action="{{ route('admin.super-admin') }}" aria-label="Bộ lọc thời gian" data-legacy-analytics-form
+    <div class="legacy-overview">
+        <section class="legacy-analytics-bar" aria-label="Bộ lọc dữ liệu kinh doanh">
+            <div class="legacy-analytics-head">
+                <div class="legacy-analytics-head-copy">
+                    <h2 class="sa-panel-title">Bộ lọc dữ liệu kinh doanh</h2>
+                    <p class="sa-panel-note">Áp dụng cho KPI, chi nhánh và sản phẩm bên dưới.</p>
+                </div>
+                <div class="legacy-analytics-presets" role="group" aria-label="Chọn khoảng thời gian">
+                    @foreach($analyticsPeriodPresets as $periodValue => $periodLabel)
+                        <button
+                            type="button"
+                            class="legacy-analytics-period-btn {{ $analyticsPeriodType === $periodValue ? 'active' : '' }}"
+                            data-analytics-period-preset="{{ $periodValue }}"
+                            aria-pressed="{{ $analyticsPeriodType === $periodValue ? 'true' : 'false' }}"
+                        >
+                            {{ $periodLabel }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            <form class="legacy-analytics-form" method="GET" action="{{ route('admin.super-admin') }}" data-legacy-analytics-form
                 data-analytics-default-date="{{ now()->format('Y-m-d') }}"
                 data-analytics-default-week="{{ now()->format('o-\WW') }}"
                 data-analytics-default-month="{{ now()->format('Y-m') }}"
@@ -1019,58 +930,44 @@
                 <input type="hidden" name="status" value="{{ $filters['status'] }}">
                 <input type="hidden" name="role" value="{{ $filters['role'] }}">
                 <input type="hidden" name="created" value="{{ $filters['created'] }}">
-                <input type="hidden" name="analytics_product_sort" value="quantity">
+                <input type="hidden" name="ranking_period" value="{{ $rankingPeriod }}">
+                <input type="hidden" name="analytics_product_sort" value="{{ request('analytics_product_sort', 'quantity') }}">
                 <input type="hidden" name="branch_search" value="{{ request('branch_search') }}">
                 <input type="hidden" name="branch_sort" value="{{ request('branch_sort', 'revenue') }}">
                 <input type="hidden" name="branch_direction" value="{{ request('branch_direction', 'desc') }}">
                 <input type="hidden" name="branch_performance" value="{{ request('branch_performance', 'all') }}">
                 <input type="hidden" name="branch_per_page" value="{{ request('branch_per_page', 5) }}">
                 <input type="hidden" name="branch_page" value="1">
-                <input type="hidden" name="quick_trend_period" value="{{ $quickTrendPeriod }}">
-                @if($quickTrendBranchId)
-                    <input type="hidden" name="quick_trend_branch_id" value="{{ $quickTrendBranchId }}">
-                @endif
-                @if($quickTrendPeriod === 'range')
-                    <input type="hidden" name="quick_trend_start_date" value="{{ $quickTrendStartDate }}">
-                    <input type="hidden" name="quick_trend_end_date" value="{{ $quickTrendEndDate }}">
-                @endif
-                @if($topProductBranchId)
-                    <input type="hidden" name="top_product_branch_id" value="{{ $topProductBranchId }}">
-                @endif
                 <input type="hidden" name="analytics_period_type" value="{{ $analyticsPeriodType }}" data-analytics-period-type-input>
                 <input type="hidden" name="analytics_date" value="{{ now()->format('Y-m-d') }}" data-analytics-period-value="day">
                 <input type="hidden" name="analytics_week" value="{{ now()->format('o-\WW') }}" data-analytics-period-value="week">
                 <input type="hidden" name="analytics_month" value="{{ now()->format('Y-m') }}" data-analytics-period-value="month">
                 <input type="hidden" name="analytics_year" value="{{ now()->format('Y') }}" data-analytics-period-value="year">
-                <input type="hidden" name="analytics_compare_type" value="none">
 
-                <div class="legacy-analytics-toolbar">
-                    <div class="legacy-analytics-presets" role="group" aria-label="Chọn khoảng thời gian">
-                        @foreach($analyticsPeriodPresets as $periodValue => $periodLabel)
-                            <button
-                                type="button"
-                                class="legacy-analytics-period-btn {{ $analyticsPeriodType === $periodValue ? 'active' : '' }}"
-                                data-analytics-period-preset="{{ $periodValue }}"
-                                aria-pressed="{{ $analyticsPeriodType === $periodValue ? 'true' : 'false' }}"
-                            >
-                                {{ $periodLabel }}
-                            </button>
-                        @endforeach
-                    </div>
-
-                    <div class="legacy-analytics-actions legacy-analytics-actions--compact">
-                        <a href="{{ route('admin.super-admin', request()->except(['analytics_period_type', 'analytics_date', 'analytics_week', 'analytics_month', 'analytics_year', 'analytics_start_date', 'analytics_end_date', 'analytics_compare_type', 'analytics_compare_date', 'analytics_compare_month', 'analytics_compare_year', 'analytics_compare_start_date', 'analytics_compare_end_date', 'analytics_branch_id', 'analytics_branch_ids', 'branch_ids', 'analytics_product_sort'])) }}" class="sa-btn legacy-analytics-reset-btn" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                            <span>Đặt lại</span>
-                        </a>
-                        <button type="submit" class="sa-btn sa-btn-primary legacy-analytics-apply-btn">
-                            <i class="bi bi-check2"></i>
-                            <span>Áp dụng</span>
-                        </button>
-                    </div>
+                <div class="legacy-analytics-field legacy-analytics-field--compare">
+                    <label class="legacy-analytics-label" for="analytics-compare-type">So sánh với</label>
+                    <select id="analytics-compare-type" name="analytics_compare_type" class="legacy-analytics-control" data-analytics-compare-selector>
+                        <option value="none" @selected($analyticsCompareType === 'none')>Không so sánh</option>
+                        <option value="previous" @selected($analyticsCompareType === 'previous')>Kỳ liền trước</option>
+                        <option value="previous_year" @selected($analyticsCompareType === 'previous_year')>Cùng kỳ năm trước</option>
+                        <option value="custom" @selected($analyticsCompareType === 'custom') @disabled($analyticsContext->periodType === 'all')>Tùy chọn</option>
+                    </select>
                 </div>
 
-                <div class="legacy-analytics-period-row legacy-analytics-hidden legacy-analytics-range-row" data-analytics-period-group="range">
+                <div class="legacy-analytics-field legacy-analytics-field--branch">
+                    <label class="legacy-analytics-label">Chi nhánh</label>
+                    @include('admin.super-admin.partials.branch-scope-multi-select', [
+                        'controlId' => 'legacy-analytics-branch-scope',
+                        'inputName' => 'analytics_branch_ids',
+                        'branches' => $branches,
+                        'selectedIds' => $analyticsContext->normalizedBranchIds(),
+                        'summaryLabel' => $analyticsBranchScopeLabel,
+                        'placeholder' => 'Tìm chi nhánh...',
+                        'showChips' => false,
+                    ])
+                </div>
+
+                <div class="legacy-analytics-period-row legacy-analytics-hidden" data-analytics-period-group="range">
                     <div class="legacy-analytics-range">
                         <div class="legacy-analytics-field">
                             <label class="legacy-analytics-label" for="analytics-start-date">Từ ngày</label>
@@ -1082,7 +979,46 @@
                         </div>
                     </div>
                 </div>
-        </form>
+
+                <div class="legacy-analytics-actions">
+                    <a href="{{ route('admin.super-admin', request()->except(['analytics_period_type', 'analytics_date', 'analytics_week', 'analytics_month', 'analytics_year', 'analytics_start_date', 'analytics_end_date', 'analytics_compare_type', 'analytics_compare_date', 'analytics_compare_month', 'analytics_compare_year', 'analytics_compare_start_date', 'analytics_compare_end_date', 'analytics_branch_id', 'analytics_branch_ids', 'branch_ids', 'analytics_product_sort'])) }}" class="sa-btn" style="white-space: nowrap;"><i class="bi bi-arrow-counterclockwise"></i> Xóa lọc</a>
+                    <button type="submit" class="sa-btn sa-btn-primary" style="white-space: nowrap;"><i class="bi bi-funnel"></i> Áp dụng</button>
+                </div>
+
+                <div class="legacy-analytics-compare-grid">
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="day">
+                        <label class="legacy-analytics-label" for="analytics-compare-date">Ngày đối chiếu</label>
+                        <input id="analytics-compare-date" type="date" name="analytics_compare_date" value="{{ request('analytics_compare_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="month">
+                        <label class="legacy-analytics-label" for="analytics-compare-month">Tháng đối chiếu</label>
+                        <input id="analytics-compare-month" type="month" name="analytics_compare_month" value="{{ request('analytics_compare_month') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="year">
+                        <label class="legacy-analytics-label" for="analytics-compare-year">Năm đối chiếu</label>
+                        <input id="analytics-compare-year" type="number" name="analytics_compare_year" min="2000" max="{{ now()->addYear()->year }}" value="{{ request('analytics_compare_year') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="week">
+                        <label class="legacy-analytics-label">Khoảng đối chiếu cho tuần</label>
+                        <div class="legacy-analytics-range">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                        </div>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="range">
+                        <label class="legacy-analytics-label">Khoảng ngày đối chiếu</label>
+                        <div class="legacy-analytics-range">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+            <div class="legacy-analytics-summary" aria-live="polite">
+                <span class="legacy-analytics-summary-line">{{ $analyticsSummaryLine }}</span>
+            </div>
+        </section>
 
     @php
         $businessKpis = [
@@ -1092,8 +1028,17 @@
             ['key' => 'items_sold', 'icon' => 'bi-cup-straw', 'label' => 'Sản phẩm bán ra', 'money' => false],
             ['key' => 'average_order_value', 'icon' => 'bi-receipt', 'label' => 'Trung bình mỗi đơn', 'money' => true],
         ];
-        // Trang tổng quan Super Admin chỉ xếp hạng sản phẩm theo số lượng.
-        $topProductSort = 'quantity';
+        $topProductSort = in_array(request('analytics_product_sort'), ['quantity', 'revenue'], true)
+            ? (string) request('analytics_product_sort')
+            : 'quantity';
+        $topProductSortLabel = match ($topProductSort) {
+            'revenue' => 'Theo doanh thu',
+            default => 'Theo số lượng',
+        };
+        $topProductSortLinks = [
+            'quantity' => request()->fullUrlWithQuery(['analytics_product_sort' => 'quantity']),
+            'revenue' => request()->fullUrlWithQuery(['analytics_product_sort' => 'revenue']),
+        ];
     @endphp
 
     <!-- KPI Cards chính - 5 KPI kinh doanh -->
@@ -1108,6 +1053,19 @@
                     'change_state' => 'unavailable',
                     'comparison_label' => 'Không đối chiếu',
                 ];
+                $state = $metric['change_state'];
+                $changeTone = match ($state) {
+                    'increased', 'new_activity' => 'var(--sa-green)',
+                    'decreased' => '#dc2626',
+                    'unchanged' => '#6b7280',
+                    default => '#9ca3af',
+                };
+                $changeIcon = match ($state) {
+                    'increased' => 'bi-arrow-up',
+                    'decreased' => 'bi-arrow-down',
+                    'unchanged' => 'bi-dash',
+                    default => 'bi-dash',
+                };
             @endphp
             <article class="sa-stat" data-business-kpi-card="{{ $kpi['key'] }}" style="min-height: 132px; @if($kpi['key'] === 'revenue') background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-color: rgba(13, 147, 115, 0.25); @endif">
                 <div class="sa-stat-top">
@@ -1116,6 +1074,8 @@
                     </span>
                     @if(!empty($kpi['note']))
                         <span class="sa-stat-note">{{ $kpi['note'] }}</span>
+                    @else
+                        <span class="sa-stat-note">{{ $metric['comparison_label'] }}</span>
                     @endif
                 </div>
                 <div class="sa-stat-value" style="font-size: 1.58rem; @if($kpi['key'] === 'revenue' || $kpi['key'] === 'average_order_value') color: var(--sa-green); @endif">
@@ -1126,6 +1086,17 @@
                     @endif
                 </div>
                 <div class="sa-stat-label">{{ $kpi['label'] }}</div>
+                <div style="margin-top: 0.28rem; color: {{ $changeTone }}; font-size: 0.78rem; font-weight: 800; line-height: 1.35;">
+                    @if($state === 'unavailable')
+                        Không đối chiếu
+                    @elseif($state === 'new_activity')
+                        Phát sinh mới
+                    @else
+                        <i class="bi {{ $changeIcon }}"></i>
+                        {{ $metric['percentage_change'] >= 0 ? '+' : '' }}{{ number_format((float) $metric['percentage_change'], 1, ',', '.') }}%
+                        so với {{ $metric['comparison_label'] }}
+                    @endif
+                </div>
             </article>
         @endforeach
     </section>
@@ -1135,592 +1106,262 @@
             <div>
                 <p class="sa-section-kicker">Tổng quan nhanh</p>
                 <h2 class="sa-section-title" id="quick-overview-title">Điểm nóng cần theo dõi ngay</h2>
-                <p class="sa-section-copy">Theo dõi xu hướng doanh thu và sản phẩm bán chạy nổi bật.</p>
+                <p class="sa-section-copy">Tóm tắt chi nhánh và sản phẩm nổi bật trong kỳ đang chọn.</p>
             </div>
         </div>
 
         <div class="sa-overview-grid">
-            @php
-                $quickTrendBuckets = collect($quickBranchTrend['buckets'] ?? []);
-                $quickTrendCompactMoney = static function (int $value): string {
-                    if ($value >= 1000000000) {
-                        return rtrim(rtrim(number_format($value / 1000000000, 1, ',', '.'), '0'), ',').' tỷ';
-                    }
-                    if ($value >= 1000000) {
-                        return rtrim(rtrim(number_format($value / 1000000, 1, ',', '.'), '0'), ',').'tr';
-                    }
-                    if ($value >= 1000) {
-                        return number_format((int) round($value / 1000), 0, ',', '.').'k';
-                    }
-                    return number_format($value, 0, ',', '.').'đ';
-                };
-            @endphp
-            <article class="sa-panel sa-revenue-trend-card" data-quick-branch-trend-region>
-                <div class="sa-revenue-trend-head">
-                    <div class="sa-revenue-trend-toolbar">
-                        <div class="sa-revenue-trend-title-wrap">
-                            <h3 class="sa-revenue-trend-title">Xu hướng doanh thu</h3>
-                        </div>
-
-                        <div class="sa-revenue-trend-branch">
-                            <i class="bi bi-shop"></i>
-                            <select class="sa-revenue-trend-select" aria-label="Chọn chi nhánh cho biểu đồ doanh thu" data-quick-trend-branch-select>
-                                <option value="">Tất cả chi nhánh</option>
-                                @foreach($branches->sortBy('name') as $branchOption)
-                                    <option value="{{ $branchOption->id }}" {{ (int) ($quickTrendBranchId ?? 0) === (int) $branchOption->id ? 'selected' : '' }}>{{ $branchOption->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="sa-revenue-trend-periods" aria-label="Khoảng thời gian biểu đồ">
-                            @foreach(['day' => 'Hôm nay', 'week' => 'Tuần', 'month' => 'Tháng', 'year' => 'Năm', 'range' => 'Tùy chọn'] as $periodKey => $periodLabel)
-                                <button type="button" class="sa-revenue-trend-period {{ ($quickTrendPeriod ?? 'week') === $periodKey ? 'active' : '' }}" data-quick-trend-period="{{ $periodKey }}">{{ $periodLabel }}</button>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <form class="sa-revenue-trend-range" data-quick-trend-range-form hidden>
-                        <div class="sa-revenue-trend-range-head">
-                            <p class="sa-revenue-trend-range-title">Khoảng thời gian</p>
-                            <button type="button" class="sa-revenue-trend-range-close" aria-label="Đóng chọn khoảng thời gian" data-quick-trend-range-close>
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-                        <div class="sa-revenue-trend-range-fields">
-                            <div class="sa-revenue-trend-range-field">
-                                <label for="quickTrendStartDate">Từ ngày</label>
-                                <input id="quickTrendStartDate" type="date" value="{{ $quickTrendStartDate ?: now()->startOfMonth()->format('Y-m-d') }}" max="{{ now()->format('Y-m-d') }}" data-quick-trend-start-date>
-                            </div>
-                            <div class="sa-revenue-trend-range-field">
-                                <label for="quickTrendEndDate">Đến ngày</label>
-                                <input id="quickTrendEndDate" type="date" value="{{ $quickTrendEndDate ?: now()->format('Y-m-d') }}" max="{{ now()->format('Y-m-d') }}" data-quick-trend-end-date>
-                            </div>
-                        </div>
-                        <div class="sa-revenue-trend-range-actions">
-                            <button type="button" class="sa-btn sa-btn-light" data-quick-trend-range-cancel>Hủy</button>
-                            <button type="submit" class="sa-btn sa-btn-primary"><i class="bi bi-check-lg"></i> Xem</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="sa-revenue-trend-body">
-                    @if($quickTrendBuckets->isNotEmpty())
-                        <div class="sa-revenue-trend-chart" aria-label="Biểu đồ cột doanh thu theo thời gian">
-                            @php
-                                $quickTrendBucketCount = $quickTrendBuckets->count();
-                            @endphp
-                            <div class="sa-revenue-trend-bars {{ $quickTrendBucketCount <= 4 ? 'is-sparse' : ($quickTrendBucketCount > 14 ? 'is-dense' : '') }}">
-                                @foreach($quickTrendBuckets as $bucket)
-                                    @php
-                                        $bucketRevenue = (int) ($bucket['revenue'] ?? 0);
-                                        $barHeight = (int) ($bucket['height'] ?? 0);
-                                    @endphp
-                                    <div class="sa-revenue-trend-col" title="{{ $bucket['label'] }}: {{ number_format($bucketRevenue, 0, ',', '.') }}đ doanh thu">
-                                        <div class="sa-revenue-trend-bar-wrap">
-                                            <span class="sa-revenue-trend-bar {{ $bucketRevenue <= 0 ? 'is-zero' : '' }}" style="height: {{ $bucketRevenue > 0 ? $barHeight : 0 }}%;"></span>
-                                        </div>
-                                        <span class="sa-revenue-trend-label">{{ $bucket['label'] }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    @else
-                        <div class="sa-revenue-trend-empty">
-                            <i class="bi bi-bar-chart"></i>
-                            <span>Chưa có dữ liệu cho khoảng đã chọn.</span>
-                        </div>
-                    @endif
-                </div>
-            </article>
-
-            @php
-                $selectedTopProductBranch = $topProductBranchId
-                    ? $branches->firstWhere('id', $topProductBranchId)
-                    : null;
-            @endphp
-            <section class="legacy-top-products" aria-label="Bán chạy toàn hệ thống" data-top-products-region>
-                <div class="legacy-top-products-header">
+            <article class="sa-panel sa-quick-branches">
+                <div class="sa-panel-header sa-overview-card-header">
                     <div>
-                        <h2 class="legacy-top-products-title">Bán chạy toàn hệ thống</h2>
-                    </div>
-                    <div class="legacy-top-products-actions">
-                        <div class="legacy-top-products-branch-filter">
-                            <i class="bi bi-shop"></i>
-                            <select
-                                class="legacy-top-products-branch-select"
-                                aria-label="Lọc sản phẩm bán chạy theo chi nhánh"
-                                data-top-products-branch-select
-                            >
-                                <option value="">Tất cả chi nhánh</option>
-                                @foreach($branches->sortBy('name') as $branchOption)
-                                    <option value="{{ $branchOption->id }}" {{ (int) $topProductBranchId === (int) $branchOption->id ? 'selected' : '' }}>
-                                        {{ $branchOption->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+                        <h3 class="sa-panel-title">Top chi nhánh</h3>
                     </div>
                 </div>
 
-                @if($topProducts->isEmpty())
-                    <div class="legacy-top-products-empty">
-                        {{ $topProductBranchId ? 'Chi nhánh này chưa có sản phẩm được bán trong kỳ đã chọn.' : 'Chưa có sản phẩm được bán trong kỳ đã chọn.' }}
-                    </div>
-                @else
-                    <div class="legacy-top-products-list" data-top-products-list data-current-sort="quantity">
-                        @foreach($topProducts as $topProduct)
-                            <article
-                                class="legacy-top-products-row"
-                                data-top-product-row
-                                data-top-product-rank="{{ $topProduct['rank'] }}"
-                                data-top-product-quantity="{{ (int) ($topProduct['total_quantity'] ?? 0) }}"
-                                data-top-product-revenue="{{ (int) ($topProduct['total_revenue'] ?? 0) }}"
-                            >
-                                <span class="legacy-top-products-rank" data-top-product-rank-label>{{ $topProduct['rank'] }}</span>
-                                <div class="legacy-top-products-thumb">
-                                    <img src="{{ $topProduct['product_image_url'] }}" alt="{{ $topProduct['product_name'] }}" loading="lazy">
-                                </div>
+                @if($topBranchHighlights->isNotEmpty())
+                    <div class="sa-quick-branch-list">
+                        @foreach($topBranchHighlights as $branchHighlight)
+                            @php
+                                $highlightGrowth = (float) ($branchHighlight['revenue_change_percentage'] ?? 0);
+                                $highlightGrowthState = (string) ($branchHighlight['change_state'] ?? 'unavailable');
+                                $highlightGrowthLabel = $highlightGrowthState === 'unavailable'
+                                    ? 'Không đối chiếu'
+                                    : (($highlightGrowth > 0 ? '+' : '').number_format($highlightGrowth, 1, ',', '.').'%');
+                            @endphp
+                            <article class="sa-quick-branch-row">
+                                <span class="sa-quick-branch-rank">#{{ $branchHighlight['rank'] }}</span>
                                 <div>
-                                    <h3 class="legacy-top-products-name">{{ $topProduct['product_name'] }}</h3>
-                                    <div class="legacy-top-products-meta">
-                                        <span>{{ number_format($topProduct['total_quantity']) }} sản phẩm</span>
-                                        <span>{{ number_format($topProduct['total_revenue'], 0, ',', '.') }}đ</span>
+                                    <h3 class="sa-quick-branch-name">{{ $branchHighlight['branch_name'] }}</h3>
+                                    <div class="sa-quick-branch-meta">
+                                        {{ $branchHighlight['valid_order_count'] }} đơn · {{ number_format($branchHighlight['items_sold']) }} món
                                     </div>
                                 </div>
-                                <div class="legacy-top-products-branch">
-                                    @if($topProductBranchId)
-                                        <strong>{{ $selectedTopProductBranch?->name ?? 'Chi nhánh đã chọn' }}</strong>
-                                        <span>{{ number_format($topProduct['total_quantity']) }} sản phẩm · {{ number_format($topProduct['total_revenue'], 0, ',', '.') }}đ</span>
-                                    @else
-                                        <strong>Mạnh nhất: {{ $topProduct['strongest_branch_name'] }}</strong>
-                                        <span>{{ number_format($topProduct['strongest_branch_quantity']) }} sản phẩm · {{ number_format($topProduct['strongest_branch_revenue'], 0, ',', '.') }}đ</span>
+                                <div class="sa-quick-branch-metric">
+                                    <strong>{{ number_format($branchHighlight['revenue'], 0, ',', '.') }}đ</strong>
+                                    @if($highlightGrowthState !== 'unavailable')
+                                        <span>{{ $highlightGrowthLabel }}</span>
                                     @endif
                                 </div>
                             </article>
                         @endforeach
                     </div>
+                @else
+                    <div class="sa-empty" style="min-height: 220px;">
+                        <i class="bi bi-shop"></i>
+                        <strong>Chưa có dữ liệu chi nhánh</strong>
+                    </div>
                 @endif
+            </article>
+
+            <section class="legacy-top-products" aria-label="Bán chạy toàn hệ thống">
+        <div class="legacy-top-products-header">
+            <div>
+                <h2 class="legacy-top-products-title">Bán chạy toàn hệ thống</h2>
+            </div>
+            <div class="legacy-top-products-actions" role="tablist" aria-label="Chọn cách xếp hạng sản phẩm">
+                <button
+                    type="button"
+                    class="legacy-top-products-action {{ $topProductSort === 'quantity' ? 'active' : '' }}"
+                    data-top-products-sort="quantity"
+                    aria-pressed="{{ $topProductSort === 'quantity' ? 'true' : 'false' }}"
+                >Theo số lượng</button>
+                <button
+                    type="button"
+                    class="legacy-top-products-action {{ $topProductSort === 'revenue' ? 'active' : '' }}"
+                    data-top-products-sort="revenue"
+                    aria-pressed="{{ $topProductSort === 'revenue' ? 'true' : 'false' }}"
+                >Theo doanh thu</button>
+            </div>
+        </div>
+
+        @if($topProducts->isEmpty())
+            <div class="legacy-top-products-empty">Chưa có sản phẩm được bán trong kỳ đã chọn.</div>
+        @else
+            <div class="legacy-top-products-list" data-top-products-list data-current-sort="{{ $topProductSort }}">
+                @foreach($topProducts as $topProduct)
+                    <article
+                        class="legacy-top-products-row"
+                        data-top-product-row
+                        data-top-product-rank="{{ $topProduct['rank'] }}"
+                        data-top-product-quantity="{{ (int) ($topProduct['total_quantity'] ?? 0) }}"
+                        data-top-product-revenue="{{ (int) ($topProduct['total_revenue'] ?? 0) }}"
+                    >
+                        <span class="legacy-top-products-rank" data-top-product-rank-label>{{ $topProduct['rank'] }}</span>
+                        <div class="legacy-top-products-thumb">
+                            <img src="{{ $topProduct['product_image_url'] }}" alt="{{ $topProduct['product_name'] }}" loading="lazy">
+                        </div>
+                        <div>
+                            <h3 class="legacy-top-products-name">{{ $topProduct['product_name'] }}</h3>
+                            <div class="legacy-top-products-meta">
+                                <span>{{ number_format($topProduct['total_quantity']) }} sản phẩm</span>
+                                <span>{{ number_format($topProduct['total_revenue'], 0, ',', '.') }}đ</span>
+                            </div>
+                        </div>
+                        <div class="legacy-top-products-branch">
+                            <strong>Mạnh nhất: {{ $topProduct['strongest_branch_name'] }}</strong>
+                            <span>{{ number_format($topProduct['strongest_branch_quantity']) }} sản phẩm · {{ number_format($topProduct['strongest_branch_revenue'], 0, ',', '.') }}đ</span>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
             </section>
         </div>
     </section>
 
-    <script>
-        let superAdminOverviewLoading = false;
-
-        function restoreStableScroll(scrollTop) {
-            window.requestAnimationFrame(() => {
-                window.scrollTo({ top: scrollTop, left: window.scrollX, behavior: 'auto' });
-            });
-        }
-
-        async function loadSuperAdminOverviewRegions(url, options = {}) {
-            if (superAdminOverviewLoading) {
-                return;
-            }
-
-            const targetUrl = new URL(url, window.location.origin);
-            targetUrl.hash = window.location.hash || '';
-            const selectors = options.regionSelectors || [
-                '[data-business-overview-region]',
-                '[data-business-analysis-region]',
-            ];
-            const currentScrollTop = window.scrollY;
-            const regions = selectors.map((selector) => document.querySelector(selector)).filter(Boolean);
-            regions.forEach((region) => region.classList.add('is-refreshing'));
-            superAdminOverviewLoading = true;
-
-            try {
-                const response = await fetch(targetUrl.toString(), {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'text/html',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const html = await response.text();
-                const nextDoc = new DOMParser().parseFromString(html, 'text/html');
-                let replaced = false;
-
-                selectors.forEach((selector) => {
-                    const currentRegion = document.querySelector(selector);
-                    const nextRegion = nextDoc.querySelector(selector);
-                    if (currentRegion && nextRegion) {
-                        currentRegion.replaceWith(nextRegion);
-                        replaced = true;
-                    }
-                });
-
-                if (!replaced) {
-                    throw new Error('Không tìm thấy vùng Tổng quan để cập nhật.');
-                }
-
-                window.history.replaceState({}, '', targetUrl.toString());
-                syncLegacyAnalyticsPeriodFields();
-                syncLegacyAnalyticsCompareFields();
-                if (typeof syncAnalyticsTabFromLocation === 'function') {
-                    syncAnalyticsTabFromLocation();
-                }
-                if (typeof syncLegacyTopProducts === 'function') {
-                    syncLegacyTopProducts();
-                }
-                restoreStableScroll(currentScrollTop);
-            } catch (error) {
-                console.error('Super Admin overview refresh error:', error);
-                regions.forEach((region) => region.classList.remove('is-refreshing'));
-            } finally {
-                superAdminOverviewLoading = false;
-                selectors.forEach((selector) => {
-                    document.querySelector(selector)?.classList.remove('is-refreshing');
-                });
-            }
-        }
-
-        async function loadTopProductsRegion(url) {
-            return loadSuperAdminOverviewRegions(url, {
-                regionSelectors: ['[data-top-products-region]'],
-            });
-        }
-
-        document.addEventListener('change', function (event) {
-            const branchSelect = event.target && event.target.closest('[data-top-products-branch-select]');
-            if (!branchSelect) {
-                return;
-            }
-
-            const url = new URL(window.location.href);
-            const branchId = branchSelect.value;
-            if (branchId) {
-                url.searchParams.set('top_product_branch_id', branchId);
-            } else {
-                url.searchParams.delete('top_product_branch_id');
-            }
-
-            loadTopProductsRegion(url.toString());
-        });
-
-
-        let quickTrendAbortController = null;
-        let quickTrendRequestToken = 0;
-        const quickTrendResponseCache = new Map();
-        const QUICK_TREND_CACHE_TTL = 10000;
-
-        function quickTrendUrl() {
-            return new URL(window.location.href);
-        }
-
-        // Request riêng của biểu đồ chỉ mang đúng các tham số cần thiết.
-        // Không gửi toàn bộ query string của dashboard để FormRequest khỏi validate
-        // branch list, product state, pagination... không liên quan tới biểu đồ.
-        function quickTrendRequestUrl(stateUrl) {
-            const source = stateUrl instanceof URL ? stateUrl : new URL(stateUrl, window.location.origin);
-            const requestUrl = new URL(window.location.pathname, window.location.origin);
-            requestUrl.searchParams.set('quick_trend_json', '1');
-
-            const period = source.searchParams.get('quick_trend_period') || 'week';
-            requestUrl.searchParams.set('quick_trend_period', period);
-
-            const branchId = source.searchParams.get('quick_trend_branch_id');
-            if (branchId) requestUrl.searchParams.set('quick_trend_branch_id', branchId);
-
-            if (period === 'range') {
-                const start = source.searchParams.get('quick_trend_start_date');
-                const end = source.searchParams.get('quick_trend_end_date');
-                if (start) requestUrl.searchParams.set('quick_trend_start_date', start);
-                if (end) requestUrl.searchParams.set('quick_trend_end_date', end);
-            }
-
-            return requestUrl;
-        }
-
-        function quickTrendCacheKey(stateUrl) {
-            return quickTrendRequestUrl(stateUrl).searchParams.toString();
-        }
-
-        function syncQuickTrendHiddenFields(url) {
-            const form = document.querySelector('[data-legacy-analytics-form]');
-            if (!form) {
-                return;
-            }
-
-            const names = [
-                'quick_trend_period',
-                'quick_trend_branch_id',
-                'quick_trend_start_date',
-                'quick_trend_end_date',
-            ];
-            names.forEach((name) => form.querySelectorAll(`input[name="${name}"]`).forEach((input) => input.remove()));
-
-            const activePeriod = url.searchParams.get('quick_trend_period')
-                || document.querySelector('[data-quick-trend-period].active')?.dataset.quickTrendPeriod
-                || 'week';
-            url.searchParams.set('quick_trend_period', activePeriod);
-
-            names.forEach((name) => {
-                const value = url.searchParams.get(name);
-                if (!value) {
-                    return;
-                }
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = name;
-                input.value = value;
-                form.appendChild(input);
-            });
-        }
-
-        function setQuickTrendPeriodUi(period) {
-            document.querySelectorAll('[data-quick-trend-period]').forEach((button) => {
-                button.classList.toggle('active', button.dataset.quickTrendPeriod === period);
-            });
-        }
-
-        function currentAppliedQuickTrendPeriod() {
-            return new URL(window.location.href).searchParams.get('quick_trend_period') || 'week';
-        }
-
-        function openQuickTrendRangePopover() {
-            const rangeForm = document.querySelector('[data-quick-trend-range-form]');
-            if (!rangeForm) return;
-            rangeForm.hidden = false;
-            requestAnimationFrame(() => rangeForm.querySelector('[data-quick-trend-start-date]')?.focus({ preventScroll: true }));
-        }
-
-        function closeQuickTrendRangePopover({ restoreApplied = false } = {}) {
-            const rangeForm = document.querySelector('[data-quick-trend-range-form]');
-            if (rangeForm) rangeForm.hidden = true;
-            if (restoreApplied) setQuickTrendPeriodUi(currentAppliedQuickTrendPeriod());
-        }
-
-        function formatQuickTrendMoney(value) {
-            return `${new Intl.NumberFormat('vi-VN').format(Number(value || 0))}đ`;
-        }
-
-        function renderQuickTrendChart(payload) {
-            const region = document.querySelector('[data-quick-branch-trend-region]');
-            const body = region?.querySelector('.sa-revenue-trend-body');
-            if (!region || !body) {
-                return;
-            }
-
-            const buckets = Array.isArray(payload?.buckets) ? payload.buckets : [];
-            body.replaceChildren();
-
-            if (!buckets.length) {
-                const empty = document.createElement('div');
-                empty.className = 'sa-revenue-trend-empty';
-                const icon = document.createElement('i');
-                icon.className = 'bi bi-bar-chart';
-                const text = document.createElement('span');
-                text.textContent = 'Chưa có dữ liệu cho khoảng đã chọn.';
-                empty.append(icon, text);
-                body.appendChild(empty);
-                return;
-            }
-
-            const chart = document.createElement('div');
-            chart.className = 'sa-revenue-trend-chart';
-            chart.setAttribute('aria-label', 'Biểu đồ cột doanh thu theo thời gian');
-            const bars = document.createElement('div');
-            bars.className = 'sa-revenue-trend-bars';
-            if (buckets.length <= 4) {
-                bars.classList.add('is-sparse');
-            } else if (buckets.length > 14) {
-                bars.classList.add('is-dense');
-            }
-
-            buckets.forEach((bucket) => {
-                const revenue = Number(bucket?.revenue || 0);
-                const height = Math.max(0, Math.min(100, Number(bucket?.height || 0)));
-                const col = document.createElement('div');
-                col.className = 'sa-revenue-trend-col';
-                col.title = `${bucket?.label || ''}: ${formatQuickTrendMoney(revenue)} doanh thu`;
-
-                const wrap = document.createElement('div');
-                wrap.className = 'sa-revenue-trend-bar-wrap';
-                const bar = document.createElement('span');
-                bar.className = `sa-revenue-trend-bar${revenue <= 0 ? ' is-zero' : ''}`;
-                bar.style.height = revenue > 0 ? `${height}%` : '0%';
-                wrap.appendChild(bar);
-
-                const label = document.createElement('span');
-                label.className = 'sa-revenue-trend-label';
-                label.textContent = bucket?.label || '';
-                col.append(wrap, label);
-                bars.appendChild(col);
-            });
-
-            chart.appendChild(bars);
-            body.appendChild(chart);
-        }
-
-        function applyQuickTrendPayload(payload, cleanUrl) {
-            const resolvedPeriod = payload?.period || cleanUrl.searchParams.get('quick_trend_period') || 'week';
-            setQuickTrendPeriodUi(resolvedPeriod);
-            renderQuickTrendChart(payload);
-
-            if (resolvedPeriod === 'range') {
-                const startInput = document.querySelector('[data-quick-trend-start-date]');
-                const endInput = document.querySelector('[data-quick-trend-end-date]');
-                if (startInput && payload?.start) startInput.value = payload.start;
-                if (endInput && payload?.end) endInput.value = payload.end;
-            }
-
-            window.history.replaceState({}, '', cleanUrl.toString());
-            syncQuickTrendHiddenFields(cleanUrl);
-        }
-
-        async function loadQuickBranchTrendRegion(url) {
-            const cleanUrl = new URL(url, window.location.origin);
-            cleanUrl.searchParams.delete('quick_trend_json');
-            const requestUrl = quickTrendRequestUrl(cleanUrl);
-            const cacheKey = quickTrendCacheKey(cleanUrl);
-            const cached = quickTrendResponseCache.get(cacheKey);
-
-            // Quay lại phạm vi vừa xem trong 10 giây: render ngay từ RAM, không chờ HTTP.
-            if (cached && (Date.now() - cached.at) < QUICK_TREND_CACHE_TTL) {
-                applyQuickTrendPayload(cached.payload, cleanUrl);
-                return;
-            }
-
-            if (quickTrendAbortController) {
-                quickTrendAbortController.abort();
-            }
-            quickTrendAbortController = new AbortController();
-            const requestToken = ++quickTrendRequestToken;
-            const region = document.querySelector('[data-quick-branch-trend-region]');
-            region?.classList.add('is-refreshing');
-
-            try {
-                const response = await fetch(requestUrl.toString(), {
-                    signal: quickTrendAbortController.signal,
-                    cache: 'no-store',
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json',
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const payload = await response.json();
-                if (requestToken !== quickTrendRequestToken) {
-                    return;
-                }
-
-                quickTrendResponseCache.set(cacheKey, { at: Date.now(), payload });
-                if (quickTrendResponseCache.size > 12) {
-                    quickTrendResponseCache.delete(quickTrendResponseCache.keys().next().value);
-                }
-
-                applyQuickTrendPayload(payload, cleanUrl);
-            } catch (error) {
-                if (error?.name !== 'AbortError') {
-                    console.error('Quick revenue trend refresh error:', error);
-                }
-            } finally {
-                if (requestToken === quickTrendRequestToken) {
-                    region?.classList.remove('is-refreshing');
-                }
-            }
-        }
-
-        document.addEventListener('change', function (event) {
-            const branchSelect = event.target && event.target.closest('[data-quick-trend-branch-select]');
-            if (!branchSelect) {
-                return;
-            }
-
-            const url = quickTrendUrl();
-            if (branchSelect.value) {
-                url.searchParams.set('quick_trend_branch_id', branchSelect.value);
-            } else {
-                url.searchParams.delete('quick_trend_branch_id');
-            }
-
-            syncQuickTrendHiddenFields(url);
-            loadQuickBranchTrendRegion(url.toString());
-        });
-
-        document.addEventListener('click', function (event) {
-            const periodButton = event.target && event.target.closest('[data-quick-trend-period]');
-            if (!periodButton) {
-                return;
-            }
-
-            event.preventDefault();
-            const period = periodButton.dataset.quickTrendPeriod || 'week';
-            setQuickTrendPeriodUi(period);
-
-            const url = quickTrendUrl();
-            url.searchParams.set('quick_trend_period', period);
-
-            if (period === 'range') {
-                openQuickTrendRangePopover();
-                return;
-            }
-
-            closeQuickTrendRangePopover();
-            url.searchParams.delete('quick_trend_start_date');
-            url.searchParams.delete('quick_trend_end_date');
-            syncQuickTrendHiddenFields(url);
-            loadQuickBranchTrendRegion(url.toString());
-        });
-
-        document.addEventListener('click', function (event) {
-            const closeButton = event.target && event.target.closest('[data-quick-trend-range-close], [data-quick-trend-range-cancel]');
-            if (closeButton) {
-                event.preventDefault();
-                closeQuickTrendRangePopover({ restoreApplied: true });
-                return;
-            }
-
-            const rangeForm = document.querySelector('[data-quick-trend-range-form]');
-            if (!rangeForm || rangeForm.hidden) return;
-            if (event.target.closest('[data-quick-trend-range-form], [data-quick-trend-period="range"]')) return;
-            closeQuickTrendRangePopover({ restoreApplied: true });
-        });
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key !== 'Escape') return;
-            const rangeForm = document.querySelector('[data-quick-trend-range-form]');
-            if (!rangeForm || rangeForm.hidden) return;
-            closeQuickTrendRangePopover({ restoreApplied: true });
-            document.querySelector('[data-quick-trend-period="range"]')?.focus({ preventScroll: true });
-        });
-
-        document.addEventListener('submit', function (event) {
-            const rangeForm = event.target && event.target.closest('[data-quick-trend-range-form]');
-            if (!rangeForm) {
-                return;
-            }
-
-            event.preventDefault();
-            const startInput = rangeForm.querySelector('[data-quick-trend-start-date]');
-            const endInput = rangeForm.querySelector('[data-quick-trend-end-date]');
-            if (!startInput?.value || !endInput?.value || startInput.value > endInput.value) {
-                return;
-            }
-
-            const url = quickTrendUrl();
-            url.searchParams.set('quick_trend_period', 'range');
-            url.searchParams.set('quick_trend_start_date', startInput.value);
-            url.searchParams.set('quick_trend_end_date', endInput.value);
-            syncQuickTrendHiddenFields(url);
-
-            // Phản hồi UI ngay: đóng popover trước, giữ biểu đồ cũ trong lúc JSON nhẹ tải về.
-            closeQuickTrendRangePopover();
-            loadQuickBranchTrendRegion(url.toString());
-        });
-    </script>
+    <section class="sa-section sa-supplemental-section" aria-labelledby="supplemental-title">
+        <div class="sa-section-heading">
+            <div>
+                <p class="sa-section-kicker">Thông tin bổ sung</p>
+                <h2 class="sa-section-title" id="supplemental-title">Bức tranh vận hành nền tảng</h2>
+                <p class="sa-section-copy">Các thẻ thông tin chi tiết và biểu đồ cột phụ trợ được giữ nguyên dữ liệu, chỉ tổ chức lại để dễ đọc hơn.</p>
+            </div>
+        </div>
+
+    <!-- Expandable Stats Sections -->
+    <div class="sa-supplemental-grid" style="margin-bottom: 0;">
+        <!-- Chi tiết doanh thu -->
+        <div class="sa-panel" style="overflow: visible;">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none;" onclick="toggleSection('revenue')">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="sa-stat-icon" style="width: 40px; height: 40px; background: var(--sa-green); color: #fff;">
+                        <i class="bi bi-currency-exchange"></i>
+                    </span>
+                    <div style="text-align: left;">
+                        <h3 class="sa-panel-title" style="margin-bottom: 0.1rem;">Chi tiết doanh thu</h3>
+                        <p class="sa-panel-note">Phân tích doanh thu theo thời gian</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.32rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 800;">
+                        {{ number_format($branchSummaryStats['total_revenue'], 0, ',', '.') }}đ trong {{ mb_strtolower($branchSummaryStats['period_label']) }}
+                    </span>
+                    <i class="bi bi-chevron-down" style="font-size: 1rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-revenue"></i>
+                </div>
+            </button>
+            <div id="content-revenue" style="display: none; overflow: hidden; transition: all 0.3s ease;">
+                <div style="padding: 0.9rem 1rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+                        @foreach([
+                            ['bi-calendar-day', number_format($branchSummaryStats['today_revenue'], 0, ',', '.').'đ', 'Hôm nay'],
+                            ['bi-calendar-week', number_format($branchSummaryStats['month_revenue'], 0, ',', '.').'đ', 'Tháng này'],
+                            ['bi-graph-up', number_format($branchSummaryStats['total_revenue'], 0, ',', '.').'đ', 'Tổng cộng'],
+                        ] as [$icon, $value, $label])
+                            <div style="padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.55rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 1rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.72rem; font-weight: 650;">{{ $label }}</span>
+                                </div>
+                                <div style="color: var(--sa-ink); font-size: 1.24rem; font-weight: 800;">{{ $value }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chi tiết chi nhánh -->
+        <div class="sa-panel" style="overflow: visible;">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none;" onclick="toggleSection('branch')">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="sa-stat-icon" style="width: 40px; height: 40px;">
+                        <i class="bi bi-shop"></i>
+                    </span>
+                    <div style="text-align: left;">
+                        <h3 class="sa-panel-title" style="margin-bottom: 0.1rem;">Chi tiết chi nhánh</h3>
+                        <p class="sa-panel-note">Thông tin chi nhánh và nhân sự</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.32rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 800;">
+                        {{ $branchSummaryStats['active_branches'] }}/{{ $branchSummaryStats['total_branches'] }} hoạt động
+                    </span>
+                    <i class="bi bi-chevron-down" style="font-size: 1rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-branch"></i>
+                </div>
+            </button>
+            <div id="content-branch" style="display: none; overflow: hidden; transition: all 0.3s ease;">
+                <div style="padding: 0.9rem 1rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+                        @foreach([
+                            ['bi-diagram-3', $branchSummaryStats['total_branches'], 'Tổng chi nhánh'],
+                            ['bi-shop-window', $branchSummaryStats['active_branches'], 'Đang hoạt động'],
+                            ['bi-people', $branchSummaryStats['total_branch_staff'], 'Nhân viên'],
+                            ['bi-bag-check', $branchSummaryStats['total_orders'], 'Đơn hàng'],
+                        ] as [$icon, $value, $label])
+                            <div style="padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.55rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 1rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.72rem; font-weight: 650;">{{ $label }}</span>
+                                </div>
+                                <div style="color: var(--sa-ink); font-size: 1.24rem; font-weight: 800;">{{ number_format($value) }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chi tiết hệ thống -->
+        <div class="sa-panel" style="overflow: visible;">
+            <button type="button" class="sa-panel-header" style="width: 100%; cursor: pointer; transition: all 0.2s; background: none; border: none;" onclick="toggleSection('system')">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span class="sa-stat-icon" style="width: 40px; height: 40px;">
+                        <i class="bi bi-gear"></i>
+                    </span>
+                    <div style="text-align: left;">
+                        <h3 class="sa-panel-title" style="margin-bottom: 0.1rem;">Chi tiết hệ thống</h3>
+                        <p class="sa-panel-note">Quản trị, sản phẩm và phân quyền</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="background: rgba(13, 147, 115, 0.1); color: var(--sa-green); padding: 0.32rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 800;">
+                        {{ $activeAdminCount }}/{{ $adminCount }} admin
+                    </span>
+                    <i class="bi bi-chevron-down" style="font-size: 1rem; color: var(--sa-muted); transition: transform 0.2s;" id="icon-system"></i>
+                </div>
+            </button>
+            <div id="content-system" style="display: none; overflow: hidden; transition: all 0.3s ease;">
+                <div style="padding: 0.9rem 1rem; border-top: 1px solid var(--sa-border);">
+                    <div class="sa-stats" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
+                        @foreach([
+                            ['bi-person-badge', $adminCount, 'Tổng Admin'],
+                            ['bi-person-check', $activeAdminCount, 'Admin hoạt động'],
+                            ['bi-cup-straw', $productCount, 'Sản phẩm'],
+                            ['bi-grid', $categoryCount, 'Danh mục'],
+                            ['bi-diagram-3', $roleCount, 'Vai trò'],
+                        ] as [$icon, $value, $label])
+                            <div style="padding: 0.85rem; border: 1px solid var(--sa-border); border-radius: 10px; background: #fff;">
+                                <div style="display: flex; align-items: center; gap: 0.45rem; margin-bottom: 0.55rem;">
+                                    <i class="bi {{ $icon }}" style="color: var(--sa-green); font-size: 1rem;"></i>
+                                    <span style="color: var(--sa-muted); font-size: 0.72rem; font-weight: 650;">{{ $label }}</span>
+                                </div>
+                                <div style="color: var(--sa-ink); font-size: 1.24rem; font-weight: 800;">{{ number_format($value) }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
+        function toggleSection(section) {
+            const content = document.getElementById('content-' + section);
+            const icon = document.getElementById('icon-' + section);
+            
+            if (content && icon) {
+                const isVisible = content.style.display !== 'none';
+                
+                if (isVisible) {
+                    content.style.display = 'none';
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.display = 'block';
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            }
+        }
+
         function syncLegacyAnalyticsPeriodFields() {
             const form = document.querySelector('[data-legacy-analytics-form]');
             const periodInput = form?.querySelector('[data-analytics-period-type-input]');
@@ -1908,16 +1549,6 @@ function normalizeLegacyAnalyticsForm(form) {
             syncLegacyAnalyticsPeriodFields();
         });
 
-        document.addEventListener('click', function (event) {
-            const resetLink = event.target && event.target.closest('.legacy-analytics-reset-btn');
-            if (!resetLink || !resetLink.closest('[data-legacy-analytics-form]')) {
-                return;
-            }
-
-            event.preventDefault();
-            loadSuperAdminOverviewRegions(resetLink.getAttribute('href'));
-        });
-
         document.addEventListener('submit', function (event) {
             const form = event.target;
             if (!form || !form.matches('[data-legacy-analytics-form]')) {
@@ -1934,7 +1565,7 @@ function normalizeLegacyAnalyticsForm(form) {
 
             const url = new URL(form.getAttribute('action') || window.location.href, window.location.origin);
             url.search = params.toString();
-            loadSuperAdminOverviewRegions(url.toString());
+            window.location.href = url.toString();
         });
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1943,24 +1574,32 @@ function normalizeLegacyAnalyticsForm(form) {
         });
     </script>
 
-    <section class="sa-section sa-business-section" aria-labelledby="business-analytics-title" data-business-analysis-region>
+    @include('admin.super-admin.partials.branch-time-comparison')
+
+    </section>
+
+    <section class="sa-section sa-business-section" aria-labelledby="business-analytics-title">
         <div class="sa-section-heading">
             <div>
                 <p class="sa-section-kicker">Phân tích kinh doanh</p>
                 <h2 class="sa-section-title" id="business-analytics-title">So sánh, đào sâu theo chi nhánh và theo sản phẩm</h2>
-                <p class="sa-section-copy">Hai module analytics còn lại dùng chung payload hiện có và hiển thị bằng tab phía client.</p>
+                <p class="sa-section-copy">Ba module analytics dùng chung cùng payload hiện có, chỉ đổi bố cục hiển thị bằng tab phía client.</p>
             </div>
         </div>
 
         <div class="sa-panel sa-analytics-shell" id="analytics-tabs-shell">
             <div class="sa-analytics-tabs" role="tablist" aria-label="Chuyển vùng phân tích kinh doanh">
                 <button type="button" class="sa-analytics-tab active" data-analytics-tab="branch-ranking" role="tab" aria-selected="true">So sánh chi nhánh</button>
+                <button type="button" class="sa-analytics-tab" data-analytics-tab="branch-product-detail" role="tab" aria-selected="false">Bán chạy theo chi nhánh</button>
                 <button type="button" class="sa-analytics-tab" data-analytics-tab="focus-product-section" role="tab" aria-selected="false">Một món bán tốt ở đâu?</button>
             </div>
 
             <div class="sa-analytics-panels">
                 <div class="sa-analytics-panel" data-analytics-tab-panel="branch-ranking" role="tabpanel">
                     @include('admin.super-admin.partials.branch-ranking')
+                </div>
+                <div class="sa-analytics-panel" data-analytics-tab-panel="branch-product-detail" role="tabpanel" hidden>
+                    @include('admin.super-admin.partials.branch-product-detail')
                 </div>
                 <div class="sa-analytics-panel" data-analytics-tab-panel="focus-product-section" role="tabpanel" hidden>
                     @include('admin.super-admin.partials.product-branch-performance')
@@ -2047,14 +1686,15 @@ function normalizeLegacyAnalyticsForm(form) {
             <div>
                 <p class="sa-section-kicker">Quản trị vận hành</p>
                 <h2 class="sa-section-title" id="ops-title">Nhân sự quản trị và thao tác hệ thống</h2>
+                <p class="sa-section-copy">Giữ nguyên bộ lọc, modal, phân quyền và trạng thái hoạt động của từng quản trị viên.</p>
             </div>
         </div>
 
-        <div id="admins-region" data-admins-region>
-            <section class="sa-panel" id="admins">
-                <div class="sa-panel-header">
-                    <div><h2 class="sa-panel-title">Danh sách quản trị viên</h2><p class="sa-panel-note">{{ $adminUsers->total() }} tài khoản phù hợp</p></div>
-                </div>
+    <div id="admins-region" data-admins-region>
+    <section class="sa-panel" id="admins">
+        <div class="sa-panel-header">
+            <div><h2 class="sa-panel-title">Danh sách quản trị viên</h2><p class="sa-panel-note">{{ $adminUsers->total() }} tài khoản phù hợp</p></div>
+        </div>
         <form class="sa-filter-form" method="GET" action="{{ route('admin.super-admin') }}" data-admins-filter-form>
             <input class="sa-control" type="search" name="q" value="{{ $filters['search'] }}" placeholder="Tìm theo tên hoặc email" aria-label="Tìm theo tên hoặc email">
             <input type="hidden" name="analytics_period_type" value="{{ $analyticsContext->periodType }}">
@@ -2064,6 +1704,15 @@ function normalizeLegacyAnalyticsForm(form) {
             <input type="hidden" name="analytics_year" value="{{ request('analytics_year') }}">
             <input type="hidden" name="analytics_start_date" value="{{ request('analytics_start_date') }}">
             <input type="hidden" name="analytics_end_date" value="{{ request('analytics_end_date') }}">
+            <input type="hidden" name="analytics_compare_type" value="{{ request('analytics_compare_type') }}">
+            <input type="hidden" name="analytics_compare_date" value="{{ request('analytics_compare_date') }}">
+            <input type="hidden" name="analytics_compare_month" value="{{ request('analytics_compare_month') }}">
+            <input type="hidden" name="analytics_compare_year" value="{{ request('analytics_compare_year') }}">
+            <input type="hidden" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}">
+            <input type="hidden" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}">
+            @foreach($analyticsContext->normalizedBranchIds() as $branchId)
+                <input type="hidden" name="analytics_branch_ids[]" value="{{ $branchId }}">
+            @endforeach
             <select class="sa-control" name="role" aria-label="Lọc vai trò">
                 <option value="all">Tất cả vai trò</option>
                 <option value="super" @selected($filters['role'] === 'super')>Quản trị cấp cao</option>
@@ -2130,12 +1779,10 @@ function normalizeLegacyAnalyticsForm(form) {
                                 <div class="sa-actions" @if($adminUser->isSuperAdmin()) data-admin-actions-locked="{{ $adminUser->id }}" @endif>
                                     @if($adminUser->isSuperAdmin())
                                         <span class="sa-action-btn sa-action-btn-disabled" aria-disabled="true" title="Không áp dụng cho quản trị cấp cao"><i class="bi bi-eye"></i></span>
+                                    @elseif($adminUser->branch_id)
+                                        <a class="sa-action-btn" href="{{ route('admin.preview-admin', ['branch_id' => $adminUser->branch_id]) }}" title="Vào trang admin của chi nhánh bằng quyền super admin"><i class="bi bi-eye"></i></a>
                                     @else
-                                        <a
-                                            class="sa-action-btn"
-                                            href="{{ route('admin.preview-admin', array_filter(['branch_id' => $adminUser->branch_id])) }}"
-                                            title="Vào trang quản lý với tư cách Admin"
-                                        ><i class="bi bi-eye"></i></a>
+                                        <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
                                     @endif
                                     <button
                                         class="sa-action-btn {{ $adminUser->isSuperAdmin() ? 'sa-action-btn-disabled' : '' }}"
@@ -2167,8 +1814,7 @@ function normalizeLegacyAnalyticsForm(form) {
                     <a class="sa-page-link {{ $page === $adminUsers->currentPage() ? 'active' : '' }}" href="{{ $adminUsers->url($page) }}">{{ $page }}</a>
                 @endforeach
             </div>
-        </div>
-            </section>
+    </section>
 
     <!-- Branch Edit Modals -->
     @foreach($adminUsers as $adminUser)
@@ -2399,10 +2045,10 @@ function normalizeLegacyAnalyticsForm(form) {
             </div>
         </div>
     @endforeach
-        </div>
+    </div>
     </section>
 
-    <section class="sa-section sa-health-section" aria-labelledby="health-title">
+    <section class="sa-section" aria-labelledby="health-title">
         <div class="sa-section-heading">
             <div>
                 <p class="sa-section-kicker">Sức khỏe hệ thống</p>
@@ -2859,36 +2505,32 @@ document.addEventListener('click', function(e) {
 async function loadAdminsRegion(url) {
     const targetUrl = new URL(url, window.location.origin);
     targetUrl.hash = 'admins';
-    const currentScrollTop = window.scrollY;
 
-    try {
-        const response = await fetch(targetUrl.toString(), {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'text/html',
-            },
-        });
+    const response = await fetch(targetUrl.toString(), {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/html',
+        },
+    });
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const html = await response.text();
-        const parser = new DOMParser();
-        const nextDoc = parser.parseFromString(html, 'text/html');
-        const nextRegion = nextDoc.querySelector('[data-admins-region]');
-        const currentRegion = document.querySelector('[data-admins-region]');
-
-        if (!nextRegion || !currentRegion) {
-            throw new Error('Không tìm thấy vùng quản trị viên để cập nhật.');
-        }
-
-        currentRegion.replaceWith(nextRegion);
-        window.history.replaceState({}, '', targetUrl.toString());
-        restoreStableScroll(currentScrollTop);
-    } catch (error) {
-        console.error('Admins region load error:', error);
+    if (!response.ok) {
+        window.location.href = targetUrl.toString();
+        return;
     }
+
+    const html = await response.text();
+    const parser = new DOMParser();
+    const nextDoc = parser.parseFromString(html, 'text/html');
+    const nextRegion = nextDoc.querySelector('[data-admins-region]');
+    const currentRegion = document.querySelector('[data-admins-region]');
+
+    if (!nextRegion || !currentRegion) {
+        window.location.href = targetUrl.toString();
+        return;
+    }
+
+    currentRegion.replaceWith(nextRegion);
+    window.history.replaceState({}, '', targetUrl.toString());
 }
 
 let branchSectionLoading = false;
@@ -2898,6 +2540,10 @@ function resolveAnalyticsTabFromHash(hashValue = '') {
     if (normalizedHash === 'focus-product-section') {
         return 'focus-product-section';
     }
+    if (normalizedHash === 'branch-product-detail') {
+        return 'branch-product-detail';
+    }
+
     return 'branch-ranking';
 }
 
@@ -2928,12 +2574,14 @@ function syncAnalyticsTabFromLocation() {
     setAnalyticsTab(window.location.hash || 'branch-ranking');
 }
 
-function syncLegacyTopProducts() {
+function syncLegacyTopProducts(sort, options = {}) {
+    const normalizedSort = sort === 'revenue' ? 'revenue' : 'quantity';
     const list = document.querySelector('[data-top-products-list]');
     if (!list) {
         return;
     }
 
+    const buttons = Array.from(document.querySelectorAll('[data-top-products-sort]'));
     const rows = Array.from(list.querySelectorAll('[data-top-product-row]')).map((row, index) => ({
         row,
         index,
@@ -2943,8 +2591,26 @@ function syncLegacyTopProducts() {
     rows.sort((a, b) => {
         const aQuantity = Number(a.row.dataset.topProductQuantity || 0);
         const bQuantity = Number(b.row.dataset.topProductQuantity || 0);
-        const quantityDiff = bQuantity - aQuantity;
-        return quantityDiff !== 0 ? quantityDiff : (a.index - b.index);
+        const aRevenue = Number(a.row.dataset.topProductRevenue || 0);
+        const bRevenue = Number(b.row.dataset.topProductRevenue || 0);
+
+        const primary = normalizedSort === 'revenue'
+            ? (bRevenue - aRevenue)
+            : (bQuantity - aQuantity);
+
+        if (primary !== 0) {
+            return primary;
+        }
+
+        const secondary = normalizedSort === 'revenue'
+            ? (bQuantity - aQuantity)
+            : (bRevenue - aRevenue);
+
+        if (secondary !== 0) {
+            return secondary;
+        }
+
+        return a.index - b.index;
     });
 
     rows.forEach(({ row, rankLabel }, index) => {
@@ -2955,7 +2621,19 @@ function syncLegacyTopProducts() {
         }
     });
 
-    list.dataset.currentSort = 'quantity';
+    list.dataset.currentSort = normalizedSort;
+
+    buttons.forEach((button) => {
+        const isActive = button.getAttribute('data-top-products-sort') === normalizedSort;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    if (options.updateUrl !== false) {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set('analytics_product_sort', normalizedSort);
+        window.history.replaceState({}, '', nextUrl.toString());
+    }
 }
 
 async function loadSuperAdminAnalyticsRegions(url, options = {}) {
@@ -2964,7 +2642,6 @@ async function loadSuperAdminAnalyticsRegions(url, options = {}) {
     }
 
     branchSectionLoading = true;
-    const currentScrollTop = window.scrollY;
     const targetUrl = new URL(url, window.location.origin);
     const targetHash = options.hash || targetUrl.hash || 'branch-ranking';
     targetUrl.hash = targetHash;
@@ -2972,6 +2649,7 @@ async function loadSuperAdminAnalyticsRegions(url, options = {}) {
     const shouldUpdateHistory = options.updateHistory !== false;
     const regionSelectors = options.regionSelectors || [
         '[data-branch-ranking-region]',
+        '[data-branch-product-detail-region]',
         '[data-product-branch-performance-region]',
     ];
     const currentRegions = regionSelectors
@@ -2989,7 +2667,8 @@ async function loadSuperAdminAnalyticsRegions(url, options = {}) {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            window.location.href = targetUrl.toString();
+            return;
         }
 
         const html = await response.text();
@@ -3008,7 +2687,8 @@ async function loadSuperAdminAnalyticsRegions(url, options = {}) {
         });
 
         if (!replaced) {
-            throw new Error('Không tìm thấy vùng phân tích để cập nhật.');
+            window.location.href = targetUrl.toString();
+            return;
         }
 
         if (shouldUpdateHistory) {
@@ -3020,7 +2700,6 @@ async function loadSuperAdminAnalyticsRegions(url, options = {}) {
         }
 
         syncAnalyticsTabFromLocation();
-        restoreStableScroll(currentScrollTop);
     } catch (error) {
         console.error('Analytics region load error:', error);
     } finally {
@@ -3177,6 +2856,12 @@ document.addEventListener('click', function(e) {
         return;
     }
 
+    const topProductsSortButton = e.target.closest('[data-top-products-sort]');
+    if (topProductsSortButton) {
+        e.preventDefault();
+        syncLegacyTopProducts(topProductsSortButton.getAttribute('data-top-products-sort') || 'quantity');
+        return;
+    }
 
     const resetLink = e.target.closest('[data-admins-reset]');
     if (resetLink) {
@@ -3253,7 +2938,7 @@ document.addEventListener('click', function(e) {
 });
 
 window.addEventListener('popstate', function() {
-    if (document.querySelector('[data-branch-ranking-region]') || document.querySelector('[data-branch-time-comparison-region]') || document.querySelector('[data-product-branch-performance-region]')) {
+    if (document.querySelector('[data-branch-ranking-region]') || document.querySelector('[data-branch-product-detail-region]') || document.querySelector('[data-branch-time-comparison-region]') || document.querySelector('[data-product-branch-performance-region]')) {
         loadSuperAdminAnalyticsRegions(window.location.href, { updateHistory: false });
         return;
     }
@@ -3464,7 +3149,7 @@ function filterBranchScopeOptions(root) {
 
 document.querySelectorAll('[data-branch-scope]').forEach(initBranchScopeControl);
 syncAnalyticsTabFromLocation();
-syncLegacyTopProducts();
+syncLegacyTopProducts(document.querySelector('[data-top-products-list]')?.dataset.currentSort || 'quantity', { updateUrl: false });
 
 if (!window.__branchScopeGlobalListenersBound) {
     window.__branchScopeGlobalListenersBound = true;

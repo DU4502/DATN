@@ -42,14 +42,113 @@ class SuperAdminController extends Controller
 
     public function index(SuperAdminAnalyticsRequest $request)
     {
+        // Trang tổng quan hiện dùng toàn bộ chi nhánh và không dùng kỳ đối chiếu.
+        // Chuẩn hóa ngay tại action này để URL cũ/bookmark cũ không làm dashboard hiển thị sai phạm vi.
+        foreach ([
+            'analytics_branch_id',
+            'analytics_branch_ids',
+            'branch_ids',
+            'ranking_period',
+            'branch_direction',
+            'branch_performance',
+            'analytics_compare_date',
+            'analytics_compare_month',
+            'analytics_compare_year',
+            'analytics_compare_start_date',
+            'analytics_compare_end_date',
+        ] as $overviewIgnoredQueryKey) {
+            $request->query->remove($overviewIgnoredQueryKey);
+        }
+        $request->query->set('analytics_compare_type', 'none');
+
         $adminQuery = User::admins();
         $search = trim((string) $request->query('q'));
         $status = (string) $request->query('status', 'all');
         $role = (string) $request->query('role', 'all');
         $created = (string) $request->query('created', 'all');
-        $rankingPeriod = in_array($request->query('ranking_period'), ['all', 'week', 'month', 'year'], true)
-            ? $request->query('ranking_period')
-            : 'all';
+        if ((string) $request->query('branch_sort', 'revenue') === 'growth') {
+            $request->query->set('branch_sort', 'revenue');
+        }
+
+        // Bộ lọc thời gian riêng cho bảng So sánh chi nhánh.
+        // Không tác động tới KPI / sản phẩm / các module khác trên trang tổng quan.
+        $branchPeriod = in_array((string) $request->query('branch_period', 'day'), ['day', 'week', 'month', 'year', 'range'], true)
+            ? (string) $request->query('branch_period', 'day')
+            : 'day';
+        $branchStartDate = trim((string) $request->query('branch_start_date', ''));
+        $branchEndDate = trim((string) $request->query('branch_end_date', ''));
+
+        // Bộ lọc riêng cho biểu đồ xu hướng doanh thu ở Tổng quan nhanh.
+        // Mặc định là toàn bộ chi nhánh + tuần hiện tại và không tác động các module khác.
+        $quickTrendPeriod = in_array((string) $request->query('quick_trend_period', 'week'), ['day', 'week', 'month', 'year', 'range'], true)
+            ? (string) $request->query('quick_trend_period', 'week')
+            : 'week';
+        $quickTrendBranchId = (int) $request->query('quick_trend_branch_id', 0);
+        $quickTrendBranchId = $quickTrendBranchId > 0 ? $quickTrendBranchId : null;
+        $quickTrendStartDate = trim((string) $request->query('quick_trend_start_date', ''));
+        $quickTrendEndDate = trim((string) $request->query('quick_trend_end_date', ''));
+
+        if ($quickTrendPeriod !== 'range') {
+            $quickTrendStartDate = '';
+            $quickTrendEndDate = '';
+        } else {
+            $quickTrendStartDate = $quickTrendStartDate !== '' ? $quickTrendStartDate : now()->startOfMonth()->format('Y-m-d');
+            $quickTrendEndDate = $quickTrendEndDate !== '' ? $quickTrendEndDate : now()->format('Y-m-d');
+        }
+
+        // Fast path riêng cho biểu đồ Xu hướng doanh thu.
+        // Trước đây mỗi lần bấm Hôm nay/Tuần/Tháng/Năm phải render lại toàn bộ dashboard,
+        // kéo theo các query nặng của admin list, branch analytics, product analytics... nên có độ trễ thấy rõ.
+        // Khi client chỉ cần refresh biểu đồ, trả JSON ngay tại đây trước mọi phần tính toán còn lại.
+        if ($request->ajax() && $request->boolean('quick_trend_json')) {
+            $trend = $this->quickBranchRevenueTrend(
+                $quickTrendPeriod,
+                $quickTrendBranchId,
+                $quickTrendStartDate,
+                $quickTrendEndDate,
+            );
+
+            $trendBuckets = collect($trend['buckets'] ?? [])->map(static function ($bucket): array {
+                return [
+                    'label' => (string) ($bucket['label'] ?? ''),
+                    'revenue' => (int) ($bucket['revenue'] ?? 0),
+                    'valid_order_count' => (int) ($bucket['valid_order_count'] ?? 0),
+                    'height' => (int) ($bucket['height'] ?? 0),
+                ];
+            })->values();
+
+            return response()->json([
+                'period' => (string) ($trend['period'] ?? $quickTrendPeriod),
+                'period_label' => (string) ($trend['period_label'] ?? ''),
+                'branch_id' => $trend['branch_id'] ?? null,
+                'branch_label' => (string) ($trend['branch_label'] ?? 'Tất cả chi nhánh'),
+                'start' => ($trend['start'] ?? null) instanceof CarbonInterface
+                    ? $trend['start']->format('Y-m-d')
+                    : null,
+                'end' => ($trend['end'] ?? null) instanceof CarbonInterface
+                    ? $trend['end']->format('Y-m-d')
+                    : null,
+                'buckets' => $trendBuckets,
+            ]);
+        }
+
+        if ($branchPeriod !== 'range') {
+            $request->query->remove('branch_start_date');
+            $request->query->remove('branch_end_date');
+            $branchStartDate = '';
+            $branchEndDate = '';
+        } else {
+            if ($branchStartDate === '') {
+                $branchStartDate = now()->startOfMonth()->format('Y-m-d');
+                $request->query->set('branch_start_date', $branchStartDate);
+            }
+            if ($branchEndDate === '') {
+                $branchEndDate = now()->format('Y-m-d');
+                $request->query->set('branch_end_date', $branchEndDate);
+            }
+        }
+
+        $rankingPeriod = 'all';
         $analyticsContext = $request->analyticsPeriodContext();
         $analyticsBranchIds = $analyticsContext->normalizedBranchIds();
 
@@ -102,15 +201,37 @@ class SuperAdminController extends Controller
         $branchSummaryStats = $this->branchSummaryStats($analyticsContext);
         $branchRankingComparison = $this->analyticsService->branchComparison($analyticsContext, [
             'ranking_period' => $rankingPeriod,
+            'branch_period' => $branchPeriod,
+            'branch_start_date' => $branchStartDate,
+            'branch_end_date' => $branchEndDate,
             'search' => trim((string) $request->query('branch_search', '')),
             'sort' => (string) $request->query('branch_sort', 'revenue'),
-            'direction' => (string) $request->query('branch_direction', 'desc'),
-            'performance' => (string) $request->query('branch_performance', 'all'),
+            // Tổng quan chỉ xếp hạng cao -> thấp, không còn control Hướng.
+            'direction' => 'desc',
+            'performance' => 'all',
             'per_page' => 5,
             'page' => (int) $request->query('branch_page', 1),
             'analytics_branch_ids' => $analyticsBranchIds,
         ]);
         $branchRankingStats = $branchRankingComparison['paginator']->getCollection();
+        $quickBranchTrend = $this->quickBranchRevenueTrend(
+            $quickTrendPeriod,
+            $quickTrendBranchId,
+            $quickTrendStartDate,
+            $quickTrendEndDate,
+        );
+        $quickTrendPeriod = (string) ($quickBranchTrend['period'] ?? $quickTrendPeriod);
+        if ($quickTrendPeriod === 'range') {
+            $quickTrendStartDate = $quickBranchTrend['start'] instanceof CarbonInterface
+                ? $quickBranchTrend['start']->format('Y-m-d')
+                : $quickTrendStartDate;
+            $quickTrendEndDate = $quickBranchTrend['end'] instanceof CarbonInterface
+                ? $quickBranchTrend['end']->format('Y-m-d')
+                : $quickTrendEndDate;
+        } else {
+            $quickTrendStartDate = '';
+            $quickTrendEndDate = '';
+        }
         $branchDetailBranchId = $this->resolveBranchDetailBranchId(
             $request,
             $branchRankingStats,
@@ -120,10 +241,17 @@ class SuperAdminController extends Controller
             'sort_by' => (string) $request->query('branch_product_sort', 'quantity'),
             'analytics_branch_ids' => $analyticsBranchIds,
         ]);
-        $topProductSort = in_array($request->query('analytics_product_sort'), ['quantity', 'revenue'], true)
-            ? (string) $request->query('analytics_product_sort')
-            : 'quantity';
-        $topProducts = $this->analyticsService->topProducts($analyticsContext, $topProductSort, 5);
+        // Overview policy: product rankings are quantity-only.
+        $topProductSort = 'quantity';
+        $topProductBranchId = null;
+        $requestedTopProductBranchId = (int) $request->query('top_product_branch_id', 0);
+        if ($requestedTopProductBranchId > 0 && Schema::hasTable('branches') && Branch::query()->whereKey($requestedTopProductBranchId)->exists()) {
+            $topProductBranchId = $requestedTopProductBranchId;
+        }
+        $systemTopProducts = $this->analyticsService->topProducts($analyticsContext, 'quantity', 5);
+        $topProducts = $topProductBranchId !== null
+            ? $this->analyticsService->topProducts($analyticsContext, 'quantity', 5, $topProductBranchId)
+            : $systemTopProducts;
         $branchTimeIndicator = in_array($request->query('branch_time_indicator'), ['both', 'revenue', 'orders'], true)
             ? (string) $request->query('branch_time_indicator')
             : 'both';
@@ -199,16 +327,16 @@ class SuperAdminController extends Controller
         if ($request->filled('analytics_time_matrix_export')) {
             return $this->downloadBranchTimeComparisonExport($request, $analyticsContext, $branchTimeComparison);
         }
-        $focusProductSort = in_array($request->query('analytics_focus_product_sort'), ['quantity', 'revenue'], true)
-            ? (string) $request->query('analytics_focus_product_sort')
-            : 'quantity';
+        // Overview policy: branch performance for a product is always ranked by quantity.
+        $focusProductSort = 'quantity';
         $focusProductQuery = trim((string) $request->query('analytics_focus_product_query', ''));
-        $focusProductId = $this->resolveFocusProductId($request, $topProducts);
+        $focusProductId = $this->resolveFocusProductId($request, $systemTopProducts);
         $focusProductCandidates = $this->analyticsService->focusProducts($focusProductQuery, 8);
         $focusProductPerformance = $focusProductId !== null
             ? $this->analyticsService->productBranchPerformance($analyticsContext, $focusProductId, [
-                'sort_by' => $focusProductSort,
-                'search' => trim((string) $request->query('analytics_focus_branch_search', '')),
+                'sort_by' => 'quantity',
+                // The overview no longer exposes branch search/filter controls here.
+                'search' => '',
                 'page' => (int) $request->query('analytics_focus_branch_page', 1),
                 'analytics_branch_ids' => $analyticsBranchIds,
             ])
@@ -251,10 +379,19 @@ class SuperAdminController extends Controller
             'branchOrderChart' => $this->branchOrderChart($analyticsContext),
             'branchRankingStats' => $branchRankingStats,
             'branchRankingComparison' => $branchRankingComparison,
+            'quickBranchTrend' => $quickBranchTrend,
+            'quickTrendPeriod' => $quickTrendPeriod,
+            'quickTrendBranchId' => $quickTrendBranchId,
+            'quickTrendStartDate' => $quickTrendStartDate,
+            'quickTrendEndDate' => $quickTrendEndDate,
             'branchProductDetail' => $branchProductDetail,
             'branchDetailBranchId' => $branchDetailBranchId,
             'rankingPeriod' => $rankingPeriod,
+            'branchPeriod' => $branchPeriod,
+            'branchStartDate' => $branchStartDate,
+            'branchEndDate' => $branchEndDate,
             'topProductSort' => $topProductSort,
+            'topProductBranchId' => $topProductBranchId,
             'topProducts' => $topProducts,
             'focusProductSort' => $focusProductSort,
             'focusProductQuery' => $focusProductQuery,
@@ -263,6 +400,362 @@ class SuperAdminController extends Controller
             'focusProductPerformance' => $focusProductPerformance,
             'analyticsContext' => $analyticsContext,
         ]);
+    }
+
+
+    /**
+     * Dữ liệu biểu đồ cột doanh thu cục bộ của khu Tổng quan nhanh.
+     * Bộ lọc này độc lập với analytics period chính và branch ranking phía dưới.
+     *
+     * @return array<string, mixed>
+     */
+    private function quickBranchRevenueTrend(string $period, ?int $branchId, string $startDate = '', string $endDate = ''): array
+    {
+        $timezone = (string) config('app.timezone', 'Asia/Ho_Chi_Minh');
+        $now = Carbon::now($timezone);
+
+        try {
+            [$start, $end, $periodLabel] = match ($period) {
+                // Hôm nay: 8 cột, mỗi cột gom 3 giờ liên tiếp trong ngày hiện tại.
+                'day' => [$now->copy()->startOfDay(), $now->copy(), 'Hôm nay'],
+
+                // Tháng: không còn hiểu là riêng tháng hiện tại. Dashboard nhanh cần
+                // một bức tranh 12 tháng gần nhất, tháng hiện tại là cột cuối.
+                'month' => [
+                    $now->copy()->subMonthsNoOverflow(11)->startOfMonth(),
+                    $now->copy(),
+                    '12 tháng gần nhất',
+                ],
+
+                // Năm: hiển thị 5 năm gần nhất, năm hiện tại là cột cuối.
+                'year' => [
+                    $now->copy()->subYears(4)->startOfYear(),
+                    $now->copy(),
+                    '5 năm gần nhất',
+                ],
+
+                'range' => $this->resolveQuickTrendRange($startDate, $endDate, $now, $timezone),
+
+                // Tuần: từng ngày của tuần hiện tại (từ Thứ 2 đến thời điểm hiện tại).
+                default => [$now->copy()->startOfWeek(Carbon::MONDAY), $now->copy(), 'Tuần này'],
+            };
+        } catch (Throwable) {
+            $period = 'week';
+            $start = $now->copy()->startOfWeek(Carbon::MONDAY);
+            $end = $now->copy();
+            $periodLabel = 'Tuần này';
+        }
+
+        $buckets = $this->quickTrendBuckets($start, $end, $period);
+        $branchName = null;
+        if ($branchId !== null) {
+            // Một query vừa lấy tên vừa xác nhận branch; tránh exists() + value() thành hai lượt DB.
+            $branchName = Branch::query()->whereKey($branchId)->value('name');
+            if ($branchName === null) {
+                $branchId = null;
+            }
+        }
+
+        // orders là bảng lõi của dashboard; bỏ Schema::hasTable() ở hot path để không
+        // phát sinh metadata query mỗi lần người dùng đổi thời gian.
+        $ordersQuery = $this->analyticsService->validSalesOrdersQuery();
+        $this->analyticsService->applyDateRange($ordersQuery, $start, $end);
+        if ($branchId !== null) {
+            $this->analyticsService->applyBranchScope($ordersQuery, $branchId);
+        }
+
+        // Aggregate theo bucket ngay trong SQL để nút Hôm nay/Tuần/Tháng/Năm phản hồi nhanh.
+        // Tránh load toàn bộ orders của cả khoảng về PHP rồi lặp từng order x từng bucket.
+        $caseParts = [];
+        $caseBindings = [];
+        foreach ($buckets->values() as $index => $bucket) {
+            $caseParts[] = 'WHEN orders.created_at >= ? AND orders.created_at <= ? THEN '.(int) $index;
+            $caseBindings[] = $bucket['start']->format('Y-m-d H:i:s');
+            $caseBindings[] = $bucket['end']->format('Y-m-d H:i:s');
+        }
+
+        $bucketAggregates = collect();
+        if ($caseParts !== []) {
+            $bucketCaseSql = 'CASE '.implode(' ', $caseParts).' ELSE NULL END';
+            $bucketAggregates = (clone $ordersQuery)
+                ->selectRaw($bucketCaseSql.' as bucket_index, COALESCE(SUM(orders.total), 0) as revenue, COUNT(*) as valid_order_count', $caseBindings)
+                ->groupBy('bucket_index')
+                ->get()
+                ->filter(static fn ($row) => $row->bucket_index !== null)
+                ->keyBy(static fn ($row) => (int) $row->bucket_index);
+        }
+
+        $bucketRows = $buckets->values()->map(function (array $bucket, int $index) use ($bucketAggregates): array {
+            $aggregate = $bucketAggregates->get($index);
+
+            return array_merge($bucket, [
+                'revenue' => (int) round((float) ($aggregate->revenue ?? 0)),
+                'valid_order_count' => (int) ($aggregate->valid_order_count ?? 0),
+            ]);
+        })->values();
+
+        $totalRevenue = (int) $bucketRows->sum('revenue');
+        $totalOrders = (int) $bucketRows->sum('valid_order_count');
+        $maxRevenue = max(1, (int) $bucketRows->max('revenue'));
+        $peak = $bucketRows
+            ->sortByDesc('revenue')
+            ->first();
+
+        $bucketRows = $bucketRows->map(function (array $bucket) use ($maxRevenue): array {
+            $revenue = (int) ($bucket['revenue'] ?? 0);
+            $bucket['height'] = $revenue > 0 ? max(8, (int) round(($revenue / $maxRevenue) * 100)) : 0;
+
+            return $bucket;
+        })->values();
+
+        return [
+            'period' => $period,
+            'period_label' => $periodLabel,
+            'branch_id' => $branchId,
+            'branch_name' => $branchName,
+            'branch_label' => $branchName ?: 'Tất cả chi nhánh',
+            'start' => $start,
+            'end' => $end,
+            'buckets' => $bucketRows,
+            'total_revenue' => $totalRevenue,
+            'total_valid_orders' => $totalOrders,
+            'average_order_value' => $totalOrders > 0 ? (int) round($totalRevenue / $totalOrders) : 0,
+            'peak' => $peak && (int) ($peak['revenue'] ?? 0) > 0
+                ? [
+                    'label' => (string) ($peak['label'] ?? ''),
+                    'revenue' => (int) ($peak['revenue'] ?? 0),
+                ]
+                : null,
+            'error' => null,
+        ];
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon, 2: string}
+     */
+    private function resolveQuickTrendRange(string $startDate, string $endDate, Carbon $now, string $timezone): array
+    {
+        $start = $startDate !== '' ? Carbon::createFromFormat('Y-m-d', $startDate, $timezone) : $now->copy()->startOfMonth();
+        $end = $endDate !== '' ? Carbon::createFromFormat('Y-m-d', $endDate, $timezone) : $now->copy();
+
+        if ($start === false || $end === false) {
+            throw new \InvalidArgumentException('Khoảng thời gian không hợp lệ.');
+        }
+
+        $start = $start->startOfDay();
+        $end = $end->isSameDay($now) ? $now->copy() : $end->endOfDay();
+        if ($end->isAfter($now)) {
+            $end = $now->copy();
+        }
+        if ($start->isAfter($end)) {
+            throw new \InvalidArgumentException('Khoảng thời gian không hợp lệ.');
+        }
+
+        return [$start, $end, $start->format('d/m/Y').' – '.$end->format('d/m/Y')];
+    }
+
+    /**
+     * @return Collection<int, array{key:string,label:string,start:Carbon,end:Carbon}>
+     */
+    private function quickTrendBuckets(Carbon $start, Carbon $end, string $period): Collection
+    {
+        $buckets = collect();
+
+        if ($period === 'day') {
+            // Hôm nay = 8 cột, mỗi cột 3 giờ:
+            // 00–02h, 03–05h, 06–08h, 09–11h, 12–14h, 15–17h, 18–20h, 21–23h.
+            // Các khung giờ chưa tới vẫn giữ cột 0đ; query thực tế vẫn chỉ chạy tới
+            // $end (= thời điểm hiện tại), nên không đọc dữ liệu tương lai.
+            $cursor = $start->copy()->startOfDay();
+            for ($slot = 0; $slot < 8; $slot++) {
+                $bucketStart = $cursor->copy()->addHours($slot * 3)->startOfHour();
+                $bucketEnd = $bucketStart->copy()->addHours(2)->endOfHour();
+                $buckets->push([
+                    'key' => $bucketStart->format('YmdH'),
+                    'label' => $bucketStart->format('H').'–'.$bucketEnd->format('H').'h',
+                    'start' => $bucketStart,
+                    'end' => $bucketEnd,
+                ]);
+            }
+
+            return $buckets;
+        }
+
+        if ($period === 'week') {
+            // Tuần = đủ 7 ngày T2 -> CN. Ngày tương lai trong tuần hiển thị 0đ;
+            // query vẫn được chặn ở thời điểm hiện tại nên không đọc dữ liệu tương lai.
+            $cursor = $start->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
+            $dayLabels = [1 => 'T2', 2 => 'T3', 3 => 'T4', 4 => 'T5', 5 => 'T6', 6 => 'T7', 7 => 'CN'];
+            for ($day = 0; $day < 7; $day++) {
+                $bucketStart = $cursor->copy()->addDays($day)->startOfDay();
+                $bucketEnd = $bucketStart->copy()->endOfDay();
+                $buckets->push([
+                    'key' => $bucketStart->format('Ymd'),
+                    'label' => ($dayLabels[$bucketStart->isoWeekday()] ?? $bucketStart->format('d/m')).' '.$bucketStart->format('d/m'),
+                    'start' => $bucketStart,
+                    'end' => $bucketEnd,
+                ]);
+            }
+
+            return $buckets;
+        }
+
+        if ($period === 'month') {
+            // Tháng = 12 tháng gần nhất. Mỗi cột là một tháng.
+            $cursor = $start->copy()->startOfMonth();
+            while ($cursor->lte($end)) {
+                $bucketStart = $cursor->copy();
+                $bucketEnd = $cursor->copy()->endOfMonth();
+                if ($bucketEnd->gt($end)) {
+                    $bucketEnd = $end->copy();
+                }
+                $buckets->push([
+                    'key' => $cursor->format('Ym'),
+                    'label' => $cursor->format('m/Y'),
+                    'start' => $bucketStart,
+                    'end' => $bucketEnd,
+                ]);
+                $cursor = $cursor->copy()->addMonthNoOverflow()->startOfMonth();
+            }
+
+            return $buckets;
+        }
+
+        if ($period === 'year') {
+            // Năm = 5 năm gần nhất. Mỗi cột là một năm.
+            $cursor = $start->copy()->startOfYear();
+            while ($cursor->lte($end)) {
+                $bucketStart = $cursor->copy();
+                $bucketEnd = $cursor->copy()->endOfYear();
+                if ($bucketEnd->gt($end)) {
+                    $bucketEnd = $end->copy();
+                }
+                $buckets->push([
+                    'key' => $cursor->format('Y'),
+                    'label' => $cursor->format('Y'),
+                    'start' => $bucketStart,
+                    'end' => $bucketEnd,
+                ]);
+                $cursor = $cursor->copy()->addYear()->startOfYear();
+            }
+
+            return $buckets;
+        }
+
+        $days = max(1, $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1);
+
+        // Tùy chọn: giữ số cột dễ đọc theo đúng ngưỡng nghiệp vụ của dashboard.
+        // - <= 12 ngày: mỗi cột là 1 ngày.
+        // - > 12 ngày đến <= 12 tuần: mỗi cột là 1 tuần (7 ngày liên tiếp từ ngày bắt đầu).
+        // - > 12 tuần đến <= 12 tháng: mỗi cột là 1 tháng.
+        // - > 12 tháng: mỗi cột là 1 năm.
+        // Các bucket đầu/cuối có thể là kỳ không đầy đủ và luôn bị chặn đúng trong range đã chọn.
+        if ($days <= 12) {
+            $cursor = $start->copy()->startOfDay();
+            while ($cursor->lte($end)) {
+                $bucketStart = $cursor->copy();
+                $bucketEnd = $cursor->copy()->endOfDay();
+                if ($bucketEnd->gt($end)) {
+                    $bucketEnd = $end->copy();
+                }
+                $buckets->push([
+                    'key' => $bucketStart->format('Ymd'),
+                    'label' => $bucketStart->format('d/m'),
+                    'start' => $bucketStart,
+                    'end' => $bucketEnd,
+                ]);
+                $cursor = $cursor->copy()->addDay()->startOfDay();
+            }
+
+            return $buckets;
+        }
+
+        $twelveWeeksEnd = $start->copy()->addWeeks(12)->subSecond();
+        if ($end->lte($twelveWeeksEnd)) {
+            $cursor = $start->copy()->startOfDay();
+            while ($cursor->lte($end)) {
+                $bucketStart = $cursor->copy();
+                $bucketEnd = $cursor->copy()->addDays(6)->endOfDay();
+                if ($bucketEnd->gt($end)) {
+                    $bucketEnd = $end->copy();
+                }
+                $buckets->push([
+                    'key' => $bucketStart->format('Ymd'),
+                    'label' => $bucketStart->format('d/m').'–'.$bucketEnd->format('d/m'),
+                    'start' => $bucketStart,
+                    'end' => $bucketEnd,
+                ]);
+                $cursor = $bucketEnd->copy()->addSecond()->startOfDay();
+            }
+
+            return $buckets;
+        }
+
+        $twelveMonthsEnd = $start->copy()->addMonthsNoOverflow(12)->subSecond();
+        if ($end->lte($twelveMonthsEnd)) {
+            $cursor = $start->copy()->startOfMonth();
+            while ($cursor->lte($end)) {
+                $bucketStart = $cursor->lt($start) ? $start->copy() : $cursor->copy();
+                $bucketEnd = $cursor->copy()->endOfMonth();
+                if ($bucketEnd->gt($end)) {
+                    $bucketEnd = $end->copy();
+                }
+                $buckets->push([
+                    'key' => $cursor->format('Ym'),
+                    'label' => $cursor->format('m/Y'),
+                    'start' => $bucketStart,
+                    'end' => $bucketEnd,
+                ]);
+                $cursor = $cursor->copy()->addMonthNoOverflow()->startOfMonth();
+            }
+
+            return $buckets;
+        }
+
+        $cursor = $start->copy()->startOfYear();
+        while ($cursor->lte($end)) {
+            $bucketStart = $cursor->lt($start) ? $start->copy() : $cursor->copy();
+            $bucketEnd = $cursor->copy()->endOfYear();
+            if ($bucketEnd->gt($end)) {
+                $bucketEnd = $end->copy();
+            }
+            $buckets->push([
+                'key' => $cursor->format('Y'),
+                'label' => $cursor->format('Y'),
+                'start' => $bucketStart,
+                'end' => $bucketEnd,
+            ]);
+            $cursor = $cursor->copy()->addYear()->startOfYear();
+        }
+
+        return $buckets;
+    }
+
+    /**
+     * @param Collection<int, array<string, mixed>> $buckets
+     * @return array<string, mixed>
+     */
+    private function emptyQuickBranchTrend(string $period, string $periodLabel, ?int $branchId, ?string $branchName, Carbon $start, Carbon $end, Collection $buckets): array
+    {
+        return [
+            'period' => $period,
+            'period_label' => $periodLabel,
+            'branch_id' => $branchId,
+            'branch_name' => $branchName,
+            'branch_label' => $branchName ?: 'Tất cả chi nhánh',
+            'start' => $start,
+            'end' => $end,
+            'buckets' => $buckets->map(fn (array $bucket): array => array_merge($bucket, [
+                'revenue' => 0,
+                'valid_order_count' => 0,
+                'height' => 0,
+            ]))->values(),
+            'total_revenue' => 0,
+            'total_valid_orders' => 0,
+            'average_order_value' => 0,
+            'peak' => null,
+            'error' => null,
+        ];
     }
 
     private function safeDashboardAnalytics(array $filters = []): array

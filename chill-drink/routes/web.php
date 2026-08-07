@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Admin\StaffManagementController;
+use App\Http\Middleware\KeepSuperAdminContext;
 use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\OrderLookupController;
 use App\Http\Controllers\Client\ChatController;
@@ -199,7 +200,7 @@ Route::middleware('auth')->group(function () {
 |--------------------------------------------------------------------------https://antigravity.google/support
 */
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSuperAdminContext::class])->group(function () {
     Route::get('/super-admin', [SuperAdminController::class, 'index'])->name('super-admin');
     Route::post('/super-admin/admins', [SuperAdminController::class, 'storeAdmin'])->name('super-admin.admins.store');
     Route::post('/super-admin/staff', [SuperAdminController::class, 'storeStaff'])->name('super-admin.staff.store');
@@ -214,7 +215,43 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::get('/preview/admin', [SuperAdminController::class, 'enterAdminWorkspace'])->name('preview-admin');
     Route::get('/preview/admin/exit', [SuperAdminController::class, 'exitAdminWorkspace'])->name('preview-admin.exit');
 
-    
+    // Store-management pages opened from the Super Admin sidebar keep the
+    // Super Admin URL/context instead of falling back to /admin/*.
+    Route::prefix('super-admin')->name('super-admin.manage.')->group(function () {
+        Route::get('/vouchers', [VoucherController::class, 'index'])->name('vouchers.index');
+        Route::get('/vouchers/create', [VoucherController::class, 'create'])->name('vouchers.create');
+        Route::get('/vouchers/{voucher}/edit', [VoucherController::class, 'edit'])->name('vouchers.edit');
+
+        Route::get('/toppings', [ToppingController::class, 'index'])->name('toppings.index');
+
+        Route::get('/products/trash', [AdminProductController::class, 'trash'])->name('products.trash');
+        Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+        Route::get('/products/create', [AdminProductController::class, 'create'])->name('products.create');
+        Route::get('/products/{product}', [AdminProductController::class, 'show'])->name('products.show');
+        Route::get('/products/{product}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
+
+        Route::get('/categories/trash', [CategoryController::class, 'trash'])->name('categories.trash');
+        Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+        Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
+        Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
+
+        Route::get('/slides/trash', [BranchSlideController::class, 'trash'])->name('slides.trash');
+        Route::get('/slides', [BranchSlideController::class, 'index'])->name('slides.index');
+
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+
+        Route::get('/group-orders', [AdminGroupOrderController::class, 'index'])->name('group-orders.index');
+        Route::get('/group-orders/{groupOrder}', [AdminGroupOrderController::class, 'show'])->name('group-orders.show');
+
+        Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [UserController::class, 'show'])->name('users.show');
+        Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
+
+        Route::get('/staff', [StaffManagementController::class, 'index'])->name('staff.index');
+    });
+
     // Branch Management
     Route::get('/branches', [BranchController::class, 'index'])->name('branches.index');
     Route::post('/branches', [BranchController::class, 'store'])->name('branches.store');
@@ -223,7 +260,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin'])->grou
     Route::patch('/branches/{branch}/status', [BranchController::class, 'toggleStatus'])->name('branches.toggle-status');
 });
 
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAdminContext::class])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
