@@ -374,6 +374,7 @@
             white-space: nowrap;
             transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
         }
+        button.active-group-return { font-family: inherit; cursor: pointer; }
 
         .active-group-return:hover { color: var(--c-primary-dark); background: #d9f5ee; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(13,147,115,.14); }
         .active-group-return__time { min-width: 3.15rem; font-variant-numeric: tabular-nums; }
@@ -1261,10 +1262,26 @@
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     @if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*'))
-                        <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
-                            <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                            <span>Tiếp tục thanh toán</span>
-                        </a>
+                        @if((int) session('checkout_group_order_id') === (int) $pendingCheckoutGroup->id)
+                            <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                                <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                                <span>Tiếp tục thanh toán</span>
+                                <span class="active-group-return__time" title="Đã chốt lúc {{ $pendingCheckoutGroup->closes_at?->format('H:i · d/m/Y') }}">
+                                    {{ $pendingCheckoutGroup->closes_at?->format('H:i') ?? '--:--' }}
+                                </span>
+                            </a>
+                        @else
+                            <form method="POST" action="{{ route('group-orders.pending-checkout.resume') }}" class="m-0">
+                                @csrf
+                                <button type="submit" class="active-group-return is-checkout" title="Khôi phục và tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                                    <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                                    <span>Tiếp tục thanh toán</span>
+                                    <span class="active-group-return__time" title="Đã chốt lúc {{ $pendingCheckoutGroup->closes_at?->format('H:i · d/m/Y') }}">
+                                        {{ $pendingCheckoutGroup->closes_at?->format('H:i') ?? '--:--' }}
+                                    </span>
+                                </button>
+                            </form>
+                        @endif
                     @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
                         <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
                             <i class="bi bi-people-fill" aria-hidden="true"></i>
@@ -1903,8 +1920,6 @@
         });
     </script>
     <script>
-        /* Automatic branch switching is intentionally disabled. */
-        /*
         document.addEventListener('DOMContentLoaded', function () {
             const activeGroupTimer = document.querySelector('[data-active-group-countdown]');
             if (!activeGroupTimer) return;
@@ -1941,7 +1956,6 @@
             window.addEventListener('pagehide', stopTimer, { once: true });
             startTimer();
         });
-        */
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -1951,7 +1965,7 @@
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('{{ route('select-nearest-branch') }}', {
+                fetch('{{ route('select-nearest-branch', [], false) }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1969,10 +1983,11 @@
                 .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
             }
 
-            // Kiểm tra và tự động gửi tọa độ nếu đã được cấp quyền trước đó
+            // Kiểm tra trạng thái quyền vị trí
             if (navigator.permissions) {
                 navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
                     if (result.state === 'granted') {
+                        // Đã cấp quyền trước đó → lấy ngay, không hỏi nữa
                         navigator.geolocation.getCurrentPosition(
                             pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
                             err => console.warn("Lỗi GPS:", err),
@@ -1983,7 +1998,15 @@
                         var banner = document.getElementById('location-permission-banner');
                         if (banner) banner.style.display = 'flex';
                     }
+                    // 'denied' → không làm gì
                 });
+            } else {
+                // Browser không hỗ trợ Permissions API → thử lấy thẳng
+                navigator.geolocation.getCurrentPosition(
+                    pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
+                    err => console.warn("Lỗi GPS:", err),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+                );
             }
 
 
@@ -2012,10 +2035,9 @@
             @endauth
         });
     </script>
-    {{-- Disabled automatic branch switching on page load.
-         Branch selection now only happens when the user explicitly chooses it. --}}
     @include('partials.realtime')
     @include('partials.client-notifications')
+    @stack('scripts')
 </body>
 
 </html>

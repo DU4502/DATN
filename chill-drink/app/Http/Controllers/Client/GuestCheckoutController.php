@@ -142,16 +142,6 @@ class GuestCheckoutController extends CheckoutController
 
         $validated['guest_phone'] = $this->normalizeVietnamesePhoneNumber($validated['guest_phone']);
 
-        if (
-            ($validated['fulfillment_type'] ?? null) === 'delivery'
-            && ! $this->hasHouseNumber($validated['shipping_address_ui'] ?? '')
-            && blank($validated['note'] ?? null)
-        ) {
-            throw ValidationException::withMessages([
-                'note' => 'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng để shipper dễ tìm.',
-            ]);
-        }
-
         $this->validateOrderServiceRadius(
             $validated['fulfillment_type'],
             $validated['branch_id'],

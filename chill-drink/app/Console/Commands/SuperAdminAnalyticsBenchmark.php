@@ -695,7 +695,7 @@ class SuperAdminAnalyticsBenchmark extends Command
     }
 
     /**
-     * @return array<int, array{label:string,context:array,branch_scope:array<string,mixed>}> 
+     * @return array<int, array{label:string,context:array,branch_scope:array<string,mixed>}>
      */
     private function benchmarkDefinitions(): array
     {
