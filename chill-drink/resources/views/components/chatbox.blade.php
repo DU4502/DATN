@@ -22,6 +22,7 @@
         pollInterval: null,
         unreadPollInterval: null,
         echoChannel: null,
+        echoConnected: false,
         visibilityHandler: null,
         isLoggedIn: {{ auth()->check() ? 'true' : 'false' }},
         guestToken: null,
@@ -284,6 +285,11 @@
             if (this.echoChannel) return;
 
             this.echoChannel = window.Echo.private('conversation.' + this.conversationId)
+                .subscribed(() => {
+                    this.echoConnected = true;
+                    this.stopPolling();
+                    this.stopUnreadPolling();
+                })
                 .listen('.message-sent', (payload) => {
                     const alreadyExists = this.messages.some(m => m.id === payload.message_id);
                     if (alreadyExists) return;
@@ -326,6 +332,7 @@
                 .error((error) => {
                     console.warn('Echo channel error, using fallback polling', error);
                     this.echoChannel = null;
+                    this.echoConnected = false;
                     if (this.isOpen) this.startPolling();
                 });
         },
@@ -357,7 +364,7 @@
         },
 
         startUnreadPolling() {
-            if (this.unreadPollInterval || this.isOpen || document.hidden) return;
+            if (this.unreadPollInterval || this.isOpen || document.hidden || this.echoConnected) return;
             this.unreadPollInterval = window.setInterval(() => {
                 if (!this.isOpen && !document.hidden) this.fetchUnreadCount();
             }, 1000);
@@ -373,11 +380,12 @@
             if (!window.Echo || !this.conversationId || !this.echoChannel) return;
             window.Echo.leave('conversation.' + this.conversationId);
             this.echoChannel = null;
+            this.echoConnected = false;
         },
 
         startPolling() {
             this.stopPolling();
-            if (!this.isOpen || document.hidden || !this.conversationId) return;
+            if (!this.isOpen || document.hidden || !this.conversationId || this.echoConnected) return;
             this.pollInterval = window.setInterval(() => {
                 if (this.isOpen && !document.hidden) this.fetchMessages();
             }, 1500);
