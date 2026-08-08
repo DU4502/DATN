@@ -67,6 +67,7 @@ class OrderIssueReportController extends Controller
                     'code' => $code,
                     'type' => Voucher::TYPE_FIXED,
                     'value' => $voucherAmount,
+                    'max_discount' => 0,
                     'description' => 'Voucher hỗ trợ cho đơn '.($issue->order->order_code ?? '#'.$issue->order_id),
                     'min_order' => 0,
                     'usage_limit' => 1,

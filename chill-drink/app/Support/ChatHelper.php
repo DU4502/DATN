@@ -127,14 +127,9 @@ class ChatHelper
             ->latest()
             ->first();
 
-        // Đã có conversation với đúng chi nhánh → không cần làm gì
+        // Nếu đã có conversation với đúng chi nhánh → không cần làm gì
         if ($existing && (int) $existing->branch_id === (int) $order->branch_id) {
             return;
-        }
-
-        // Đóng conversation cũ với chi nhánh khác
-        if ($existing && $existing->branch_id && (int) $existing->branch_id !== (int) $order->branch_id) {
-            $existing->update(['status' => 'closed']);
         }
 
         $branch = \App\Models\Branch::find($order->branch_id);
@@ -142,13 +137,24 @@ class ChatHelper
             return;
         }
 
-        // Tạo conversation mới gắn với đơn hàng và chi nhánh
-        $conversation = Conversation::create([
-            'user_id'   => $user->id,
-            'subject'   => "Đơn hàng {$order->displayCode()}",
-            'status'    => 'open',
-            'branch_id' => $branch->id,
-        ]);
+        // Nếu có conversation mở nhưng chưa có chi nhánh (Khách hàng vãng lai nhắn trước khi đặt) -> Gán luôn chi nhánh này
+        if ($existing && is_null($existing->branch_id)) {
+            $existing->update(['branch_id' => $branch->id, 'order_id' => $order->id]);
+            $conversation = $existing;
+        } else {
+            // Đóng conversation cũ với chi nhánh khác
+            if ($existing && (int) $existing->branch_id !== (int) $order->branch_id) {
+                $existing->update(['status' => 'closed']);
+            }
+
+            // Tạo conversation mới gắn với đơn hàng và chi nhánh
+            $conversation = Conversation::create([
+                'user_id'   => $user->id,
+                'subject'   => "Đơn hàng {$order->displayCode()}",
+                'status'    => 'open',
+                'branch_id' => $branch->id,
+            ]);
+        }
 
         // Tìm nhân viên thuộc chi nhánh để gửi system message
         $staffUser = User::whereIn('role_id', [2, 3, 4])

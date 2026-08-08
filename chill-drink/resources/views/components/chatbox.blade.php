@@ -47,6 +47,7 @@
         conversationStatus: 'open',
         showScrollToLatest: false,
         supportIssue: null,
+        confirmChangeBranch: false,
 
         get hasUserSentMessage() {
             return this.messages.some(m => Number(m.sender_id) === Number(this.currentUserId));
@@ -290,6 +291,9 @@
                 });
                 const data = await res.json();
                 if (data.success) {
+                    if (data.conversation_id) {
+                        this.conversationId = data.conversation_id;
+                    }
                     this.branchId = data.branch_id;
                     this.branchName = data.branch_name;
                     if (data.message) {
@@ -310,10 +314,15 @@
         },
 
         changeBranch() {
-            if (this.hasUserSentMessage) {
-                alert('Bạn đã gửi tin nhắn trong cuộc trò chuyện này. Vui lòng tiếp tục hỗ trợ với ' + this.branchName + '.');
+            if (this.messages.length > 0) {
+                this.confirmChangeBranch = true;
                 return;
             }
+            this.proceedChangeBranch();
+        },
+
+        proceedChangeBranch() {
+            this.confirmChangeBranch = false;
             this.branchId = null;
             this.branchName = '';
             this.messages = [];
@@ -774,8 +783,32 @@
     <div
         x-show="isOpen && !groupChatOpen"
         x-cloak
-        class="rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300"
+        class="rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300 relative"
         style="position: fixed; right: 1.5rem; bottom: 6.25rem; width: min(380px, calc(100vw - 2rem)); height: min(540px, calc(100vh - 8rem)); background: #ffffff; border-color: var(--c-border); z-index: 1055;">
+        
+        <!-- Custom Confirm Change Branch Overlay -->
+        <template x-if="confirmChangeBranch">
+            <div class="absolute inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(255,255,255,0.85); backdrop-filter: blur(4px);">
+                <div class="bg-white rounded-2xl shadow-xl border p-4 text-center w-full max-w-[280px]" style="border-color: #e2e8f0;">
+                    <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-sm" style="background: #fef2f2; color: #ef4444;">
+                        ⚠️
+                    </div>
+                    <h3 class="font-bold text-sm text-slate-800 mb-2">Đổi chi nhánh?</h3>
+                    <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+                        Lịch sử trò chuyện hiện tại sẽ được đóng lại để bắt đầu phiên mới. Bạn có chắc chắn muốn đổi?
+                    </p>
+                    <div class="flex gap-2 w-full">
+                        <button type="button" @click.prevent="confirmChangeBranch = false" class="flex-1 py-2 rounded-xl text-xs font-bold text-slate-700 transition-colors" style="background: #f1f5f9;">
+                            Hủy
+                        </button>
+                        <button type="button" @click.prevent="proceedChangeBranch()" class="flex-1 py-2 rounded-xl text-xs font-bold text-white transition-colors shadow-sm" style="background: #ef4444;">
+                            Đổi ngay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+
         <!-- Header -->
         <div class="p-3.5 flex items-center justify-between flex-shrink-0 shadow-sm" style="background: linear-gradient(135deg, var(--c-primary), var(--c-accent)); color: white;">
             <div class="flex items-center gap-3">
@@ -788,7 +821,7 @@
                     <h4 class="font-bold text-sm leading-tight mb-0">Hỗ trợ khách hàng</h4>
                     <p class="text-xs opacity-90 mb-0 flex items-center gap-1">
                         <span x-text="branchId ? ('Đang hỗ trợ bởi: ' + branchName) : (loadingLocation ? 'Đang xác định vị trí...' : 'Vui lòng chọn chi nhánh bên dưới')"></span>
-                        <template x-if="branchId && !hasUserSentMessage && !loadingMessages && !loadingConversation">
+                        <template x-if="branchId && !loadingMessages && !loadingConversation">
                             <button type="button" @click.prevent="changeBranch()" class="ml-1 underline text-[11px] hover:opacity-100 opacity-90 font-semibold" style="color: #fef08a;">[Đổi chi nhánh]</button>
                         </template>
                     </p>
@@ -801,12 +834,12 @@
             </button>
         </div>
 
-        <!-- Messages & Branch Selector Area (Solid Pure White Background) -->
         <div
             x-ref="messageList"
             @scroll.passive="handleMessageScroll()"
             class="flex-1 p-3 overflow-y-auto space-y-3"
             style="min-height: 0; background: #ffffff !important;">
+
             <!-- Case: Unauthenticated User Prompt -->
             <template x-if="needLogin">
                 <div class="flex flex-col items-center justify-center h-full gap-3 py-8 text-center px-4">

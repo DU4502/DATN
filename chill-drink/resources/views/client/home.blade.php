@@ -1676,17 +1676,24 @@
                 const sz = sizeBtn.dataset.value;
                 if (sz === 'S') {
                     sizeBtn.dataset.extra = '0';
+                    sizeBtn.style.display = '';
                 } else if (sizesMap[sz] !== undefined) {
                     const extraPrice = Number(sizesMap[sz]);
                     sizeBtn.dataset.extra = extraPrice;
                     const small = sizeBtn.querySelector('small');
                     if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
+                    sizeBtn.style.display = '';
+                } else {
+                    sizeBtn.style.display = 'none';
+                    sizeBtn.dataset.extra = '0';
                 }
             });
 
             resetGroup('size', 'S'); resetGroup('sugar', '50'); resetGroup('ice', '100');
             element.querySelectorAll('[data-home-toppings] .home-quick-choice').forEach((item) => item.classList.remove('active'));
             input('toppings').value = '[]';
+            input('quantity').value = '1';
+            element.querySelector('[data-home-qty-label]').textContent = '1';
             updateTotal();
             modal.show();
         }));

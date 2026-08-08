@@ -72,6 +72,6 @@ class OrderItem extends Model
     public function toppings()
     {
         return $this->belongsToMany(Topping::class, 'order_item_toppings', 'order_item_id', 'topping_id')
-            ->withPivot('price', 'quantity');
+            ->withPivot('price');
     }
 }
