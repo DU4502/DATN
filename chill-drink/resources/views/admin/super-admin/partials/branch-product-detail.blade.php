@@ -6,7 +6,6 @@
     $detailBranch = $branchDetail['branch'] ?? null;
     $selectedBranchId = (int) ($branchDetailBranchId ?? ($detailBranch['id'] ?? 0));
 
-    $rankingCompatQueryBase = request()->except('ranking_period');
     $branchQueryBase = request()->except(['branch_search', 'branch_sort', 'branch_direction', 'branch_performance', 'branch_per_page', 'branch_page']);
     $branchQueryBase['analytics_detail_branch_id'] = $selectedBranchId;
     $branchDetailQueryBase = request()->query();
@@ -24,16 +23,11 @@
         'orders' => 'Đơn hàng',
         'average_order_value' => 'Trung bình/đơn',
         'items_sold' => 'Sản phẩm bán ra',
-        'growth' => 'Tăng trưởng',
         'cancellation_rate' => 'Tỷ lệ hủy',
         'name' => 'Tên chi nhánh',
     ];
     $branchPerformanceOptions = [
         'all' => 'Tất cả',
-        'increased' => 'Tăng trưởng',
-        'decreased' => 'Giảm',
-        'unchanged' => 'Không đổi',
-        'new_activity' => 'Mới phát sinh',
         'no_orders' => 'Chưa có đơn',
     ];
     $summary = $branchDetail['summary'] ?? [];
@@ -49,17 +43,10 @@
                 <p class="branch-product-toolbar-note">Tổng hợp chi nhánh và sản phẩm nổi bật trong kỳ đã chọn.</p>
                 <div class="branch-product-toolbar-meta">
                     <span class="sa-state sa-state-active" style="background:#eafaf5; color:var(--sa-green);">{{ $branchComparison['period_label'] }}</span>
-                    <span class="sa-state" style="background:#eef2ff; color:#4338ca;">{{ $branchComparison['comparison_label'] }}</span>
                     <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ number_format($branchTotal) }} chi nhánh</span>
                 </div>
             </div>
             <div class="branch-product-toolbar-actions">
-                <div class="branch-product-period-switcher" role="tablist" aria-label="Chọn kỳ phân tích">
-                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'all', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="all" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'all' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'all' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tất cả</a>
-                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'week', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="week" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'week' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'week' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tuần</a>
-                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'month', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="month" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
-                    <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'year', 'analytics_detail_branch_id' => $selectedBranchId])) }}#branch-product-detail" data-ranking-period="year" class="sa-btn branch-product-period-link {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
-                </div>
                 <button type="button" class="sa-btn sa-btn-primary branch-product-add-btn" data-bs-toggle="modal" data-bs-target="#createBranchModal"><i class="bi bi-plus-circle"></i> Thêm chi nhánh</button>
             </div>
         </div>
@@ -166,10 +153,6 @@
                             <h3 class="branch-product-detail-title">{{ $detailBranch['name'] }}</h3>
                             <div class="branch-product-detail-meta">
                                 Mã chi nhánh: <strong>{{ $detailBranch['code'] }}</strong>
-                                <span style="margin:0 0.25rem;">·</span>
-                                Kỳ: {{ $branchDetail['period_label'] ?? $branchComparison['period_label'] }}
-                                <span style="margin:0 0.25rem;">·</span>
-                                Đối chiếu: <strong>{{ $branchDetail['comparison_label'] ?? $branchComparison['comparison_label'] }}</strong>
                             </div>
                         </div>
                         <div class="branch-product-detail-chiprow">
@@ -178,7 +161,6 @@
                             @else
                                 <span class="sa-state" style="background:#fef2f2; color:#991b1b;"><i class="bi bi-pause-circle"></i> Tạm ngưng</span>
                             @endif
-                            <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ $branchDetail['comparison_label'] ?? 'Không đối chiếu' }}</span>
                         </div>
                     </div>
 
@@ -186,24 +168,10 @@
                         <div class="branch-product-summary-card">
                             <div class="branch-product-summary-label">Doanh thu</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['revenue'] ?? 0), 0, ',', '.') }}đ</div>
-                            <div class="branch-product-summary-note">
-                                @if(($comparison['revenue_change_percentage'] ?? null) !== null)
-                                    {{ (($comparison['revenue_change_percentage'] ?? 0) >= 0 ? '+' : '') . number_format((float) $comparison['revenue_change_percentage'], 1) }}% so với kỳ đối chiếu
-                                @else
-                                    Không đối chiếu
-                                @endif
-                            </div>
                         </div>
                         <div class="branch-product-summary-card">
                             <div class="branch-product-summary-label">Đơn hợp lệ</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['valid_order_count'] ?? 0)) }}</div>
-                            <div class="branch-product-summary-note">
-                                @if(($comparison['order_change_percentage'] ?? null) !== null)
-                                    {{ (($comparison['order_change_percentage'] ?? 0) >= 0 ? '+' : '') . number_format((float) $comparison['order_change_percentage'], 1) }}% so với kỳ đối chiếu
-                                @else
-                                    Không đối chiếu
-                                @endif
-                            </div>
                         </div>
                         <div class="branch-product-summary-card">
                             <div class="branch-product-summary-label">Khách hàng thành viên</div>
@@ -213,24 +181,10 @@
                         <div class="branch-product-summary-card">
                             <div class="branch-product-summary-label">Sản phẩm bán ra</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['items_sold'] ?? 0)) }}</div>
-                            <div class="branch-product-summary-note">
-                                @if(($comparison['items_change_percentage'] ?? null) !== null)
-                                    {{ (($comparison['items_change_percentage'] ?? 0) >= 0 ? '+' : '') . number_format((float) $comparison['items_change_percentage'], 1) }}% so với kỳ đối chiếu
-                                @else
-                                    Không đối chiếu
-                                @endif
-                            </div>
                         </div>
                         <div class="branch-product-summary-card">
                             <div class="branch-product-summary-label">Trung bình/đơn</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['average_order_value'] ?? 0), 0, ',', '.') }}đ</div>
-                            <div class="branch-product-summary-note">
-                                @if(($comparison['revenue_change_percentage'] ?? null) !== null)
-                                    Điểm so với doanh thu kỳ trước
-                                @else
-                                    Không đối chiếu
-                                @endif
-                            </div>
                         </div>
                         <div class="branch-product-summary-card">
                             <div class="branch-product-summary-label">Tỷ lệ hủy</div>
@@ -259,23 +213,12 @@
                             <h4 class="branch-product-panel-title" style="font-size:0.96rem;">Top 5 sản phẩm</h4>
                             <p class="branch-product-panel-note">Sắp xếp theo {{ ($branchDetail['sort_by'] ?? 'quantity') === 'revenue' ? 'doanh thu' : 'số lượng' }} bán ra trong kỳ đã chọn.</p>
                         </div>
-                        <div class="branch-product-detail-chiprow">
-                            <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ $branchDetail['comparison_label'] ?? 'Không đối chiếu' }}</span>
-                        </div>
                     </div>
 
                     @if($topProducts->isNotEmpty())
                         <div class="branch-product-toplist">
                             @foreach($topProducts as $topProduct)
                                 @php
-                                    $productGrowthState = $topProduct['change_state'] ?? 'unavailable';
-                                    $productGrowthTone = match ($productGrowthState) {
-                                        'increased', 'new_activity' => 'up',
-                                        'decreased' => 'down',
-                                        default => 'flat',
-                                    };
-                                    $quantityChange = $topProduct['quantity_change_percentage'];
-                                    $revenueChange = $topProduct['revenue_change_percentage'];
                                 @endphp
                                 <div class="branch-product-toprow">
                                     <div class="branch-product-toprank">{{ $topProduct['rank'] }}</div>
@@ -299,19 +242,6 @@
                                     <div class="branch-product-topmetric">
                                         <strong>{{ number_format((int) ($topProduct['total_revenue'] ?? 0), 0, ',', '.') }}đ</strong>
                                         Doanh thu
-                                    </div>
-                                    <div class="branch-product-topmetric">
-                                        <span class="branch-product-badge {{ $productGrowthTone }}">
-                                            <i class="bi {{ in_array($productGrowthState, ['increased', 'new_activity'], true) ? 'bi-arrow-up-right' : (in_array($productGrowthState, ['decreased'], true) ? 'bi-arrow-down-right' : 'bi-dash') }}"></i>
-                                            @if($quantityChange === null)
-                                                N/A
-                                            @else
-                                                {{ (($quantityChange ?? 0) >= 0 ? '+' : '') . number_format((float) $quantityChange, 1) }}%
-                                            @endif
-                                        </span>
-                                        <div class="branch-product-topmeta" style="margin-top:0.22rem;">
-                                            DT {{ $revenueChange === null ? 'N/A' : ((($revenueChange ?? 0) >= 0 ? '+' : '') . number_format((float) $revenueChange, 1).'%' ) }}
-                                        </div>
                                     </div>
                                 </div>
                             @endforeach

@@ -20,6 +20,34 @@ class SuperAdminAnalyticsRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        // Fast path chỉ dành cho AJAX của biểu đồ Xu hướng doanh thu trên Tổng quan.
+        // Không mang theo/validate toàn bộ state analytics của dashboard vì thao tác này
+        // chỉ cần 4 tham số cục bộ và phải phản hồi thật nhanh.
+        if ($this->boolean('quick_trend_json')) {
+            $period = (string) $this->input('quick_trend_period', 'week');
+            if (! in_array($period, ['day', 'week', 'month', 'year', 'range'], true)) {
+                $period = 'week';
+            }
+
+            $quickData = [
+                'quick_trend_json' => true,
+                'quick_trend_period' => $period,
+            ];
+
+            $branchId = $this->input('quick_trend_branch_id');
+            if ($branchId !== null && $branchId !== '' && is_numeric($branchId)) {
+                $quickData['quick_trend_branch_id'] = (int) $branchId;
+            }
+
+            if ($period === 'range') {
+                $quickData['quick_trend_start_date'] = $this->input('quick_trend_start_date');
+                $quickData['quick_trend_end_date'] = $this->input('quick_trend_end_date');
+            }
+
+            $this->replace($quickData);
+            return;
+        }
+
         $data = $this->all();
 
         $periodType = (string) Arr::get($data, 'analytics_period_type', 'all');
@@ -88,6 +116,18 @@ class SuperAdminAnalyticsRequest extends FormRequest
      */
     public function rules(): array
     {
+        if ($this->boolean('quick_trend_json')) {
+            return [
+                'quick_trend_json' => ['required', 'boolean'],
+                'quick_trend_period' => ['required', Rule::in(['day', 'week', 'month', 'year', 'range'])],
+                // Không dùng exists ở đây để tránh thêm query validation cho mỗi lần bấm lọc.
+                // Controller đã tự xác nhận branch trước khi áp scope.
+                'quick_trend_branch_id' => ['nullable', 'integer', 'min:1'],
+                'quick_trend_start_date' => ['nullable', 'date_format:Y-m-d'],
+                'quick_trend_end_date' => ['nullable', 'date_format:Y-m-d'],
+            ];
+        }
+
         return [
             'analytics_period_type' => ['required', Rule::in(['all', 'day', 'week', 'month', 'year', 'range'])],
             'analytics_date' => ['nullable', 'date_format:Y-m-d'],
@@ -168,6 +208,10 @@ class SuperAdminAnalyticsRequest extends FormRequest
 
     protected function passedValidation(): void
     {
+        if ($this->boolean('quick_trend_json')) {
+            return;
+        }
+
         $this->analyticsPeriodContext = app(SuperAdminAnalyticsPeriodResolver::class)->resolve($this->validated());
     }
 

@@ -52,6 +52,24 @@
             font-size: 15px;
         }
 
+        /* Apply the same visual density to every Super Admin screen.
+           Browser 100% now matches the previous 90% view on desktop. */
+        @media (min-width: 992px) {
+            body {
+                zoom: 0.9;
+            }
+
+            /* Bootstrap appends the modal backdrop directly under <body>.
+               Because the Super Admin workspace is zoomed to 90%, a normal
+               100vw/100vh backdrop only covers 90% of the physical viewport.
+               Compensate the backdrop dimensions so the dim layer always
+               reaches every browser edge without changing the modal scale. */
+            .modal-backdrop {
+                width: 111.111111vw !important;
+                height: 111.111111vh !important;
+            }
+        }
+
         .root-shell { min-height: 100vh; }
 
         .root-sidebar {
@@ -441,16 +459,16 @@
                 <a href="{{ route('admin.order-issues.index') }}" class="root-nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ</a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>
-                <a href="{{ route('admin.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
-                <a href="{{ route('admin.toppings.index') }}" class="root-nav-link {{ request()->routeIs('admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
-                <a href="{{ route('admin.products.index') }}" class="root-nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
-                <a href="{{ route('admin.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
-                <a href="{{ route('admin.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
-                <a href="{{ route('admin.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
-                <a href="{{ route('admin.reviews.index') }}" class="root-nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
-                <a href="{{ route('admin.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
-                <a href="{{ route('admin.staff.index') }}" class="root-nav-link {{ request()->routeIs('admin.staff.*') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Nhân viên</a>
+                <a href="{{ route('admin.super-admin.manage.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.vouchers.*', 'admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
+                <a href="{{ route('admin.super-admin.manage.toppings.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.toppings.*', 'admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
+                <a href="{{ route('admin.super-admin.manage.products.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.products.*', 'admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
+                <a href="{{ route('admin.super-admin.manage.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.categories.*', 'admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
+                <a href="{{ route('admin.super-admin.manage.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.slides.*', 'admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
+                <a href="{{ route('admin.super-admin.manage.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.orders.*', 'admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.super-admin.manage.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.group-orders.*', 'admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
+                <a href="{{ route('admin.super-admin.manage.reviews.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.reviews.*', 'admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
+                <a href="{{ route('admin.super-admin.manage.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.users.*', 'admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
+                <a href="{{ route('admin.super-admin.manage.staff.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.staff.*', 'admin.staff.*') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Nhân viên</a>
 
                 <p class="root-nav-label">Hệ thống</p>
                 <a href="{{ route('admin.super-admin') }}#health" class="root-nav-link" data-root-section="health"><i class="bi bi-activity"></i> Hệ thống</a>

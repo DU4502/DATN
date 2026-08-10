@@ -40,9 +40,10 @@
     $focusCandidates = collect($focusProductCandidates ?? []);
 
     $focusSelectedProductId = (int) ($focusProduct['id'] ?? 0);
-    $focusProductSort = (string) ($focusProductSort ?? ($focusPerformance['sort_by'] ?? 'quantity'));
+    // Trang tổng quan chỉ xếp hạng theo số lượng và không lọc riêng theo chi nhánh.
+    $focusProductSort = 'quantity';
     $focusProductQuery = (string) ($focusProductQuery ?? request('analytics_focus_product_query', $focusProduct['name'] ?? ''));
-    $focusBranchSearch = (string) request('analytics_focus_branch_search', $focusPerformance['search'] ?? '');
+    $focusBranchSearch = '';
     $focusBranchPage = (int) request('analytics_focus_branch_page', $focusPerformance['pagination']['current_page'] ?? 1);
 
     $focusQueryBase = request()->except([
@@ -68,40 +69,10 @@
         $focusCurrentQuery['analytics_focus_branch_page'] = $focusBranchPage;
     }
 
-    $focusSelectorSearchUrl = route('admin.super-admin', array_merge($focusQueryBase, [
-        'analytics_focus_product_query' => $focusProductQuery,
-        'analytics_focus_product_id' => null,
-        'analytics_focus_product_sort' => $focusProductSort,
-        'analytics_focus_branch_search' => $focusBranchSearch !== '' ? $focusBranchSearch : null,
-        'analytics_focus_branch_page' => 1,
-    ]));
-
-    $focusSortLinks = [
-        'quantity' => route('admin.super-admin', array_merge($focusCurrentQuery, ['analytics_focus_product_sort' => 'quantity'])) . '#focus-product-section',
-        'revenue' => route('admin.super-admin', array_merge($focusCurrentQuery, ['analytics_focus_product_sort' => 'revenue'])) . '#focus-product-section',
-    ];
-
-    $focusBranchFilterUrl = route('admin.super-admin', array_merge($focusCurrentQuery, [
-        'analytics_focus_product_sort' => $focusProductSort,
-        'analytics_focus_branch_page' => 1,
-    ]));
-
-    $focusClearBranchUrl = route('admin.super-admin', array_merge($focusCurrentQuery, [
-        'analytics_focus_branch_search' => null,
-        'analytics_focus_branch_page' => null,
-    ]));
-
     $selectedProductLabel = filled($focusProduct['name'] ?? null) ? (string) $focusProduct['name'] : 'Chưa chọn sản phẩm';
     $selectedProductStatus = $focusProduct['is_deleted'] ?? false
         ? 'Đã xóa'
         : (($focusProduct['status'] ?? false) ? 'Đang bán' : 'Ngừng bán');
-    $selectedProductSummary = [
-        'Tổng số lượng' => number_format((int) ($focusSummary['total_quantity'] ?? 0)),
-        'Doanh thu' => number_format((int) ($focusSummary['total_revenue'] ?? 0), 0, ',', '.').'đ',
-        'Chi nhánh có bán' => number_format((int) ($focusSummary['branches_with_sales'] ?? 0)).'/'.number_format((int) ($focusSummary['total_branches_in_scope'] ?? 0)),
-        'Chi nhánh mạnh nhất' => filled($focusSummary['strongest_branch_name'] ?? null) ? (string) $focusSummary['strongest_branch_name'] : 'Chưa xác định',
-        'Đối chiếu' => $focusComparison['comparison_label'] ?? 'Không đối chiếu',
-    ];
     $focusBranchTotal = $focusPaginator ? (int) $focusPaginator->total() : (int) ($focusPerformance['pagination']['total'] ?? 0);
     $focusBranchShowingFrom = $focusPaginator ? (int) ($focusPaginator->firstItem() ?? 0) : 0;
     $focusBranchShowingTo = $focusPaginator ? (int) ($focusPaginator->lastItem() ?? 0) : 0;
@@ -115,13 +86,11 @@
             <p class="focus-product-panel-note">Chọn một sản phẩm để xem chi nhánh nào bán mạnh nhất trong kỳ đang chọn. Bộ lọc giữ nguyên theo cùng trang tổng quan.</p>
             <div class="focus-product-selected-chiprow">
                 <span class="sa-state sa-state-active" style="background:#eafaf5; color:var(--sa-green);">{{ $analyticsContext->displayLabel ?? 'Tất cả thời gian' }}</span>
-                <span class="sa-state" style="background:#eef2ff; color:#4338ca;">{{ $focusComparison['comparison_label'] ?? 'Không đối chiếu' }}</span>
                 <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ number_format($focusBranchTotal) }} chi nhánh</span>
             </div>
         </div>
         <div class="focus-product-actions">
             <span class="sa-state" style="background:#fff7ed; color:#9a3412;">{{ $selectedProductStatus }}</span>
-            <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ $focusProductSort === 'revenue' ? 'Theo doanh thu' : 'Theo số lượng' }}</span>
         </div>
     </div>
 
@@ -138,10 +107,10 @@
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                         @endif
                     @endforeach
-                    <input type="hidden" name="analytics_focus_product_sort" value="{{ $focusProductSort }}">
+                    <input type="hidden" name="analytics_focus_product_sort" value="quantity">
                     <input type="hidden" name="analytics_focus_product_id" value="{{ $focusSelectedProductId > 0 ? $focusSelectedProductId : '' }}">
-                    <input type="hidden" name="analytics_focus_branch_search" value="{{ $focusBranchSearch }}">
-                    <input type="hidden" name="analytics_focus_branch_page" value="{{ $focusBranchPage }}">
+                    
+                    <input type="hidden" name="analytics_focus_branch_page" value="1">
                     <div class="focus-product-form-row">
                         <div class="focus-product-search">
                             <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Tìm sản phẩm</label>
@@ -158,42 +127,6 @@
                     </div>
                 </form>
 
-                <div class="focus-product-selected">
-                    <div class="focus-product-selected-head">
-                        <div style="min-width: 0;">
-                            <div class="focus-product-selected-title">{{ $selectedProductLabel }}</div>
-                            <div class="focus-product-selected-subtitle">
-                                @if(($focusProduct['sku'] ?? null))
-                                    SKU: <strong>{{ $focusProduct['sku'] }}</strong>
-                                    <span style="margin:0 0.25rem;">·</span>
-                                @endif
-                                <span>{{ $focusProduct['is_deleted'] ?? false ? 'Đã xóa' : (($focusProduct['status'] ?? false) ? 'Đang bán' : 'Ngừng bán') }}</span>
-                            </div>
-                        </div>
-                        @if(($focusProduct['image_url'] ?? null))
-                            <div class="focus-product-candidate-thumb" style="width: 48px; height: 48px; border-radius: 12px;">
-                                <img src="{{ $focusProduct['image_url'] }}" alt="{{ $selectedProductLabel }}" loading="lazy">
-                            </div>
-                        @else
-                            <span class="focus-product-candidate-thumb" style="width: 48px; height: 48px; border-radius: 12px;"><i class="bi bi-cup-straw"></i></span>
-                        @endif
-                    </div>
-                    <div class="focus-product-selected-stats" aria-label="Thông tin sản phẩm đã chọn">
-                        <div class="focus-product-selected-stat">
-                            <div class="focus-product-selected-stat-label">Doanh thu</div>
-                            <div class="focus-product-selected-stat-value">{{ number_format((int) ($focusSummary['total_revenue'] ?? 0), 0, ',', '.') }}đ</div>
-                        </div>
-                        <div class="focus-product-selected-stat">
-                            <div class="focus-product-selected-stat-label">Bán được</div>
-                            <div class="focus-product-selected-stat-value">{{ number_format((int) ($focusSummary['total_quantity'] ?? 0)) }} cốc</div>
-                        </div>
-                    </div>
-                    <div class="focus-product-selected-chiprow">
-                        <span class="sa-state" style="background:#ecfdf5; color:#15803d;">{{ number_format((int) ($focusSummary['total_quantity'] ?? 0)) }} sản phẩm</span>
-                        <span class="sa-state" style="background:#eefbf7; color:#0d9373;">{{ number_format((int) ($focusSummary['total_revenue'] ?? 0), 0, ',', '.') }}đ</span>
-                        <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ number_format((int) ($focusSummary['branches_with_sales'] ?? 0)) }}/{{ number_format((int) ($focusSummary['total_branches_in_scope'] ?? 0)) }} chi nhánh</span>
-                    </div>
-                </div>
 
                 <div class="focus-product-candidate-list">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap;">
@@ -209,8 +142,8 @@
                             $candidateQuery = array_filter(array_merge($focusCurrentQuery, [
                                 'analytics_focus_product_id' => $candidate['id'],
                                 'analytics_focus_product_query' => null,
-                                'analytics_focus_product_sort' => $focusProductSort,
-                                'analytics_focus_branch_search' => $focusBranchSearch !== '' ? $focusBranchSearch : null,
+                                'analytics_focus_product_sort' => 'quantity',
+                                'analytics_focus_branch_search' => null,
                                 'analytics_focus_branch_page' => 1,
                             ]), static fn ($value) => $value !== null && $value !== '');
                             $candidateUrl = route('admin.super-admin', $candidateQuery) . '#focus-product-section';
@@ -247,7 +180,7 @@
             <div class="focus-product-panel-header">
                 <div style="min-width: 0;">
                     <h3 class="focus-product-panel-title" style="font-size:0.9rem;">Hiệu suất theo chi nhánh</h3>
-                    <p class="focus-product-panel-note">Xếp hạng theo {{ $focusProductSort === 'revenue' ? 'doanh thu' : 'số lượng' }} của sản phẩm đã chọn.</p>
+                    <p class="focus-product-panel-note">Xếp hạng theo số lượng bán của sản phẩm đã chọn.</p>
                 </div>
                 <div class="focus-product-actions">
                     <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ $selectedProductLabel }}</span>
@@ -255,69 +188,15 @@
                 </div>
             </div>
 
-            <div class="focus-product-controls">
-                <div class="focus-product-sort" role="tablist" aria-label="Chọn kiểu xếp hạng sản phẩm">
-                    <a href="{{ $focusSortLinks['quantity'] }}" class="focus-product-sort-link {{ $focusProductSort === 'quantity' ? 'active' : '' }}" data-focus-product-sort="quantity">Theo số lượng</a>
-                    <a href="{{ $focusSortLinks['revenue'] }}" class="focus-product-sort-link {{ $focusProductSort === 'revenue' ? 'active' : '' }}" data-focus-product-sort="revenue">Theo doanh thu</a>
-                </div>
-                <div class="focus-product-actions">
-                    <span class="sa-state" style="background:#eafaf5; color:var(--sa-green);">
-                        Mạnh nhất: {{ $focusSummary['strongest_branch_name'] ?? 'Chưa xác định' }}
-                    </span>
-                    <span class="sa-state" style="background:#fff7ed; color:#9a3412;">
-                        {{ $focusComparison['comparison_label'] ?? 'Không đối chiếu' }}
-                    </span>
-                </div>
-            </div>
-
-            <form method="GET" action="{{ route('admin.super-admin') }}" class="focus-product-searchbar" data-product-branch-performance-form>
-                @foreach($focusCurrentQuery as $key => $value)
-                    @if($key !== 'analytics_focus_branch_search' && $key !== 'analytics_focus_branch_page' && $key !== 'analytics_focus_product_query')
-                        @if(is_array($value))
-                            @foreach($value as $arrayValue)
-                                <input type="hidden" name="{{ $key }}[]" value="{{ $arrayValue }}">
-                            @endforeach
-                        @elseif($value !== null && $value !== '')
-                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                        @endif
-                    @endif
-                @endforeach
-                <input type="hidden" name="analytics_focus_product_id" value="{{ $focusSelectedProductId > 0 ? $focusSelectedProductId : '' }}">
-                <input type="hidden" name="analytics_focus_product_sort" value="{{ $focusProductSort }}">
-                <input type="hidden" name="analytics_focus_product_query" value="{{ $focusProductQuery }}">
-                <input type="hidden" name="analytics_focus_branch_page" value="1">
-                <div>
-                    <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Tìm chi nhánh</label>
-                    <input class="sa-control" type="search" name="analytics_focus_branch_search" value="{{ $focusBranchSearch }}" placeholder="Tên chi nhánh hoặc mã..." aria-label="Tìm chi nhánh trong bảng xếp hạng">
-                </div>
-                <div class="focus-product-actions">
-                    <button type="submit" class="sa-btn sa-btn-primary"><i class="bi bi-filter"></i> Lọc</button>
-                    <a class="sa-btn" href="{{ $focusClearBranchUrl }}#focus-product-section"><i class="bi bi-arrow-counterclockwise"></i> Xóa lọc</a>
-                </div>
-            </form>
 
             <div class="focus-product-summary-grid">
                 <article class="focus-product-summary-card">
                     <div class="focus-product-summary-label">Tổng số lượng</div>
                     <div class="focus-product-summary-value">{{ number_format((int) ($focusSummary['total_quantity'] ?? 0)) }}</div>
-                    <div class="focus-product-summary-note">
-                        @if(($focusComparison['quantity_change_percentage'] ?? null) !== null)
-                            {{ (($focusComparison['quantity_change_percentage'] ?? 0) >= 0 ? '+' : '') . number_format((float) $focusComparison['quantity_change_percentage'], 1) }}% so với {{ $focusComparison['comparison_label'] ?? 'kỳ đối chiếu' }}
-                        @else
-                            Không đối chiếu
-                        @endif
-                    </div>
                 </article>
                 <article class="focus-product-summary-card">
                     <div class="focus-product-summary-label">Tổng doanh thu</div>
                     <div class="focus-product-summary-value">{{ number_format((int) ($focusSummary['total_revenue'] ?? 0), 0, ',', '.') }}đ</div>
-                    <div class="focus-product-summary-note">
-                        @if(($focusComparison['revenue_change_percentage'] ?? null) !== null)
-                            {{ (($focusComparison['revenue_change_percentage'] ?? 0) >= 0 ? '+' : '') . number_format((float) $focusComparison['revenue_change_percentage'], 1) }}% so với {{ $focusComparison['comparison_label'] ?? 'kỳ đối chiếu' }}
-                        @else
-                            Không đối chiếu
-                        @endif
-                    </div>
                 </article>
                 <article class="focus-product-summary-card">
                     <div class="focus-product-summary-label">Chi nhánh có bán</div>
@@ -329,11 +208,6 @@
                     <div class="focus-product-summary-value">{{ $focusSummary['strongest_branch_name'] ?? 'Chưa xác định' }}</div>
                     <div class="focus-product-summary-note">{{ number_format((int) ($focusSummary['strongest_branch_quantity'] ?? 0)) }} sản phẩm · {{ number_format((int) ($focusSummary['strongest_branch_revenue'] ?? 0), 0, ',', '.') }}đ</div>
                 </article>
-                <article class="focus-product-summary-card">
-                    <div class="focus-product-summary-label">Đối chiếu</div>
-                    <div class="focus-product-summary-value">{{ $focusComparison['comparison_label'] ?? 'Không đối chiếu' }}</div>
-                    <div class="focus-product-summary-note">So sánh theo bộ lọc hiện tại</div>
-                </article>
             </div>
 
             <div class="focus-product-branch-list">
@@ -342,7 +216,6 @@
                         Đang hiển thị {{ $focusBranchShowingFrom }}-{{ $focusBranchShowingTo }} / {{ number_format($focusBranchTotal) }} chi nhánh
                     </div>
                     <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
-                        <span class="sa-state" style="background:#f8fafc; color:#334155;">Sắp xếp: {{ $focusProductSort === 'revenue' ? 'Doanh thu' : 'Số lượng' }}</span>
                         <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ number_format((int) ($focusSummary['branches_with_sales'] ?? 0)) }} chi nhánh có bán</span>
                     </div>
                 </div>
@@ -350,16 +223,6 @@
                 @forelse($focusBranches as $branch)
                     @php
                         $isTopBranch = (int) ($branch['branch_id'] ?? 0) === (int) ($focusSummary['strongest_branch_id'] ?? 0);
-                        $changeState = (string) ($branch['quantity_change_state'] ?? 'unavailable');
-                        $changeValue = $focusProductSort === 'revenue'
-                            ? (float) ($branch['revenue_change_percentage'] ?? 0)
-                            : (float) ($branch['quantity_change_percentage'] ?? 0);
-                        $changeLabel = $changeState === 'unavailable'
-                            ? 'Không đối chiếu'
-                            : (($changeValue >= 0 ? '+' : '') . number_format($changeValue, 1).'%');
-                        $changeTone = in_array($changeState, ['increased', 'new_activity'], true)
-                            ? 'up'
-                            : (in_array($changeState, ['decreased'], true) ? 'down' : 'flat');
                     @endphp
                     <article class="focus-product-branch-card {{ $isTopBranch ? 'top' : '' }}">
                         <span class="focus-product-branch-rank">{{ $branch['rank'] }}</span>
@@ -370,7 +233,6 @@
                                     <span>Mã: {{ $branch['branch_code'] }}</span>
                                 @endif
                                 <span>{{ $branch['branch_status'] ? 'Hoạt động' : 'Tạm ngưng' }}</span>
-                                <span>{{ $focusComparison['comparison_label'] ?? 'Không đối chiếu' }}</span>
                             </div>
                         </div>
                         <div class="focus-product-branch-stats">
@@ -392,10 +254,6 @@
                             </div>
                         </div>
                         <div class="focus-product-branch-badges">
-                            <span class="focus-product-branch-badge {{ $changeTone }}">
-                                <i class="bi {{ $changeTone === 'up' ? 'bi-arrow-up-right' : ($changeTone === 'down' ? 'bi-arrow-down-right' : 'bi-dash') }}"></i>
-                                {{ $changeLabel }}
-                            </span>
                             <span class="focus-product-branch-badge muted">
                                 {{ $branch['branch_status'] ? 'Hoạt động' : 'Tạm ngưng' }}
                             </span>

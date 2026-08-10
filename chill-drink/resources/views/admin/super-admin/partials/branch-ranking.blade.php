@@ -1,88 +1,124 @@
 @php
-    $branchComparison = $branchRankingComparison ?? ['paginator' => null, 'period_label' => $analyticsContext->displayLabel ?? 'Tất cả thời gian', 'comparison_label' => $analyticsContext->comparisonLabel ?? 'Không so sánh', 'search' => '', 'sort' => 'revenue', 'direction' => 'desc', 'performance' => 'all', 'per_page' => 5];
+    $branchComparison = $branchRankingComparison ?? ['paginator' => null, 'period_label' => 'Hôm nay', 'search' => '', 'sort' => 'revenue', 'per_page' => 5];
     $branchPaginator = $branchComparison['paginator'] ?? null;
     $branchRows = $branchPaginator ? $branchPaginator->getCollection() : collect();
-    $rankingCompatQueryBase = request()->except('ranking_period');
-    $branchQueryBase = request()->except(['branch_search', 'branch_sort', 'branch_direction', 'branch_performance', 'branch_per_page', 'branch_page']);
+
+    $branchPeriod = in_array($branchPeriod ?? request('branch_period', 'day'), ['day', 'week', 'month', 'year', 'range'], true)
+        ? (string) ($branchPeriod ?? request('branch_period', 'day'))
+        : 'day';
+    $branchStartDateValue = trim((string) ($branchStartDate ?? request('branch_start_date', '')));
+    $branchEndDateValue = trim((string) ($branchEndDate ?? request('branch_end_date', '')));
+    $branchStartDate = $branchStartDateValue !== '' ? $branchStartDateValue : now()->startOfMonth()->format('Y-m-d');
+    $branchEndDate = $branchEndDateValue !== '' ? $branchEndDateValue : now()->format('Y-m-d');
+
     $branchSearch = (string) request('branch_search', $branchComparison['search'] ?? '');
     $branchSort = (string) request('branch_sort', $branchComparison['sort'] ?? 'revenue');
-    $branchDirection = (string) request('branch_direction', $branchComparison['direction'] ?? 'desc');
-    $branchPerformance = (string) request('branch_performance', $branchComparison['performance'] ?? 'all');
     $branchTotal = $branchPaginator ? (int) $branchPaginator->total() : 0;
     $branchShowingFrom = $branchPaginator ? (int) ($branchPaginator->firstItem() ?? 0) : 0;
     $branchShowingTo = $branchPaginator ? (int) ($branchPaginator->lastItem() ?? 0) : 0;
+
     $branchSortOptions = [
         'revenue' => 'Doanh thu',
         'orders' => 'Đơn hàng',
         'average_order_value' => 'Trung bình/đơn',
         'items_sold' => 'Sản phẩm bán ra',
-        'growth' => 'Tăng trưởng',
         'cancellation_rate' => 'Tỷ lệ hủy',
         'name' => 'Tên chi nhánh',
     ];
-    $branchPerformanceOptions = [
-        'all' => 'Tất cả',
-        'increased' => 'Tăng trưởng',
-        'decreased' => 'Giảm',
-        'unchanged' => 'Không đổi',
-        'new_activity' => 'Mới phát sinh',
-        'no_orders' => 'Chưa có đơn',
-    ];
+
+    $branchPeriodQueryBase = request()->except([
+        'branch_period', 'branch_start_date', 'branch_end_date',
+        'branch_direction', 'branch_performance', 'branch_page',
+    ]);
+    $branchResetQueryBase = request()->except([
+        'branch_search', 'branch_sort', 'branch_direction', 'branch_performance', 'branch_page',
+    ]);
+    $branchFormPreserveQuery = request()->except([
+        'branch_period', 'branch_start_date', 'branch_end_date',
+        'branch_search', 'branch_sort', 'branch_direction', 'branch_performance', 'branch_page',
+    ]);
 @endphp
 
 <section class="sa-panel" id="branch-ranking" data-branch-ranking-region>
     <div class="sa-panel-header sa-branch-compare-header">
         <div class="sa-branch-compare-header-copy">
-            <h2 class="sa-branch-compare-title">Lọc trong bảng chi nhánh</h2>
-            <p class="sa-panel-note" style="margin: 0.25rem 0 0;">Chỉ áp dụng cho bảng này.</p>
-            <div class="sa-branch-compare-meta">
-                <span class="sa-state sa-state-active" style="background:#eafaf5; color:var(--sa-green);">{{ $branchComparison['period_label'] }}</span>
-                <span class="sa-state" style="background:#eef2ff; color:#4338ca;">{{ $branchComparison['comparison_label'] }}</span>
-                <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ number_format($branchTotal) }} chi nhánh</span>
-            </div>
+            <h2 class="sa-branch-compare-title">Lọc & xếp hạng chi nhánh</h2>
+            <div class="sa-branch-compare-subtitle">Chỉ áp dụng cho bảng bên dưới</div>
         </div>
+
         <div class="sa-branch-compare-tools">
-            <div class="sa-branch-period-switcher">
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'all'])) }}#branch-ranking" data-ranking-period="all" class="sa-btn sa-branch-period-link {{ $rankingPeriod === 'all' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'all' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tất cả</a>
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'week'])) }}#branch-ranking" data-ranking-period="week" class="sa-btn sa-branch-period-link {{ $rankingPeriod === 'week' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'week' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tuần</a>
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'month'])) }}#branch-ranking" data-ranking-period="month" class="sa-btn sa-branch-period-link {{ $rankingPeriod === 'month' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'month' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Tháng</a>
-                <a href="{{ route('admin.super-admin', array_merge($rankingCompatQueryBase, ['ranking_period' => 'year'])) }}#branch-ranking" data-ranking-period="year" class="sa-btn sa-branch-period-link {{ $rankingPeriod === 'year' ? 'sa-btn-primary' : '' }}" style="{{ $rankingPeriod === 'year' ? '' : 'background:#fff; color:var(--sa-ink); border:1px solid transparent;' }}">Năm</a>
+            <div class="sa-branch-period-group">
+                <span class="sa-branch-period-label">Thời gian</span>
+                <div class="sa-branch-period-switcher" aria-label="Khoảng thời gian bảng chi nhánh">
+                    <a href="{{ route('admin.super-admin', array_merge($branchPeriodQueryBase, ['branch_period' => 'day'])) }}#branch-ranking"
+                       data-ranking-period="day"
+                       class="sa-btn sa-branch-period-link {{ $branchPeriod === 'day' ? 'sa-btn-primary' : '' }}"
+                       style="{{ $branchPeriod === 'day' ? '' : 'background:transparent; color:var(--sa-ink); border:0;' }}">Hôm nay</a>
+                    <a href="{{ route('admin.super-admin', array_merge($branchPeriodQueryBase, ['branch_period' => 'week'])) }}#branch-ranking"
+                       data-ranking-period="week"
+                       class="sa-btn sa-branch-period-link {{ $branchPeriod === 'week' ? 'sa-btn-primary' : '' }}"
+                       style="{{ $branchPeriod === 'week' ? '' : 'background:transparent; color:var(--sa-ink); border:0;' }}">Tuần</a>
+                    <a href="{{ route('admin.super-admin', array_merge($branchPeriodQueryBase, ['branch_period' => 'month'])) }}#branch-ranking"
+                       data-ranking-period="month"
+                       class="sa-btn sa-branch-period-link {{ $branchPeriod === 'month' ? 'sa-btn-primary' : '' }}"
+                       style="{{ $branchPeriod === 'month' ? '' : 'background:transparent; color:var(--sa-ink); border:0;' }}">Tháng</a>
+                    <a href="{{ route('admin.super-admin', array_merge($branchPeriodQueryBase, ['branch_period' => 'year'])) }}#branch-ranking"
+                       data-ranking-period="year"
+                       class="sa-btn sa-branch-period-link {{ $branchPeriod === 'year' ? 'sa-btn-primary' : '' }}"
+                       style="{{ $branchPeriod === 'year' ? '' : 'background:transparent; color:var(--sa-ink); border:0;' }}">Năm</a>
+                    <a href="{{ route('admin.super-admin', array_merge($branchPeriodQueryBase, ['branch_period' => 'range', 'branch_start_date' => $branchStartDate, 'branch_end_date' => $branchEndDate])) }}#branch-ranking"
+                       data-ranking-period="range"
+                       class="sa-btn sa-branch-period-link {{ $branchPeriod === 'range' ? 'sa-btn-primary' : '' }}"
+                       style="{{ $branchPeriod === 'range' ? '' : 'background:transparent; color:var(--sa-ink); border:0;' }}">Tùy chọn</a>
+                </div>
             </div>
-            <button type="button" class="sa-btn sa-btn-primary" data-bs-toggle="modal" data-bs-target="#createBranchModal" style="min-height:40px; padding:0.42rem 0.9rem; border-radius:999px; white-space:nowrap; font-size:0.84rem;"><i class="bi bi-plus-circle"></i> Thêm chi nhánh</button>
+
+            <button type="button" class="sa-btn sa-btn-primary sa-branch-add-btn" data-bs-toggle="modal" data-bs-target="#createBranchModal"><i class="bi bi-plus-circle"></i> Thêm chi nhánh</button>
         </div>
     </div>
 
-    <form method="GET" action="{{ route('admin.super-admin', $branchQueryBase) }}#branch-ranking" class="sa-filter-form sa-branch-compare-form" data-branch-ranking-form style="border-top: 0;">
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Tìm chi nhánh</label>
-            <input class="sa-control" type="search" name="branch_search" value="{{ $branchSearch }}" placeholder="Tên chi nhánh, mã, admin..." aria-label="Tìm chi nhánh">
+    <form method="GET" action="{{ route('admin.super-admin') }}#branch-ranking"
+          class="sa-filter-form sa-branch-compare-form {{ $branchPeriod === 'range' ? 'sa-branch-compare-form-range' : 'sa-branch-compare-form-compact' }}"
+          data-branch-ranking-form>
+        @foreach($branchFormPreserveQuery as $preserveKey => $preserveValue)
+            @if(is_array($preserveValue))
+                @foreach($preserveValue as $preserveItem)
+                    <input type="hidden" name="{{ $preserveKey }}[]" value="{{ $preserveItem }}">
+                @endforeach
+            @elseif($preserveValue !== null && $preserveValue !== '')
+                <input type="hidden" name="{{ $preserveKey }}" value="{{ $preserveValue }}">
+            @endif
+        @endforeach
+        <input type="hidden" name="branch_period" value="{{ $branchPeriod }}">
+
+        @if($branchPeriod === 'range')
+            <div class="sa-branch-filter-field">
+                <label for="branch_start_date">Từ ngày</label>
+                <input id="branch_start_date" class="sa-control" type="date" name="branch_start_date" value="{{ $branchStartDate }}">
+            </div>
+            <div class="sa-branch-filter-field">
+                <label for="branch_end_date">Đến ngày</label>
+                <input id="branch_end_date" class="sa-control" type="date" name="branch_end_date" value="{{ $branchEndDate }}">
+            </div>
+        @endif
+
+        <div class="sa-branch-filter-field">
+            <label for="branch_search">Tìm chi nhánh</label>
+            <input id="branch_search" class="sa-control" type="search" name="branch_search" value="{{ $branchSearch }}" placeholder="Tên, mã hoặc admin...">
         </div>
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Sắp xếp</label>
-            <select class="sa-control" name="branch_sort" aria-label="Sắp xếp chi nhánh">
+
+        <div class="sa-branch-filter-field">
+            <label for="branch_sort">Sắp xếp theo</label>
+            <select id="branch_sort" class="sa-control" name="branch_sort">
                 @foreach($branchSortOptions as $value => $label)
                     <option value="{{ $value }}" @selected($branchSort === $value)>{{ $label }}</option>
                 @endforeach
             </select>
         </div>
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Hướng</label>
-            <select class="sa-control" name="branch_direction" aria-label="Hướng sắp xếp">
-                <option value="desc" @selected($branchDirection === 'desc')>Giảm dần</option>
-                <option value="asc" @selected($branchDirection === 'asc')>Tăng dần</option>
-            </select>
-        </div>
-        <div>
-            <label class="sa-panel-note" style="display:block; margin:0 0 0.35rem; font-weight:800; color:var(--sa-ink);">Hiệu suất</label>
-            <select class="sa-control" name="branch_performance" aria-label="Lọc hiệu suất">
-                @foreach($branchPerformanceOptions as $value => $label)
-                    <option value="{{ $value }}" @selected($branchPerformance === $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </div>
+
         <div class="sa-filter-actions sa-branch-compare-actions">
-            <a class="sa-btn" href="{{ route('admin.super-admin', array_merge($branchQueryBase, ['branch_search' => null, 'branch_sort' => null, 'branch_direction' => null, 'branch_performance' => null, 'branch_page' => null])) }}#branch-ranking" title="Xóa bộ lọc"><i class="bi bi-arrow-counterclockwise"></i> Xóa lọc</a>
-            <button class="sa-btn sa-btn-primary" type="submit"><i class="bi bi-funnel"></i> Áp dụng</button>
+            <a class="sa-btn" href="{{ route('admin.super-admin', $branchResetQueryBase) }}#branch-ranking" title="Đặt lại bộ lọc"><i class="bi bi-arrow-counterclockwise"></i> Đặt lại</a>
+            <button class="sa-btn sa-btn-primary" type="submit"><i class="bi bi-check2"></i> Áp dụng</button>
         </div>
     </form>
 
@@ -104,7 +140,6 @@
                         <th style="position: sticky; top: 0; z-index: 1;">Đơn hàng</th>
                         <th style="position: sticky; top: 0; z-index: 1;">Trung bình/đơn</th>
                         <th style="position: sticky; top: 0; z-index: 1;">Sản phẩm bán ra</th>
-                        <th style="position: sticky; top: 0; z-index: 1;">Tăng trưởng</th>
                         <th style="position: sticky; top: 0; z-index: 1;">Món bán chạy nhất</th>
                         <th style="position: sticky; top: 0; z-index: 1;">SL món</th>
                         <th style="position: sticky; top: 0; z-index: 1;">Tỷ lệ hủy</th>
@@ -115,15 +150,6 @@
                 <tbody>
                     @foreach($branchRows as $branch)
                         @php
-                            $revenueGrowth = $branch['revenue_change_percentage'];
-                            $growthState = $branch['change_state'] ?? 'unavailable';
-                            $growthLabel = $growthState === 'unavailable'
-                                ? 'N/A'
-                                : (($revenueGrowth ?? 0) > 0 ? '+'.number_format($revenueGrowth, 1).'%' : number_format((float) $revenueGrowth, 1).'%');
-                            $growthTone = in_array($growthState, ['increased', 'new_activity'], true) ? 'color:#15803d;' : (in_array($growthState, ['decreased'], true) ? 'color:#b91c1c;' : 'color:var(--sa-muted);');
-                            $growthIcon = $growthState === 'increased' || $growthState === 'new_activity'
-                                ? 'bi-arrow-up-right'
-                                : ($growthState === 'decreased' ? 'bi-arrow-down-right' : 'bi-dash');
                             $branchStatusValue = (int) ($branch['branch_status'] ?? 0);
                             $isEditingThisBranch = (string) old('branch_modal_id') === (string) $branch['branch_id'];
                         @endphp
@@ -143,9 +169,6 @@
                             <td style="font-weight:700; white-space:nowrap;">{{ number_format($branch['valid_order_count']) }}</td>
                             <td style="font-weight:700; white-space:nowrap;">{{ number_format($branch['average_order_value'], 0, ',', '.') }}đ</td>
                             <td style="font-weight:700; white-space:nowrap;">{{ number_format($branch['items_sold']) }}</td>
-                            <td style="font-weight:800; {{ $growthTone }} white-space:nowrap;">
-                                <i class="bi {{ $growthIcon }}"></i> {{ $growthLabel }}
-                            </td>
                             <td style="min-width: 200px;">
                                 <div style="font-weight:700; color:var(--sa-ink);">{{ $branch['top_product_name'] }}</div>
                                 <div style="color:var(--sa-muted); font-size:0.72rem; margin-top:0.15rem;">

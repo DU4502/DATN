@@ -210,11 +210,13 @@ class SuperAdminAnalyticsService
         ];
     }
 
-    public function topProducts(AnalyticsPeriodContext $context, string $sortBy = 'quantity', int $limit = 5): Collection
+    public function topProducts(AnalyticsPeriodContext $context, string $sortBy = 'quantity', int $limit = 5, int|array|null $branchScopeOverride = null): Collection
     {
         $sortBy = in_array($sortBy, ['quantity', 'revenue'], true) ? $sortBy : 'quantity';
         $revenueExpression = 'COALESCE(order_items.total_price, order_items.quantity * order_items.unit_price)';
-        $branchScopeIds = $this->contextBranchScopeIds($context);
+        $branchScopeIds = $branchScopeOverride !== null
+            ? $this->normalizeBranchScopeSelection($branchScopeOverride)
+            : $this->contextBranchScopeIds($context);
         $currentOrderItemsQuery = $this->validSalesOrderItemsQuery();
         $this->applyDateRange($currentOrderItemsQuery, $context->currentStart, $context->currentEnd);
         $this->applyBranchScope($currentOrderItemsQuery, $branchScopeIds);
@@ -545,6 +547,11 @@ class SuperAdminAnalyticsService
         $legacyRankingPeriod = in_array(Arr::get($options, 'ranking_period'), ['all', 'week', 'month', 'year'], true)
             ? (string) Arr::get($options, 'ranking_period')
             : 'all';
+        $branchPeriod = in_array(Arr::get($options, 'branch_period'), ['day', 'week', 'month', 'year', 'range'], true)
+            ? (string) Arr::get($options, 'branch_period')
+            : null;
+        $branchStartDate = trim((string) Arr::get($options, 'branch_start_date', ''));
+        $branchEndDate = trim((string) Arr::get($options, 'branch_end_date', ''));
         $search = trim((string) Arr::get($options, 'search', ''));
         $sort = in_array(Arr::get($options, 'sort'), ['revenue', 'orders', 'average_order_value', 'items_sold', 'growth', 'cancellation_rate', 'name'], true)
             ? (string) Arr::get($options, 'sort')
@@ -557,7 +564,9 @@ class SuperAdminAnalyticsService
         $page = max(1, (int) Arr::get($options, 'page', 1));
         $scopeBranchIds = $this->contextBranchScopeIds($context, Arr::get($options, 'analytics_branch_ids', Arr::get($options, 'branch_ids')));
 
-        [$currentStart, $currentEnd, $compareStart, $compareEnd, $periodLabel, $comparisonLabel] = $this->resolveBranchComparisonPeriod($context, $legacyRankingPeriod);
+        [$currentStart, $currentEnd, $compareStart, $compareEnd, $periodLabel, $comparisonLabel] = $branchPeriod !== null
+            ? $this->resolveOverviewBranchPeriod($context, $branchPeriod, $branchStartDate, $branchEndDate)
+            : $this->resolveBranchComparisonPeriod($context, $legacyRankingPeriod);
 
         if (! $context->hasComparison() && $sort === 'growth') {
             $sort = 'revenue';
@@ -727,6 +736,9 @@ class SuperAdminAnalyticsService
             'per_page' => $perPage,
             'page' => $page,
             'ranking_period' => $legacyRankingPeriod,
+            'branch_period' => $branchPeriod,
+            'branch_start_date' => $branchStartDate,
+            'branch_end_date' => $branchEndDate,
         ];
     }
 
@@ -1443,6 +1455,73 @@ class SuperAdminAnalyticsService
                 ->values(),
             'sort_by' => $sortBy,
         ];
+    }
+
+    private function resolveOverviewBranchPeriod(AnalyticsPeriodContext $context, string $branchPeriod, string $branchStartDate = '', string $branchEndDate = ''): array
+    {
+        $now = now($context->timezone);
+
+        if ($branchPeriod === 'range') {
+            try {
+                $start = $branchStartDate !== ''
+                    ? Carbon::createFromFormat('Y-m-d', $branchStartDate, $context->timezone)->startOfDay()
+                    : $now->copy()->startOfMonth()->startOfDay();
+                $end = $branchEndDate !== ''
+                    ? Carbon::createFromFormat('Y-m-d', $branchEndDate, $context->timezone)->endOfDay()
+                    : $now->copy()->endOfDay();
+            } catch (\Throwable) {
+                $start = $now->copy()->startOfMonth()->startOfDay();
+                $end = $now->copy()->endOfDay();
+            }
+
+            if ($start->gt($end)) {
+                [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+            }
+
+            return [
+                $start,
+                $end,
+                null,
+                null,
+                $start->format('d/m/Y').' - '.$end->format('d/m/Y'),
+                'Không so sánh',
+            ];
+        }
+
+        return match ($branchPeriod) {
+            'week' => [
+                $now->copy()->startOfWeek(Carbon::MONDAY),
+                $now->copy()->endOfWeek(Carbon::SUNDAY),
+                null,
+                null,
+                'Tuần này',
+                'Không so sánh',
+            ],
+            'month' => [
+                $now->copy()->startOfMonth(),
+                $now->copy()->endOfMonth(),
+                null,
+                null,
+                'Tháng '.$now->format('m/Y'),
+                'Không so sánh',
+            ],
+            'year' => [
+                $now->copy()->startOfYear(),
+                $now->copy()->endOfYear(),
+                null,
+                null,
+                'Năm '.$now->format('Y'),
+                'Không so sánh',
+            ],
+            default => [
+                $now->copy()->startOfDay(),
+                $now->copy()->endOfDay(),
+                null,
+                null,
+                'Hôm nay',
+                'Không so sánh',
+            ],
+        };
     }
 
     private function resolveBranchComparisonPeriod(AnalyticsPeriodContext $context, string $legacyRankingPeriod): array
