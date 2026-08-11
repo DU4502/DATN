@@ -49,7 +49,7 @@ class OrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size', 'orderItems.toppings'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {

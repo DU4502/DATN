@@ -25,7 +25,7 @@
             --root-ink: #151918;
             --root-muted: #69716e;
             --root-border: #e1e6e4;
-            --root-sidebar-width: 348px;
+            --root-sidebar-width: 289px;
         }
 
         *, *::before, *::after { box-sizing: border-box; }

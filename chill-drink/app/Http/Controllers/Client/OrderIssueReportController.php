@@ -120,8 +120,8 @@ class OrderIssueReportController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id && $issue->order_id === $order->id && $issue->user_id === $request->user()->id, 403);
 
-        if ($issue->status !== 'awaiting_customer') {
-            return back()->with('error', 'Yêu cầu này chưa ở bước chờ bạn xác nhận.');
+        if (in_array($issue->status, ['rejected'], true)) {
+            return back()->with('error', 'Yêu cầu này đã bị từ chối và không thể xác nhận.');
         }
 
         $issue->update([

@@ -40,7 +40,7 @@ class StaffOrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size', 'orderItems.toppings'])
             ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword       = $filters['q'];

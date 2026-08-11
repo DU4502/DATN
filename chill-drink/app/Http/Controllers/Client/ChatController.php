@@ -220,9 +220,27 @@ class ChatController extends Controller
         $this->authorizeConversation($conversation, $request);
 
         $branch      = Branch::findOrFail($request->branch_id);
-        $isNewBranch = ($conversation->branch_id !== $branch->id);
+        $isNewBranch = ($conversation->branch_id !== null && $conversation->branch_id !== $branch->id);
 
-        $conversation->update(['branch_id' => $branch->id]);
+        if ($isNewBranch) {
+            // Đóng conversation cũ
+            $conversation->update(['status' => 'closed']);
+
+            // Tạo conversation mới kế thừa thông tin
+            $conversation = Conversation::create([
+                'user_id'     => $conversation->user_id,
+                'guest_name'  => $conversation->guest_name,
+                'guest_email' => $conversation->guest_email,
+                'guest_token' => $conversation->guest_token,
+                'branch_id'   => $branch->id,
+                'status'      => 'open',
+                'subject'     => $conversation->subject,
+            ]);
+        } else if ($conversation->branch_id !== $branch->id) {
+            // Nếu conversation cũ chưa có branch (null), chỉ cần update branch
+            $conversation->update(['branch_id' => $branch->id]);
+        }
+
         session(['nearest_branch_id' => $branch->id]);
 
         $systemMessage = null;
@@ -266,10 +284,11 @@ class ChatController extends Controller
         }
 
         return response()->json([
-            'success'     => true,
-            'branch_id'   => $branch->id,
-            'branch_name' => $branch->name,
-            'message'     => $systemMessage ? MessageResource::toPublicArray($systemMessage) : null,
+            'success'         => true,
+            'branch_id'       => $branch->id,
+            'branch_name'     => $branch->name,
+            'conversation_id' => $conversation->id,
+            'message'         => $systemMessage ? MessageResource::toPublicArray($systemMessage) : null,
         ]);
     }
 
