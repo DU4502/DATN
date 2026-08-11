@@ -121,6 +121,39 @@ class SuperAdminDashboardTest extends TestCase
         );
     }
 
+    public function test_super_admin_branch_ranking_shows_super_admin_assigned_to_branch(): void
+    {
+        $superAdmin = User::factory()->create([
+            'email' => User::SUPER_ADMIN_EMAIL,
+            'role_id' => 3,
+        ]);
+        $branch = $this->createBranch('CN-SA', 'Chi nhánh Super Admin');
+        User::factory()->create([
+            'name' => 'Super Admin Phụ Trách',
+            'email' => 'branch-super-admin@chilldrink.com',
+            'role_id' => 3,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($superAdmin)->get('/admin/super-admin');
+
+        $response->assertOk();
+
+        $content = $response->getContent();
+        $rowMarker = 'data-branch-row="'.$branch->id.'"';
+        $rowStart = strpos($content, $rowMarker);
+        $rowEnd = $rowStart !== false ? strpos($content, '</tr>', $rowStart) : false;
+
+        $this->assertNotFalse($rowStart, 'Không tìm thấy hàng chi nhánh trong bảng ranking.');
+        $this->assertNotFalse($rowEnd, 'Không tìm thấy phần kết của hàng chi nhánh.');
+
+        $rowHtml = substr($content, $rowStart, $rowEnd - $rowStart);
+
+        $this->assertStringContainsString('Super Admin Phụ Trách', $rowHtml);
+        $this->assertStringNotContainsString('Chưa gán admin', $rowHtml);
+    }
+
     public function test_super_admin_dashboard_xhr_response_still_contains_branch_ranking_and_admin_regions(): void
     {
         $superAdmin = User::factory()->create([

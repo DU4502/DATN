@@ -2094,7 +2094,8 @@ class SuperAdminController extends Controller
     {
         return DB::table('users')
             ->selectRaw('branch_id, MIN(id) as admin_id')
-            ->where('role_id', 2)
+            // Chi nhánh có thể thuộc admin thường (2) hoặc super admin (3)
+            ->whereIn('role_id', [2, 3])
             ->whereNotNull('branch_id')
             ->groupBy('branch_id');
     }
