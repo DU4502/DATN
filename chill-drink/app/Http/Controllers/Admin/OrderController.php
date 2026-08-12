@@ -278,13 +278,41 @@ class OrderController extends Controller
         $newStatus = OrderStatus::normalize($request->status);
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
 
+        if (OrderStatus::normalize((string) $order->status) === $newStatus) {
+            $message = 'Trạng thái đơn hàng không thay đổi.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'data' => $this->statusUpdateData($order),
+                ]);
+            }
+
+            return redirect()->back()->with('success', $message);
+        }
+
         // Kiểm tra yêu cầu lý do hủy
         if ($newStatus === OrderStatus::CANCELLED && empty($request->cancellation_reason)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vui lòng nhập lý do hủy đơn hàng.',
+                ], 422);
+            }
+
             return redirect()->back()->with('error', 'Vui lòng nhập lý do hủy đơn hàng.');
         }
 
         // Kiểm tra logic chuyển trạng thái
         if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus, $fulfillmentType)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không thể chuyển sang trạng thái này. Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn (nếu được phép).',
+                ], 422);
+            }
+
             return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này. Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn (nếu được phép).');
         }
 
@@ -292,6 +320,13 @@ class OrderController extends Controller
         if ($newStatus === OrderStatus::CONFIRMED && 
             $order->payment_method === 'vnpay' && 
             $order->payment_status !== 'paid') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.',
+                ], 422);
+            }
+
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
         }
 
@@ -324,7 +359,34 @@ class OrderController extends Controller
         RealtimeOrderNotifier::orderStatusUpdated($order);
 
         $statusLabel = OrderStatus::label($newStatus);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Cập nhật trạng thái đơn hàng thành công.',
+                'data' => $this->statusUpdateData($order->fresh()),
+            ]);
+        }
         return redirect()->back()->with('success', "Đã cập nhật trạng thái đơn hàng thành: {$statusLabel}");
+    }
+
+    private function statusUpdateData(Order $order): array
+    {
+        $status = OrderStatus::normalize((string) $order->status);
+        $statusOptions = OrderStatus::stepwiseOptions($status, $order->fulfillment_type ?? 'delivery');
+        $nextStatus = collect(array_keys($statusOptions))->first(fn (string $option) => $option !== $status);
+
+        return [
+            'id' => (int) $order->id,
+            'order_code' => $order->displayCode(),
+            'status' => $status,
+            'status_label' => OrderStatus::label($status),
+            'status_icon' => OrderStatus::notificationIcon($status),
+            'status_class' => 'status-text-'.$status,
+            'status_options' => $statusOptions,
+            'next_status' => $nextStatus,
+            'can_update' => count($statusOptions) > 1,
+            'updated_at' => $order->updated_at?->toIso8601String(),
+        ];
     }
 
     /**

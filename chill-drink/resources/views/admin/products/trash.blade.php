@@ -92,7 +92,6 @@
                     <th>Tên sản phẩm</th>
                     <th>Danh mục</th>
                     <th>Giá</th>
-                    <th>Tồn kho</th>
                     <th>Ngày xóa</th>
                     <th class="text-end">Hành động</th>
                 </tr>
@@ -111,11 +110,6 @@
                             <span class="badge badge-soft-secondary">{{ $product->category?->name ?? 'Chưa có' }}</span>
                         </td>
                         <td class="text-primary fw-bold">{{ number_format($product->price, 0, ',', '.') }}₫</td>
-                        <td>
-                            <span class="{{ $product->stock <= 0 ? 'text-danger' : ($product->stock <= 5 ? 'text-warning' : 'text-success') }} fw-bold">
-                                {{ $product->stock }}
-                            </span>
-                        </td>
                         <td>
                             <small class="text-muted">{{ $product->deleted_at ? $product->deleted_at->format('d/m/Y H:i') : '-' }}</small>
                         </td>
@@ -140,7 +134,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center text-secondary py-5">
+                        <td colspan="6" class="text-center text-secondary py-5">
                             <div class="fw-bold text-dark mb-1">Thùng rác trống</div>
                             <div>Không có sản phẩm nào đã bị xóa.</div>
                         </td>

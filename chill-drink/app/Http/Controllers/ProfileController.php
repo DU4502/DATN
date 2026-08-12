@@ -56,9 +56,11 @@ class ProfileController extends Controller
                 'type' => $notification->data['type'] ?? null,
                 'icon' => OrderStatus::notificationIconByType($notification->data['type'] ?? null),
                 'order_id' => $notification->data['order_id'] ?? null,
+                'order_code' => $notification->data['order_code'] ?? null,
                 'url' => $this->orderNotificationUrl($notification->data['order_id'] ?? null),
                 'status' => $notification->data['status'] ?? null,
                 'status_label' => $notification->data['status_label'] ?? null,
+                'updated_at' => $notification->data['updated_at'] ?? null,
                 'read_at' => $notification->read_at?->toIso8601String(),
                 'created_at' => $notification->created_at?->diffForHumans(),
             ])

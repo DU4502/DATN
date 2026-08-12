@@ -16,6 +16,7 @@ use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
 use App\Services\OrderCodeGenerator;
+use App\Services\ProductAvailabilityService;
 use App\Support\ShippingFee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -290,8 +291,6 @@ class CheckoutController extends Controller
         try {
             DB::beginTransaction();
 
-            $orderItems = $this->prepareOrderItems($cart);
-            $subtotal = collect($orderItems)->sum('total_price');
             $fulfillmentType = $request->input('fulfillment_type', 'delivery');
 
             $branchId = $request->input('branch_id');
@@ -305,14 +304,21 @@ class CheckoutController extends Controller
                     ->value('id');
             }
 
+            $branch = Branch::query()->whereKey($branchId)->where('status', true)->first();
+            if (! $branch) {
+                throw new \RuntimeException('Chi nhánh đã chọn không còn hoạt động. Vui lòng chọn lại chi nhánh.');
+            }
+
+            app(ProductAvailabilityService::class)->assertCartAvailable($cart, $branch, true);
+            $orderItems = $this->prepareOrderItems($cart);
+            $subtotal = collect($orderItems)->sum('total_price');
+
             // Handle shipping fee based on delivery type
             if ($fulfillmentType === 'pickup') {
                 $shippingFee = 0;
             } else {
                 $lat = $request->input('latitude');
                 $lng = $request->input('longitude');
-                $branch = Branch::find($branchId);
-
                 if ($lat !== null && $lng !== null && $branch && $branch->latitude !== null && $branch->longitude !== null) {
                     $distance = $branch->distanceTo((float) $lat, (float) $lng);
                     $shippingQuote = ShippingFee::calculate($distance, $request->shipping_method_ui);
@@ -928,17 +934,23 @@ class CheckoutController extends Controller
 
         $price = max(0, (int) ($item['price'] ?? $item['base_price'] ?? 0));
 
-        return Product::create([
+        $product = Product::create([
             'category_id' => $category?->id,
             'name' => $fallbackName,
             'slug' => $fallbackSlug,
             'price' => $price,
-            'stock' => 100,
             'status' => true,
             'description' => trim((string) ($item['description'] ?? '')) !== ''
                 ? $item['description']
                 : 'Sản phẩm được tạo tự động để hỗ trợ thanh toán.',
         ]);
+
+        app(ProductAvailabilityService::class)->syncProduct(
+            $product,
+            Branch::query()->where('status', true)->pluck('id')->mapWithKeys(fn ($id) => [$id => true])->all()
+        );
+
+        return $product;
     }
 
     protected function prepareOrderItems(array $cart): array
@@ -963,16 +975,6 @@ class CheckoutController extends Controller
             }
 
             $quantity = max(1, min(99, (int) ($item['quantity'] ?? 1)));
-
-            if (Schema::hasColumn('products', 'stock')) {
-                $stock = (int) ($product->stock ?? 0);
-
-                if ($stock < $quantity) {
-                    throw new \RuntimeException("Sản phẩm {$product->name} chỉ còn {$stock} món trong kho.");
-                }
-
-                $product->decrement('stock', $quantity);
-            }
 
             $unitPrice = $this->currentUnitPriceForCheckoutItem($item, $product);
 

@@ -3,6 +3,8 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Category;
+use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,7 +27,6 @@ class ProductManagementTest extends TestCase
             'slug' => 'tra-sua-tim-kiem',
             'sku' => 'TS-SEARCH-001',
             'price' => 45000,
-            'stock' => 12,
             'status' => true,
         ]);
         Product::create([
@@ -34,7 +35,6 @@ class ProductManagementTest extends TestCase
             'slug' => 'ca-phe-khong-khop',
             'sku' => 'CF-OTHER-001',
             'price' => 32000,
-            'stock' => 8,
             'status' => true,
         ]);
 
@@ -52,41 +52,43 @@ class ProductManagementTest extends TestCase
             ->assertDontSee('Trà sữa tìm kiếm');
     }
 
-    public function test_admin_can_filter_products_by_category_status_and_stock(): void
+    public function test_admin_can_filter_products_by_category_status_and_availability(): void
     {
         $admin = $this->admin();
         [$teaCategory, $coffeeCategory] = $this->productCategories();
 
-        Product::create([
+        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'status' => true]);
+        $availableProduct = Product::create([
             'category_id' => $teaCategory->id,
             'name' => 'Trà đang bán sắp hết',
             'slug' => 'tra-dang-ban-sap-het',
             'price' => 45000,
-            'stock' => 3,
             'status' => true,
         ]);
-        Product::create([
+        $hiddenProduct = Product::create([
             'category_id' => $teaCategory->id,
             'name' => 'Trà đã ẩn',
             'slug' => 'tra-da-an',
             'price' => 42000,
-            'stock' => 20,
             'status' => false,
         ]);
-        Product::create([
+        $unavailableProduct = Product::create([
             'category_id' => $coffeeCategory->id,
             'name' => 'Cà phê hết hàng',
             'slug' => 'ca-phe-het-hang',
             'price' => 32000,
-            'stock' => 0,
             'status' => true,
         ]);
+        BranchProductStatus::create(['branch_id' => $branch->id, 'product_id' => $availableProduct->id, 'is_available' => true]);
+        BranchProductStatus::create(['branch_id' => $branch->id, 'product_id' => $hiddenProduct->id, 'is_available' => true]);
+        BranchProductStatus::create(['branch_id' => $branch->id, 'product_id' => $unavailableProduct->id, 'is_available' => false]);
 
         $this->actingAs($admin)
             ->get(route('admin.products.index', [
                 'category' => $teaCategory->id,
                 'status' => 'active',
-                'stock' => 'low',
+                'branch_id' => $branch->id,
+                'availability' => 'available',
             ]))
             ->assertOk()
             ->assertSee('Trà đang bán sắp hết')
@@ -95,10 +97,45 @@ class ProductManagementTest extends TestCase
             ->assertSee('selected', false);
 
         $this->actingAs($admin)
-            ->get(route('admin.products.index', ['stock' => 'out']))
+            ->get(route('admin.products.index', ['branch_id' => $branch->id, 'availability' => 'out_of_stock']))
             ->assertOk()
             ->assertSee('Cà phê hết hàng')
             ->assertDontSee('Trà đang bán sắp hết');
+    }
+
+    public function test_product_index_collapses_branch_statuses_into_a_summary(): void
+    {
+        $admin = $this->admin();
+        [$category] = $this->productCategories();
+        $branches = collect([
+            Branch::create(['name' => 'Chi nhánh 1', 'code' => 'UI-1', 'status' => true]),
+            Branch::create(['name' => 'Chi nhánh 2', 'code' => 'UI-2', 'status' => true]),
+            Branch::create(['name' => 'Chi nhánh 3', 'code' => 'UI-3', 'status' => true]),
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Sản phẩm kiểm tra giao diện',
+            'slug' => 'san-pham-kiem-tra-giao-dien',
+            'price' => 45000,
+            'status' => true,
+        ]);
+
+        foreach ($branches as $index => $branch) {
+            BranchProductStatus::create([
+                'branch_id' => $branch->id,
+                'product_id' => $product->id,
+                'is_available' => $index < 2,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.products.index'))
+            ->assertOk()
+            ->assertSee('2/3 chi nhánh còn hàng')
+            ->assertSee('1 chi nhánh hết hàng')
+            ->assertSee('Quản lý trạng thái')
+            ->assertSee('class="d-none product-availability-details"', false)
+            ->assertSee('data-availability-summary="'.$product->id.'"', false);
     }
 
     public function test_admin_can_create_product(): void
@@ -114,7 +151,6 @@ class ProductManagementTest extends TestCase
             'category_id' => $category->id,
             'name' => 'Trà Sữa Test',
             'price' => 39000,
-            'stock' => 20,
             'status' => '1',
         ]);
 
@@ -140,7 +176,6 @@ class ProductManagementTest extends TestCase
             'category_id' => $category->id,
             'name' => 'Trà Đào Cam Sả',
             'price' => 49000,
-            'stock' => 10,
             'status' => '1',
             'image' => $this->imageUpload('tra-dao-cam-sa.png'),
         ]);
@@ -173,7 +208,6 @@ class ProductManagementTest extends TestCase
             'name' => 'Cà Phê Cũ',
             'slug' => 'ca-phe-cu',
             'price' => 25000,
-            'stock' => 10,
             'status' => true,
         ]);
 
@@ -182,7 +216,6 @@ class ProductManagementTest extends TestCase
             'name' => 'Cà Phê Mới',
             'slug' => 'ca-phe-moi',
             'price' => 30000,
-            'stock' => 15,
             'status' => '0',
         ]);
 
@@ -213,7 +246,6 @@ class ProductManagementTest extends TestCase
             'slug' => 'soda-blue',
             'image' => $oldPath,
             'price' => 35000,
-            'stock' => 8,
             'status' => true,
         ]);
 
@@ -222,7 +254,6 @@ class ProductManagementTest extends TestCase
             'name' => 'Soda Blue New',
             'slug' => 'soda-blue-new',
             'price' => 37000,
-            'stock' => 12,
             'status' => '1',
             'image' => $this->imageUpload('new-image.png'),
         ]);
@@ -261,7 +292,6 @@ class ProductManagementTest extends TestCase
             'image' => $mainPath,
             'gallery_images' => [$galleryPath],
             'price' => 30000,
-            'stock' => 10,
             'status' => true,
         ]);
 
@@ -286,7 +316,6 @@ class ProductManagementTest extends TestCase
             'name' => 'Soda Test',
             'slug' => 'soda-test',
             'price' => 36000,
-            'stock' => 12,
             'status' => true,
         ]);
 
@@ -313,20 +342,19 @@ class ProductManagementTest extends TestCase
                 'category_id' => $category->id,
                 'name' => 'Cam Ép Test',
                 'price' => -1,
-                'stock' => -5,
                 'status' => '1',
                 'image' => UploadedFile::fake()->create('wrong-file.pdf', 120, 'application/pdf'),
             ]);
 
         $response->assertRedirect(route('admin.products.create'));
-        $response->assertSessionHasErrors(['image', 'price', 'stock']);
+        $response->assertSessionHasErrors(['image', 'price']);
         $this->assertDatabaseMissing('products', ['name' => 'Cam Ép Test']);
     }
 
     private function admin(): User
     {
         return User::factory()->create([
-            'role_id' => 2,
+            'role_id' => 3,
             'is_active' => 1,
         ]);
     }

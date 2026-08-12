@@ -46,13 +46,20 @@
                 <p class="h4 text-primary fw-bold mb-3">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
                 <p class="text-secondary">{{ $product->description ?: 'Chưa có mô tả.' }}</p>
 
-                <div class="row g-3 my-4">
-                    <div class="col-sm-4">
-                        <div class="border rounded-3 p-3">
-                            <div class="text-secondary small">Tồn kho</div>
-                            <div class="h5 fw-bold mb-0">{{ $product->stock ?? 0 }}</div>
-                        </div>
+                <div class="border rounded-3 p-3 my-4">
+                    <div class="fw-bold mb-3">Trạng thái sản phẩm theo chi nhánh</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        @forelse($product->branchStatuses as $branchStatus)
+                            <span class="badge {{ $branchStatus->is_available ? 'text-bg-success' : 'text-bg-danger' }}">
+                                {{ $branchStatus->branch?->name }}: {{ $branchStatus->is_available ? 'Còn hàng' : 'Hết hàng' }}
+                            </span>
+                        @empty
+                            <span class="badge text-bg-secondary">Chưa áp dụng tại chi nhánh nào</span>
+                        @endforelse
                     </div>
+                </div>
+
+                <div class="row g-3 my-4">
                     <div class="col-sm-4">
                         <div class="border rounded-3 p-3">
                             <div class="text-secondary small">Lượt bán</div>

@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Category;
+use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Product;
 use App\Support\ProductCatalog;
 use App\Support\ProductImage;
@@ -19,6 +21,13 @@ class ProductFactory extends Factory
             $product->update([
                 'image' => ProductImage::forProduct($product->id, $product->slug, 700),
             ]);
+
+            Branch::query()->where('status', true)->pluck('id')->each(function ($branchId) use ($product) {
+                BranchProductStatus::query()->firstOrCreate([
+                    'branch_id' => $branchId,
+                    'product_id' => $product->id,
+                ], ['is_available' => true]);
+            });
         });
     }
 
@@ -48,7 +57,6 @@ class ProductFactory extends Factory
             'image' => null,
             'price' => $item['price'],
             'description' => $item['description'],
-            'stock' => fake()->numberBetween(20, 80),
             'status' => true,
         ];
     }

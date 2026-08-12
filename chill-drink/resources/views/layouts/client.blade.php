@@ -2011,6 +2011,7 @@
     </script>
     @include('partials.realtime')
     @include('partials.client-notifications')
+    @stack('scripts')
 </body>
 
 </html>

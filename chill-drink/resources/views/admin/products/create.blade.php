@@ -180,6 +180,7 @@
 
 <form action="{{ route('admin.products.store') }}" method="POST" enctype="multipart/form-data" id="createProductForm">
     @csrf
+    <input type="hidden" name="branch_statuses_submitted" value="1">
 
     @if ($errors->any())
     <div class="alert alert-danger rounded-3 mb-4 shadow-sm">
@@ -298,6 +299,38 @@
                     </div>
                 </div>
             </div>
+
+            <div class="form-card">
+                <div class="form-card-header">
+                    <i class="bi bi-shop text-primary fs-5"></i>
+                    <span>Trạng thái sản phẩm theo chi nhánh</span>
+                </div>
+                <div class="form-card-body">
+                    <p class="text-secondary small">Chỉ các chi nhánh được chọn mới phục vụ sản phẩm này.</p>
+                    <div class="row g-2">
+                        @foreach($branches as $branch)
+                            @php
+                                $oldStatuses = old('branch_statuses', []);
+                                $selected = array_key_exists((string) $branch->id, $oldStatuses)
+                                    || (! auth()->user()->isSuperAdmin() && (int) auth()->user()->branch_id === (int) $branch->id && old('branch_statuses') === null);
+                                $available = (bool) ($oldStatuses[$branch->id] ?? true);
+                            @endphp
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3" data-branch-status-row>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input custom-check-green" type="checkbox" id="branch_{{ $branch->id }}" data-branch-status-toggle @checked($selected)>
+                                        <label class="form-check-label fw-bold" for="branch_{{ $branch->id }}">{{ $branch->name }}</label>
+                                    </div>
+                                    <select class="form-select form-select-sm" name="branch_statuses[{{ $branch->id }}]" data-branch-status-select @disabled(! $selected)>
+                                        <option value="1" @selected($available)>Còn hàng</option>
+                                        <option value="0" @selected(! $available)>Hết hàng</option>
+                                    </select>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Cột Phải -->
@@ -393,6 +426,14 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-branch-status-row]').forEach(function(row) {
+            const toggle = row.querySelector('[data-branch-status-toggle]');
+            const select = row.querySelector('[data-branch-status-select]');
+            toggle?.addEventListener('change', function() {
+                select.disabled = !toggle.checked;
+            });
+        });
+
         const inputM = document.getElementById('size_price_input_M');
         const inputL = document.getElementById('size_price_input_L');
         const checkM = document.querySelector('.size-checkbox[data-size-name="M"]');

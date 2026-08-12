@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
@@ -47,8 +48,12 @@ class CheckoutBranchSelectionTest extends TestCase
             'name' => 'Trà kiểm thử',
             'slug' => 'tra-kiem-thu',
             'price' => 50000,
-            'stock' => 10,
             'status' => true,
+        ]);
+        BranchProductStatus::create([
+            'branch_id' => $branch->id,
+            'product_id' => $product->id,
+            'is_available' => true,
         ]);
 
         $size = Size::create(['name' => 'M', 'multiplier' => 1]);
@@ -84,6 +89,7 @@ class CheckoutBranchSelectionTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => '123 Nguyễn Huệ',
                 'shipping_area_ui' => 'Quận 1, Thành phố Hồ Chí Minh',
                 'branch_id' => $branch->id,
@@ -117,6 +123,7 @@ class CheckoutBranchSelectionTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => '123 Nguyễn Huệ',
                 'branch_id' => $branch->id,
             ])

@@ -155,7 +155,6 @@ class ProductReviewTest extends TestCase
             'name' => 'Trà sữa review test',
             'slug' => $productSlug,
             'price' => 45000,
-            'stock' => 100,
             'status' => true,
         ]);
 

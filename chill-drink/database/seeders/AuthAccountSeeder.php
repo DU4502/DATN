@@ -77,7 +77,6 @@ class AuthAccountSeeder extends Seeder
             $data = [
                 'name' => $account['name'],
                 'password' => Hash::make($account['password']),
-                'plain_password' => $account['password'],
                 'role_id' => $account['role_id'],
                 'phone' => $account['phone'],
                 'is_active' => true,

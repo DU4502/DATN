@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
+use App\Http\Controllers\Admin\ProductAvailabilityController;
 use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\OrderLookupController;
 use App\Http\Controllers\Client\ChatController;
@@ -244,6 +245,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/slides/trash', [BranchSlideController::class, 'trash'])->name('slides.trash');
     Route::post('/slides/{id}/restore', [BranchSlideController::class, 'restore'])->name('slides.restore');
     Route::delete('/slides/{id}/force-delete', [BranchSlideController::class, 'forceDelete'])->name('slides.force-delete');
+
+    Route::patch('/products/{productId}/branches/{branch}/availability', [ProductAvailabilityController::class, 'update'])
+        ->name('products.branches.availability.update');
 });
 
 require __DIR__.'/auth.php';

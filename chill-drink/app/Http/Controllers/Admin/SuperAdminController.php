@@ -473,7 +473,6 @@ class SuperAdminController extends Controller
                 'admin_id' => $admin?->id,
                 'admin_name' => $admin?->name ?? 'Chưa gán',
                 'admin_email' => $admin?->email,
-                'admin_password' => $admin?->plain_password ?? '12345678',
                 'staff_count' => $branch->users()->count(),
                 'active_staff_count' => $branch->users()->where('is_active', true)->count(),
                 'total_orders' => $totalOrders,

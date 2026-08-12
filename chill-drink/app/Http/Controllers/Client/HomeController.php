@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Favorite;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -16,8 +17,11 @@ class HomeController extends Controller
      */
     public function index()
     {
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
+
         // Get featured products
         $featuredProducts = Product::where('status', true)
+            ->with(['branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->latest()
             ->take(8)
             ->get();
@@ -33,7 +37,7 @@ class HomeController extends Controller
         ];
 
         $discoverProductsBySlug = Product::query()
-            ->with('category')
+            ->with(['category', 'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->where('status', true)
             ->whereIn('slug', $discoverProductSlugs)
             ->get()
@@ -47,15 +51,6 @@ class HomeController extends Controller
         $favoriteProductIds = auth()->check()
             ? Favorite::where('user_id', auth()->id())->pluck('product_id')
             : collect();
-
-        $branchId = session('nearest_branch_id');
-        $branch = null;
-        if ($branchId) {
-            $branch = \App\Models\Branch::find($branchId);
-        }
-        if (!$branch) {
-            $branch = \App\Models\Branch::first();
-        }
 
         $slides = $branch ? $branch->slides()->where('is_active', true)->get() : collect();
 

@@ -7,6 +7,7 @@ use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Services\OrderCodeGenerator;
+use App\Services\ProductAvailabilityService;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\ShippingFee;
@@ -218,9 +219,20 @@ class GuestCheckoutController extends CheckoutController
         try {
             DB::beginTransaction();
 
+            $deliveryType = $guestInfo['fulfillment_type'] ?? 'delivery';
+            $branchId = $guestInfo['branch_id'] ?? null;
+            if (! $branchId && $deliveryType === 'delivery') {
+                $branchId = Branch::query()->where('status', true)->orderBy('id')->value('id');
+            }
+
+            $branch = Branch::query()->whereKey($branchId)->where('status', true)->first();
+            if (! $branch) {
+                throw new \RuntimeException('Vui lòng chọn một chi nhánh đang hoạt động trước khi đặt hàng.');
+            }
+
+            app(ProductAvailabilityService::class)->assertCartAvailable($cart, $branch, true);
             $orderItems = $this->prepareOrderItems($cart);
             $subtotal = collect($orderItems)->sum('total_price');
-            $deliveryType = $guestInfo['fulfillment_type'] ?? 'delivery';
 
             if ($deliveryType === 'pickup') {
                 $shippingFee = 0;
@@ -250,10 +262,6 @@ class GuestCheckoutController extends CheckoutController
             $note = mb_substr($note, 0, 500);
             $guestToken = Str::random(48);
 
-            $branchId = $guestInfo['branch_id'] ?? null;
-            if (! $branchId && $deliveryType === 'delivery') {
-                $branchId = Branch::query()->where('status', true)->orderBy('id')->value('id');
-            }
             if (! $branchId && $deliveryType === 'pickup') {
                 throw new \RuntimeException('Vui lòng chọn chi nhánh trước khi đặt hàng.');
             }

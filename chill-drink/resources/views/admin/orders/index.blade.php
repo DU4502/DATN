@@ -74,6 +74,12 @@
     .status-text-ready_for_pickup { color: #06b6d4 !important; }
     .status-text-completed { color: #16a34a !important; }
     .status-text-cancelled { color: #dc2626 !important; }
+
+    .order-status-spinner {
+        width: 1rem;
+        height: 1rem;
+        flex: 0 0 auto;
+    }
 </style>
 
 <div class="mb-4">
@@ -233,18 +239,20 @@
                     </td>
                     <td class="text-end fw-bold text-primary">{{ number_format($order->total_price ?? $order->total ?? 0, 0, ',', '.') }}đ</td>
                     <td class="text-center">
-                        <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST">
+                        <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" data-order-status-form data-order-id="{{ $order->id }}">
                             @csrf
                             @method('PUT')
                             <div class="d-flex align-items-center gap-2 justify-content-center">
                                 <select name="status"
                                         class="form-select form-select-sm"
-                                        onchange="this.form.submit()"
+                                        data-order-status-select
+                                        data-current-status="{{ $order->status }}"
                                         @disabled($nextStatus === null)>
                                     @foreach($statusStepOptions as $value => $label)
                                         <option value="{{ $value }}" @selected($order->status === $value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
+                                <span class="spinner-border spinner-border-sm text-primary d-none order-status-spinner" role="status" aria-label="Đang cập nhật" data-order-status-loading></span>
                             </div>
                         </form>
                     </td>
@@ -421,6 +429,107 @@
                 .replace(/'/g, '&#039;');
         }
 
+        const pendingStatusUpdates = new Set();
+
+        function showOrderStatusToast(message, type) {
+            if (typeof window.showRealtimeToast === 'function') {
+                window.showRealtimeToast(message, type === 'error' ? 'warning' : type);
+                return;
+            }
+
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type === 'success' ? 'success' : 'danger'} shadow-sm`;
+            alert.style.cssText = 'position:fixed;top:80px;right:20px;z-index:10001;max-width:360px;border-radius:12px;';
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            window.setTimeout(() => alert.remove(), 4000);
+        }
+
+        function responseErrorMessage(payload, fallback) {
+            const validationMessage = payload?.errors
+                ? Object.values(payload.errors).flat().find(Boolean)
+                : null;
+
+            return validationMessage || payload?.message || fallback;
+        }
+
+        function updateOrderStatusRow(orderRow, select, payload) {
+            const status = String(payload.status || '');
+            const statusOptions = payload.status_options || { [status]: payload.status_label || status };
+
+            select.replaceChildren(...Object.entries(statusOptions).map(([value, label]) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                option.selected = value === status;
+                return option;
+            }));
+            select.dataset.currentStatus = status;
+            select.disabled = payload.can_update === false;
+            orderRow.dataset.orderStatus = status;
+            if (payload.updated_at) orderRow.dataset.orderUpdatedAt = payload.updated_at;
+
+            const detailStatus = document
+                .getElementById(`order-detail-${payload.id}`)
+                ?.querySelector('[class*="status-text-"]');
+            if (detailStatus) {
+                detailStatus.className = payload.status_class || `status-text-${status}`;
+                detailStatus.textContent = String(payload.status_label || status).toUpperCase();
+            }
+
+            orderRow.style.backgroundColor = 'rgba(13, 147, 115, 0.1)';
+            window.setTimeout(() => {
+                orderRow.style.backgroundColor = '';
+            }, 1500);
+        }
+
+        async function submitOrderStatus(select) {
+            const form = select.closest('[data-order-status-form]');
+            const orderRow = select.closest('tr[data-order-id]');
+            const orderId = String(form?.dataset.orderId || orderRow?.dataset.orderId || '');
+            const previousStatus = String(select.dataset.currentStatus || '');
+            const requestedStatus = String(select.value || '');
+
+            if (!form || !orderRow || !orderId || requestedStatus === previousStatus || pendingStatusUpdates.has(orderId)) {
+                select.value = previousStatus || requestedStatus;
+                return;
+            }
+
+            const loading = form.querySelector('[data-order-status-loading]');
+            const formData = new FormData(form);
+            pendingStatusUpdates.add(orderId);
+            select.disabled = true;
+            loading?.classList.remove('d-none');
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                });
+                const payload = await response.json().catch(() => ({}));
+
+                if (!response.ok || payload.success !== true || !payload.data) {
+                    throw new Error(responseErrorMessage(payload, 'Không thể cập nhật trạng thái đơn hàng.'));
+                }
+
+                updateOrderStatusRow(orderRow, select, payload.data);
+                showOrderStatusToast(payload.message || 'Cập nhật trạng thái đơn hàng thành công.', 'success');
+            } catch (error) {
+                select.value = previousStatus;
+                select.dataset.currentStatus = previousStatus;
+                showOrderStatusToast(error.message || 'Không thể cập nhật trạng thái đơn hàng.', 'error');
+            } finally {
+                pendingStatusUpdates.delete(orderId);
+                loading?.classList.add('d-none');
+                select.disabled = select.options.length <= 1;
+            }
+        }
+
         function paymentBadgeHtml(payload) {
             if (payload.payment_status === 'paid') {
                 return '<span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Đã thanh toán</span>';
@@ -462,12 +571,13 @@
             `;
 
             return `
-                <form action="${escapeHtml(updateUrl)}" method="POST" class="d-flex align-items-center gap-2 justify-content-center">
+                <form action="${escapeHtml(updateUrl)}" method="POST" class="d-flex align-items-center gap-2 justify-content-center" data-order-status-form data-order-id="${escapeHtml(payload.order_id)}">
                     <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
                     <input type="hidden" name="_method" value="PUT">
-                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" ${nextStatus ? '' : 'disabled'}>
+                    <select name="status" class="form-select form-select-sm" data-order-status-select data-current-status="${escapeHtml(status)}" ${nextStatus ? '' : 'disabled'}>
                         ${optionsHtml}
                     </select>
+                    <span class="spinner-border spinner-border-sm text-primary d-none order-status-spinner" role="status" aria-label="Đang cập nhật" data-order-status-loading></span>
                 </form>
             `;
         }
@@ -698,6 +808,26 @@
             }
 
             toggleDetailRow(toggleButton.dataset.toggleOrderDetail);
+        });
+
+        document.addEventListener('change', function (event) {
+            const statusSelect = event.target.closest('[data-order-status-select]');
+            if (statusSelect) {
+                submitOrderStatus(statusSelect);
+            }
+        });
+
+        document.addEventListener('submit', function (event) {
+            const statusForm = event.target.closest('[data-order-status-form]');
+            if (!statusForm) {
+                return;
+            }
+
+            event.preventDefault();
+            const statusSelect = statusForm.querySelector('[data-order-status-select]');
+            if (statusSelect) {
+                submitOrderStatus(statusSelect);
+            }
         });
 
         function handleNewOrders(orders) {

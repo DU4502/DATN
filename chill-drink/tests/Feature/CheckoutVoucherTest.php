@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductSize;
@@ -53,6 +55,7 @@ class CheckoutVoucherTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'momo',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => '123 Test Street',
             ])
             ->assertRedirect(route('checkout.index'))
@@ -81,6 +84,7 @@ class CheckoutVoucherTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'vnpay',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => '123 Test Street',
                 'shipping_area_ui' => 'Test Area',
             ]);
@@ -178,6 +182,7 @@ class CheckoutVoucherTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => $shippingAddress,
                 'shipping_area_ui' => $shippingArea,
                 'voucher_code' => 'TESTCHILL10',
@@ -193,7 +198,6 @@ class CheckoutVoucherTest extends TestCase
         $this->assertSame(10000, (int) $order->discount);
         $this->assertSame(100000 + $shippingFee - 10000, (int) $order->total);
         $this->assertSame(1, (int) $voucher->fresh()->used_count);
-        $this->assertSame(99, (int) $product->fresh()->stock);
         $this->assertDatabaseHas('user_coupon_usage', [
             'user_id' => $user->id,
             'coupon_id' => $voucher->id,
@@ -234,6 +238,7 @@ class CheckoutVoucherTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => '123 Test Street',
                 'shipping_area_ui' => 'Test Area',
                 'voucher_code' => 'MIN200',
@@ -268,6 +273,7 @@ class CheckoutVoucherTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => '',
                 'shipping_area_ui' => 'Hà Nội',
                 'voucher_code' => '',
@@ -314,6 +320,7 @@ class CheckoutVoucherTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
                 'shipping_address_ui' => $shippingAddress,
                 'shipping_area_ui' => $shippingArea,
                 'voucher_code' => 'DBPRICE',
@@ -363,9 +370,16 @@ class CheckoutVoucherTest extends TestCase
             'name' => 'Trà sữa test',
             'slug' => $productSlug,
             'price' => 100000,
-            'stock' => 100,
             'status' => true,
         ]);
+        $branch = Branch::query()->firstOrCreate(
+            ['code' => 'CHECKOUT-TEST'],
+            ['name' => 'Chi nhánh checkout', 'status' => true]
+        );
+        BranchProductStatus::query()->updateOrCreate(
+            ['branch_id' => $branch->id, 'product_id' => $product->id],
+            ['is_available' => true]
+        );
 
         $size = Size::create([
             'name' => 'M',
