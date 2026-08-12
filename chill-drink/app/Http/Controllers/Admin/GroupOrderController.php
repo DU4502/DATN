@@ -52,14 +52,64 @@ class GroupOrderController extends Controller
         
         $user = auth()->user();
         if (!$user->isSuperAdmin()) {
-            if ($groupOrder->order && $user->branch_id && $groupOrder->order->branch_id !== $user->branch_id) {
+            if (! $user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
                 abort(403, 'Bạn không có quyền xem đơn nhóm này.');
             }
         }
 
-        $groupOrder->load(['owner', 'order', 'members.items.product.category']);
+        // Super Admin chỉ giám sát: xem được lịch sử chat nhưng không có
+        // endpoint gửi tin nhắn trong khu vực quản trị.
+        $groupOrder->load([
+            'owner',
+            'order',
+            'members.items.product.category',
+            'messages.sender',
+            'messages.recipient',
+        ]);
 
         return view('admin.group-orders.show', compact('groupOrder'));
+    }
+
+    public function updateStatus(Request $request, GroupOrder $groupOrder)
+    {
+        $request->validate([
+            'status' => ['required', 'in:open,closed,ordered,cancelled'],
+        ]);
+
+        $user = auth()->user();
+        if (!$user->isSuperAdmin()) {
+            if (!$user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
+                abort(403, 'Bạn không có quyền cập nhật đơn nhóm này.');
+            }
+        }
+
+        $allowedTransitions = [
+            'open' => ['closed', 'cancelled'],
+            'closed' => ['ordered', 'cancelled'],
+            'ordered' => [],
+            'cancelled' => [],
+        ];
+
+        if (!in_array($request->status, $allowedTransitions[$groupOrder->status] ?? [], true)) {
+            return redirect()->back()->with('error', 'KhÃ´ng thá»ƒ chuyá»ƒn sang tráº¡ng thÃ¡i nÃ y.');
+        }
+
+        $data = [
+            'status' => $request->status,
+            'status_changed_at' => now(),
+            'status_changed_by' => $user->id,
+        ];
+
+        if ($request->status === 'cancelled') {
+            $data['cancelled_at'] = now();
+        }
+        if ($request->status === 'closed') {
+            $data['locked_at'] = now();
+        }
+
+        $groupOrder->update($data);
+
+        return redirect()->back()->with('success', 'Đã cập nhật trạng thái đơn nhóm thành công.');
     }
 
     /**
@@ -75,13 +125,9 @@ class GroupOrderController extends Controller
         }
 
         if (! $user->branch_id) {
-            return $query;
+            return $query->whereRaw('1 = 0');
         }
 
-        return $query->where(function ($scopedQuery) use ($user) {
-            $scopedQuery
-                ->whereDoesntHave('order')
-                ->orWhereHas('order', fn ($order) => $order->where('branch_id', $user->branch_id));
-        });
+        return $query->where('branch_id', $user->branch_id);
     }
 }

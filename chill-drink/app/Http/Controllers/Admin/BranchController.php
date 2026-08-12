@@ -66,11 +66,14 @@ class BranchController extends Controller
 
         Branch::create($validated);
 
-        $redirectRoute = $request->input('return_to') === 'super-admin'
-            ? 'admin.super-admin'
-            : 'admin.branches.index';
+        \App\Models\SystemLog::record(
+            request()->user(),
+            "Đã tạo chi nhánh mới: {$validated['name']} ({$validated['code']})",
+            'branch',
+            'info'
+        );
 
-        return redirect()->route($redirectRoute)
+        return redirect()->to(route('admin.super-admin') . '#branch-ranking')
             ->with('success', 'Thêm chi nhánh thành công!');
     }
 
@@ -111,6 +114,13 @@ class BranchController extends Controller
 
         $branch->update($validated);
 
+        \App\Models\SystemLog::record(
+            request()->user(),
+            "Đã cập nhật chi nhánh: {$branch->name}",
+            'branch',
+            'info'
+        );
+
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
@@ -130,7 +140,7 @@ class BranchController extends Controller
             ]);
         }
 
-        return redirect()->route('admin.branches.index')
+        return redirect()->to(route('admin.super-admin') . '#branch-ranking')
             ->with('success', 'Cập nhật chi nhánh thành công!');
     }
 
@@ -237,19 +247,33 @@ class BranchController extends Controller
     {
         // Check if branch has users assigned
         if ($branch->users()->exists()) {
-            return redirect()->route('admin.branches.index')
+            return redirect()->to(route('admin.super-admin') . '#branch-ranking')
                 ->with('error', 'Không thể xóa! Chi nhánh này đang có nhân viên được gán.');
         }
 
         // Check if branch has orders
         if ($branch->orders()->exists()) {
-            return redirect()->route('admin.branches.index')
+            return redirect()->to(route('admin.super-admin') . '#branch-ranking')
                 ->with('error', 'Không thể xóa! Chi nhánh này đang có đơn hàng liên quan.');
         }
 
+        // Check if branch has slides or conversations
+        if ($branch->slides()->exists() || $branch->conversations()->exists()) {
+            return redirect()->to(route('admin.super-admin') . '#branch-ranking')
+                ->with('error', 'Không thể xóa! Chi nhánh này vẫn còn chứa dữ liệu Slide quảng cáo hoặc Lịch sử chat CSKH.');
+        }
+
+        $branchName = $branch->name;
         $branch->delete();
 
-        return redirect()->route('admin.branches.index')
+        \App\Models\SystemLog::record(
+            request()->user(),
+            "Đã xóa chi nhánh: {$branchName}",
+            'branch',
+            'warning'
+        );
+
+        return redirect()->to(route('admin.super-admin') . '#branch-ranking')
             ->with('success', 'Xóa chi nhánh thành công!');
     }
 
@@ -260,11 +284,18 @@ class BranchController extends Controller
     {
         $branch->update(['status' => ! $branch->status]);
 
+        \App\Models\SystemLog::record(
+            request()->user(),
+            "Đã " . ($branch->status ? 'kích hoạt' : 'vô hiệu hóa') . " chi nhánh {$branch->name}",
+            'branch',
+            'info'
+        );
+
         if (request()->expectsJson()) {
             return response()->json(['success' => true, 'status' => $branch->status]);
         }
 
-        return redirect()->route('admin.branches.index')
+        return redirect()->to(route('admin.super-admin') . '#branch-ranking')
             ->with('success', ($branch->status ? 'Kích hoạt' : 'Vô hiệu hóa') . ' chi nhánh thành công!');
     }
 }

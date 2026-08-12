@@ -1,4 +1,4 @@
-@extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Đơn nhóm')
 
@@ -39,7 +39,20 @@
                     <td><small class="d-block text-secondary">Tạo {{ $group->created_at?->format('H:i d/m/Y') }}</small><small>Chốt {{ $group->closes_at->format('H:i d/m/Y') }}</small></td>
                     <td class="text-center fw-bold">{{ $group->members_count }}</td>
                     <td class="text-center fw-bold">{{ $group->items_count }}</td>
-                    <td><span class="badge bg-{{ $status[1] }}-subtle text-{{ $status[1] }}-emphasis">{{ $status[0] }}</span></td>
+                    <td>
+                        <span class="badge bg-{{ $status[1] }}-subtle text-{{ $status[1] }}-emphasis d-inline-block mb-1">{{ $status[0] }}</span>
+                        @if($group->status_changed_at)
+                            @php
+                                $groupUpdater = $group->status_changed_by ? \App\Models\User::find($group->status_changed_by) : null;
+                            @endphp
+                            <small class="text-muted d-block" style="font-size:0.72rem;">
+                                <i class="bi bi-clock-history me-1"></i>{{ $group->status_changed_at->format('H:i · d/m/Y') }}
+                                @if($groupUpdater)
+                                    ({{ $groupUpdater->name }})
+                                @endif
+                            </small>
+                        @endif
+                    </td>
                     <td class="text-end"><a class="admin-action text-decoration-none" href="{{ route('admin.group-orders.show', $group) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
                 </tr>
             @empty

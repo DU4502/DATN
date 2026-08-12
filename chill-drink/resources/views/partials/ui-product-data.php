@@ -194,7 +194,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
         return $sku && in_array($sku, $uiDisplaySkus, true);
     };
 
-    $uiGetProductGallery = static function (?string $sku, ?string $category, ?string $name = null, int $limit = 4, ?string $uploadedImage = null) use ($uiProductImageUrls, $uiResolveProductImage, $uiImageVariant, $uiPlaceholderImage): array {
+    $uiGetProductGallery = static function (?string $sku, ?string $category, ?string $name = null, int $limit = 4, ?string $uploadedImage = null) use ($uiProductImageUrls, $uiResolveProductImage, $uiPlaceholderImage): array {
         $primary = $uploadedImage;
 
         if (! $primary && $sku && isset($uiProductImageUrls[$sku])) {
@@ -209,16 +209,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             $primary = $uiPlaceholderImage($name, $category);
         }
 
-        $images = [
-            $uiImageVariant($primary, 1000, 0),
-            $uiImageVariant($primary, 1000, 1),
-            $uiImageVariant($primary, 1000, 2),
-            $uiImageVariant($primary, 1000, 3),
-        ];
-
-        $images[] = $uiPlaceholderImage($name, $category);
-
-        return array_values(array_slice(array_unique($images), 0, $limit));
+        return [$primary];
     };
 
     view()->share([

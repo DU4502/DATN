@@ -1,4 +1,4 @@
-@extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Chi tiết đơn nhóm')
 
@@ -10,10 +10,25 @@
 <style>
     .admin-group-product { display: flex; align-items: center; gap: .85rem; min-width: 280px; }
     .admin-group-product-image { width: 58px; height: 58px; flex: 0 0 58px; border: 1px solid #e1ebe8; border-radius: 13px; object-fit: cover; background: #f1f7f5; }
+    .admin-group-chat { max-height: 440px; overflow-y: auto; background: #f7fbfa; }
+    .admin-group-chat-message { max-width: 760px; margin: 0 auto; padding: .8rem 1rem; border-bottom: 1px solid #e5efed; background: #fff; }
+    .admin-group-chat-message:last-child { border-bottom: 0; }
 </style>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div><a href="{{ route('admin.group-orders.index') }}" class="text-decoration-none text-secondary"><i class="bi bi-arrow-left me-1"></i>Danh sách đơn nhóm</a><h2 class="h4 fw-bold mt-2 mb-0">{{ $groupOrder->name }}</h2></div>
-    <span class="badge bg-primary-subtle text-primary-emphasis fs-6">{{ $statusLabel }}</span>
+    <div class="d-flex align-items-center gap-2">
+        <form action="{{ route('admin.group-orders.updateStatus', $groupOrder) }}" method="POST" class="d-inline-flex align-items-center gap-2 m-0">
+            @csrf
+            @method('PUT')
+            <select name="status" class="form-select form-select-sm shadow-none fw-bold" onchange="this.form.submit()" style="min-width:140px;">
+                <option value="open" @selected($groupOrder->status === 'open')>Đang mở</option>
+                <option value="closed" @selected($groupOrder->status === 'closed')>Chờ thanh toán</option>
+                <option value="ordered" @selected($groupOrder->status === 'ordered')>Đã đặt hàng</option>
+                <option value="cancelled" @selected($groupOrder->status === 'cancelled')>Đã hủy</option>
+            </select>
+        </form>
+        <span class="badge bg-primary-subtle text-primary-emphasis fs-6 px-3 py-2">{{ $statusLabel }}</span>
+    </div>
 </div>
 
 <div class="row g-3 mb-4">
@@ -22,6 +37,20 @@
     <div class="col-md-3"><div class="admin-card p-3 h-100"><small class="text-secondary">Thành viên</small><strong class="d-block fs-5">{{ $groupOrder->members->count() }} / {{ \App\Models\GroupOrder::MAX_MEMBERS }} thành viên</strong><small class="text-secondary">{{ $groupOrder->items->sum('quantity') }} món đã chọn</small></div></div>
     <div class="col-md-3"><div class="admin-card p-3 h-100"><small class="text-secondary">Tổng tạm tính</small><strong class="d-block text-primary fs-5">{{ number_format($total, 0, ',', '.') }}đ</strong></div></div>
 </div>
+
+@if($groupOrder->status_changed_at)
+    @php
+        $groupUpdater = $groupOrder->status_changed_by ? \App\Models\User::find($groupOrder->status_changed_by) : null;
+    @endphp
+    <div class="alert alert-light border shadow-sm rounded-3 d-flex align-items-center justify-content-between py-2 px-3 mb-3">
+        <div class="small text-secondary">
+            <i class="bi bi-clock-history me-1 text-primary"></i>Cập nhật trạng thái gần nhất: <strong>{{ $groupOrder->status_changed_at->format('H:i · d/m/Y') }}</strong>
+            @if($groupUpdater)
+                bởi <strong>{{ $groupUpdater->name }}</strong> <span class="badge {{ $groupUpdater->isStaffOnly() ? 'bg-warning text-dark' : ($groupUpdater->isAdmin() ? 'bg-primary' : 'bg-secondary') }}" style="font-size:0.65rem;">{{ $groupUpdater->isStaffOnly() ? 'Nhân viên' : ($groupUpdater->isAdmin() ? 'Admin' : 'Hệ thống') }}</span>
+            @endif
+        </div>
+    </div>
+@endif
 
 @if($groupOrder->note)<div class="alert alert-info border-0 rounded-3"><i class="bi bi-chat-left-text me-2"></i>{{ $groupOrder->note }}</div>@endif
 
@@ -39,5 +68,29 @@
     @empty
         <div class="text-center text-secondary py-5">Chưa có thành viên tham gia.</div>
     @endforelse
+</section>
+
+<section class="admin-card mt-4">
+    <div class="p-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h3 class="h5 fw-bold mb-1"><i class="bi bi-chat-square-text me-2 text-primary"></i>Lịch sử trò chuyện</h3>
+            <small class="text-secondary">Chế độ giám sát: Super Admin chỉ xem, không thể gửi tin nhắn.</small>
+        </div>
+        <span class="badge bg-primary-subtle text-primary-emphasis">{{ $groupOrder->messages->count() }} tin nhắn</span>
+    </div>
+    <div class="admin-group-chat">
+        @forelse($groupOrder->messages->sortBy('id') as $message)
+            <article class="admin-group-chat-message">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                    <strong>{{ $message->sender?->name ?? 'Thành viên đã rời phòng' }}</strong>
+                    <small class="text-secondary">{{ $message->created_at->format('H:i · d/m/Y') }}</small>
+                </div>
+                <div class="small mb-2"><span class="badge {{ $message->recipient ? 'bg-warning-subtle text-warning-emphasis' : 'bg-success-subtle text-success-emphasis' }}">{{ $message->recipient ? 'Tin nhắn riêng tới '.$message->recipient->name : 'Chat chung' }}</span></div>
+                <p class="mb-0 text-dark">{{ $message->content }}</p>
+            </article>
+        @empty
+            <div class="text-center text-secondary py-5"><i class="bi bi-chat-dots d-block fs-3 mb-2"></i>Chưa có tin nhắn trong phòng.</div>
+        @endforelse
+    </div>
 </section>
 @endsection

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Topping;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ToppingController extends Controller
 {
@@ -36,7 +37,7 @@ class ToppingController extends Controller
             'status' => 'nullable|boolean',
         ]);
 
-        $validated['status'] = $request->has('status') ? (bool)$request->status : true;
+        $validated['status'] = $request->boolean('status');
 
         Topping::create($validated);
 
@@ -51,7 +52,7 @@ class ToppingController extends Controller
             'status' => 'nullable|boolean',
         ]);
 
-        $validated['status'] = $request->has('status') ? (bool)$request->status : false;
+        $validated['status'] = $request->boolean('status');
 
         $topping->update($validated);
 
@@ -60,6 +61,15 @@ class ToppingController extends Controller
 
     public function destroy(Topping $topping)
     {
+        $hasOrderHistory = DB::table('order_item_toppings')
+            ->where('topping_id', $topping->id)
+            ->exists();
+
+        if ($hasOrderHistory) {
+            return redirect()->route('admin.toppings.index')
+                ->with('error', 'Không thể xóa Topping đã xuất hiện trong lịch sử đơn hàng. Vui lòng chuyển sang ngưng bán.');
+        }
+
         $topping->products()->detach();
         $topping->delete();
 

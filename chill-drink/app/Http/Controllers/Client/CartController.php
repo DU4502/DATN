@@ -98,7 +98,7 @@ class CartController extends Controller
             return $cart;
         }
 
-        $products = Product::with('category')
+        $products = Product::with(['category', 'sizes'])
             ->whereIn('id', $productIds)
             ->get()
             ->keyBy('id');
@@ -111,12 +111,20 @@ class CartController extends Controller
             }
 
             $product = $products->get((int) $productId);
+            $sizeCode = strtoupper((string) ($item['size'] ?? 'M'));
+            $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
+            $defaultExtra = $sizeCode === 'S' ? 0 : ($sizeCode === 'M' ? 5000 : 10000);
+            $sizeExtra = ($sizeObj && isset($sizeObj->pivot->price))
+                ? (int) $sizeObj->pivot->price
+                : (int) ($item['size_extra'] ?? $defaultExtra);
+
             $cart[$key]['name'] = $product->name;
             $cart[$key]['image'] = $product->image_url;
             $cart[$key]['sku'] = $product->sku ?? null;
             $cart[$key]['category'] = $product->category?->name;
             $cart[$key]['base_price'] = (int) $product->price;
-            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0);
+            $cart[$key]['size_extra'] = $sizeExtra;
+            $cart[$key]['price'] = (int) $product->price + $sizeExtra + (int) ($item['topping_total'] ?? 0);
         }
 
         return $cart;
@@ -151,7 +159,20 @@ class CartController extends Controller
         $cart = session()->get('cart', []);
         $sizes = $this->sizeOptions();
         $sizeCode = strtoupper((string) $request->input('size', 'M'));
+        if (! in_array($sizeCode, ['S', 'M', 'L'], true)) {
+            $sizeCode = 'M';
+        }
         $size = $sizes[$sizeCode] ?? $sizes['M'];
+
+        $sizeExtra = (int) $size['extra'];
+        if ($product instanceof Product) {
+            $product->loadMissing('sizes');
+            $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
+            if ($sizeObj && isset($sizeObj->pivot->price)) {
+                $sizeExtra = (int) $sizeObj->pivot->price;
+            }
+        }
+
         $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
         $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
         $toppings = collect(json_decode((string) $request->input('toppings', '[]'), true) ?: [])
@@ -183,10 +204,10 @@ class CartController extends Controller
                 'product_id' => $productId,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => $basePrice + $size['extra'] + $toppingTotal,
+                'price' => $basePrice + $sizeExtra + $toppingTotal,
                 'size' => $sizeCode,
-                'size_label' => $size['label'],
-                'size_extra' => $size['extra'],
+                'size_label' => 'Size ' . $sizeCode,
+                'size_extra' => $sizeExtra,
                 'sugar_level' => $sugarLevel,
                 'ice_level' => $iceLevel,
                 'toppings' => $toppings,
@@ -211,6 +232,11 @@ class CartController extends Controller
 
         if ($request->boolean('buy_now')) {
             $route = auth()->check() ? 'checkout.index' : 'checkout.guest.index';
+
+            if (! auth()->check()) {
+                session(['guest_checkout_require_location' => true]);
+            }
+
             return redirect()->route($route, ['items' => [$cartKey]]);
         }
         

@@ -56,9 +56,17 @@ class ChatHelper
         // Tìm nhân viên thuộc chi nhánh để gửi system message
         $staffUser = User::whereIn('role_id', [2, 3, 4])
             ->where('branch_id', $branch->id)
+            ->where('is_active', true)
             ->first()
-            ?? User::whereIn('role_id', [2, 3, 4])->first()
-            ?? $user;
+            ?? User::whereIn('role_id', [2, 3, 4])
+                ->where('is_active', true)
+                ->first();
+
+        // Không có tài khoản staff thì bỏ qua system message, tuyệt đối
+        // không dùng tài khoản khách hàng làm người gửi cho chính họ.
+        if (! $staffUser) {
+            return;
+        }
 
         $message = $conversation->messages()->create([
             'sender_id' => $staffUser->id,

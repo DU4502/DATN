@@ -29,6 +29,9 @@ class Order extends Model
         'fulfillment_type',
         'scheduled_delivery_time',
         'delivery_note',
+        'shipping_address_text',
+        'shipping_latitude',
+        'shipping_longitude',
         'branch_id',
         'coupon_id',
         'subtotal',
@@ -45,6 +48,8 @@ class Order extends Model
         'shipper_id',
         'note',
         'scheduled_at',
+        'status_changed_at',
+        'status_changed_by',
     ];
 
     /**
@@ -62,6 +67,9 @@ class Order extends Model
         'scheduled_at'                   => 'datetime',
         'scheduled_delivery_time'        => 'datetime',
         'delivered_at'                   => 'datetime',
+        'status_changed_at'              => 'datetime',
+        'shipping_latitude'              => 'float',
+        'shipping_longitude'             => 'float',
     ];
 
     /**
@@ -75,6 +83,11 @@ class Order extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function statusChangedBy()
+    {
+        return $this->belongsTo(User::class, 'status_changed_by');
     }
 
     public function address()
@@ -211,6 +224,15 @@ class Order extends Model
         return 'Chưa cập nhật địa chỉ';
     }
 
+    protected static function booted(): void
+    {
+        static::updating(function (Order $order) {
+            if ($order->isDirty('status') && OrderStatus::normalize($order->status) === OrderStatus::DELIVERED && is_null($order->delivered_at)) {
+                $order->delivered_at = now();
+            }
+        });
+    }
+
     public function pointsEarnable(): int
     {
         // 1 point per 10,000 VND spent
@@ -224,6 +246,15 @@ class Order extends Model
     {
         // Only award points to registered users
         if (!$this->user_id) {
+            return;
+        }
+
+        $alreadyAwarded = PointTransaction::where('reference_type', 'order')
+            ->where('reference_id', $this->id)
+            ->where('type', 'earn')
+            ->exists();
+
+        if ($alreadyAwarded) {
             return;
         }
 
@@ -241,6 +272,35 @@ class Order extends Model
             points: $points,
             type: 'earn',
             description: "Hoàn thành đơn hàng {$this->displayCode()}",
+            referenceType: 'order',
+            referenceId: $this->id
+        );
+    }
+
+    /**
+     * Revoke loyalty points when order is cancelled
+     */
+    public function revokeLoyaltyPoints(): void
+    {
+        if (!$this->user_id) {
+            return;
+        }
+
+        $awardTransaction = PointTransaction::where('reference_type', 'order')
+            ->where('reference_id', $this->id)
+            ->where('type', 'earn')
+            ->first();
+
+        if (!$awardTransaction) {
+            return;
+        }
+
+        $points = $awardTransaction->points;
+        $loyaltyPoint = LoyaltyPoint::getOrCreateForUser($this->user_id);
+        $loyaltyPoint->deductPoints(
+            points: $points,
+            type: 'spend',
+            description: "Thu hồi điểm thưởng đơn hàng bị hủy {$this->displayCode()}",
             referenceType: 'order',
             referenceId: $this->id
         );

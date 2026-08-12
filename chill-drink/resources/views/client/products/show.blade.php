@@ -347,12 +347,18 @@
     .detail-favorite-btn {
         width: 50px;
         height: 50px;
-        padding: 0;
+        min-width: 50px;
+        min-height: 50px;
+        padding: 0 !important;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50% !important;
+        border-radius: 100% !important;
         font-size: 1.15rem;
+        flex-shrink: 0;
+        aspect-ratio: 1;
+        line-height: 1;
+        box-sizing: border-box;
     }
 
     .product-detail-actions {
@@ -836,6 +842,8 @@
         .detail-favorite-btn {
             width: 46px;
             height: 46px;
+            min-width: 46px;
+            min-height: 46px;
         }
 
         .detail-action-content {
@@ -1058,7 +1066,7 @@
                         @if(!empty($product->sku))
                         <p class="text-secondary small font-monospace mb-2">Mã sản phẩm: {{ $product->sku }}</p>
                         @endif
-                        <p class="h2 text-primary fw-bold mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
+                        <p class="h2 text-primary fw-bold mb-0" data-detail-price-display data-base-price="{{ (int)($product->price ?? 0) }}">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
                     </div>
 
                     <div class="detail-info-card p-4">
@@ -1102,14 +1110,13 @@
                                 @foreach(['M', 'L'] as $szName)
                                     @php
                                         $sizeObj = $productSizesMap->get($szName);
-                                        $extraPrice = $sizeObj ? (int) $sizeObj->pivot->price : 0;
+                                        $defaultExtra = $szName === 'M' ? 5000 : 10000;
+                                        $extraPrice = $sizeObj ? (int) $sizeObj->pivot->price : $defaultExtra;
                                     @endphp
-                                    @if($sizeObj)
-                                        <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
-                                            {{ $szName }}
-                                            <small>+{{ number_format($extraPrice, 0, ',', '.') }}đ</small>
-                                        </button>
-                                    @endif
+                                    <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
+                                        {{ $szName }}
+                                        <small>+{{ number_format($extraPrice, 0, ',', '.') }}đ</small>
+                                    </button>
                                 @endforeach
                             </div>
                         </div>
@@ -1491,6 +1498,21 @@
             }
         });
 
+        const updateDetailTotal = function () {
+            const priceDisplay = document.querySelector('[data-detail-price-display]');
+            if (!priceDisplay) return;
+            const basePrice = Number(priceDisplay.dataset.basePrice || 0);
+            const activeSize = document.querySelector('[data-size-group] .size-choice.active');
+            const sizeExtra = Number(activeSize?.dataset.sizeExtra || 0);
+            const activeToppings = Array.from(document.querySelectorAll('[data-topping-group] .topping-choice.active'));
+            const toppingTotal = activeToppings.reduce((sum, btn) => sum + Number(btn.dataset.toppingPrice || 0), 0);
+            const qtyVal = Number(document.querySelector('[data-qty-value]')?.textContent || 1);
+
+            const totalUnit = basePrice + sizeExtra + toppingTotal;
+            const totalPrice = totalUnit * qtyVal;
+            priceDisplay.textContent = totalPrice.toLocaleString('vi-VN') + 'đ';
+        };
+
         const minus = document.querySelector('[data-qty-minus]');
         const plus = document.querySelector('[data-qty-plus]');
         const value = document.querySelector('[data-qty-value]');
@@ -1503,6 +1525,7 @@
                 if (qtyInput) {
                     qtyInput.value = qty;
                 }
+                updateDetailTotal();
             };
 
             minus.addEventListener('click', function() {
@@ -1598,6 +1621,7 @@
                     });
                     button.classList.add('active');
                     sizeInput.value = button.dataset.sizeOption || 'S';
+                    updateDetailTotal();
                 });
             });
         }
@@ -1645,6 +1669,7 @@
                 });
 
                 toppingInput.value = JSON.stringify(toppings);
+                updateDetailTotal();
             };
 
             toppingGroup.querySelectorAll('.topping-choice').forEach(function (button) {

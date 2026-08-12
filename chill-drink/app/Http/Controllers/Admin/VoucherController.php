@@ -91,6 +91,11 @@ class VoucherController extends Controller
 
     public function destroy(Voucher $voucher): RedirectResponse
     {
+        if ($voucher->userVouchers()->exists()) {
+            return redirect()->route('admin.vouchers.index')
+                ->with('error', 'Không thể xóa! Voucher này đã được khách hàng lưu/đổi vào ví. Vui lòng chuyển trạng thái sang Tắt.');
+        }
+
         $voucher->delete();
 
         return redirect()
@@ -100,6 +105,12 @@ class VoucherController extends Controller
 
     private function validatedData(Request $request, ?Voucher $voucher = null): array
     {
+        if ($request->has('code')) {
+            $request->merge([
+                'code' => strtoupper(trim((string) $request->input('code'))),
+            ]);
+        }
+
         $voucherId = $voucher?->id;
 
         $validator = Validator::make($request->all(), [
@@ -129,6 +140,13 @@ class VoucherController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request, $voucher) {
+            if ($voucher && $request->filled('usage_limit')) {
+                $newLimit = (int) $request->input('usage_limit');
+                if ($newLimit > 0 && $newLimit < (int) $voucher->used_count) {
+                    $validator->errors()->add('usage_limit', "Giới hạn sử dụng không thể nhỏ hơn số lượt đã dùng hiện tại ({$voucher->used_count}).");
+                }
+            }
+
             if ($request->input('type') === Voucher::TYPE_PERCENT && (int) $request->input('value') > 100) {
                 $validator->errors()->add('value', 'Voucher phần trăm không được lớn hơn 100%.');
             }

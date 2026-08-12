@@ -102,6 +102,15 @@ class UserController extends Controller
 
         $user->update(['role_id' => $roleId]);
 
+        try {
+            \Illuminate\Support\Facades\Mail::raw(
+                "Vai trò tài khoản {$user->email} đã được cập nhật.",
+                function ($message) use ($user) {
+                    $message->to($user->email)->subject('Thông báo thay đổi vai trò tài khoản');
+                }
+            );
+        } catch (\Throwable) {}
+
         SystemLog::record(
             Auth::user(),
             "Đã cập nhật vai trò của {$user->email}",
@@ -131,6 +140,15 @@ class UserController extends Controller
 
         $user->forceFill(['is_active' => $newStatus])->save();
 
+        try {
+            \Illuminate\Support\Facades\Mail::raw(
+                "Trạng thái tài khoản của bạn đã được thay đổi thành: " . ($newStatus ? 'Hoạt động' : 'Bị khóa'),
+                function ($message) use ($user) {
+                    $message->to($user->email)->subject('Thông báo thay đổi trạng thái tài khoản');
+                }
+            );
+        } catch (\Throwable) {}
+
         SystemLog::record(
             Auth::user(),
             ($newStatus ? 'Đã mở khóa ' : 'Đã khóa ').$user->email,
@@ -143,6 +161,46 @@ class UserController extends Controller
             'success',
             $user->is_active ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.'
         );
+    }
+
+    public function bulkToggleStatus(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'user_ids' => ['required', 'array'],
+            'user_ids.*' => ['exists:users,id'],
+            'status' => ['required', 'boolean'],
+        ]);
+
+        $userIds = $request->input('user_ids');
+        $status = (bool) $request->input('status');
+        $count = 0;
+
+        foreach ($userIds as $id) {
+            $targetUser = User::find($id);
+            if (!$targetUser || $targetUser->is(Auth::user())) {
+                continue;
+            }
+
+            if ($targetUser->isSuperAdmin() && !Auth::user()->isSuperAdmin()) {
+                continue;
+            }
+
+            if ($this->wouldRemoveLastActiveAdmin($targetUser, (int) $targetUser->role_id, $status)) {
+                continue;
+            }
+
+            $targetUser->forceFill(['is_active' => $status])->save();
+            $count++;
+        }
+
+        SystemLog::record(
+            Auth::user(),
+            "Đã cập nhật trạng thái hàng loạt cho {$count} tài khoản sang " . ($status ? 'Hoạt động' : 'Khóa'),
+            'security',
+            'success',
+        );
+
+        return back()->with('success', "Đã cập nhật trạng thái cho {$count} tài khoản.");
     }
 
     private function validatedRoleData(Request $request): array

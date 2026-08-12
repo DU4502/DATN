@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Order;
+use App\Models\ProductSize;
 use App\Models\User;
 use App\Jobs\ProcessGuestOrderEmail;
+use App\Support\OrderDistancePolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -25,6 +29,8 @@ class GuestCheckoutController extends Controller
             'guest_email' => 'required|email|max:255',
             'guest_phone' => 'required|string|max:20',
             'branch_id' => 'required|integer|exists:branches,id',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
             'items' => 'required|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -37,19 +43,51 @@ class GuestCheckoutController extends Controller
             ], 422);
         }
 
+        $branch = Branch::availableForLocation()->find($request->branch_id);
+        $distance = $branch
+            ? OrderDistancePolicy::distanceFromBranch($branch, $request->latitude, $request->longitude)
+            : null;
+
+        if (! $branch || $distance === null || ! OrderDistancePolicy::isInsideServiceRadius($distance)) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => [
+                    'branch_id' => [OrderDistancePolicy::message()],
+                ],
+            ], 422);
+        }
+
         try {
             DB::beginTransaction();
 
             $totalAmount = 0;
-            // Here, we should Ideally loop through $request->items to calculate real price.
-            // Using a simple mock total for this architectural demonstration.
+            $itemsData = [];
             foreach ($request->items as $item) {
-                $totalAmount += $item['quantity'] * 35000; // Mock 35,000 VND per item
+                $product = \App\Models\Product::findOrFail($item['product_id']);
+                $productSize = ProductSize::query()
+                    ->where('product_id', $product->id)
+                    ->orderBy('id')
+                    ->first();
+
+                if (! $productSize) {
+                    throw new \RuntimeException("Product {$product->id} has no sellable size.");
+                }
+
+                $price = (int) ($productSize->price ?: $product->price);
+                $itemTotal = $price * (int) $item['quantity'];
+                $totalAmount += $itemTotal;
+                $itemsData[] = [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'quantity' => (int) $item['quantity'],
+                    'price' => $price,
+                    'total_price' => $itemTotal,
+                ];
             }
 
             $orderToken = (string) Str::uuid();
 
-            $order = Order::create([
+            $orderData = [
                 'user_id' => null,
                 'guest_name' => $request->guest_name,
                 'guest_email' => $request->guest_email,
@@ -58,19 +96,25 @@ class GuestCheckoutController extends Controller
                 'branch_id' => $request->branch_id,
                 'subtotal' => $totalAmount,
                 'total' => $totalAmount,
-                'total_price' => $totalAmount,
                 'status' => 'pending',
                 'payment_method' => 'cod',
-                'payment_status' => 'unpaid',
-            ]);
+                'payment_status' => 'pending',
+            ];
 
-            // Save order items...
-            foreach ($request->items as $item) {
+            if (Schema::hasColumn('orders', 'total_price')) {
+                $orderData['total_price'] = $totalAmount;
+            }
+
+            $order = Order::create($orderData);
+
+            // Save order items with real product prices
+            foreach ($itemsData as $itemData) {
                 $order->orderItems()->create([
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'price' => 35000, 
-                    'total_price' => $item['quantity'] * 35000,
+                    'product_id' => $itemData['product_id'],
+                    'product_size_id' => $itemData['product_size_id'],
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['price'],
+                    'total_price' => $itemData['total_price'],
                 ]);
             }
 
@@ -167,17 +211,19 @@ class GuestCheckoutController extends Controller
             }
 
             // Sync with loyalty_points table
-            DB::table('loyalty_points')->insert([
-                'user_id' => $user->id,
-                'total_points' => $totalPointsEarned,
-                'lifetime_points' => $totalPointsEarned,
-                'level' => 'bronze',
-            ]);
+            \App\Models\LoyaltyPoint::getOrCreateForUser($user->id)->addPoints(
+                points: $totalPointsEarned,
+                type: 'earn',
+                description: 'Tích điểm chuyển đổi thành viên',
+                referenceType: 'convert',
+                referenceId: $order->id
+            );
 
             DB::commit();
 
-            // Typically you would issue a Sanctum/Passport token here.
-            $token = 'dummy_auth_token_string'; 
+            $token = method_exists($user, 'createToken')
+                ? $user->createToken('auth_token')->plainTextToken
+                : Str::random(64);
 
             return response()->json([
                 'status' => 'success',

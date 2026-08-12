@@ -1,4 +1,4 @@
-@extends(auth()->user()?->isSuperAdmin() ? 'layouts.super-admin' : 'layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Đơn hàng')
 
@@ -233,13 +233,13 @@
                     </td>
                     <td class="text-end fw-bold text-primary">{{ number_format($order->total_price ?? $order->total ?? 0, 0, ',', '.') }}đ</td>
                     <td class="text-center">
-                        <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST">
+                        <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="order-status-form" data-order-id="{{ $order->id }}">
                             @csrf
                             @method('PUT')
                             <div class="d-flex align-items-center gap-2 justify-content-center">
                                 <select name="status"
-                                        class="form-select form-select-sm"
-                                        onchange="this.form.submit()"
+                                        class="form-select form-select-sm order-status-select"
+                                        data-original-status="{{ $order->status }}"
                                         @disabled($nextStatus === null)>
                                     @foreach($statusStepOptions as $value => $label)
                                         <option value="{{ $value }}" @selected($order->status === $value)>{{ $label }}</option>
@@ -346,6 +346,17 @@
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">{{ strtoupper(\App\Support\OrderStatus::label((string) $order->status)) }}</strong>
                                                     </div>
+                                                    @if($order->status_changed_at)
+                                                        @php
+                                                            $changedByUser = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
+                                                        @endphp
+                                                        <div class="mt-1 text-muted" style="font-size:0.75rem;">
+                                                            <i class="bi bi-clock-history me-1"></i>Cập nhật: <strong>{{ $order->status_changed_at->format('H:i · d/m/Y') }}</strong>
+                                                            @if($changedByUser)
+                                                                bởi <strong>{{ $changedByUser->name }}</strong> <span class="badge {{ $changedByUser->isStaffOnly() ? 'bg-warning text-dark' : ($changedByUser->isAdmin() ? 'bg-primary' : 'bg-secondary') }}" style="font-size:0.62rem;">{{ $changedByUser->isStaffOnly() ? 'Nhân viên' : ($changedByUser->isAdmin() ? 'Admin' : 'Hệ thống') }}</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </div>
 
@@ -559,6 +570,12 @@
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</strong>
                                                     </div>
+                                                    ${payload.status_changed_at ? `
+                                                        <div class="mt-1 text-muted" style="font-size:0.75rem;">
+                                                            <i class="bi bi-clock-history me-1"></i>Cập nhật: <strong>${escapeHtml(payload.status_changed_at)}</strong>
+                                                            ${payload.status_changed_by_name ? `bởi <strong>${escapeHtml(payload.status_changed_by_name)}</strong>` : ''}
+                                                        </div>
+                                                    ` : ''}
                                                 </div>
                                             </div>
 
@@ -873,6 +890,103 @@
                 cancelReasonTextarea.value = '';
             });
         }
+
+        // Handle order status change with AJAX
+        document.addEventListener('change', function(event) {
+            const selectElement = event.target;
+            
+            if (!selectElement.classList.contains('order-status-select')) {
+                return;
+            }
+
+            const form = selectElement.closest('.order-status-form');
+            const orderId = form.dataset.orderId;
+            const newStatus = selectElement.value;
+            const originalStatus = selectElement.dataset.originalStatus;
+            
+            // Show loading state
+            selectElement.disabled = true;
+            const orderRow = form.closest('tr');
+            orderRow.style.opacity = '0.6';
+            
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('_token', '{{ csrf_token() }}');
+            formData.append('_method', 'PUT');
+            formData.append('status', newStatus);
+            
+            // Send AJAX request
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update original status
+                    selectElement.dataset.originalStatus = newStatus;
+                    
+                    // Highlight row briefly
+                    orderRow.style.transition = 'none';
+                    orderRow.style.backgroundColor = 'rgba(13, 147, 115, 0.15)';
+                    
+                    setTimeout(() => {
+                        orderRow.style.transition = 'background-color 0.8s ease';
+                        orderRow.style.backgroundColor = '';
+                    }, 100);
+                    
+                    // Show success toast
+                    if (typeof window.showRealtimeToast === 'function') {
+                        window.showRealtimeToast(data.message || 'Đã cập nhật trạng thái đơn hàng', 'success');
+                    } else {
+                        // Fallback to alert
+                        const toast = document.createElement('div');
+                        toast.className = 'alert alert-success position-fixed top-0 end-0 m-3';
+                        toast.style.zIndex = '9999';
+                        toast.textContent = data.message || 'Đã cập nhật trạng thái đơn hàng';
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 3000);
+                    }
+                    
+                    // Reload page after 1 second to update order list with new status options
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    throw new Error(data.message || 'Có lỗi xảy ra');
+                }
+            })
+            .catch(error => {
+                // Revert to original status
+                selectElement.value = originalStatus;
+                
+                // Show error message
+                const errorMessage = error.message || 'Không thể cập nhật trạng thái. Vui lòng thử lại.';
+                
+                if (typeof window.showRealtimeToast === 'function') {
+                    window.showRealtimeToast(errorMessage, 'error');
+                } else {
+                    const toast = document.createElement('div');
+                    toast.className = 'alert alert-danger position-fixed top-0 end-0 m-3';
+                    toast.style.zIndex = '9999';
+                    toast.textContent = errorMessage;
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 3000);
+                }
+                
+                console.error('Error updating order status:', error);
+            })
+            .finally(() => {
+                // Re-enable select and restore opacity
+                selectElement.disabled = false;
+                orderRow.style.opacity = '1';
+            });
+        });
     });
 </script>
 

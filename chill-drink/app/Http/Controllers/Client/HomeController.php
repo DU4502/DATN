@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Favorite;
+use App\Models\Branch;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -49,13 +50,7 @@ class HomeController extends Controller
             : collect();
 
         $branchId = session('nearest_branch_id');
-        $branch = null;
-        if ($branchId) {
-            $branch = \App\Models\Branch::find($branchId);
-        }
-        if (!$branch) {
-            $branch = \App\Models\Branch::first();
-        }
+        $branch = $branchId ? Branch::find($branchId) : null;
 
         $slides = $branch ? $branch->slides()->where('is_active', true)->get() : collect();
 
