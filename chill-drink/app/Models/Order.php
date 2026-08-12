@@ -107,11 +107,6 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function issueReports()
-    {
-        return $this->hasMany(OrderIssueReport::class);
-    }
-
     /**
      * Get status badge color
      */

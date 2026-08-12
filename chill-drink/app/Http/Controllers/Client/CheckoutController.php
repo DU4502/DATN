@@ -15,8 +15,6 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
-use App\Models\UserVoucher;
-use App\Notifications\GroupOrderCompletedNotification;
 use App\Services\OrderCodeGenerator;
 use App\Support\ShippingFee;
 use App\Support\AddressLearning;
@@ -39,23 +37,6 @@ class CheckoutController extends Controller
      */
     public function index(Request $request)
     {
-        $groupOrderId = session('checkout_group_order_id');
-        if ($groupOrderId) {
-            $groupOrder = \App\Models\GroupOrder::find($groupOrderId);
-            $canContinueGroupCheckout = $groupOrder
-                && (int) $groupOrder->owner_id === (int) auth()->id()
-                && $groupOrder->status === 'closed'
-                && ! $groupOrder->order_id;
-
-            if (! $canContinueGroupCheckout) {
-                session()->put('cart', session()->pull('personal_cart_backup', []));
-                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys', 'group_branch_id']);
-
-                return redirect()->route('home')
-                    ->with('success', 'Đơn nhóm này đã được đặt hoặc không còn chờ thanh toán.');
-            }
-        }
-
         $cart = session()->get('cart', []);
         $cart = $this->normalizeCartForCheckout($cart);
 
@@ -186,7 +167,7 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->sortByDesc(fn ($userVoucher) => str_starts_with(strtoupper((string) $userVoucher->voucher?->code), 'HT'))
+                ->map(fn ($uv) => $uv->voucher)
                 ->values();
         } else {
             // For guest users
@@ -200,7 +181,7 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->sortByDesc(fn ($userVoucher) => str_starts_with(strtoupper((string) $userVoucher->voucher?->code), 'HT'))
+                ->map(fn ($uv) => $uv->voucher)
                 ->values();
         }
 
@@ -227,8 +208,6 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
-        $groupMemberUserIds = collect();
-        $completedGroupOrder = null;
         if ($request->filled('scheduled_at') && ! $request->filled('delivery_type')) {
             $request->merge([
                 'delivery_type' => 'scheduled',
@@ -310,6 +289,16 @@ class CheckoutController extends Controller
             'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
             'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
         ]);
+
+        if (
+            $request->input('fulfillment_type') === 'delivery'
+            && ! $this->hasHouseNumber($request->input('shipping_address_ui'))
+            && blank($request->input('note'))
+        ) {
+            throw ValidationException::withMessages([
+                'note' => 'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng để shipper dễ tìm.',
+            ]);
+        }
 
         $serviceDistance = $this->validateOrderServiceRadius(
             $request->input('fulfillment_type'),
@@ -469,13 +458,6 @@ class CheckoutController extends Controller
 
             if ($groupOrderId) {
                 $groupOrder->update(['order_id' => $order->id, 'status' => 'ordered']);
-                $completedGroupOrder = $groupOrder->fresh();
-                $groupMemberUserIds = $completedGroupOrder->members()
-                    ->whereNotNull('user_id')
-                    ->where('user_id', '!=', auth()->id())
-                    ->pluck('user_id')
-                    ->unique()
-                    ->values();
             }
 
             // Create order items
@@ -499,13 +481,6 @@ class CheckoutController extends Controller
             }
 
             DB::commit();
-
-            if ($completedGroupOrder && $groupMemberUserIds->isNotEmpty()) {
-                \App\Models\User::query()
-                    ->whereIn('id', $groupMemberUserIds)
-                    ->get()
-                    ->each(fn ($member) => $member->notify(new GroupOrderCompletedNotification($completedGroupOrder)));
-            }
 
             // Chỉ notify admin khi không phải VNPay (VNPay sẽ notify sau khi thanh toán thành công)
             if ($order->payment_method !== 'vnpay') {
@@ -870,17 +845,6 @@ class CheckoutController extends Controller
             throw new \RuntimeException('Mã voucher đã hết lượt sử dụng.');
         }
 
-        if (Str::startsWith(Str::upper((string) $voucher->code), 'HT')) {
-            $ownedVoucher = UserVoucher::query()
-                ->where('coupon_id', $voucher->id)
-                ->where('is_used', false)
-                ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()), fn ($query) => $query->where('guest_identifier', session()->getId()))
-                ->exists();
-            if (! $ownedVoucher) {
-                throw new \RuntimeException('Voucher hỗ trợ này không thuộc tài khoản của bạn.');
-            }
-        }
-
         if (! $voucher->meetsMinimumOrder($subtotal)) {
             throw new \RuntimeException(
                 'Mã voucher chỉ áp dụng cho đơn từ '
@@ -927,12 +891,15 @@ class CheckoutController extends Controller
     {
         $voucher->increment('used_count');
 
-        if (Str::startsWith(Str::upper((string) $voucher->code), 'HT')) {
-            UserVoucher::query()
+        if (auth()->check() && Schema::hasTable('user_vouchers')) {
+            \App\Models\UserVoucher::where('user_id', auth()->id())
                 ->where('coupon_id', $voucher->id)
-                ->where('is_used', false)
-                ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()), fn ($query) => $query->where('guest_identifier', session()->getId()))
-                ->update(['is_used' => true, 'used_at' => now()]);
+                ->where('is_used', 0)
+                ->limit(1)
+                ->update([
+                    'is_used' => 1,
+                    'used_at' => now(),
+                ]);
         }
 
         if (Schema::hasTable('user_coupon_usage')) {

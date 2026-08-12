@@ -1611,16 +1611,11 @@
                     const sz = sizeBtn.dataset.value;
                     if (sz === 'S') {
                         sizeBtn.dataset.extraPrice = '0';
-                        sizeBtn.style.display = '';
                     } else if (sizesMap[sz] !== undefined) {
                         const extraPrice = Number(sizesMap[sz]);
                         sizeBtn.dataset.extraPrice = extraPrice;
                         const small = sizeBtn.querySelector('small');
                         if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
-                        sizeBtn.style.display = '';
-                    } else {
-                        sizeBtn.style.display = 'none';
-                        sizeBtn.dataset.extraPrice = '0';
                     }
                 });
 

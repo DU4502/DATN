@@ -25,7 +25,7 @@
             --root-ink: #151918;
             --root-muted: #69716e;
             --root-border: #e1e6e4;
-            --root-sidebar-width: 289px;
+            --root-sidebar-width: 348px;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -57,16 +57,6 @@
         @media (min-width: 992px) {
             body {
                 zoom: 0.9;
-            }
-
-            /* Bootstrap appends the modal backdrop directly under <body>.
-               Because the Super Admin workspace is zoomed to 90%, a normal
-               100vw/100vh backdrop only covers 90% of the physical viewport.
-               Compensate the backdrop dimensions so the dim layer always
-               reaches every browser edge without changing the modal scale. */
-            .modal-backdrop {
-                width: 111.111111vw !important;
-                height: 111.111111vh !important;
             }
         }
 
@@ -456,7 +446,6 @@
                     @endphp
                     <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
-                <a href="{{ route('admin.order-issues.index') }}" class="root-nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ</a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>
                 <a href="{{ route('admin.super-admin.manage.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.vouchers.*', 'admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>

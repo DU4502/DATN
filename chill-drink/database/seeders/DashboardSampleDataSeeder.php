@@ -218,18 +218,20 @@ class DashboardSampleDataSeeder extends Seeder
             return;
         }
 
-        $extraPrices = [
-            'M' => 5000,
-            'L' => 10000,
+        $multipliers = [
+            'S' => 0.9,
+            'M' => 1.0,
+            'L' => 1.15,
         ];
 
         foreach ($products as $product) {
-            foreach ($extraPrices as $sizeName => $extraPrice) {
+            foreach ($multipliers as $sizeName => $multiplier) {
                 $size = $sizes[$sizeName] ?? null;
                 if (! $size) {
                     continue;
                 }
 
+                $price = (int) round(((int) $product->price) * $multiplier);
                 $existing = DB::table('product_sizes')
                     ->where('product_id', $product->id)
                     ->where('size_id', $size->id)
@@ -238,12 +240,12 @@ class DashboardSampleDataSeeder extends Seeder
                 if ($existing) {
                     DB::table('product_sizes')
                         ->where('id', $existing->id)
-                        ->update(['price' => $extraPrice]);
+                        ->update(['price' => $price]);
                 } else {
                     DB::table('product_sizes')->insert([
                         'product_id' => $product->id,
                         'size_id' => $size->id,
-                        'price' => $extraPrice,
+                        'price' => $price,
                     ]);
                 }
             }

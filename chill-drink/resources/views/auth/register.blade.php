@@ -11,8 +11,8 @@
         padding: 1rem;
         overflow: hidden;
         background:
-            linear-gradient(180deg, rgba(255, 251, 232, 0.32), rgba(255, 248, 212, 0.2)),
-            url('{{ asset('images/auth-register-mango.png') }}') center / cover no-repeat;
+            radial-gradient(circle at 16% 18%, rgba(11, 198, 180, 0.16), transparent 28%),
+            linear-gradient(180deg, #e9fbff 0%, #effdfa 46%, #ffffff 100%);
     }
 
     .register-shell {
@@ -67,21 +67,22 @@
 
     .register-illustration {
         position: relative;
-        width: min(390px, 92%);
-        height: 250px;
+        width: min(360px, 86%);
+        height: 265px;
         margin-top: 0.2rem;
-        overflow: hidden;
-        border-radius: 24px;
-        background: url('{{ asset('images/auth-register-mango.png') }}') center / cover no-repeat;
-        box-shadow: 0 22px 44px rgba(12, 132, 121, 0.22);
     }
 
     .register-illustration::before {
-        display: none;
+        content: '';
+        position: absolute;
+        inset: 35px 18px 8px;
+        border-radius: 38px;
+        background: linear-gradient(145deg, rgba(32, 204, 185, 0.18), rgba(255, 255, 255, 0.8));
+        transform: perspective(440px) rotateX(58deg) rotateZ(-7deg);
+        box-shadow: 0 26px 42px rgba(10, 117, 108, 0.16);
     }
 
     .drink-card {
-        display: none;
         position: absolute;
         left: 78px;
         top: 12px;
@@ -113,7 +114,6 @@
     }
 
     .channel-dot {
-        display: none;
         position: absolute;
         width: 48px;
         height: 48px;
@@ -355,7 +355,6 @@
             aspect-ratio: auto;
             grid-template-columns: 1fr;
             gap: 1.5rem;
-            border-radius: 22px;
         }
 
         .register-hero {
@@ -368,7 +367,6 @@
         .register-hero p {
             max-width: 28rem;
         }
-
     }
 
     @media (max-width: 575.98px) {
@@ -389,7 +387,6 @@
             width: 100%;
             transform: scale(0.88);
         }
-
     }
 </style>
 

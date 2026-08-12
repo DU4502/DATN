@@ -832,6 +832,76 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
     </div>
 </div>
 
+<div class="admin-card overflow-hidden dashboard-time-comparison" id="dashboard-time-comparison-card">
+    <div class="comparison-header border-bottom">
+        <div>
+            <h3 class="h5 fw-bold mb-1">So sánh theo thời gian</h3>
+            <p class="text-secondary small mb-0">Bảng lịch sử doanh thu của chi nhánh, mới nhất ở trên cùng.</p>
+        </div>
+        <div class="comparison-toolbar">
+            <div class="d-flex flex-column gap-1">
+                <span class="comparison-toolbar-label">Hiển thị</span>
+                <div class="comparison-pills" id="dashboard-time-comparison-period-options">
+                    @forelse($timeComparisonPeriodOptions as $option)
+                        <button
+                            type="button"
+                            class="comparison-pill-button {{ $timeComparisonPeriodCount === (int) ($option['value'] ?? 0) ? 'active' : '' }}"
+                            data-dashboard-matrix-period="{{ (int) ($option['value'] ?? 0) }}">
+                            {{ $option['label'] ?? '' }}
+                        </button>
+                    @empty
+                        <span class="text-secondary small px-2">Chưa có dữ liệu</span>
+                    @endforelse
+                </div>
+            </div>
+            <a id="dashboard-time-comparison-export" href="{{ $timeComparisonExportUrl }}" class="btn btn-primary btn-sm rounded-pill px-3 comparison-export">
+                <i class="bi bi-download me-1"></i> Tải Excel
+            </a>
+        </div>
+    </div>
+    <div class="comparison-table-wrap" id="dashboard-time-comparison-table">
+        @if(empty($timeComparisonRows))
+            <div class="comparison-empty">Chưa có dữ liệu trong khoảng này.</div>
+        @else
+            <div class="comparison-list-head">
+                <div>Kỳ</div>
+                <div class="text-end">Doanh thu</div>
+                <div class="text-end">Số đơn</div>
+                <div class="text-end">Trung bình/đơn</div>
+                <div class="text-end">So với kỳ trước</div>
+            </div>
+            <div class="comparison-list">
+                @foreach($timeComparisonRows as $row)
+                    @php
+                        $latestChange = $row['latest_change'] ?? [];
+                        $revenueChange = $latestChange['revenue'] ?? ['type' => 'insufficient', 'label' => 'Chưa đủ dữ liệu'];
+                        $orderChange = $latestChange['orders'] ?? ['type' => 'insufficient', 'label' => 'Chưa đủ dữ liệu'];
+                        $changeType = $revenueChange['type'] ?? 'insufficient';
+                    @endphp
+                    <div class="comparison-row {{ !empty($row['is_partial']) ? 'is-partial' : '' }}">
+                        <div class="comparison-cell comparison-period-cell">
+                            <div class="comparison-period-title">
+                                <strong>{{ $row['label'] ?? '' }}</strong>
+                                @if(!empty($row['is_partial']))
+                                    <span class="comparison-period-pill">Đang diễn ra</span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="comparison-cell comparison-number">{{ number_format((float) ($row['revenue'] ?? 0), 0, ',', '.') . 'đ' }}</div>
+                        <div class="comparison-cell comparison-number">{{ number_format((int) ($row['valid_order_count'] ?? 0), 0, ',', '.') }}</div>
+                        <div class="comparison-cell comparison-number">{{ number_format((float) ($row['average_order_value'] ?? 0), 0, ',', '.') . 'đ' }}</div>
+                        <div class="comparison-cell">
+                            <div class="comparison-change {{ $changeType }}">
+                                <span class="comparison-change-badge">{{ $revenueChange['label'] ?? 'Chưa đủ dữ liệu' }}</span>
+                                <span class="comparison-change-sub">{{ $orderChange['label'] ?? 'Chưa đủ dữ liệu' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
