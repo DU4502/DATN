@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Hiển thị trang đăng nhập
      */
     public function create(): View
     {
@@ -20,39 +20,130 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Xử lý đăng nhập
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Gọi hàm authenticate() từ LoginRequest để đăng nhập
+        // Đăng nhập
         $request->authenticate();
 
+        // Tạo lại session để bảo mật
         $request->session()->regenerate();
 
-        if ($request->user()->isSuperAdmin()) {
+        $user = $request->user();
+
+        /*
+        |--------------------------------------------------------------------------
+        | SHIPPER
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isShipper()) {
+
+            // Kiểm tra tài khoản
+            if (!$user->is_active) {
+
+                Auth::guard('web')->logout();
+
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return redirect()
+                    ->route('login')
+                    ->withErrors([
+                        'email' => 'Tài khoản Shipper của bạn đang bị khóa.',
+                    ]);
+            }
+
+            // Kiểm tra hồ sơ shipper
+            $shipper = \App\Models\Shipper::firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                ],
+                [
+                    'code' => 'SHIP' . str_pad(
+                        $user->id,
+                        4,
+                        '0',
+                        STR_PAD_LEFT
+                    ),
+                    'phone' => $user->phone ?? '',
+                    'vehicle_type' => 'bike',
+                    'status' => 'online',
+                ]
+            );
+
+            // Lưu thông tin đăng nhập
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
             $request->session()->forget('url.intended');
+
+            return redirect()->route('shipper.dashboard');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUPER ADMIN
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isSuperAdmin()) {
+
+            $request->session()->forget('url.intended');
+
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
 
             return redirect()->route('admin.super-admin');
         }
 
-        if ($request->user()->isAdmin()) {
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isAdmin()) {
+
             $request->session()->forget('url.intended');
+
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
 
             return redirect()->route('admin.dashboard');
         }
 
-        return redirect()->intended(route('home', absolute: false));
+        /*
+        |--------------------------------------------------------------------------
+        | CUSTOMER
+        |--------------------------------------------------------------------------
+        */
+
+        $user->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ])->save();
+
+        return redirect()->intended(
+            route('home', absolute: false)
+        );
     }
 
     /**
-     * Destroy an authenticated session.
+     * Đăng xuất
      */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');

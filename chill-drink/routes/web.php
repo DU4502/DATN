@@ -23,6 +23,7 @@ use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
+use App\Http\Controllers\Shipper\ShipController;
 use App\Http\Controllers\Client\QuickOrderController;
 use App\Http\Controllers\Client\VnpayController;
 use App\Http\Controllers\ProfileController;
@@ -70,6 +71,133 @@ Route::prefix('checkout/guest')->name('checkout.guest.')->group(function () {
         ->middleware('signed')
         ->name('track');
 });
+
+Route::middleware(['auth'])
+    ->prefix('shipper')
+    ->name('shipper.')
+    ->group(function () {
+
+        // ==============================
+        // DASHBOARD
+        // ==============================
+        Route::get('/dashboard', [
+            ShipController::class,
+            'dashboard'
+        ])->name('dashboard');
+
+
+        // ==============================
+        // ĐƠN HÀNG
+        // ==============================
+
+        // Danh sách đơn
+        Route::get('/orders', [
+            ShipController::class,
+            'orders'
+        ])->name('orders');
+
+        // Chi tiết đơn
+        Route::get('/orders/{id}', [
+            ShipController::class,
+            'showOrder'
+        ])->name('orders.show');
+
+        // Nhận đơn
+        Route::post('/orders/{id}/accept', [
+            ShipController::class,
+            'acceptOrder'
+        ])->name('orders.accept');
+
+        // Bắt đầu giao
+        Route::post('/orders/{id}/start', [
+            ShipController::class,
+            'startDelivery'
+        ])->name('orders.start');
+
+        // Hoàn thành
+        Route::post('/orders/{id}/complete', [
+            ShipController::class,
+            'completeOrder'
+        ])->name('orders.complete');
+
+        // Hủy đơn
+        Route::post('/orders/{id}/cancel', [
+            ShipController::class,
+            'cancelOrder'
+        ])->name('orders.cancel');
+
+
+        // ==============================
+        // TRẠNG THÁI SHIPPER
+        // ==============================
+        Route::post('/status', [
+            ShipController::class,
+            'updateStatus'
+        ])->name('status.update');
+
+
+        // ==============================
+        // VỊ TRÍ
+        // ==============================
+        Route::post('/location', [
+            ShipController::class,
+            'updateLocation'
+        ])->name('location.update');
+
+
+        // ==============================
+        // BẢN ĐỒ
+        // ==============================
+        Route::get('/map', function () {
+            return view('shipper.map');
+        })->name('map');
+
+
+        // ==============================
+        // LỊCH SỬ GIAO HÀNG
+        // ==============================
+        Route::get('/history', function () {
+            $shipper = \App\Models\Shipper::where(
+                'user_id',
+                auth()->id()
+            )->firstOrFail();
+
+            $orders = \App\Models\Order::where(
+                'shipper_id',
+                $shipper->id
+            )
+                ->whereIn('status', [
+                    'completed',
+                    'cancelled'
+                ])
+                ->latest()
+                ->paginate(10);
+
+            return view(
+                'shipper.history',
+                compact('orders', 'shipper')
+            );
+        })->name('history');
+
+
+        // ==============================
+        // PROFILE
+        // ==============================
+        Route::get('/profile', function () {
+            $user = auth()->user();
+
+            $shipper = \App\Models\Shipper::where(
+                'user_id',
+                $user->id
+            )->firstOrFail();
+
+            return view(
+                'shipper.profile',
+                compact('user', 'shipper')
+            );
+        })->name('profile');
+    });
+
 
 Route::post('/register/guest-convert', [GuestConvertController::class, 'store'])
     ->middleware('guest')
@@ -131,6 +259,7 @@ Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->
     Route::post('/{conversation}/reply', [AdminChatController::class, 'reply'])->name('reply');
     Route::patch('/{conversation}/close', [AdminChatController::class, 'close'])->name('close');
 });
+
 
 /*
 |--------------------------------------------------------------------------

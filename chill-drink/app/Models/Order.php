@@ -42,6 +42,7 @@ class Order extends Model
         'status',
         'cancellation_reason',
         'delivered_at',
+        'shipper_id',
         'note',
         'scheduled_at',
     ];
