@@ -186,22 +186,20 @@ Route::middleware(['auth'])
         })->name('history');
 
 
-        // ==============================
-        // PROFILE
-        // ==============================
-        Route::get('/profile', function () {
-            $user = auth()->user();
+    // ==============================
+    // PROFILE
+    // ==============================
+    // Trang cá nhân
+    Route::get('/profile', [
+        ShipController::class,
+        'profile'
+    ])->name('profile');
 
-            $shipper = \App\Models\Shipper::where(
-                'user_id',
-                $user->id
-            )->firstOrFail();
-
-            return view(
-                'shipper.profile',
-                compact('user', 'shipper')
-            );
-        })->name('profile');
+    // Cập nhật cá nhân
+    Route::put('/profile', [
+        ShipController::class,
+        'updateProfile'
+    ])->name('profile.update');
     });
 
 

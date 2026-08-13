@@ -274,40 +274,18 @@ class ShipController extends Controller
      */
     public function map($id)
     {
-        $shipperInfo = $this->getShipper();
+        $shipper = $this->getShipper();
 
-        /*
-        |--------------------------------------------------------------------------
-        | LẤY ĐƠN HÀNG ĐANG GIAO
-        |--------------------------------------------------------------------------
-        */
-
-        $order = Order::where('id', $id)
-            ->where(
-                'shipper_id',
-                $shipperInfo->id
-            )
-            ->where(
-                'status',
-                'shipping'
-            )
+        $order = Order::with('customer')
+            ->where('id', $id)
+            ->where('shipper_id', $shipper->id)
             ->firstOrFail();
 
-        /*
-        |--------------------------------------------------------------------------
-        | TRẢ $order SANG VIEW
-        |--------------------------------------------------------------------------
-        */
-
-        return view(
-            'shipper.map',
-            compact(
-                'order',
-                'shipperInfo'
-            )
-        );
+        return view('shipper.map', [
+            'order' => $order,
+            'shipper' => $shipper,
+        ]);
     }
-
     /**
      * Hoàn thành đơn hàng
      */
@@ -388,44 +366,65 @@ class ShipController extends Controller
     }
 
     /**
-     * Cập nhật trạng thái shipper
+     * Trang cá nhân shipper
      */
-    public function updateStatus(Request $request)
+    public function profile()
     {
-        $request->validate([
-            'status' => 'required|in:offline,online,busy',
+        $user = Auth::user();
+
+        // Lấy thông tin shipper
+        $shipperInfo = Shipper::where('user_id', $user->id)->first();
+
+        return view('shipper.profile', [
+            'shipperUser' => $user,
+            'shipperInfo' => $shipperInfo,
         ]);
-
-        $shipperInfo = $this->getShipper();
-
-        if (
-            $request->status === 'offline' &&
-            Order::where(
-                'shipper_id',
-                $shipperInfo->id
-            )
-            ->where(
-                'status',
-                'shipping'
-            )
-            ->exists()
-        ) {
-            return back()->with(
-                'error',
-                'Bạn đang giao hàng nên không thể chuyển sang offline.'
-            );
-        }
-
-        $shipperInfo->update([
-            'status' => $request->status,
-        ]);
-
-        return back()->with(
-            'success',
-            'Cập nhật trạng thái thành công!'
-        );
     }
 
+
+    /**
+     * Cập nhật thông tin cá nhân shipper
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        $shipper = Shipper::where('user_id', $user->id)->firstOrFail();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:20',
+            'vehicle_type' => 'nullable|string|max:50',
+            'license_plate' => 'nullable|string|max:50',
+            'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+        ]);
+
+        // Cập nhật tên trong bảng users
+        $user->name = $request->name;
+        $user->save();
+
+        // Cập nhật thông tin trong bảng shippers
+        $shipper->phone = $request->phone;
+        $shipper->vehicle_type = $request->vehicle_type;
+        $shipper->license_plate = $request->license_plate;
+
+        // Upload avatar
+        if ($request->hasFile('avatar')) {
+
+            $path = $request->file('avatar')->store(
+                'shippers',
+                'public'
+            );
+
+            $shipper->avatar = $path;
+        }
+
+        $shipper->save();
+
+        return redirect()
+            ->route('shipper.profile')
+            ->with('success', 'Cập nhật thông tin shipper thành công!');
+    }
     /**
      * Cập nhật vị trí shipper
      */

@@ -4,121 +4,168 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid py-4">
 
-    {{-- ================= HEADER ================= --}}
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    {{-- HEADER --}}
+    <div class="d-flex justify-content-between align-items-center mb-4">
 
         <div>
-            <h4 class="fw-bold mb-1">
-                <i class="bi bi-geo-alt-fill text-danger me-2"></i>
+            <h3 class="fw-bold mb-1">
+                <i class="fa-solid fa-map-location-dot text-danger me-2"></i>
                 Bản đồ giao hàng
-            </h4>
+            </h3>
 
             <p class="text-muted mb-0">
-                Vị trí khách hàng và vị trí hiện tại của bạn
+                Đang giao đơn hàng #{{ $order->id }}
             </p>
         </div>
 
-        <a href="{{ route('shipper.orders.show', $order->id) }}"
-           class="btn btn-outline-secondary">
-
-            <i class="bi bi-arrow-left me-1"></i>
-            Quay lại đơn hàng
-
-        </a>
+        <span class="badge bg-warning text-dark px-3 py-2">
+            <i class="fa-solid fa-truck-fast me-1"></i>
+            Đang giao hàng
+        </span>
 
     </div>
 
 
-    {{-- ================= THÔNG TIN ĐƠN ================= --}}
-    <div class="card shadow-sm border-0 mb-3">
+    <div class="row g-4">
 
-        <div class="card-body">
+        {{-- THÔNG TIN KHÁCH HÀNG --}}
+        <div class="col-lg-4">
 
-            <div class="row g-3">
+            <div class="card border-0 shadow-sm rounded-4">
 
-                {{-- Mã đơn --}}
-                <div class="col-md-3">
+                <div class="card-body p-4">
 
-                    <small class="text-muted">
-                        Mã đơn
-                    </small>
-
-                    <div class="fw-bold text-primary">
-
-                        #{{ $order->order_code ?? $order->id }}
-
-                    </div>
-
-                </div>
+                    <h5 class="fw-bold mb-4">
+                        <i class="fa-solid fa-user text-primary me-2"></i>
+                        Thông tin khách hàng
+                    </h5>
 
 
-                {{-- Khách hàng --}}
-                <div class="col-md-3">
+                    {{-- Tên --}}
+                    <div class="customer-info">
 
-                    <small class="text-muted">
-                        Khách hàng
-                    </small>
-
-                    <div class="fw-bold">
-
-                        {{ $order->customer_name ?? 'Khách hàng' }}
-
-                    </div>
-
-                </div>
-
-
-                {{-- Số điện thoại --}}
-                <div class="col-md-3">
-
-                    <small class="text-muted">
-                        Số điện thoại
-                    </small>
-
-                    @if(!empty($order->phone))
+                        <div class="icon">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
 
                         <div>
+                            <small class="text-muted">
+                                Họ và tên
+                            </small>
 
-                            <a href="tel:{{ $order->phone }}"
-                               class="text-decoration-none">
-
-                                <i class="bi bi-telephone text-success me-1"></i>
-
-                                {{ $order->phone }}
-
-                            </a>
-
+                            <div class="fw-bold">
+                                {{ $order->customer->name ?? 'Chưa có' }}
+                            </div>
                         </div>
 
-                    @else
+                    </div>
 
-                        <div class="text-muted">
-                            Chưa có
+
+                    {{-- Số điện thoại --}}
+                    <div class="customer-info">
+
+                        <div class="icon">
+                            <i class="fa-solid fa-phone"></i>
                         </div>
+
+                        <div>
+                            <small class="text-muted">
+                                Số điện thoại
+                            </small>
+
+                            <div class="fw-bold">
+                                {{ $order->customer->phone ?? 'Chưa có' }}
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    {{-- Địa chỉ --}}
+                    <div class="customer-info">
+
+                        <div class="icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </div>
+
+                        <div>
+                            <small class="text-muted">
+                                Địa chỉ giao hàng
+                            </small>
+
+                            <div class="fw-bold">
+                                {{ $order->shipping_address ?? $order->address ?? 'Chưa có' }}
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    {{-- Nút gọi --}}
+                    @if(!empty($order->customer->phone))
+
+                        <a href="tel:{{ $order->customer->phone }}"
+                           class="btn btn-success w-100 mt-3">
+
+                            <i class="fa-solid fa-phone me-2"></i>
+                            Gọi cho khách hàng
+
+                        </a>
 
                     @endif
 
                 </div>
 
+            </div>
 
-                {{-- Trạng thái --}}
-                <div class="col-md-3">
 
-                    <small class="text-muted">
-                        Trạng thái
-                    </small>
+            {{-- THÔNG TIN ĐƠN --}}
+            <div class="card border-0 shadow-sm rounded-4 mt-4">
 
-                    <div>
+                <div class="card-body p-4">
+
+                    <h5 class="fw-bold mb-3">
+                        <i class="fa-solid fa-box text-warning me-2"></i>
+                        Thông tin đơn hàng
+                    </h5>
+
+                    <div class="d-flex justify-content-between mb-2">
+
+                        <span class="text-muted">
+                            Mã đơn
+                        </span>
+
+                        <strong>
+                            #{{ $order->id }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="d-flex justify-content-between mb-2">
+
+                        <span class="text-muted">
+                            Trạng thái
+                        </span>
 
                         <span class="badge bg-warning text-dark">
-
-                            <i class="bi bi-truck me-1"></i>
-
                             Đang giao
-
                         </span>
+
+                    </div>
+
+
+                    <div class="d-flex justify-content-between">
+
+                        <span class="text-muted">
+                            Phí giao hàng
+                        </span>
+
+                        <strong class="text-success">
+                            {{ number_format($order->shipping_fee ?? 0) }} đ
+                        </strong>
 
                     </div>
 
@@ -128,100 +175,40 @@
 
         </div>
 
-    </div>
 
+        {{-- BẢN ĐỒ --}}
+        <div class="col-lg-8">
 
-    {{-- ================= ĐỊA CHỈ KHÁCH ================= --}}
-    <div class="alert alert-light border shadow-sm">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
 
-        <div class="d-flex align-items-start">
+                <div class="card-header bg-white border-0 p-4">
 
-            <i class="bi bi-geo-alt-fill text-danger fs-4 me-2"></i>
+                    <h5 class="fw-bold mb-1">
 
-            <div>
+                        <i class="fa-solid fa-location-crosshairs text-danger me-2"></i>
 
-                <strong>
-                    Địa chỉ giao hàng
-                </strong>
+                        Vị trí giao hàng
 
-                <div class="text-muted">
+                    </h5>
 
-                    {{ $order->address ?? 'Chưa có địa chỉ' }}
+                    <small class="text-muted">
 
-                </div>
+                        Địa chỉ khách hàng được hiển thị trên bản đồ
 
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- ================= BẢN ĐỒ ================= --}}
-    <div class="card shadow-sm border-0">
-
-        <div class="card-header bg-white">
-
-            <div class="d-flex justify-content-between align-items-center">
-
-                <h5 class="mb-0 fw-bold">
-
-                    <i class="bi bi-map me-2 text-primary"></i>
-
-                    Bản đồ giao hàng
-
-                </h5>
-
-                <span class="badge bg-success">
-
-                    GPS
-
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <div class="card-body p-0">
-
-            <div id="map"
-                 style="
-                    width: 100%;
-                    height: 550px;
-                    border-radius: 0 0 8px 8px;
-                 ">
-            </div>
-
-        </div>
-
-    </div>
-
-
-    {{-- ================= CHÚ THÍCH ================= --}}
-    <div class="card shadow-sm border-0 mt-3">
-
-        <div class="card-body">
-
-            <div class="row">
-
-                <div class="col-md-6">
-
-                    <i class="bi bi-geo-alt-fill text-danger me-2"></i>
-
-                    <strong>
-                        Vị trí khách hàng
-                    </strong>
+                    </small>
 
                 </div>
 
-                <div class="col-md-6">
 
-                    <i class="bi bi-bicycle text-primary me-2"></i>
+                <div class="card-body p-0">
 
-                    <strong>
-                        Vị trí của bạn
-                    </strong>
+                    <div id="map"
+                         style="
+                            width:100%;
+                            height:550px;
+                            border-radius:0 0 16px 16px;
+                         ">
+                    </div>
 
                 </div>
 
@@ -234,345 +221,36 @@
 </div>
 
 
-{{-- ========================================================= --}}
-{{-- LEAFLET CSS --}}
-{{-- ========================================================= --}}
+<style>
 
-<link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-/>
+.customer-info {
+    display:flex;
+    align-items:flex-start;
+    gap:15px;
+    padding:15px 0;
+    border-bottom:1px solid #eee;
+}
 
+.customer-info:last-child {
+    border-bottom:none;
+}
 
-{{-- ========================================================= --}}
-{{-- LEAFLET JS --}}
-{{-- ========================================================= --}}
+.customer-info .icon {
+    width:42px;
+    height:42px;
+    min-width:42px;
 
-<script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
-</script>
+    border-radius:12px;
 
+    background:#f1f5ff;
 
-<script>
+    color:#0d6efd;
 
-document.addEventListener('DOMContentLoaded', function () {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
 
-    /*
-    |--------------------------------------------------------------------------
-    | TỌA ĐỘ KHÁCH HÀNG
-    |--------------------------------------------------------------------------
-    */
-
-    const customerLat =
-        Number(@json($order->customer_latitude));
-
-    const customerLng =
-        Number(@json($order->customer_longitude));
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | KIỂM TRA TỌA ĐỘ
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        !customerLat ||
-        !customerLng ||
-        isNaN(customerLat) ||
-        isNaN(customerLng)
-    ) {
-
-        document.getElementById('map').innerHTML = `
-            <div class="d-flex
-                        justify-content-center
-                        align-items-center
-                        h-100">
-
-                <div class="text-center text-muted">
-
-                    <i class="bi bi-geo-alt-fill
-                              text-danger
-                              fs-1">
-                    </i>
-
-                    <h5 class="mt-3">
-                        Chưa có vị trí khách hàng
-                    </h5>
-
-                    <p class="mb-0">
-                        Đơn hàng chưa có tọa độ
-                        latitude / longitude.
-                    </p>
-
-                </div>
-
-            </div>
-        `;
-
-        return;
-    }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | KHỞI TẠO MAP
-    |--------------------------------------------------------------------------
-    */
-
-    const map = L.map('map');
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | OPEN STREET MAP
-    |--------------------------------------------------------------------------
-    */
-
-    L.tileLayer(
-        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        {
-            maxZoom: 19,
-
-            attribution:
-                '&copy; OpenStreetMap contributors'
-        }
-    ).addTo(map);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MARKER KHÁCH HÀNG
-    |--------------------------------------------------------------------------
-    */
-
-    const customerMarker = L.marker([
-        customerLat,
-        customerLng
-    ]).addTo(map);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | POPUP KHÁCH HÀNG
-    |--------------------------------------------------------------------------
-    */
-
-    customerMarker.bindPopup(`
-
-        <div style="min-width: 220px">
-
-            <h6 class="fw-bold text-danger">
-
-                <i class="bi bi-person-fill me-1"></i>
-
-                Vị trí khách hàng
-
-            </h6>
-
-            <hr class="my-2">
-
-            <div class="mb-1">
-
-                <strong>
-                    {{ $order->customer_name ?? 'Khách hàng' }}
-                </strong>
-
-            </div>
-
-            <div class="text-muted mb-2">
-
-                <i class="bi bi-geo-alt me-1"></i>
-
-                {{ $order->address ?? 'Chưa có địa chỉ' }}
-
-            </div>
-
-            @if(!empty($order->phone))
-
-                <a href="tel:{{ $order->phone }}"
-                   class="btn btn-sm btn-success">
-
-                    <i class="bi bi-telephone me-1"></i>
-
-                    Gọi khách
-
-                </a>
-
-            @endif
-
-        </div>
-
-    `);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | ĐƯA MAP ĐẾN VỊ TRÍ KHÁCH
-    |--------------------------------------------------------------------------
-    */
-
-    map.setView([
-        customerLat,
-        customerLng
-    ], 16);
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | MỞ POPUP
-    |--------------------------------------------------------------------------
-    */
-
-    customerMarker.openPopup();
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | LẤY GPS SHIPPER
-    |--------------------------------------------------------------------------
-    */
-
-    if (navigator.geolocation) {
-
-        navigator.geolocation.watchPosition(
-
-            function (position) {
-
-                const shipperLat =
-                    position.coords.latitude;
-
-                const shipperLng =
-                    position.coords.longitude;
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | TẠO / CẬP NHẬT MARKER SHIPPER
-                |--------------------------------------------------------------------------
-                */
-
-                if (window.shipperMarker) {
-
-                    window.shipperMarker.setLatLng([
-                        shipperLat,
-                        shipperLng
-                    ]);
-
-                } else {
-
-                    window.shipperMarker =
-                        L.marker([
-                            shipperLat,
-                            shipperLng
-                        ]).addTo(map);
-
-                    window.shipperMarker.bindPopup(`
-
-                        <div>
-
-                            <strong>
-                                <i class="bi bi-bicycle
-                                          text-primary me-1">
-                                </i>
-
-                                Vị trí của bạn
-                            </strong>
-
-                        </div>
-
-                    `);
-
-                }
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | GỬI VỊ TRÍ SHIPPER VỀ SERVER
-                |--------------------------------------------------------------------------
-                */
-
-                fetch(
-                    "{{ route('shipper.location') }}",
-                    {
-                        method: 'POST',
-
-                        headers: {
-
-                            'Content-Type':
-                                'application/json',
-
-                            'X-CSRF-TOKEN':
-                                '{{ csrf_token() }}',
-
-                            'Accept':
-                                'application/json'
-
-                        },
-
-                        body: JSON.stringify({
-
-                            latitude:
-                                shipperLat,
-
-                            longitude:
-                                shipperLng
-
-                        })
-
-                    }
-                )
-                .then(response => response.json())
-                .then(data => {
-
-                    console.log(
-                        'Đã cập nhật vị trí:',
-                        data
-                    );
-
-                })
-                .catch(error => {
-
-                    console.error(
-                        'Lỗi cập nhật vị trí:',
-                        error
-                    );
-
-                });
-
-            },
-
-            function (error) {
-
-                console.error(
-                    'Không lấy được GPS:',
-                    error
-                );
-
-            },
-
-            {
-
-                enableHighAccuracy: true,
-
-                maximumAge: 5000,
-
-                timeout: 10000
-
-            }
-
-        );
-
-    } else {
-
-        alert(
-            'Thiết bị của bạn không hỗ trợ GPS.'
-        );
-
-    }
-
-});
-
-</script>
+</style>
 
 @endsection

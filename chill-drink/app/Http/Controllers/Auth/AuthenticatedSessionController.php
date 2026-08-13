@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Shipper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,53 +35,63 @@ class AuthenticatedSessionController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | KIỂM TRA TÀI KHOẢN BỊ KHÓA
+        |--------------------------------------------------------------------------
+        */
+
+        if (! $user->is_active) {
+
+            Auth::guard('web')->logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()
+                ->route('login')
+                ->withErrors([
+                    'email' => 'Tài khoản của bạn đang bị khóa.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | SHIPPER
         |--------------------------------------------------------------------------
         */
 
         if ($user->isShipper()) {
 
-            // Kiểm tra tài khoản
-            if (!$user->is_active) {
-
-                Auth::guard('web')->logout();
-
-                $request->session()->invalidate();
-                $request->session()->regenerateToken();
-
-                return redirect()
-                    ->route('login')
-                    ->withErrors([
-                        'email' => 'Tài khoản Shipper của bạn đang bị khóa.',
-                    ]);
-            }
-
-            // Kiểm tra hồ sơ shipper
-            $shipper = \App\Models\Shipper::firstOrCreate(
+            // Tạo hồ sơ Shipper nếu chưa có
+            $shipper = Shipper::firstOrCreate(
                 [
                     'user_id' => $user->id,
                 ],
                 [
                     'code' => 'SHIP' . str_pad(
                         $user->id,
-                        4,
+                        5,
                         '0',
                         STR_PAD_LEFT
                     ),
+
                     'phone' => $user->phone ?? '',
+
                     'vehicle_type' => 'bike',
+
                     'status' => 'online',
                 ]
             );
 
-            // Lưu thông tin đăng nhập
+            // Cập nhật thông tin đăng nhập
             $user->forceFill([
                 'last_login_at' => now(),
                 'last_login_ip' => $request->ip(),
             ])->save();
 
+            // Xóa URL trước đó
             $request->session()->forget('url.intended');
 
+            // Chuyển sang Dashboard Shipper
             return redirect()->route('shipper.dashboard');
         }
 
@@ -92,12 +103,12 @@ class AuthenticatedSessionController extends Controller
 
         if ($user->isSuperAdmin()) {
 
-            $request->session()->forget('url.intended');
-
             $user->forceFill([
                 'last_login_at' => now(),
                 'last_login_ip' => $request->ip(),
             ])->save();
+
+            $request->session()->forget('url.intended');
 
             return redirect()->route('admin.super-admin');
         }
@@ -110,17 +121,52 @@ class AuthenticatedSessionController extends Controller
 
         if ($user->isAdmin()) {
 
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
             $request->session()->forget('url.intended');
+
+            return redirect()->route('admin.dashboard');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | CSKH
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isCskh()) {
 
             $user->forceFill([
                 'last_login_at' => now(),
                 'last_login_ip' => $request->ip(),
             ])->save();
 
-            return redirect()->route('admin.dashboard');
+            $request->session()->forget('url.intended');
+
+            return redirect()->route('admin.chat.index');
         }
 
-<<<<<<< HEAD
+        /*
+        |--------------------------------------------------------------------------
+        | STAFF / SHIPPER STAFF
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isStaffOnly()) {
+
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
+            $request->session()->forget('url.intended');
+
+            return redirect()->route('staff.dashboard');
+        }
+
         /*
         |--------------------------------------------------------------------------
         | CUSTOMER
@@ -132,28 +178,17 @@ class AuthenticatedSessionController extends Controller
             'last_login_ip' => $request->ip(),
         ])->save();
 
+        // Nếu đang truy cập chat thì không redirect lại chat
+        if (str_contains(
+            session('url.intended', ''),
+            '/chat'
+        )) {
+            $request->session()->forget('url.intended');
+        }
+
         return redirect()->intended(
             route('home', absolute: false)
         );
-=======
-        if ($request->user()->isCskh()) {
-            $request->session()->forget('url.intended');
-
-            return redirect()->route('admin.chat.index');
-        }
-
-        if ($request->user()->isStaffOnly()) {
-            $request->session()->forget('url.intended');
-
-            return redirect()->route('staff.dashboard');
-        }
-
-        if (str_contains(session('url.intended', ''), '/chat')) {
-            $request->session()->forget('url.intended');
-        }
-
-        return redirect()->intended(route('home', absolute: false));
->>>>>>> 5b3381183eab985031f200b21f0067dbfdec9944
     }
 
     /**
