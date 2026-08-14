@@ -547,7 +547,9 @@
                 return;
             }
 
-            startCountdown(60);
+            sendButton.disabled = true;
+            sendButton.textContent = 'Đang gửi...';
+            setStatus('Đang gửi mã xác minh...');
 
             try {
                 const response = await fetch(sendButton.dataset.sendCodeUrl, {
@@ -562,7 +564,6 @@
 
                 if (!response.ok) {
                     setStatus(await getErrorMessage(response), 'error');
-                    clearInterval(countdownTimer);
                     sendButton.textContent = 'Lấy mã';
                     sendButton.disabled = false;
                     return;
@@ -570,6 +571,7 @@
 
                 const data = await response.json();
                 setStatus(data.message || 'Mã xác minh đã được gửi. Vui lòng kiểm tra Gmail.', 'success');
+                startCountdown(60);
                 codeInput.focus();
             } catch (error) {
                 setStatus('Không thể gửi mã. Kiểm tra kết nối hoặc cấu hình mail.', 'error');

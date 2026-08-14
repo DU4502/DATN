@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\EmailVerificationCodeService;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class EmailVerificationCodeController extends Controller
 {
@@ -20,7 +22,18 @@ class EmailVerificationCodeController extends Controller
             'email.email' => 'Email không đúng định dạng.',
         ]);
 
-        $verificationCodes->sendToEmail($validated['email']);
+        $email = Str::lower(trim($validated['email']));
+
+        if (User::query()->where('email', $email)->exists()) {
+            return response()->json([
+                'message' => 'Email này đã được đăng ký.',
+                'errors' => [
+                    'email' => ['Email này đã được đăng ký.'],
+                ],
+            ], 422);
+        }
+
+        $verificationCodes->sendToEmail($email);
 
         return response()->json([
             'message' => 'Mã xác minh đã được gửi tới email của bạn.',

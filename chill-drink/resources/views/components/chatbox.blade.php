@@ -785,7 +785,7 @@
         x-cloak
         class="rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300 relative"
         style="position: fixed; right: 1.5rem; bottom: 6.25rem; width: min(380px, calc(100vw - 2rem)); height: min(540px, calc(100vh - 8rem)); background: #ffffff; border-color: var(--c-border); z-index: 1055;">
-        
+
         <!-- Custom Confirm Change Branch Overlay -->
         <template x-if="confirmChangeBranch">
             <div class="absolute inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(255,255,255,0.85); backdrop-filter: blur(4px);">

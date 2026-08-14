@@ -77,4 +77,23 @@ class RegistrationTest extends TestCase
 
         Notification::assertSentOnDemand(EmailVerificationCodeNotification::class);
     }
+
+    public function test_registration_email_code_is_not_sent_for_existing_email(): void
+    {
+        Notification::fake();
+
+        User::factory()->create([
+            'email' => 'test@example.com',
+        ]);
+
+        $response = $this->postJson(route('register.email-code.send'), [
+            'email' => 'test@example.com',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'Email này đã được đăng ký.')
+            ->assertJsonValidationErrors(['email']);
+
+        Notification::assertNothingSent();
+    }
 }
