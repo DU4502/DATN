@@ -410,6 +410,9 @@ $paymentLabels = $paymentLabels ?? [
                         @csrf
                         <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
                     </form>
+                    @if(!in_array($statusKey, ['pending', 'cancelled'], true))
+                        <a href="{{ route('orders.issues.create', $order) }}" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-headset me-1"></i>Báo vấn đề đơn</a>
+                    @endif
                     
                     @if($statusKey === 'pending' || $order->status === 'pending')
                         <button type="button" class="btn btn-sm btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#customerCancelOrderModal" data-order-id="{{ $order->id }}">

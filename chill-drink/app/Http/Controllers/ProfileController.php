@@ -202,6 +202,27 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
+    public function exportData(Request $request)
+    {
+        $user = $request->user();
+        $orders = $user->orders()->latest()->get(['id', 'order_code', 'status', 'total', 'created_at']);
+
+        return response()->streamDownload(function () use ($user, $orders): void {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF");
+            fputcsv($out, ['DỮ LIỆU TÀI KHOẢN', '']);
+            fputcsv($out, ['Họ tên', $user->name]);
+            fputcsv($out, ['Email', $user->email]);
+            fputcsv($out, ['Số điện thoại', $user->phone ?? '']);
+            fputcsv($out, []);
+            fputcsv($out, ['MÃ ĐƠN', 'TRẠNG THÁI', 'TỔNG TIỀN', 'NGÀY TẠO']);
+            foreach ($orders as $order) {
+                fputcsv($out, [$order->order_code ?? '#'.$order->id, $order->status, $order->total, $order->created_at?->format('d/m/Y H:i')]);
+            }
+            fclose($out);
+        }, 'du-lieu-ca-nhan-'.now()->format('Ymd-His').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
     private function orderHistoryData(Request $request): array
     {
         $profileOrders = $request->user()

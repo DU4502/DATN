@@ -44,6 +44,7 @@
                 <a href="{{ route('admin.slides.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
                 <a href="{{ route('admin.orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
                 <a href="{{ route('admin.group-orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
+                <a href="{{ route('admin.order-issues.index') }}" class="nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ</a>
                 <a href="{{ route('admin.reviews.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.users.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
                 <a href="{{ route('admin.staff.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.staff.*') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Quản lý Staff</a>

@@ -1261,10 +1261,26 @@
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     @if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*'))
-                        <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
-                            <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                            <span>Tiếp tục thanh toán</span>
-                        </a>
+                        @if((int) session('checkout_group_order_id') === (int) $pendingCheckoutGroup->id)
+                            <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                                <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                                <span>Tiếp tục thanh toán</span>
+                                <span class="active-group-return__time" title="Đã chốt lúc {{ $pendingCheckoutGroup->closes_at?->format('H:i · d/m/Y') }}">
+                                    {{ $pendingCheckoutGroup->closes_at?->format('H:i') ?? '--:--' }}
+                                </span>
+                            </a>
+                        @else
+                            <form method="POST" action="{{ route('group-orders.pending-checkout.resume') }}" class="m-0">
+                                @csrf
+                                <button type="submit" class="active-group-return is-checkout" title="Khôi phục và tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                                    <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                                    <span>Tiếp tục thanh toán</span>
+                                    <span class="active-group-return__time" title="Đã chốt lúc {{ $pendingCheckoutGroup->closes_at?->format('H:i · d/m/Y') }}">
+                                        {{ $pendingCheckoutGroup->closes_at?->format('H:i') ?? '--:--' }}
+                                    </span>
+                                </button>
+                            </form>
+                        @endif
                     @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
                         <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
                             <i class="bi bi-people-fill" aria-hidden="true"></i>
