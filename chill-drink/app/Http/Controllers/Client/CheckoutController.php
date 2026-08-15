@@ -15,6 +15,7 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\Voucher;
+use App\Notifications\GroupOrderCompletedNotification;
 use App\Services\OrderCodeGenerator;
 use App\Support\ShippingFee;
 use App\Support\AddressLearning;
@@ -208,6 +209,9 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
+        $groupMemberUserIds = collect();
+        $completedGroupOrder = null;
+
         if ($request->filled('scheduled_at') && ! $request->filled('delivery_type')) {
             $request->merge([
                 'delivery_type' => 'scheduled',
@@ -458,6 +462,13 @@ class CheckoutController extends Controller
 
             if ($groupOrderId) {
                 $groupOrder->update(['order_id' => $order->id, 'status' => 'ordered']);
+                $completedGroupOrder = $groupOrder->fresh();
+                $groupMemberUserIds = $completedGroupOrder->members()
+                    ->whereNotNull('user_id')
+                    ->where('user_id', '!=', auth()->id())
+                    ->pluck('user_id')
+                    ->unique()
+                    ->values();
             }
 
             // Create order items
@@ -481,6 +492,13 @@ class CheckoutController extends Controller
             }
 
             DB::commit();
+
+            if ($completedGroupOrder && $groupMemberUserIds->isNotEmpty()) {
+                \App\Models\User::query()
+                    ->whereIn('id', $groupMemberUserIds)
+                    ->get()
+                    ->each(fn ($member) => $member->notify(new GroupOrderCompletedNotification($completedGroupOrder)));
+            }
 
             // Chỉ notify admin khi không phải VNPay (VNPay sẽ notify sau khi thanh toán thành công)
             if ($order->payment_method !== 'vnpay') {

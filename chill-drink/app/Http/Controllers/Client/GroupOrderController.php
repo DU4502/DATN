@@ -265,7 +265,17 @@ class GroupOrderController extends Controller
         abort_if($group->status === 'closed', 422, 'Phòng đã đóng nên không thể gửi tin nhắn mới.');
         $sender = $this->currentMember($group);
         $data = $request->validate([
-            'content' => ['nullable', 'string', 'max:1000', 'required_without:attachment'],
+            'content' => [
+                'nullable',
+                'string',
+                'max:1000',
+                'required_without:attachment',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && $this->containsProhibitedGroupChatWord($value)) {
+                        $fail('Tin nhắn chứa từ ngữ không phù hợp. Vui lòng điều chỉnh trước khi gửi.');
+                    }
+                },
+            ],
             'recipient_id' => ['nullable', 'integer'],
             'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip'],
         ]);
@@ -322,6 +332,19 @@ class GroupOrderController extends Controller
             'read_at' => $message->read_at?->toIso8601String(),
             'created_at' => $message->created_at->toIso8601String(),
         ];
+    }
+
+    private function containsProhibitedGroupChatWord(string $content): bool
+    {
+        $normalized = Str::lower(Str::ascii($content));
+        $normalized = strtr($normalized, ['0' => 'o', '1' => 'i', '3' => 'e', '4' => 'a', '5' => 's', '7' => 't', '@' => 'a', '$' => 's']);
+        $normalized = preg_replace('/[^a-z]+/', ' ', $normalized) ?? '';
+
+        $wordPattern = '/(?:^| )(?:dm+|dcm+|vcl|vl|cc|cac|lon|dit|deo|concho|ngu|fuck|shit|bitch)(?= |$)/';
+        $obfuscatedAbbreviationPattern = '/(?:^| )d\s*(?:m+|c\s*m?)(?= |$)/';
+
+        return preg_match($wordPattern, $normalized) === 1
+            || preg_match($obfuscatedAbbreviationPattern, $normalized) === 1;
     }
 
     public function join(Request $request, string $code)
@@ -444,6 +467,32 @@ class GroupOrderController extends Controller
         return back()->with('success', 'Đã thêm 1 phần của món này.');
     }
 
+    public function decrementItem(string $code, GroupOrderItem $item)
+    {
+        DB::transaction(function () use ($code, $item) {
+            $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
+            $group->closeIfExpired();
+            abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng hoặc hết hạn.');
+
+            $member = $this->currentMember($group);
+            $lockedItem = GroupOrderItem::lockForUpdate()->findOrFail($item->id);
+            abort_unless(
+                $lockedItem->group_order_id === $group->id && $lockedItem->group_order_member_id === $member->id,
+                403
+            );
+
+            if ($lockedItem->quantity <= 1) {
+                $lockedItem->delete();
+
+                return;
+            }
+
+            $lockedItem->decrement('quantity');
+        });
+
+        return back()->with('success', 'Đã giảm 1 phần của món này.');
+    }
+
     public function close(string $code)
     {
         if (session()->has('checkout_group_order_id')) {
@@ -495,7 +544,7 @@ class GroupOrderController extends Controller
 
         $this->activateGroupCart($group);
 
-        return redirect()->route('cart.index')->with('success', 'Đã gom toàn bộ món vào giỏ hàng chung.');
+        return redirect()->route('checkout.index')->with('success', 'Đã chốt đơn nhóm. Vui lòng hoàn tất thanh toán.');
     }
 
     private function currentMember(GroupOrder $group): GroupOrderMember
@@ -519,16 +568,51 @@ class GroupOrderController extends Controller
 
     public function resume(string $code)
     {
-        if (session()->has('checkout_group_order_id')) {
-            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
-        }
         $group = GroupOrder::with(['items.product.category', 'items.member'])->where('code', $code)->firstOrFail();
         abort_unless($group->owner_id === auth()->id() && $group->status === 'closed' && ! $group->order_id, 403);
+
+        if (session()->has('checkout_group_order_id')) {
+            if ((int) session('checkout_group_order_id') === (int) $group->id) {
+                return redirect()->route('checkout.index');
+            }
+
+            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
+        }
+
         if ($group->items->isEmpty()) {
             return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
         }
+
         $this->activateGroupCart($group);
-        return redirect()->route('cart.index')->with('success', 'Đã khôi phục giỏ hàng đơn nhóm.');
+
+        return redirect()->route('checkout.index')->with('success', 'Đã khôi phục đơn nhóm. Vui lòng hoàn tất thanh toán.');
+    }
+
+    public function resumePendingCheckout()
+    {
+        $group = GroupOrder::with(['items.product.category', 'items.member'])
+            ->where('owner_id', auth()->id())
+            ->where('status', 'closed')
+            ->whereNull('order_id')
+            ->latest('locked_at')
+            ->latest('id')
+            ->firstOrFail();
+
+        if (session()->has('checkout_group_order_id')) {
+            if ((int) session('checkout_group_order_id') === (int) $group->id) {
+                return redirect()->route('checkout.index');
+            }
+
+            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
+        }
+
+        if ($group->items->isEmpty()) {
+            return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
+        }
+
+        $this->activateGroupCart($group);
+
+        return redirect()->route('checkout.index')->with('success', 'Đã khôi phục đơn nhóm chờ thanh toán.');
     }
 
     private function restorePersonalCart(): void
