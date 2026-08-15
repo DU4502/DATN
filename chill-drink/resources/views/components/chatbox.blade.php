@@ -31,6 +31,8 @@
         guestFormEmail: '',
         guestFormLoading: false,
         guestFormError: '',
+        showScrollToLatest: false,
+        supportIssue: null,
 
         get branchNameDisplay() {
             if (!this.branchName) return '';
@@ -289,6 +291,7 @@
                     if (alreadyExists) return;
 
                     const isFromAdmin = payload.sender_id !== {{ auth()->id() ?? 0 }};
+                    const shouldScroll = this.isNearMessageBottom();
 
                     this.messages.push({
                         id: payload.message_id,
@@ -308,7 +311,13 @@
                     }
 
                     if (this.isOpen) {
-                        this.$nextTick(() => { this.scrollToBottom(); });
+                        this.$nextTick(() => {
+                            if (shouldScroll) {
+                                this.scrollToBottom();
+                            } else {
+                                this.showScrollToLatest = true;
+                            }
+                        });
                     }
                 })
                 .listen('.conversation-closed', (payload) => {
@@ -341,6 +350,7 @@
                         this.branchId       = data.branch_id;
                         this.branchName     = data.branch_name || '';
                         this.conversationStatus = data.status || 'open';
+                        this.supportIssue = data.support_issue || null;
                         this.subscribeEchoChannel();
                     }
                 } catch (e) { return; }
@@ -407,6 +417,7 @@
                         localStorage.setItem('chat_guest_token', data.guest_token);
                     }
                     if (data.guest_name) this.guestName = data.guest_name;
+                    this.supportIssue = data.support_issue || null;
                 } else if (data.requires_guest_init) {
                     // Guest token invalid/expired - clear and show modal
                     localStorage.removeItem('chat_guest_token');
@@ -431,11 +442,19 @@
                     if (data.conversation_status) {
                         this.conversationStatus = data.conversation_status;
                     }
+                    this.supportIssue = data.support_issue || this.supportIssue;
                     const lastLocalId  = this.messages.length ? this.messages[this.messages.length - 1].id : null;
                     const lastServerId = data.messages.length ? data.messages[data.messages.length - 1].id : null;
                     if (lastServerId !== lastLocalId || data.messages.length !== this.messages.length) {
+                        const shouldScroll = markRead || this.isNearMessageBottom();
                         this.messages = data.messages;
-                        this.$nextTick(() => { this.scrollToBottom(); });
+                        this.$nextTick(() => {
+                            if (shouldScroll) {
+                                this.scrollToBottom();
+                            } else {
+                                this.showScrollToLatest = true;
+                            }
+                        });
                     }
                     if (markRead) this.supportUnread = 0;
                 }
@@ -449,6 +468,24 @@
             if (el) {
                 el.scrollTop = el.scrollHeight;
             }
+            this.showScrollToLatest = false;
+        },
+
+        scrollToLatest() {
+            this.scrollToBottom();
+        },
+
+        isNearMessageBottom() {
+            const el = this.$refs.messageList;
+            if (!el) return true;
+            return (el.scrollHeight - el.scrollTop - el.clientHeight) < 80;
+        },
+
+        isOrderSupportMessage(message) {
+            return Boolean(message?.content && (
+                message.content.startsWith('[YÊU CẦU HỖ TRỢ ĐƠN')
+                || message.content.startsWith('[CẬP NHẬT HỖ TRỢ ĐƠN')
+            ));
         },
 
         async sendMessage() {
@@ -748,6 +785,7 @@
             x-show="branchId"
             x-cloak
             x-ref="messageList"
+            @scroll="if (isNearMessageBottom()) showScrollToLatest = false"
             class="chatbox-scroll"
             style="padding: 0.9rem; background: #ffffff;">
             <template x-for="message in messages" :key="message.id">
@@ -773,6 +811,16 @@
                                 ? 'max-width: 82%; background: #00a870; color: white; border-radius: 1rem 1rem 0 1rem; padding: 0.6rem 0.8rem; font-size: 0.83rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08);'
                                 : 'max-width: 82%; background: #f1f5f9; color: #1e293b; border-radius: 1rem 1rem 1rem 0; padding: 0.6rem 0.8rem; font-size: 0.83rem; border: 1px solid #e2e8f0;'">
                             <div x-text="message.content" x-show="message.content" x-cloak style="white-space: pre-line;"></div>
+                            <template x-if="isOrderSupportMessage(message) && supportIssue">
+                                <a :href="supportIssue.url" style="margin-top: 0.55rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 0.75rem; padding: 0.5rem; text-decoration: none; background: #ffffff; border: 1px solid #cbe9df; color: #153d34;">
+                                    <img x-show="supportIssue.image_url" :src="supportIssue.image_url" :alt="supportIssue.product_name" style="width: 2.75rem; height: 2.75rem; flex-shrink: 0; border-radius: 0.55rem; object-fit: cover; background: #edf8f4;">
+                                    <span style="min-width: 0; flex: 1;">
+                                        <span x-text="supportIssue.product_name" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.72rem; font-weight: 800;"></span>
+                                        <span style="display: block; font-size: 0.68rem; color: #6b7c76;"><span x-text="supportIssue.type"></span> · <span x-text="supportIssue.status_label"></span></span>
+                                        <span style="display: inline-block; margin-top: 0.2rem; font-size: 0.68rem; font-weight: 800; color: #008b70;">Xem chi tiết <i class="bi bi-arrow-right"></i></span>
+                                    </span>
+                                </a>
+                            </template>
                             <div
                                 x-text="new Date(message.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })"
                                 :style="(isLoggedIn ? (message.sender_id == {{ auth()->id() ?? 0 }}) : message.is_guest_message) ? 'font-size: 0.68rem; opacity: 0.8; text-align: right; margin-top: 0.25rem;' : 'font-size: 0.68rem; opacity: 0.6; text-align: left; margin-top: 0.25rem;'"></div>
@@ -781,6 +829,17 @@
                 </div>
             </template>
         </div>
+
+        <button
+            type="button"
+            x-show="branchId && showScrollToLatest"
+            x-cloak
+            @click="scrollToLatest()"
+            aria-label="Cuộn xuống tin nhắn mới nhất"
+            title="Tin nhắn mới nhất"
+            style="position: absolute; left: 50%; bottom: 4.75rem; transform: translateX(-50%); width: 42px; height: 42px; border: 0; border-radius: 999px; background: #00a870; color: #fff; z-index: 10; box-shadow: 0 12px 24px rgba(0, 168, 112, 0.24);">
+            <i class="bi bi-arrow-down" style="font-size: 1.25rem;"></i>
+        </button>
 
         <!-- Input Chat (cố định dưới cùng) -->
         <div
