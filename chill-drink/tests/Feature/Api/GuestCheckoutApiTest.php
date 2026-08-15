@@ -24,6 +24,8 @@ class GuestCheckoutApiTest extends TestCase
             'name' => 'API Test Branch',
             'code' => 'API-TEST',
             'address' => 'Test address',
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
             'status' => true,
         ]);
         $category = Category::create([
@@ -51,6 +53,8 @@ class GuestCheckoutApiTest extends TestCase
             'guest_email' => 'api-guest@example.com',
             'guest_phone' => '0900000000',
             'branch_id' => $branch->id,
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 2],
             ],

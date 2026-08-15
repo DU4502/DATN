@@ -36,7 +36,7 @@
     <div class="sa-panel-header sa-time-matrix-header">
         <div class="sa-time-matrix-header-copy">
             <h2 class="sa-panel-title" id="branch-time-matrix-title">So sánh chi nhánh theo thời gian</h2>
-            <p class="sa-panel-note">Bảng rút gọn theo kỳ và phạm vi đang chọn, tối ưu để sao chép hoặc xuất Excel.</p>
+            <p class="sa-panel-note">{{ $analyticsPeriodPresets[$analyticsPeriodType] ?? 'Tùy chọn' }} · {{ $analyticsContext->comparisonLabel ?? 'Không so sánh' }}</p>
         </div>
         <div class="sa-time-matrix-meta" aria-label="Thông tin nhanh">
             <span class="sa-state" style="background:#f8fafc; color:#334155;">{{ $branchTimeGroupLabel }}</span>

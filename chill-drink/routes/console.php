@@ -28,3 +28,9 @@ Schedule::command(AutoCompleteDeliveredOrders::class)
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Tự động đóng phiên chat không hoạt động sau 24h
+Schedule::command('chat:close-inactive')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground();

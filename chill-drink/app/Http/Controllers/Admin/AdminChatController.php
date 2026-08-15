@@ -168,7 +168,7 @@ class AdminChatController extends Controller
             }
 
             if ($lockedConversation->status === 'closed') {
-                $lockedConversation->update(['status' => 'open']);
+                return false;
             }
 
             return $this->createMessage($lockedConversation, [
@@ -176,6 +176,13 @@ class AdminChatController extends Controller
                 'content' => $request->content,
             ]);
         });
+
+        if ($message === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cuộc trò chuyện này đã bị đóng, bạn không thể gửi thêm tin nhắn.'
+            ], 400);
+        }
 
         return $this->jsonMessageResponse($message);
     }

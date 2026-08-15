@@ -40,7 +40,7 @@ class VoucherSeeder extends Seeder
                 'code' => 'SHIP20K',
                 'type' => Voucher::TYPE_FIXED,
                 'value' => 20000,
-                'max_discount' => null,
+                'max_discount' => 20000,
                 'description' => 'Giảm trực tiếp 20.000đ cho đơn từ 40.000đ.',
                 'min_order' => 40000,
                 'usage_limit' => 50,

@@ -957,10 +957,20 @@
 
 <div class="sa-page">
     @php
-        // Trang tổng quan luôn dùng toàn bộ chi nhánh và không dùng kỳ đối chiếu.
-        $analyticsSelectedBranchIds = [];
-        $analyticsBranchScopeLabel = 'Tất cả chi nhánh';
-        $analyticsCompareType = 'none';
+        $rawBranchIds = request('analytics_branch_ids', request('analytics_branch_id'));
+        $rawBranchIds = is_array($rawBranchIds) ? $rawBranchIds : (is_scalar($rawBranchIds) ? [$rawBranchIds] : []);
+        $analyticsSelectedBranchIds = array_values(array_unique(array_filter(array_map('intval', $rawBranchIds))));
+        $analyticsBranchScopeLabel = $analyticsContext->branchScopeLabel;
+        if ($analyticsSelectedBranchIds !== []) {
+            if (count($analyticsSelectedBranchIds) === 1) {
+                $analyticsBranchScopeLabel = collect($branches ?? [])->firstWhere('id', $analyticsSelectedBranchIds[0])?->name
+                    ?? $analyticsBranchScopeLabel;
+            } else {
+                $analyticsBranchScopeLabel = count($analyticsSelectedBranchIds).' chi nhánh được chọn';
+            }
+        }
+
+        $analyticsCompareType = (string) request('analytics_compare_type', 'none');
         $analyticsPeriodType = (string) $analyticsContext->periodType;
         $analyticsPeriodPresets = [
             'day' => 'Hôm nay',
@@ -978,7 +988,7 @@
                 : ($analyticsPeriodPresets[$analyticsPeriodType] ?? ($analyticsContext->displayLabel ?? 'Tất cả thời gian')),
             default => $analyticsContext->displayLabel ?? 'Tất cả thời gian',
         };
-        $analyticsSummaryLine = $analyticsSummaryPeriod.' · Tất cả chi nhánh';
+        $analyticsSummaryLine = $analyticsSummaryPeriod.' · '.($analyticsContext->comparisonLabel ?? 'Không so sánh').' · Chi nhánh: '.($analyticsBranchScopeLabel ?? 'Tất cả chi nhánh');
     @endphp
 
     <header class="sa-header legacy-page-header">
@@ -1008,7 +1018,27 @@
 
     {{-- LEGACY OVERVIEW - CURRENTLY ACTIVE --}}
     <div class="legacy-overview" data-business-overview-region>
-        <form class="legacy-analytics-form legacy-analytics-form--compact legacy-analytics-filter-plain" method="GET" action="{{ route('admin.super-admin') }}" aria-label="Bộ lọc thời gian" data-legacy-analytics-form
+        <section class="legacy-analytics-bar" aria-label="Bộ lọc dữ liệu kinh doanh">
+            <div class="legacy-analytics-head">
+                <div class="legacy-analytics-head-copy">
+                    <h2 class="sa-panel-title">Bộ lọc dữ liệu kinh doanh</h2>
+                    <p class="sa-panel-note">Áp dụng cho KPI, chi nhánh và sản phẩm bên dưới.</p>
+                </div>
+                <div class="legacy-analytics-presets" role="group" aria-label="Chọn khoảng thời gian">
+                    @foreach($analyticsPeriodPresets as $periodValue => $periodLabel)
+                        <button
+                            type="button"
+                            class="legacy-analytics-period-btn {{ $analyticsPeriodType === $periodValue ? 'active' : '' }}"
+                            data-analytics-period-preset="{{ $periodValue }}"
+                            aria-pressed="{{ $analyticsPeriodType === $periodValue ? 'true' : 'false' }}"
+                        >
+                            {{ $periodLabel }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            <form class="legacy-analytics-form" method="GET" action="{{ route('admin.super-admin') }}" data-legacy-analytics-form
                 data-analytics-default-date="{{ now()->format('Y-m-d') }}"
                 data-analytics-default-week="{{ now()->format('o-\WW') }}"
                 data-analytics-default-month="{{ now()->format('Y-m') }}"
@@ -1019,22 +1049,23 @@
                 <input type="hidden" name="status" value="{{ $filters['status'] }}">
                 <input type="hidden" name="role" value="{{ $filters['role'] }}">
                 <input type="hidden" name="created" value="{{ $filters['created'] }}">
-                <input type="hidden" name="analytics_product_sort" value="quantity">
+                <input type="hidden" name="ranking_period" value="{{ $rankingPeriod ?? '30d' }}">
+                <input type="hidden" name="analytics_product_sort" value="{{ request('analytics_product_sort', 'quantity') }}">
                 <input type="hidden" name="branch_search" value="{{ request('branch_search') }}">
                 <input type="hidden" name="branch_sort" value="{{ request('branch_sort', 'revenue') }}">
                 <input type="hidden" name="branch_direction" value="{{ request('branch_direction', 'desc') }}">
                 <input type="hidden" name="branch_performance" value="{{ request('branch_performance', 'all') }}">
                 <input type="hidden" name="branch_per_page" value="{{ request('branch_per_page', 5) }}">
                 <input type="hidden" name="branch_page" value="1">
-                <input type="hidden" name="quick_trend_period" value="{{ $quickTrendPeriod }}">
-                @if($quickTrendBranchId)
+                <input type="hidden" name="quick_trend_period" value="{{ $quickTrendPeriod ?? '' }}">
+                @if(!empty($quickTrendBranchId))
                     <input type="hidden" name="quick_trend_branch_id" value="{{ $quickTrendBranchId }}">
                 @endif
-                @if($quickTrendPeriod === 'range')
-                    <input type="hidden" name="quick_trend_start_date" value="{{ $quickTrendStartDate }}">
-                    <input type="hidden" name="quick_trend_end_date" value="{{ $quickTrendEndDate }}">
+                @if(!empty($quickTrendPeriod) && $quickTrendPeriod === 'range')
+                    <input type="hidden" name="quick_trend_start_date" value="{{ $quickTrendStartDate ?? '' }}">
+                    <input type="hidden" name="quick_trend_end_date" value="{{ $quickTrendEndDate ?? '' }}">
                 @endif
-                @if($topProductBranchId)
+                @if(!empty($topProductBranchId))
                     <input type="hidden" name="top_product_branch_id" value="{{ $topProductBranchId }}">
                 @endif
                 <input type="hidden" name="analytics_period_type" value="{{ $analyticsPeriodType }}" data-analytics-period-type-input>
@@ -1042,35 +1073,31 @@
                 <input type="hidden" name="analytics_week" value="{{ now()->format('o-\WW') }}" data-analytics-period-value="week">
                 <input type="hidden" name="analytics_month" value="{{ now()->format('Y-m') }}" data-analytics-period-value="month">
                 <input type="hidden" name="analytics_year" value="{{ now()->format('Y') }}" data-analytics-period-value="year">
-                <input type="hidden" name="analytics_compare_type" value="none">
 
-                <div class="legacy-analytics-toolbar">
-                    <div class="legacy-analytics-presets" role="group" aria-label="Chọn khoảng thời gian">
-                        @foreach($analyticsPeriodPresets as $periodValue => $periodLabel)
-                            <button
-                                type="button"
-                                class="legacy-analytics-period-btn {{ $analyticsPeriodType === $periodValue ? 'active' : '' }}"
-                                data-analytics-period-preset="{{ $periodValue }}"
-                                aria-pressed="{{ $analyticsPeriodType === $periodValue ? 'true' : 'false' }}"
-                            >
-                                {{ $periodLabel }}
-                            </button>
-                        @endforeach
-                    </div>
-
-                    <div class="legacy-analytics-actions legacy-analytics-actions--compact">
-                        <a href="{{ route('admin.super-admin', request()->except(['analytics_period_type', 'analytics_date', 'analytics_week', 'analytics_month', 'analytics_year', 'analytics_start_date', 'analytics_end_date', 'analytics_compare_type', 'analytics_compare_date', 'analytics_compare_month', 'analytics_compare_year', 'analytics_compare_start_date', 'analytics_compare_end_date', 'analytics_branch_id', 'analytics_branch_ids', 'branch_ids', 'analytics_product_sort'])) }}" class="sa-btn legacy-analytics-reset-btn" title="Đặt lại bộ lọc" aria-label="Đặt lại bộ lọc">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                            <span>Đặt lại</span>
-                        </a>
-                        <button type="submit" class="sa-btn sa-btn-primary legacy-analytics-apply-btn">
-                            <i class="bi bi-check2"></i>
-                            <span>Áp dụng</span>
-                        </button>
-                    </div>
+                <div class="legacy-analytics-field legacy-analytics-field--compare">
+                    <label class="legacy-analytics-label" for="analytics-compare-type">So sánh với</label>
+                    <select id="analytics-compare-type" name="analytics_compare_type" class="legacy-analytics-control" data-analytics-compare-selector>
+                        <option value="none" @selected($analyticsCompareType === 'none')>Không so sánh</option>
+                        <option value="previous" @selected($analyticsCompareType === 'previous')>Kỳ liền trước</option>
+                        <option value="previous_year" @selected($analyticsCompareType === 'previous_year')>Cùng kỳ năm trước</option>
+                        <option value="custom" @selected($analyticsCompareType === 'custom') @disabled($analyticsContext->periodType === 'all')>Tùy chọn</option>
+                    </select>
                 </div>
 
-                <div class="legacy-analytics-period-row legacy-analytics-hidden legacy-analytics-range-row" data-analytics-period-group="range">
+                <div class="legacy-analytics-field legacy-analytics-field--branch">
+                    <label class="legacy-analytics-label">Chi nhánh</label>
+                    @include('admin.super-admin.partials.branch-scope-multi-select', [
+                        'controlId' => 'legacy-analytics-branch-scope',
+                        'inputName' => 'analytics_branch_ids',
+                        'branches' => $branches ?? [],
+                        'selectedIds' => $analyticsContext->normalizedBranchIds(),
+                        'summaryLabel' => $analyticsBranchScopeLabel,
+                        'placeholder' => 'Tìm chi nhánh...',
+                        'showChips' => false,
+                    ])
+                </div>
+
+                <div class="legacy-analytics-period-row legacy-analytics-hidden" data-analytics-period-group="range">
                     <div class="legacy-analytics-range">
                         <div class="legacy-analytics-field">
                             <label class="legacy-analytics-label" for="analytics-start-date">Từ ngày</label>
@@ -1082,7 +1109,46 @@
                         </div>
                     </div>
                 </div>
-        </form>
+
+                <div class="legacy-analytics-actions">
+                    <a href="{{ route('admin.super-admin', request()->except(['analytics_period_type', 'analytics_date', 'analytics_week', 'analytics_month', 'analytics_year', 'analytics_start_date', 'analytics_end_date', 'analytics_compare_type', 'analytics_compare_date', 'analytics_compare_month', 'analytics_compare_year', 'analytics_compare_start_date', 'analytics_compare_end_date', 'analytics_branch_id', 'analytics_branch_ids', 'branch_ids', 'analytics_product_sort'])) }}" class="sa-btn" style="white-space: nowrap;"><i class="bi bi-arrow-counterclockwise"></i> Xóa lọc</a>
+                    <button type="submit" class="sa-btn sa-btn-primary" style="white-space: nowrap;"><i class="bi bi-funnel"></i> Áp dụng</button>
+                </div>
+
+                <div class="legacy-analytics-compare-grid">
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="day">
+                        <label class="legacy-analytics-label" for="analytics-compare-date">Ngày đối chiếu</label>
+                        <input id="analytics-compare-date" type="date" name="analytics_compare_date" value="{{ request('analytics_compare_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="month">
+                        <label class="legacy-analytics-label" for="analytics-compare-month">Tháng đối chiếu</label>
+                        <input id="analytics-compare-month" type="month" name="analytics_compare_month" value="{{ request('analytics_compare_month') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="year">
+                        <label class="legacy-analytics-label" for="analytics-compare-year">Năm đối chiếu</label>
+                        <input id="analytics-compare-year" type="number" name="analytics_compare_year" min="2000" max="{{ now()->addYear()->year }}" value="{{ request('analytics_compare_year') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="week">
+                        <label class="legacy-analytics-label">Khoảng đối chiếu cho tuần</label>
+                        <div class="legacy-analytics-range">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                        </div>
+                    </div>
+                    <div class="legacy-analytics-field legacy-analytics-hidden" data-analytics-compare-group="range">
+                        <label class="legacy-analytics-label">Khoảng ngày đối chiếu</label>
+                        <div class="legacy-analytics-range">
+                            <input type="date" name="analytics_compare_start_date" value="{{ request('analytics_compare_start_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                            <input type="date" name="analytics_compare_end_date" value="{{ request('analytics_compare_end_date') }}" class="legacy-analytics-control" data-analytics-compare-input>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+            <div class="legacy-analytics-summary" aria-live="polite">
+                <span class="legacy-analytics-summary-line">{{ $analyticsSummaryLine }}</span>
+            </div>
+        </section>
 
     @php
         $businessKpis = [
@@ -1943,6 +2009,10 @@ function normalizeLegacyAnalyticsForm(form) {
         });
     </script>
 
+    @include('admin.super-admin.partials.branch-time-comparison')
+
+    </section>
+
     <section class="sa-section sa-business-section" aria-labelledby="business-analytics-title" data-business-analysis-region>
         <div class="sa-section-heading">
             <div>
@@ -1955,12 +2025,16 @@ function normalizeLegacyAnalyticsForm(form) {
         <div class="sa-panel sa-analytics-shell" id="analytics-tabs-shell">
             <div class="sa-analytics-tabs" role="tablist" aria-label="Chuyển vùng phân tích kinh doanh">
                 <button type="button" class="sa-analytics-tab active" data-analytics-tab="branch-ranking" role="tab" aria-selected="true">So sánh chi nhánh</button>
+                <button type="button" class="sa-analytics-tab" data-analytics-tab="branch-product-detail" role="tab" aria-selected="false">Bán chạy theo chi nhánh</button>
                 <button type="button" class="sa-analytics-tab" data-analytics-tab="focus-product-section" role="tab" aria-selected="false">Một món bán tốt ở đâu?</button>
             </div>
 
             <div class="sa-analytics-panels">
                 <div class="sa-analytics-panel" data-analytics-tab-panel="branch-ranking" role="tabpanel">
                     @include('admin.super-admin.partials.branch-ranking')
+                </div>
+                <div class="sa-analytics-panel" data-analytics-tab-panel="branch-product-detail" role="tabpanel" hidden>
+                    @include('admin.super-admin.partials.branch-product-detail')
                 </div>
                 <div class="sa-analytics-panel" data-analytics-tab-panel="focus-product-section" role="tabpanel" hidden>
                     @include('admin.super-admin.partials.product-branch-performance')
@@ -2130,10 +2204,12 @@ function normalizeLegacyAnalyticsForm(form) {
                                 <div class="sa-actions" @if($adminUser->isSuperAdmin()) data-admin-actions-locked="{{ $adminUser->id }}" @endif>
                                     @if($adminUser->isSuperAdmin())
                                         <span class="sa-action-btn sa-action-btn-disabled" aria-disabled="true" title="Không áp dụng cho quản trị cấp cao"><i class="bi bi-eye"></i></span>
-                                    @elseif($adminUser->branch_id)
-                                        <a class="sa-action-btn" href="{{ route('admin.preview-admin', ['branch_id' => $adminUser->branch_id]) }}" title="Vào trang admin của chi nhánh bằng quyền super admin"><i class="bi bi-eye"></i></a>
                                     @else
-                                        <a class="sa-action-btn" href="{{ route('admin.users.show', $adminUser) }}" title="Xem chi tiết"><i class="bi bi-eye"></i></a>
+                                        <a
+                                            class="sa-action-btn"
+                                            href="{{ route('admin.preview-admin', array_filter(['branch_id' => $adminUser->branch_id])) }}"
+                                            title="Vào trang quản lý với tư cách Admin"
+                                        ><i class="bi bi-eye"></i></a>
                                     @endif
                                     <button
                                         class="sa-action-btn {{ $adminUser->isSuperAdmin() ? 'sa-action-btn-disabled' : '' }}"
@@ -2896,6 +2972,9 @@ function resolveAnalyticsTabFromHash(hashValue = '') {
     if (normalizedHash === 'focus-product-section') {
         return 'focus-product-section';
     }
+    if (normalizedHash === 'branch-product-detail') {
+        return 'branch-product-detail';
+    }
     return 'branch-ranking';
 }
 
@@ -2970,6 +3049,7 @@ async function loadSuperAdminAnalyticsRegions(url, options = {}) {
     const shouldUpdateHistory = options.updateHistory !== false;
     const regionSelectors = options.regionSelectors || [
         '[data-branch-ranking-region]',
+        '[data-branch-product-detail-region]',
         '[data-product-branch-performance-region]',
     ];
     const currentRegions = regionSelectors
@@ -3251,7 +3331,7 @@ document.addEventListener('click', function(e) {
 });
 
 window.addEventListener('popstate', function() {
-    if (document.querySelector('[data-branch-ranking-region]') || document.querySelector('[data-branch-time-comparison-region]') || document.querySelector('[data-product-branch-performance-region]')) {
+    if (document.querySelector('[data-branch-ranking-region]') || document.querySelector('[data-branch-product-detail-region]') || document.querySelector('[data-branch-time-comparison-region]') || document.querySelector('[data-product-branch-performance-region]')) {
         loadSuperAdminAnalyticsRegions(window.location.href, { updateHistory: false });
         return;
     }
