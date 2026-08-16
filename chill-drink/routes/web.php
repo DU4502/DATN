@@ -29,6 +29,7 @@ use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
+use App\Http\Controllers\Shipper\ShipController;
 use App\Http\Controllers\Client\QuickOrderController;
 use App\Http\Controllers\Client\VnpayController;
 use App\Http\Controllers\ProfileController;
@@ -77,6 +78,131 @@ Route::prefix('checkout/guest')->name('checkout.guest.')->group(function () {
         ->name('track');
 });
 
+Route::middleware(['auth'])
+    ->prefix('shipper')
+    ->name('shipper.')
+    ->group(function () {
+
+        // ==============================
+        // DASHBOARD
+        // ==============================
+        Route::get('/dashboard', [
+            ShipController::class,
+            'dashboard'
+        ])->name('dashboard');
+
+
+        // ==============================
+        // ĐƠN HÀNG
+        // ==============================
+
+        // Danh sách đơn
+        Route::get('/orders', [
+            ShipController::class,
+            'orders'
+        ])->name('orders');
+
+        // Chi tiết đơn
+        Route::get('/orders/{id}', [
+            ShipController::class,
+            'showOrder'
+        ])->name('orders.show');
+
+        // Nhận đơn
+        Route::post('/orders/{id}/accept', [
+            ShipController::class,
+            'acceptOrder'
+        ])->name('orders.accept');
+
+        // Bắt đầu giao
+        Route::post('/orders/{id}/start', [
+            ShipController::class,
+            'startDelivery'
+        ])->name('orders.start');
+
+        // Hoàn thành
+        Route::post('/orders/{id}/complete', [
+            ShipController::class,
+            'completeOrder'
+        ])->name('orders.complete');
+
+        // Hủy đơn
+        Route::post('/orders/{id}/cancel', [
+            ShipController::class,
+            'cancelOrder'
+        ])->name('orders.cancel');
+
+
+        // ==============================
+        // TRẠNG THÁI SHIPPER
+        // ==============================
+        Route::post('/status', [
+            ShipController::class,
+            'updateStatus'
+        ])->name('status.update');
+
+
+        // ==============================
+        // VỊ TRÍ
+        // ==============================
+        Route::post('/location', [
+            ShipController::class,
+            'updateLocation'
+        ])->name('location.update');
+
+
+        // ==============================
+        // BẢN ĐỒ
+        // ==============================
+        Route::get('/map', function () {
+            return view('shipper.map');
+        })->name('map');
+
+
+        // ==============================
+        // LỊCH SỬ GIAO HÀNG
+        // ==============================
+        Route::get('/history', function () {
+            $shipper = \App\Models\Shipper::where(
+                'user_id',
+                auth()->id()
+            )->firstOrFail();
+
+            $orders = \App\Models\Order::where(
+                'shipper_id',
+                $shipper->id
+            )
+                ->whereIn('status', [
+                    'completed',
+                    'cancelled'
+                ])
+                ->latest()
+                ->paginate(10);
+
+            return view(
+                'shipper.history',
+                compact('orders', 'shipper')
+            );
+        })->name('history');
+
+
+    // ==============================
+    // PROFILE
+    // ==============================
+    // Trang cá nhân
+    Route::get('/profile', [
+        ShipController::class,
+        'profile'
+    ])->name('profile');
+
+    // Cập nhật cá nhân
+    Route::put('/profile', [
+        ShipController::class,
+        'updateProfile'
+    ])->name('profile.update');
+    });
+
+
 Route::post('/register/guest-convert', [GuestConvertController::class, 'store'])
     ->middleware('guest')
     ->name('register.guest-convert');
@@ -105,14 +231,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
-    Route::patch('/group-orders/join/{code}/items/{item}/decrement', [GroupOrderController::class, 'decrementItem'])->name('group-orders.items.decrement');
     Route::delete('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'removeItem'])->name('group-orders.items.destroy');
     Route::get('/group-orders', [GroupOrderController::class, 'index'])->name('group-orders.index');
     Route::get('/group-orders/create', [GroupOrderController::class, 'create'])->name('group-orders.create');
     Route::post('/group-orders', [GroupOrderController::class, 'store'])->name('group-orders.store');
     Route::post('/group-orders/{code}/close', [GroupOrderController::class, 'close'])->name('group-orders.close');
     Route::post('/group-orders/{code}/cancel', [GroupOrderController::class, 'cancel'])->name('group-orders.cancel');
-    Route::post('/group-orders/pending-checkout/resume', [GroupOrderController::class, 'resumePendingCheckout'])->name('group-orders.pending-checkout.resume');
     Route::post('/group-orders/{code}/resume', [GroupOrderController::class, 'resume'])->name('group-orders.resume');
     Route::get('/favorites', [QuickOrderController::class, 'favorites'])->name('favorites.index');
     Route::post('/favorites/{product}', [QuickOrderController::class, 'toggleFavorite'])->name('favorites.toggle');
@@ -145,11 +269,6 @@ Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->
     Route::patch('/{conversation}/close', [AdminChatController::class, 'close'])->name('close');
 });
 
-Route::prefix('admin/order-issues')->name('admin.order-issues.')->middleware(['auth', 'cskh'])->group(function () {
-    Route::get('/', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'index'])->name('index');
-    Route::get('/{issue}/evidence', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'evidence'])->name('evidence');
-    Route::patch('/{issue}', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'update'])->name('update');
-});
 
 /*
 |--------------------------------------------------------------------------
@@ -182,16 +301,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
     Route::post('/orders/{order}/cancel', [ProfileController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{order}/confirm-received', [ProfileController::class, 'confirmReceived'])->name('orders.confirm-received');
-    Route::get('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'create'])->name('orders.issues.create');
-    Route::get('/orders/{order}/support/status', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'status'])->name('orders.issues.status');
-    Route::post('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'store'])->name('orders.issues.store');
-    Route::post('/orders/{order}/support/{issue}/confirm', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'confirmResolution'])->name('orders.issues.confirm');
     Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
     Route::post('/notifications/mark-all-read', [ProfileController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/profile/data-export', [ProfileController::class, 'exportData'])->name('profile.data-export');
     
     // Address Book Management
     Route::get('/profile/addresses', [\App\Http\Controllers\Client\ProfileAddressController::class, 'index'])->name('profile.addresses.index');
@@ -206,10 +320,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
     });
 });
-
-Route::view('/dieu-khoan', 'legal.page', ['page' => 'terms'])->name('legal.terms');
-Route::view('/doi-tra', 'legal.page', ['page' => 'returns'])->name('legal.returns');
-Route::view('/quyen-rieng-tu', 'legal.page', ['page' => 'privacy'])->name('legal.privacy');
 
 /*
 |--------------------------------------------------------------------------

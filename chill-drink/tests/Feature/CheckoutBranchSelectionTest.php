@@ -109,7 +109,6 @@ class CheckoutBranchSelectionTest extends TestCase
             'role_id' => 1,
             'is_active' => true,
             'email_verified_at' => now(),
-            'email_verified_at' => now(),
         ]);
 
         $branch = Branch::create([
@@ -140,7 +139,6 @@ class CheckoutBranchSelectionTest extends TestCase
             'password' => Hash::make('password'),
             'role_id' => 1,
             'is_active' => true,
-            'email_verified_at' => now(),
         ]);
 
         $branch = Branch::create([
@@ -184,7 +182,7 @@ class CheckoutBranchSelectionTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
-                'shipping_address_ui' => '123 Phố Huế, Hà Nội',
+                'shipping_address_ui' => 'Hà Nội',
                 'shipping_area_ui' => 'Hà Nội',
                 'shipping_phone_ui' => '0912345678',
                 'fulfillment_type' => 'delivery',

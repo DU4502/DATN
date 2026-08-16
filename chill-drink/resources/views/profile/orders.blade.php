@@ -29,9 +29,6 @@
         @if(session('success'))
             <div class="alert alert-success rounded-4 border-0 mb-4">{{ session('success') }}</div>
         @endif
-        @if(session('error'))
-            <div class="alert alert-warning rounded-4 border-0 mb-4"><i class="bi bi-info-circle me-1"></i>{{ session('error') }}</div>
-        @endif
 
         @include('profile.partials.my-orders')
     </div>

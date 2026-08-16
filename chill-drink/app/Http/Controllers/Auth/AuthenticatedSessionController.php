@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Shipper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ use Illuminate\View\View;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Hiển thị trang đăng nhập
      */
     public function create(): View
     {
@@ -20,55 +21,184 @@ class AuthenticatedSessionController extends Controller
     }
 
     /**
-     * Handle an incoming authentication request.
+     * Xử lý đăng nhập
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        // Gọi hàm authenticate() từ LoginRequest để đăng nhập
+        // Đăng nhập
         $request->authenticate();
 
+        // Tạo lại session để bảo mật
         $request->session()->regenerate();
 
-        if ($request->user()->isSuperAdmin()) {
+        $user = $request->user();
+
+        /*
+        |--------------------------------------------------------------------------
+        | KIỂM TRA TÀI KHOẢN BỊ KHÓA
+        |--------------------------------------------------------------------------
+        */
+
+        if (! $user->is_active) {
+
+            Auth::guard('web')->logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()
+                ->route('login')
+                ->withErrors([
+                    'email' => 'Tài khoản của bạn đang bị khóa.',
+                ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SHIPPER
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isShipper()) {
+
+            // Tạo hồ sơ Shipper nếu chưa có
+            $shipper = Shipper::firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                ],
+                [
+                    'code' => 'SHIP' . str_pad(
+                        $user->id,
+                        5,
+                        '0',
+                        STR_PAD_LEFT
+                    ),
+
+                    'phone' => $user->phone ?? '',
+
+                    'vehicle_type' => 'bike',
+
+                    'status' => 'online',
+                ]
+            );
+
+            // Cập nhật thông tin đăng nhập
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
+            // Xóa URL trước đó
+            $request->session()->forget('url.intended');
+
+            // Chuyển sang Dashboard Shipper
+            return redirect()->route('shipper.dashboard');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | SUPER ADMIN
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isSuperAdmin()) {
+
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
             $request->session()->forget('url.intended');
 
             return redirect()->route('admin.super-admin');
         }
 
-        if ($request->user()->isAdmin()) {
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isAdmin()) {
+
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
             $request->session()->forget('url.intended');
 
             return redirect()->route('admin.dashboard');
         }
 
-        if ($request->user()->isCskh()) {
+        /*
+        |--------------------------------------------------------------------------
+        | CSKH
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isCskh()) {
+
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
             $request->session()->forget('url.intended');
 
             return redirect()->route('admin.chat.index');
         }
 
-        if ($request->user()->isStaffOnly()) {
+        /*
+        |--------------------------------------------------------------------------
+        | STAFF / SHIPPER STAFF
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->isStaffOnly()) {
+
+            $user->forceFill([
+                'last_login_at' => now(),
+                'last_login_ip' => $request->ip(),
+            ])->save();
+
             $request->session()->forget('url.intended');
 
             return redirect()->route('staff.dashboard');
         }
 
-        if (str_contains(session('url.intended', ''), '/chat')) {
+        /*
+        |--------------------------------------------------------------------------
+        | CUSTOMER
+        |--------------------------------------------------------------------------
+        */
+
+        $user->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ])->save();
+
+        // Nếu đang truy cập chat thì không redirect lại chat
+        if (str_contains(
+            session('url.intended', ''),
+            '/chat'
+        )) {
             $request->session()->forget('url.intended');
         }
 
-        return redirect()->intended(route('home', absolute: false));
+        return redirect()->intended(
+            route('home', absolute: false)
+        );
     }
 
     /**
-     * Destroy an authenticated session.
+     * Đăng xuất
      */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
         return redirect('/');

@@ -10,11 +10,6 @@ class GroupOrderController extends Controller
 {
     public function index(Request $request)
     {
-        if (! auth()->user()?->isSuperAdmin()) {
-            return redirect()->route('admin.dashboard')
-                ->with('error', 'Chỉ Super Admin mới có quyền giám sát đơn nhóm.');
-        }
-
         GroupOrder::closeExpiredOrders();
 
         $filters = [
@@ -53,12 +48,14 @@ class GroupOrderController extends Controller
 
     public function show(GroupOrder $groupOrder)
     {
-        if (! auth()->user()?->isSuperAdmin()) {
-            return redirect()->route('admin.dashboard')
-                ->with('error', 'Chỉ Super Admin mới có quyền giám sát đơn nhóm.');
-        }
-
         $groupOrder->closeIfExpired();
+        
+        $user = auth()->user();
+        if (!$user->isSuperAdmin()) {
+            if (! $user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
+                abort(403, 'Bạn không có quyền xem đơn nhóm này.');
+            }
+        }
 
         // Super Admin chỉ giám sát: xem được lịch sử chat nhưng không có
         // endpoint gửi tin nhắn trong khu vực quản trị.

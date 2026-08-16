@@ -45,6 +45,7 @@ class Order extends Model
         'status',
         'cancellation_reason',
         'delivered_at',
+        'shipper_id',
         'note',
         'scheduled_at',
         'status_changed_at',
@@ -105,11 +106,6 @@ class Order extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
-    }
-
-    public function issueReports()
-    {
-        return $this->hasMany(OrderIssueReport::class);
     }
 
     /**

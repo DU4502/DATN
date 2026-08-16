@@ -36,6 +36,8 @@ class SuperAdminDashboardTest extends TestCase
             ->assertSee('Một món bán tốt ở đâu?', false)
             ->assertSee('data-product-branch-performance-region', false)
             ->assertSee('So sánh chi nhánh', false)
+            ->assertSee('Theo số lượng', false)
+            ->assertSee('Theo doanh thu', false)
             ->assertSee('search-admin@chilldrink.com')
             ->assertDontSee('Không có quản trị viên phù hợp');
     }

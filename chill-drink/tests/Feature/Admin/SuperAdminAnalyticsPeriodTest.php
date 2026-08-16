@@ -36,9 +36,10 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
 
         $response->assertOk()
             ->assertSee('Bộ lọc dữ liệu kinh doanh', false)
+            ->assertSee('Kỳ: Tháng 07/2026', false)
             ->assertSee('Chi nhánh: Chi nhánh A', false)
             ->assertSee('Tháng này · Không so sánh', false)
-            ->assertSee('120.000đ', false)
+            ->assertSee('120.000đ trong tháng 07/2026', false)
             ->assertSee('name="analytics_branch_ids[]"', false)
             ->assertDontSee('name="branch_ids[]"', false);
     }
