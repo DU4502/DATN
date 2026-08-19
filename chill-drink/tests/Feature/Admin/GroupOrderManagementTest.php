@@ -85,4 +85,24 @@ class GroupOrderManagementTest extends TestCase
             ->assertOk()
             ->assertDontSee('GROUP-B-ROOM');
     }
+
+    public function test_super_admin_is_redirected_to_group_order_workspace_detail_with_parameter(): void
+    {
+        $superAdmin = User::factory()->create([
+            'email' => User::SUPER_ADMIN_EMAIL,
+            'role_id' => 2,
+        ]);
+        $owner = User::factory()->create();
+        $group = GroupOrder::create([
+            'owner_id' => $owner->id,
+            'name' => 'Phòng Super Admin kiểm tra',
+            'code' => 'SUPER123',
+            'status' => 'open',
+            'closes_at' => now()->addMinutes(30),
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->get(route('admin.group-orders.show', $group))
+            ->assertRedirect(route('admin.super-admin.manage.group-orders.show', $group));
+    }
 }

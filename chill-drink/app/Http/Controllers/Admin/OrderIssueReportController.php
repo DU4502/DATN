@@ -92,8 +92,12 @@ class OrderIssueReportController extends Controller
             });
             $issue->refresh();
         }
-        if ($data['resolution_type'] === 'voucher' && $issue->voucher_coupon_id) {
-            $data['resolution_value'] = $issue->resolution_value;
+        if ($data['resolution_type'] === 'voucher' && $issue->voucher_coupon_id && blank($data['resolution_value'] ?? null)) {
+            $voucher = Voucher::find($issue->voucher_coupon_id);
+            $data['resolution_value'] = $issue->resolution_value
+                ?: ($voucher
+                    ? 'Mã '.$voucher->code.' giảm '.number_format((int) $voucher->value, 0, ',', '.').'đ, dùng đến '.$voucher->expires_at->format('d/m/Y')
+                    : null);
         }
 
         $timestamps = match ($data['status']) {

@@ -95,7 +95,20 @@ class KeepSuperAdminContext
             return $next($request);
         }
 
-        $parameters = array_merge($route->parameters(), $request->query());
+        // Các route cũ và route workspace có thể dùng tên tham số khác nhau
+        // (ví dụ `group_order` và `groupOrder`). Ánh xạ theo vị trí tham số
+        // của route đích để Laravel luôn nhận đúng khóa khi tạo URL.
+        $target = app('router')->getRoutes()->getByName($targetRoute);
+        $sourceValues = array_values($route->parameters());
+        $parameters = [];
+
+        foreach ($target?->parameterNames() ?? [] as $index => $parameterName) {
+            if (array_key_exists($index, $sourceValues)) {
+                $parameters[$parameterName] = $sourceValues[$index];
+            }
+        }
+
+        $parameters = array_merge($parameters, $request->query());
 
         return redirect()->to(route($targetRoute, $parameters));
     }

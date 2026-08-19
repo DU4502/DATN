@@ -220,6 +220,38 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame(2, $item->fresh()->quantity);
     }
 
+    public function test_group_room_state_fingerprint_changes_when_items_change(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $member = GroupOrderMember::create([
+            'group_order_id' => $group->id,
+            'user_id' => $owner->id,
+            'name' => 'Chủ nhóm',
+            'member_token' => 'state-owner',
+        ]);
+        $product = Product::factory()->create(['status' => true, 'stock' => 5]);
+
+        $before = $this->actingAs($owner)
+            ->getJson(route('group-orders.state', $group->code))
+            ->assertOk()
+            ->json('fingerprint');
+
+        GroupOrderItem::create([
+            'group_order_id' => $group->id,
+            'group_order_member_id' => $member->id,
+            'product_id' => $product->id,
+            'size' => 'M',
+            'quantity' => 1,
+            'unit_price' => 45000,
+        ]);
+
+        $after = $this->getJson(route('group-orders.state', $group->code))
+            ->assertOk()
+            ->json('fingerprint');
+
+        $this->assertNotSame($before, $after);
+    }
+
     public function test_group_can_only_be_closed_once_and_price_is_refreshed(): void
     {
         [$group, $owner] = $this->openGroup();
@@ -281,6 +313,11 @@ class QuickOrderFeaturesTest extends TestCase
         $group->refresh();
         $this->assertNotNull($group->order_id);
         $this->assertSame('ordered', $group->status);
+        $this->assertSame('awaiting_payment', $group->order->status);
+        $this->actingAs($owner)
+            ->get(route('orders.index'))
+            ->assertOk()
+            ->assertDontSee($group->order->displayCode());
         $this->assertSame(5, (int) $product->fresh()->stock);
         $this->assertTrue($group->order->scheduled_at->equalTo($scheduledAt));
         $this->assertSame($personalCart, session('cart'));

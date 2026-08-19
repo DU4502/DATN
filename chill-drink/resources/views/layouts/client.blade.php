@@ -374,6 +374,7 @@
             white-space: nowrap;
             transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
         }
+        button.active-group-return { font-family: inherit; cursor: pointer; }
 
         .active-group-return:hover { color: var(--c-primary-dark); background: #d9f5ee; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(13,147,115,.14); }
         .active-group-return__time { min-width: 3.15rem; font-variant-numeric: tabular-nums; }
@@ -1261,10 +1262,31 @@
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     @if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*'))
-                        <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
-                            <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                            <span>Tiếp tục thanh toán</span>
-                        </a>
+                        @php
+                            $pendingPaymentExpiresAt = ($pendingCheckoutGroup->order?->created_at ?? $pendingCheckoutGroup->locked_at)?->copy()->addMinutes(15);
+                        @endphp
+                        @if($pendingCheckoutGroup->order && $pendingCheckoutGroup->order->payment_method === 'vnpay' && $pendingCheckoutGroup->order->payment_status !== 'paid')
+                            <a href="{{ route('vnpay.payment', $pendingCheckoutGroup->order) }}" class="active-group-return is-checkout" data-pending-payment-link data-expires-at="{{ $pendingPaymentExpiresAt?->toIso8601String() }}" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                                <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                                <span>Tiếp tục thanh toán</span>
+                                <span class="active-group-return__time" data-pending-payment-countdown>--:--</span>
+                            </a>
+                        @elseif((int) session('checkout_group_order_id') === (int) $pendingCheckoutGroup->id)
+                            <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" data-pending-payment-link data-expires-at="{{ $pendingPaymentExpiresAt?->toIso8601String() }}" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                                <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                                <span>Tiếp tục thanh toán</span>
+                                <span class="active-group-return__time" data-pending-payment-countdown>--:--</span>
+                            </a>
+                        @else
+                            <form method="POST" action="{{ route('group-orders.pending-checkout.resume') }}" class="m-0">
+                                @csrf
+                                <button type="submit" class="active-group-return is-checkout" data-pending-payment-link data-expires-at="{{ $pendingPaymentExpiresAt?->toIso8601String() }}" title="Khôi phục và tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                                    <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                                    <span>Tiếp tục thanh toán</span>
+                                    <span class="active-group-return__time" data-pending-payment-countdown>--:--</span>
+                                </button>
+                            </form>
+                        @endif
                     @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
                         <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
                             <i class="bi bi-people-fill" aria-hidden="true"></i>
@@ -1411,12 +1433,6 @@
     </header>
 
     <main style="min-height: 100vh;">
-        @if(session('error'))
-        <div class="container mt-4">
-            <div class="alert alert-danger mb-0" style="border-radius: var(--radius-md);">{{ session('error') }}</div>
-        </div>
-        @endif
-
         @yield('content')
     </main>
 
@@ -1875,7 +1891,7 @@
             const alerts = notificationContainer.querySelectorAll('.alert');
             
             alerts.forEach(function(alert) {
-                // Auto-dismiss after 5 seconds
+                // Giữ đủ lâu để người dùng đọc và thao tác nếu thông báo có hướng dẫn.
                 const dismissTimer = setTimeout(function() {
                     // Add fade-out animation
                     alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
@@ -1893,7 +1909,7 @@
                             }
                         }
                     }, 500);
-                }, 5000);
+                }, 15000);
 
                 // Clear timer if manually closed
                 alert.addEventListener('closed.bs.alert', function() {
@@ -1903,9 +1919,42 @@
         });
     </script>
     <script>
-        /* Automatic branch switching is intentionally disabled. */
-        /*
         document.addEventListener('DOMContentLoaded', function () {
+            const paymentLink = document.querySelector('[data-pending-payment-link]');
+            const paymentTimer = paymentLink?.querySelector('[data-pending-payment-countdown]');
+
+            if (paymentLink && paymentTimer) {
+                const expiresAt = new Date(paymentLink.dataset.expiresAt).getTime();
+                const paymentWrapper = paymentLink.tagName === 'BUTTON' ? paymentLink.closest('form') : paymentLink;
+                let paymentTimerId = null;
+
+                const stopPaymentTimer = function () {
+                    if (paymentTimerId === null) return;
+                    window.clearInterval(paymentTimerId);
+                    paymentTimerId = null;
+                };
+                const tickPayment = function () {
+                    const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+                    paymentTimer.textContent = String(Math.floor(seconds / 60)).padStart(2, '0') + ':' + String(seconds % 60).padStart(2, '0');
+                    if (seconds === 0) {
+                        paymentWrapper?.remove();
+                        stopPaymentTimer();
+                    }
+                };
+                const startPaymentTimer = function () {
+                    if (document.hidden || paymentTimerId !== null || !paymentWrapper?.isConnected) return;
+                    tickPayment();
+                    paymentTimerId = window.setInterval(tickPayment, 1000);
+                };
+
+                document.addEventListener('visibilitychange', function () {
+                    if (document.hidden) stopPaymentTimer();
+                    else startPaymentTimer();
+                });
+                window.addEventListener('pagehide', stopPaymentTimer, { once: true });
+                startPaymentTimer();
+            }
+
             const activeGroupTimer = document.querySelector('[data-active-group-countdown]');
             if (!activeGroupTimer) return;
 
@@ -1941,7 +1990,6 @@
             window.addEventListener('pagehide', stopTimer, { once: true });
             startTimer();
         });
-        */
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -1951,7 +1999,7 @@
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('{{ route('select-nearest-branch') }}', {
+                fetch('{{ route('select-nearest-branch', [], false) }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1969,10 +2017,11 @@
                 .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
             }
 
-            // Kiểm tra và tự động gửi tọa độ nếu đã được cấp quyền trước đó
+            // Kiểm tra trạng thái quyền vị trí
             if (navigator.permissions) {
                 navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
                     if (result.state === 'granted') {
+                        // Đã cấp quyền trước đó → lấy ngay, không hỏi nữa
                         navigator.geolocation.getCurrentPosition(
                             pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
                             err => console.warn("Lỗi GPS:", err),
@@ -1983,7 +2032,15 @@
                         var banner = document.getElementById('location-permission-banner');
                         if (banner) banner.style.display = 'flex';
                     }
+                    // 'denied' → không làm gì
                 });
+            } else {
+                // Browser không hỗ trợ Permissions API → thử lấy thẳng
+                navigator.geolocation.getCurrentPosition(
+                    pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
+                    err => console.warn("Lỗi GPS:", err),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+                );
             }
 
 
@@ -2012,10 +2069,9 @@
             @endauth
         });
     </script>
-    {{-- Disabled automatic branch switching on page load.
-         Branch selection now only happens when the user explicitly chooses it. --}}
     @include('partials.realtime')
     @include('partials.client-notifications')
+    @stack('scripts')
 </body>
 
 </html>
