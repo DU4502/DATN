@@ -175,6 +175,56 @@
         const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
         return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     };
+    const normalizeBearing = value => ((Number(value) % 360) + 360) % 360;
+    const bearingDelta = (from, to) => {
+        let diff = normalizeBearing(to) - normalizeBearing(from);
+        while (diff > 180) diff -= 360;
+        while (diff < -180) diff += 360;
+        return diff;
+    };
+    const smoothBearing = (current, target, factor = .34) => normalizeBearing(
+        normalizeBearing(current) + (bearingDelta(current, target) * factor)
+    );
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const snapPointToGeometry = (point, geometry, maxDistanceMeters = 18) => {
+        if (!validPoint(point) || !Array.isArray(geometry) || geometry.length < 2 || !window.L) return null;
+        const project = candidate => L.CRS.EPSG3857.project(L.latLng(candidate[0], candidate[1]));
+        const unproject = candidate => {
+            const latLng = L.CRS.EPSG3857.unproject(candidate);
+            return [latLng.lat, latLng.lng];
+        };
+
+        const source = project(point);
+        let best = null;
+
+        for (let index = 0; index < geometry.length - 1; index += 1) {
+            const a = geometry[index];
+            const b = geometry[index + 1];
+            if (!validPoint(a) || !validPoint(b)) continue;
+            const pa = project(a);
+            const pb = project(b);
+            const dx = pb.x - pa.x;
+            const dy = pb.y - pa.y;
+            const lengthSquared = (dx * dx) + (dy * dy);
+            if (!lengthSquared) continue;
+
+            const t = clamp((((source.x - pa.x) * dx) + ((source.y - pa.y) * dy)) / lengthSquared, 0, 1);
+            const snapped = {
+                x: pa.x + (dx * t),
+                y: pa.y + (dy * t),
+            };
+            const distance = Math.hypot(source.x - snapped.x, source.y - snapped.y);
+
+            if (!best || distance < best.distance) {
+                best = {
+                    distance,
+                    point: unproject(snapped),
+                };
+            }
+        }
+
+        return best && best.distance <= maxDistanceMeters ? best : null;
+    };
     const nextAheadPoint = (current, geometry, minMeters = 45) => {
         if (!validPoint(current) || !Array.isArray(geometry)) return null;
         let nearestIndex = 0;
@@ -259,8 +309,10 @@
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
-                keepBuffer: 4,
+                keepBuffer: 6,
+                detectRetina: true,
                 updateWhenIdle: false,
+                updateWhenZooming: false,
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
 
@@ -301,6 +353,10 @@
             let lastFollowAt = 0;
             let nextPollTimeout = null;
             let lastRoutePollAt = 0;
+            let lastRouteRequestedFrom = null;
+            let lastRenderedPoint = null;
+            let lastRenderedUpdatedAt = null;
+            let routeRefreshAfterMs = 12000;
 
             const setPlaceholder = (show, title = '', message = '') => {
                 placeholderEl?.classList.toggle('is-hidden', !show);
@@ -313,8 +369,9 @@
             const clearRoute = () => { remove(routeShadow); remove(routeLine); routeShadow = null; routeLine = null; };
             const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
 
-            const setBearingVisual = bearing => {
-                currentBearing = Number.isFinite(bearing) ? bearing : 0;
+            const setBearingVisual = (bearing, immediate = false) => {
+                const target = Number.isFinite(bearing) ? normalizeBearing(bearing) : 0;
+                currentBearing = immediate ? target : smoothBearing(currentBearing, target, .38);
                 root.style.setProperty('--delivery-bearing', `${currentBearing.toFixed(2)}deg`);
             };
 
@@ -375,7 +432,7 @@
                 if (pane) {
                     pane.style.transform = String(pane.style.transform || '').replace(/\srotate\([^)]*\)/g, '').trim();
                 }
-                setBearingVisual(0);
+                setBearingVisual(0, true);
             };
 
             mapEl.addEventListener('wheel', disableHeadingForManualUse, {capture:true, passive:true});
@@ -433,22 +490,43 @@
             const placeShipper = (point, data, smooth = true) => {
                 if (!validPoint(point)) return;
                 clearPrep();
+                const updatedAt = parseTime(data?.current?.updated_at);
                 if (!shipperMarker) {
                     shipperMarker = L.marker(point, {icon: shipperIcon, zIndexOffset: 1200}).addTo(map)
                         .bindPopup(data?.shipper?.name || 'Tài xế');
-                } else if (smooth) animateMarkerTo(shipperMarker, point, 1000);
-                else shipperMarker.setLatLng(point);
+                } else {
+                    const currentLatLng = shipperMarker.getLatLng();
+                    const from = [currentLatLng.lat, currentLatLng.lng];
+                    const jumpDistance = haversine(from, point);
+                    let duration = 0;
+
+                    if (smooth && Number.isFinite(jumpDistance) && jumpDistance >= 2 && jumpDistance <= 220) {
+                        const elapsedMs = updatedAt && lastRenderedUpdatedAt
+                            ? Math.max(0, updatedAt.getTime() - lastRenderedUpdatedAt.getTime())
+                            : 1000;
+                        duration = clamp(elapsedMs || 1000, 700, 1600);
+                    }
+
+                    if (duration > 0) animateMarkerTo(shipperMarker, point, duration);
+                    else shipperMarker.setLatLng(point);
+                }
+
+                lastRenderedPoint = point;
+                if (updatedAt) lastRenderedUpdatedAt = updatedAt;
             };
 
-            const updateHeadingAndFollow = (current, geometry, shipperMode) => {
+            const updateHeadingAndFollow = (current, geometry, shipperMode, data = null) => {
                 if (!shipperMode || !validPoint(current)) {
                     headingMode = false;
-                    setBearingVisual(0);
+                    setBearingVisual(0, true);
                     applyHeadingMap();
                     return;
                 }
                 const ahead = nextAheadPoint(current, geometry, 45) || geometry?.[geometry.length - 1];
-                const bearing = bearingBetween(current, ahead);
+                const reportedBearing = Number(data?.current?.heading);
+                const bearing = Number.isFinite(reportedBearing)
+                    ? reportedBearing
+                    : bearingBetween(current, ahead);
                 setBearingVisual(bearing);
 
                 if (following) {
@@ -464,7 +542,7 @@
             const fitPreview = (a, b) => {
                 if (!validPoint(a) || !validPoint(b)) return;
                 headingMode = false;
-                setBearingVisual(0);
+                setBearingVisual(0, true);
                 applyHeadingMap();
                 map.fitBounds(L.latLngBounds([a,b]), {padding:[55,55], maxZoom:16, animate:false});
             };
@@ -473,7 +551,7 @@
                 lastData = data;
                 const branch = toPoint(data.branch);
                 const customer = toPoint(data.customer);
-                const current = toPoint(data.current) || branch;
+                const currentRaw = toPoint(data.current) || branch;
                 const shipperMode = typeof data.mode === 'string' && data.mode.startsWith('shipper');
                 const apiGeometry = Array.isArray(data.route?.geometry)
                     ? data.route.geometry.map(toPoint).filter(validPoint)
@@ -483,19 +561,31 @@
                     lastGeometry = apiGeometry;
                     drawRoute(lastGeometry);
                 } else if (!lastGeometry || lastMode !== data.mode) {
-                    lastGeometry = validPoint(current) && validPoint(customer) ? [current, customer] : null;
+                    lastGeometry = validPoint(currentRaw) && validPoint(customer) ? [currentRaw, customer] : null;
                     if (lastGeometry) drawRoute(lastGeometry);
                 }
                 lastMode = data.mode;
+                routeRefreshAfterMs = Number.isFinite(Number(data.route_refresh_after_ms))
+                    ? Number(data.route_refresh_after_ms)
+                    : 12000;
+
+                let current = currentRaw;
+                if (shipperMode && validPoint(currentRaw) && Array.isArray(lastGeometry) && lastGeometry.length >= 2) {
+                    const snapThreshold = data?.current?.filtered ? 20 : 14;
+                    const snapped = snapPointToGeometry(currentRaw, lastGeometry, snapThreshold);
+                    if (snapped?.point) current = snapped.point;
+                }
 
                 if (modeEl) {
                     modeEl.textContent = shipperMode
-                        ? (data.mode === 'shipper_live' ? 'GPS tài xế trực tiếp' : 'Tài xế đã nhận đơn')
+                        ? (data.mode === 'shipper_live'
+                            ? 'GPS tài xế trực tiếp'
+                            : (data.mode === 'shipper_delayed' ? 'GPS cập nhật chậm' : 'Tài xế đã nhận đơn'))
                         : 'Xem trước quán → nhà';
                 }
                 if (stageEl) stageEl.textContent = data.stage || data.timeline_label || data.status_label || 'Theo dõi đơn hàng';
                 if (updatedEl) {
-                    const fresh = data.mode === 'shipper_live' && data.current?.updated_at ? ` • ${freshnessText(data.current.updated_at)}` : '';
+                    const fresh = shipperMode && data.current?.updated_at ? ` • ${freshnessText(data.current.updated_at)}` : '';
                     updatedEl.textContent = `${data.message || 'Đang cập nhật hành trình.'}${fresh}`;
                 }
                 if (distanceEl && Number.isFinite(Number(data.distance_m))) distanceEl.textContent = distanceText(data.distance_m);
@@ -522,13 +612,14 @@
                     refreshMapSize();
                 }
 
-                updateHeadingAndFollow(current, lastGeometry, shipperMode);
+                updateHeadingAndFollow(current, lastGeometry, shipperMode, data);
 
                 root.dispatchEvent(new CustomEvent('delivery:tracking-updated', {detail:data}));
 
                 if (data.status === 'delivered' || data.status === 'completed') {
                     stopped = true;
                     if (timer) clearInterval(timer);
+                    if (nextPollTimeout) clearTimeout(nextPollTimeout);
                     headingMode = false;
                     following = false;
                     applyHeadingMap();
@@ -549,10 +640,16 @@
                 try {
                     const url = new URL(liveUrl, window.location.origin);
                     const now = Date.now();
-                    const needsRoute = forceRoute || pollCount === 1 || now - lastRoutePollAt >= 7000;
+                    const movedSinceLastRoute = validPoint(lastRenderedPoint) && validPoint(lastRouteRequestedFrom)
+                        ? haversine(lastRenderedPoint, lastRouteRequestedFrom)
+                        : Infinity;
+                    const needsRoute = forceRoute
+                        || pollCount === 1
+                        || !lastGeometry
+                        || now - lastRoutePollAt >= routeRefreshAfterMs
+                        || movedSinceLastRoute >= 32;
                     if (needsRoute) {
                         url.searchParams.set('route', '1');
-                        lastRoutePollAt = now;
                     }
                     const response = await fetch(url, {headers:{'Accept':'application/json'}, cache:'no-store'});
                     const data = await response.json().catch(() => null);
@@ -572,6 +669,11 @@
                         setTimeout(() => poll(true), 150);
                     }
                     renderData(data, pollCount === 1);
+                    if (needsRoute) {
+                        lastRoutePollAt = Date.now();
+                        const routedFrom = toPoint(data.current);
+                        if (validPoint(routedFrom)) lastRouteRequestedFrom = routedFrom;
+                    }
                 } catch (error) {
                     console.error('[ChillDrink Tracking] poll failed', error);
                     setPlaceholder(true, 'Không tải được hành trình', error.message || 'Có lỗi khi tải dữ liệu theo dõi.');
@@ -585,7 +687,8 @@
             const schedulePoll = () => {
                 if (stopped) return;
                 const liveMode = lastData && typeof lastData.mode === 'string' && lastData.mode.startsWith('shipper');
-                const delay = document.hidden ? 6000 : (liveMode ? 1500 : 4000);
+                const delayedMode = lastData?.mode === 'shipper_delayed';
+                const delay = document.hidden ? 6000 : (liveMode ? (delayedMode ? 2200 : 1600) : 4000);
                 if (nextPollTimeout) clearTimeout(nextPollTimeout);
                 nextPollTimeout = setTimeout(() => poll(false), delay);
             };

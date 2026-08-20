@@ -30,6 +30,11 @@ class DeliveryTrackingController extends Controller
         OrderStatus::COMPLETED,
     ];
 
+    private const LIVE_GPS_STALE_SECONDS = 45;
+    private const TRACKING_MAX_SPEED_MPS = 24.0;
+    private const TRACKING_MIN_ACCEPTED_JUMP_M = 40.0;
+    private const TRACKING_MAX_ACCEPTED_JUMP_M = 260.0;
+
     public function show(Request $request, Order $order): View
     {
         abort_unless($request->user() && (int) $order->user_id === (int) $request->user()->id, 403);
@@ -108,23 +113,25 @@ class DeliveryTrackingController extends Controller
             : null;
         $bundleNotice = app(ShipperBundleService::class)->customerNotice($order);
 
-        $latest = $shipper ? $this->latestTrackingPoint($order, $shipper) : null;
+        $tracking = $shipper ? $this->trackingSnapshot($order, $shipper) : null;
         $arrivedCustomer = $shipper
             && in_array($status, [OrderStatus::SHIPPER_PICKED_UP, OrderStatus::DELIVERING], true)
             && $this->hasArrivalEvent($order, $shipper, 'arrived_customer');
 
         // Chỉ dùng GPS đã ghi cho đúng shipment/order hiện tại.
         // Không fallback sang current_latitude/current_longitude toàn cục của shipper vì có thể là tọa độ cũ của chuyến trước.
-        $liveLat = $latest['latitude'] ?? null;
-        $liveLng = $latest['longitude'] ?? null;
-        $updatedAt = $latest['recorded_at'] ?? null;
+        $liveLat = $tracking['latitude'] ?? null;
+        $liveLng = $tracking['longitude'] ?? null;
+        $updatedAt = $tracking['recorded_at'] ?? null;
 
         $hasLiveGps = is_numeric($liveLat) && is_numeric($liveLng);
         $hasAssignedShipper = $shipper !== null;
         $shipperAccepted = $shipper ? $this->hasShipperAccepted($order, $shipper, $status) : false;
+        $gpsFresh = ($tracking['stale_seconds'] ?? PHP_INT_MAX) <= self::LIVE_GPS_STALE_SECONDS;
         $trackingMode = match (true) {
             in_array($status, [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true) => $hasLiveGps ? 'shipper_finished' : ($shipperAccepted ? 'shipper_assigned' : 'preparing'),
-            $hasLiveGps && $shipperAccepted => 'shipper_live',
+            $hasLiveGps && $shipperAccepted && $gpsFresh => 'shipper_live',
+            $hasLiveGps && $shipperAccepted => 'shipper_delayed',
             $shipperAccepted => 'shipper_assigned',
             default => 'preparing',
         };
@@ -164,6 +171,12 @@ class DeliveryTrackingController extends Controller
                 'longitude' => (float) $liveLng,
                 'updated_at' => $updatedAt,
                 'type' => 'shipper',
+                'heading' => $tracking['heading'] ?? null,
+                'filtered' => (bool) ($tracking['filtered'] ?? false),
+                'samples' => (int) ($tracking['samples'] ?? 1),
+                'stale_seconds' => isset($tracking['stale_seconds']) ? (int) $tracking['stale_seconds'] : null,
+                'raw_latitude' => isset($tracking['raw_latitude']) ? (float) $tracking['raw_latitude'] : null,
+                'raw_longitude' => isset($tracking['raw_longitude']) ? (float) $tracking['raw_longitude'] : null,
             ]
             : [
                 'latitude' => (float) $branch['latitude'],
@@ -172,8 +185,8 @@ class DeliveryTrackingController extends Controller
                 'type' => 'branch',
             ];
 
-        $routeOriginLat = (float) $current['latitude'];
-        $routeOriginLng = (float) $current['longitude'];
+        $routeOriginLat = $hasLiveGps ? round((float) $current['latitude'], 4) : (float) $current['latitude'];
+        $routeOriginLng = $hasLiveGps ? round((float) $current['longitude'], 4) : (float) $current['longitude'];
         $routeDestination = $customer;
         $isPrePickup = in_array($status, [OrderStatus::CONFIRMED, OrderStatus::PREPARING, OrderStatus::READY_FOR_DELIVERY], true);
 
@@ -234,6 +247,10 @@ class DeliveryTrackingController extends Controller
             default => 'Quán đang chuẩn bị đơn. Bạn vẫn có thể xem trước quãng đường từ quán tới nhà.',
         };
 
+        if ($hasLiveGps && $shipperAccepted && ! $gpsFresh) {
+            $message = 'GPS tài xế đang cập nhật chậm. Bản đồ giữ vị trí ổn định gần nhất của chính chuyến này để tránh nhảy sai.';
+        }
+
         if ($bundleNotice && ! in_array($status, [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true)) {
             $message .= ' '.$bundleNotice['message'];
         }
@@ -262,33 +279,184 @@ class DeliveryTrackingController extends Controller
             'distance_m' => $distanceMeters,
             'duration_s' => $durationSeconds,
             'route' => $route,
+            'route_refresh_after_ms' => match ($trackingMode) {
+                'shipper_live' => 12000,
+                'shipper_delayed' => 18000,
+                default => 25000,
+            },
         ]);
     }
 
-    private function latestTrackingPoint(Order $order, Shipper $shipper): ?array
+    private function trackingSnapshot(Order $order, Shipper $shipper): ?array
     {
         if (! Schema::hasTable('shipments') || ! Schema::hasTable('shipment_tracking')) {
             return null;
         }
 
-        $row = DB::table('shipment_tracking as tracking')
+        $rows = DB::table('shipment_tracking as tracking')
             ->join('shipments', 'shipments.id', '=', 'tracking.shipment_id')
             ->where('shipments.order_id', $order->id)
             ->where('shipments.shipper_id', $shipper->id)
             ->orderByDesc('tracking.recorded_at')
             ->orderByDesc('tracking.id')
-            ->select(['tracking.latitude', 'tracking.longitude', 'tracking.recorded_at'])
-            ->first();
+            ->limit(8)
+            ->get(['tracking.latitude', 'tracking.longitude', 'tracking.recorded_at']);
 
-        if (! $row) {
+        if ($rows->isEmpty()) {
             return null;
         }
 
+        $points = $rows
+            ->map(function ($row) {
+                $lat = is_numeric($row->latitude ?? null) ? (float) $row->latitude : null;
+                $lng = is_numeric($row->longitude ?? null) ? (float) $row->longitude : null;
+                $at = $row->recorded_at ? Carbon::parse($row->recorded_at) : null;
+
+                if ($lat === null || $lng === null || ! $at) {
+                    return null;
+                }
+
+                return [
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                    'recorded_at' => $at,
+                ];
+            })
+            ->filter()
+            ->sortBy(fn (array $point) => $point['recorded_at']->getTimestamp())
+            ->values();
+
+        if ($points->isEmpty()) {
+            return null;
+        }
+
+        $latest = $points->last();
+        $filteredPoints = $this->filterTrackingNoise($points);
+        $anchor = $filteredPoints->last() ?: $latest;
+        $smoothed = $this->smoothedTrackingPoint($filteredPoints);
+
         return [
-            'latitude' => (float) $row->latitude,
-            'longitude' => (float) $row->longitude,
-            'recorded_at' => $row->recorded_at ? Carbon::parse($row->recorded_at)->toIso8601String() : null,
+            'latitude' => (float) ($smoothed['latitude'] ?? $anchor['latitude']),
+            'longitude' => (float) ($smoothed['longitude'] ?? $anchor['longitude']),
+            'raw_latitude' => (float) $latest['latitude'],
+            'raw_longitude' => (float) $latest['longitude'],
+            'recorded_at' => $anchor['recorded_at']->toIso8601String(),
+            'heading' => $this->trackingHeading($filteredPoints),
+            'filtered' => $filteredPoints->count() !== $points->count(),
+            'samples' => $filteredPoints->count(),
+            'stale_seconds' => max(0, $anchor['recorded_at']->diffInSeconds(now())),
         ];
+    }
+
+    private function filterTrackingNoise($points)
+    {
+        if ($points->count() <= 2) {
+            return $points->values();
+        }
+
+        $accepted = collect([$points->first()]);
+
+        foreach ($points->slice(1) as $point) {
+            $previous = $accepted->last();
+            $elapsedSeconds = max(1, $previous['recorded_at']->diffInSeconds($point['recorded_at']));
+            $distance = $this->distanceMeters(
+                (float) $previous['latitude'],
+                (float) $previous['longitude'],
+                (float) $point['latitude'],
+                (float) $point['longitude']
+            );
+
+            $allowedJump = max(
+                self::TRACKING_MIN_ACCEPTED_JUMP_M,
+                min(self::TRACKING_MAX_ACCEPTED_JUMP_M, ($elapsedSeconds * self::TRACKING_MAX_SPEED_MPS) + 18.0)
+            );
+
+            if ($distance <= $allowedJump) {
+                $accepted->push($point);
+            }
+        }
+
+        return ($accepted->count() >= 2 ? $accepted : $points->take(-2))->values();
+    }
+
+    private function smoothedTrackingPoint($points): ?array
+    {
+        if ($points->isEmpty()) {
+            return null;
+        }
+
+        if ($points->count() === 1) {
+            return $points->last();
+        }
+
+        $recent = $points->take(-4)->values();
+        $sumWeight = 0.0;
+        $avgLat = 0.0;
+        $avgLng = 0.0;
+
+        foreach ($recent as $index => $point) {
+            $weight = 1.0 + ($index * 1.35);
+            $sumWeight += $weight;
+            $avgLat += (float) $point['latitude'] * $weight;
+            $avgLng += (float) $point['longitude'] * $weight;
+        }
+
+        $avgLat = $sumWeight > 0 ? $avgLat / $sumWeight : (float) $recent->last()['latitude'];
+        $avgLng = $sumWeight > 0 ? $avgLng / $sumWeight : (float) $recent->last()['longitude'];
+        $latest = $recent->last();
+        $variance = $this->distanceMeters(
+            (float) $latest['latitude'],
+            (float) $latest['longitude'],
+            $avgLat,
+            $avgLng
+        );
+        $latestWeight = $variance > 22 ? 0.58 : 0.76;
+
+        return [
+            'latitude' => ((float) $latest['latitude'] * $latestWeight) + ($avgLat * (1 - $latestWeight)),
+            'longitude' => ((float) $latest['longitude'] * $latestWeight) + ($avgLng * (1 - $latestWeight)),
+            'recorded_at' => $latest['recorded_at'],
+        ];
+    }
+
+    private function trackingHeading($points): ?float
+    {
+        if ($points->count() < 2) {
+            return null;
+        }
+
+        $latest = $points->last();
+
+        foreach ($points->slice(0, -1)->reverse() as $previous) {
+            $distance = $this->distanceMeters(
+                (float) $previous['latitude'],
+                (float) $previous['longitude'],
+                (float) $latest['latitude'],
+                (float) $latest['longitude']
+            );
+
+            if ($distance >= 4.0) {
+                return $this->bearingDegrees(
+                    (float) $previous['latitude'],
+                    (float) $previous['longitude'],
+                    (float) $latest['latitude'],
+                    (float) $latest['longitude']
+                );
+            }
+        }
+
+        return null;
+    }
+
+    private function bearingDegrees(float $fromLat, float $fromLng, float $toLat, float $toLng): float
+    {
+        $lat1 = deg2rad($fromLat);
+        $lat2 = deg2rad($toLat);
+        $deltaLng = deg2rad($toLng - $fromLng);
+        $y = sin($deltaLng) * cos($lat2);
+        $x = cos($lat1) * sin($lat2) - sin($lat1) * cos($lat2) * cos($deltaLng);
+
+        return fmod((rad2deg(atan2($y, $x)) + 360.0), 360.0);
     }
 
     private function branchPayload(Order $order): ?array
