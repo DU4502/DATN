@@ -9,28 +9,26 @@
         display: flex;
         align-items: center;
         background:
-            linear-gradient(90deg, rgba(246, 252, 242, 0.24) 0%, rgba(246, 252, 242, 0.06) 50%, rgba(255, 255, 255, 0.18) 100%),
-            url('{{ asset('images/auth-login-matcha.png') }}') center center / cover no-repeat;
+            linear-gradient(90deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.34) 46%, rgba(255, 255, 255, 0.08) 100%),
+            url('https://png.pngtree.com/background/20250106/original/pngtree-bubble-tea-cup-with-splashing-milk-summer-drinks-background-picture-image_15464755.jpg') center/cover no-repeat;
         position: relative;
     }
     .auth-page::before {
         content: ''; position: absolute; inset: 0;
-        background: linear-gradient(135deg, rgba(10, 102, 79, 0.08) 0%, rgba(255, 255, 255, 0.04) 52%, rgba(255, 234, 183, 0.13) 100%);
+        background: linear-gradient(135deg, rgba(0, 139, 122, 0.10) 0%, rgba(255, 246, 225, 0.22) 100%);
     }
     
-    .auth-container { position: relative; z-index: 1; padding: 2.75rem 0; width: 100%; }
+    .auth-container { position: relative; z-index: 1; padding: 4rem 0; width: 100%; }
 
     .auth-card {
-        background: rgba(255, 255, 255, 0.92);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.9);
-        border-radius: 28px;
-        box-shadow: 0 24px 58px rgba(39, 78, 53, 0.22), 0 0 0 8px rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.88);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: var(--radius-2xl);
+        box-shadow: 0 24px 58px rgba(12, 54, 47, 0.22);
         overflow: hidden;
     }
-
-    .auth-card::before { content: ''; display: block; height: 5px; background: linear-gradient(90deg, #0d9373, #b7d64b); }
 
     .auth-header {
         text-align: center; margin-bottom: 2rem;
@@ -64,15 +62,6 @@
         display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.2s;
     }
     .social-btn:hover { background: var(--c-surface); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
-
-    @media (min-width: 992px) {
-        .auth-card { max-width: 450px; margin-inline: auto; }
-    }
-
-    @media (max-width: 991.98px) {
-        .auth-page { background-position: 42% center; }
-        .auth-container { padding: 2rem 0; }
-    }
 </style>
 
 <section class="auth-page">

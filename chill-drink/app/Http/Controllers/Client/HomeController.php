@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Favorite;
 use App\Models\Branch;
+use App\Support\OrderDistancePolicy;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -86,9 +87,14 @@ class HomeController extends Controller
         $nearestBranch = null;
         $minDistance = INF;
 
-        foreach ($branches as $b) {
-            $distance = $b->distanceTo($latitude, $longitude);
-            if ($distance < $minDistance) {
+        // Haversine chỉ lọc sơ bộ, quyết định cuối cùng dùng road-route.
+        $candidates = $branches
+            ->filter(fn (Branch $branch) => $branch->distanceTo($latitude, $longitude) <= OrderDistancePolicy::MAX_DISTANCE_KM)
+            ->sortBy(fn (Branch $branch) => $branch->distanceTo($latitude, $longitude));
+
+        foreach ($candidates as $b) {
+            $distance = OrderDistancePolicy::distanceFromBranch($b, $latitude, $longitude);
+            if ($distance !== null && OrderDistancePolicy::isInsideServiceRadius($distance) && $distance < $minDistance) {
                 $minDistance = $distance;
                 $nearestBranch = $b;
             }
@@ -120,6 +126,11 @@ class HomeController extends Controller
             ]);
         }
 
-        return response()->json(['success' => false, 'message' => 'Không tìm thấy chi nhánh gần nhất.']);
+        return response()->json([
+            'success' => false,
+            'message' => $candidates->isNotEmpty()
+                ? OrderDistancePolicy::routingUnavailableMessage()
+                : OrderDistancePolicy::message(),
+        ], $candidates->isNotEmpty() ? 503 : 422);
     }
 }

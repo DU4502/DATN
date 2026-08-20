@@ -68,10 +68,4 @@ class OrderItem extends Model
     {
         return $this->total_price ?? ((int) $this->quantity * (int) $this->unit_price);
     }
-
-    public function toppings()
-    {
-        return $this->belongsToMany(Topping::class, 'order_item_toppings', 'order_item_id', 'topping_id')
-            ->withPivot('price');
-    }
 }

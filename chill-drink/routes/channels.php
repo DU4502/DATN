@@ -32,3 +32,15 @@ Broadcast::channel('conversation.{conversationId}', function ($user, $conversati
         || (int) $user->id === (int) $conversation->cskh_id
         || $user->isAdmin();  // admin và super admin đều được xem
 });
+
+// Sự cố giao hàng: Admin chỉ nghe đúng chi nhánh của mình; Super Admin có kênh toàn hệ thống.
+Broadcast::channel('branch-admin-incidents.{branchId}', function ($user, $branchId) {
+    return $user
+        && $user->isAdmin()
+        && is_numeric($user->branch_id)
+        && (int) $user->branch_id === (int) $branchId;
+});
+
+Broadcast::channel('super-admin-incidents', function ($user) {
+    return $user && $user->isSuperAdmin();
+});

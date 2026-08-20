@@ -25,7 +25,7 @@
             --root-ink: #151918;
             --root-muted: #69716e;
             --root-border: #e1e6e4;
-            --root-sidebar-width: 289px;
+            --root-sidebar-width: 348px;
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -57,16 +57,6 @@
         @media (min-width: 992px) {
             body {
                 zoom: 0.9;
-            }
-
-            /* Bootstrap appends the modal backdrop directly under <body>.
-               Because the Super Admin workspace is zoomed to 90%, a normal
-               100vw/100vh backdrop only covers 90% of the physical viewport.
-               Compensate the backdrop dimensions so the dim layer always
-               reaches every browser edge without changing the modal scale. */
-            .modal-backdrop {
-                width: 111.111111vw !important;
-                height: 111.111111vh !important;
             }
         }
 
@@ -456,7 +446,6 @@
                     @endphp
                     <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
-                <a href="{{ route('admin.order-issues.index') }}" class="root-nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ</a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>
                 <a href="{{ route('admin.super-admin.manage.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.vouchers.*', 'admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
@@ -465,6 +454,9 @@
                 <a href="{{ route('admin.super-admin.manage.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.categories.*', 'admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
                 <a href="{{ route('admin.super-admin.manage.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.slides.*', 'admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
                 <a href="{{ route('admin.super-admin.manage.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.orders.*', 'admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.super-admin.manage.order-issues.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.order-issues.*', 'admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-life-preserver"></i> Khiếu nại đơn hàng</a>
+                <a href="{{ route('admin.super-admin.manage.shipper-incidents.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.shipper-incidents.*', 'admin.shipper-incidents.*') ? 'active' : '' }}"><i class="bi bi-exclamation-triangle"></i> Sự cố giao vận</a>
+                <a href="{{ route('admin.super-admin.manage.cod-settlements.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.cod-settlements.*', 'admin.cod-settlements.*') ? 'active' : '' }}"><i class="bi bi-cash-coin"></i> Đối soát COD</a>
                 <a href="{{ route('admin.super-admin.manage.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.group-orders.*', 'admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.super-admin.manage.reviews.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.reviews.*', 'admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.super-admin.manage.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.users.*', 'admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
@@ -488,6 +480,7 @@
                     <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Quản trị cấp cao')</strong></div>
                 </div>
                 <div class="root-topbar-right">
+                    @include('partials.shipper-incident-center')
                     <div class="dropdown">
                         <button type="button" class="root-topbar-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo">
                             <i class="bi bi-bell"></i>
@@ -543,6 +536,20 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            function cleanupOrphanModalBackdrop() {
+                if (document.querySelector('.modal.show')) return;
+                document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+
+            window.addEventListener('pageshow', cleanupOrphanModalBackdrop);
+            document.addEventListener('hidden.bs.modal', () => window.setTimeout(cleanupOrphanModalBackdrop, 80));
+        })();
+    </script>
     @include('partials.realtime')
     <script>
         const rootSidebar = document.querySelector('[data-root-sidebar]');

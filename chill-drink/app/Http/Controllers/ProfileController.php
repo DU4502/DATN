@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use App\Models\Review;
 use App\Support\OrderStatus;
+use App\Services\OrderCancellationService;
 
 class ProfileController extends Controller
 {
@@ -106,10 +107,14 @@ class ProfileController extends Controller
             'cancellation_reason' => ['required', 'string', 'max:500'],
         ]);
 
-        // Update order status and reason
-        $order->status = OrderStatus::CANCELLED;
-        $order->cancellation_reason = $request->cancellation_reason;
-        $order->save();
+        // Dùng cùng một service hủy đơn với Admin/Staff để tồn kho, voucher,
+        // shipment và trạng thái shipper luôn được dọn đồng bộ.
+        $result = app(OrderCancellationService::class)->cancel(
+            $order,
+            (string) $request->cancellation_reason,
+            $user
+        );
+        $order = $result['order'];
 
         // Send notification (through RealtimeOrderNotifier)
         \App\Support\RealtimeOrderNotifier::orderStatusUpdated($order);
@@ -136,6 +141,8 @@ class ProfileController extends Controller
 
         // Update order status to completed
         $order->status = OrderStatus::COMPLETED;
+        $order->status_changed_at = now();
+        $order->status_changed_by = $user->id;
         
         // Update payment status for COD orders
         if ($order->payment_method === 'cod' && $order->payment_status !== 'paid') {
@@ -143,6 +150,13 @@ class ProfileController extends Controller
         }
         
         $order->save();
+
+        if ($order->payment_method === 'cod' && $order->shipper_id) {
+            $shipper = \App\Models\Shipper::query()->find($order->shipper_id);
+            if ($shipper) {
+                app(\App\Services\ShipperCodService::class)->recordCollection($order->fresh(), $shipper);
+            }
+        }
         
         // Award loyalty points when customer confirms order
         $order->awardLoyaltyPoints();
@@ -200,26 +214,6 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
-    }
-
-    /** Xuất dữ liệu tài khoản và lịch sử đơn ở định dạng CSV, không dùng dịch vụ ngoài. */
-    public function exportData(Request $request)
-    {
-        $user = $request->user();
-        $orders = $user->orders()->latest()->get(['id', 'order_code', 'status', 'total', 'created_at']);
-
-        return response()->streamDownload(function () use ($user, $orders): void {
-            $out = fopen('php://output', 'w');
-            fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['DỮ LIỆU TÀI KHOẢN', '']);
-            fputcsv($out, ['Họ tên', $user->name]);
-            fputcsv($out, ['Email', $user->email]);
-            fputcsv($out, ['Số điện thoại', $user->phone ?? '']);
-            fputcsv($out, []);
-            fputcsv($out, ['MÃ ĐƠN', 'TRẠNG THÁI', 'TỔNG TIỀN', 'NGÀY TẠO']);
-            foreach ($orders as $order) fputcsv($out, [$order->order_code ?? '#'.$order->id, $order->status, $order->total, $order->created_at?->format('d/m/Y H:i')]);
-            fclose($out);
-        }, 'du-lieu-ca-nhan-'.now()->format('Ymd-His').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
     private function orderHistoryData(Request $request): array

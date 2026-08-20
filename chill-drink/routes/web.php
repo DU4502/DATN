@@ -14,9 +14,13 @@ use App\Http\Controllers\Admin\VoucherController;
 use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Admin\StaffManagementController;
+use App\Http\Controllers\Admin\ShipperIncidentController;
+use App\Http\Controllers\Admin\ShipperCodSettlementController;
+use App\Http\Controllers\Admin\OrderIssueReportController as AdminOrderIssueReportController;
 use App\Http\Middleware\KeepSuperAdminContext;
 use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\OrderLookupController;
+use App\Http\Controllers\Client\DeliveryTrackingController;
 use App\Http\Controllers\Client\ChatController;
 use App\Http\Controllers\Client\GuestCheckoutController;
 use App\Http\Controllers\Client\CartController;
@@ -29,9 +33,13 @@ use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\ProductController as ClientProductController;
 use App\Http\Controllers\Client\ProductReviewController;
+use App\Http\Controllers\Shipper\ShipController;
 use App\Http\Controllers\Client\QuickOrderController;
 use App\Http\Controllers\Client\VnpayController;
+use App\Http\Controllers\Client\OrderIssueReportController as ClientOrderIssueReportController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\OrderDeliveryChatController;
+use App\Http\Controllers\OrderShipmentIncidentController;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
@@ -75,7 +83,215 @@ Route::prefix('checkout/guest')->name('checkout.guest.')->group(function () {
     Route::get('/track/{order}', [GuestCheckoutController::class, 'track'])
         ->middleware('signed')
         ->name('track');
+    Route::get('/track/{order}/live', [DeliveryTrackingController::class, 'guest'])
+        ->name('live');
+    Route::get('/track/{order}/delivery-chat/messages', [OrderDeliveryChatController::class, 'guestMessages'])
+        ->name('delivery-chat.messages');
+    Route::post('/track/{order}/delivery-chat/messages', [OrderDeliveryChatController::class, 'guestSend'])
+        ->middleware('throttle:30,1')
+        ->name('delivery-chat.send');
 });
+
+Route::middleware(['auth', 'shipper'])
+    ->prefix('shipper')
+    ->name('shipper.')
+    ->group(function () {
+
+        // ==============================
+        // DASHBOARD
+        // ==============================
+        Route::get('/assignments/pulse', [
+            ShipController::class,
+            'assignmentPulse',
+        ])->name('assignments.pulse');
+
+        Route::get('/dashboard', [
+            ShipController::class,
+            'dashboard'
+        ])->name('dashboard');
+
+        Route::get('/notifications', [
+            ShipController::class,
+            'notifications'
+        ])->name('notifications.index');
+        Route::post('/notifications/mark-all-read', [
+            ShipController::class,
+            'markAllNotificationsRead'
+        ])->name('notifications.mark-all-read');
+
+        // Hộp chat theo chuyến của shipper. Chi tiết cuộc chat dùng ?order={id}
+        // để vẫn giữ toàn bộ UI trong một trang mobile duy nhất.
+        Route::get('/chats', [
+            ShipController::class,
+            'chats'
+        ])->name('chats.index');
+
+
+        // ==============================
+        // ĐƠN HÀNG
+        // ==============================
+
+        // Danh sách đơn
+        Route::get('/orders', [
+            ShipController::class,
+            'orders'
+        ])->name('orders');
+
+        // Chi tiết đơn
+        Route::get('/orders/{id}', [
+            ShipController::class,
+            'showOrder'
+        ])->name('orders.show');
+
+        // Nhận đơn
+        Route::post('/orders/{id}/accept', [
+            ShipController::class,
+            'acceptOrder'
+        ])->name('orders.accept');
+
+        // Xác nhận đã lấy hàng tại cửa hàng
+        Route::post('/orders/{id}/picked-up', [
+            ShipController::class,
+            'pickedUpOrder'
+        ])->name('orders.picked-up');
+
+        // Bắt đầu chặng giao tới khách
+        Route::post('/orders/{id}/start', [
+            ShipController::class,
+            'startDelivery'
+        ])->name('orders.start');
+
+        // Shipper xác nhận thủ công đã tới điểm giao sau khi GPS đã xác nhận lớp 1.
+        Route::post('/orders/{id}/arrived', [
+            ShipController::class,
+            'confirmCustomerArrival'
+        ])->name('orders.arrived');
+
+        // Tài xế thay thế xác nhận đã nhận bàn giao hàng từ tài xế cũ.
+        Route::post('/orders/{id}/handover', [
+            ShipController::class,
+            'confirmHandover'
+        ])->name('orders.handover');
+
+        // Xác nhận đã giao cho khách (đơn sang delivered, chưa completed)
+        Route::post('/orders/{id}/complete', [
+            ShipController::class,
+            'completeOrder'
+        ])->name('orders.complete');
+
+        // Legacy guard: route cũ được giữ nhưng backend luôn chặn shipper hủy/từ chối chuyến.
+        Route::post('/orders/{id}/cancel', [
+            ShipController::class,
+            'cancelOrder'
+        ])->name('orders.cancel');
+
+        // Báo sự cố sau khi đã lấy hàng; không tự nhả đơn
+        Route::post('/orders/{id}/issue', [
+            ShipController::class,
+            'reportIssue'
+        ])->name('orders.issue');
+
+        // Chat ngắn theo đúng chuyến giao (khách <-> shipper), tự hết hạn sau 24h.
+        Route::get('/orders/{order}/delivery-chat/messages', [OrderDeliveryChatController::class, 'shipperMessages'])->name('orders.delivery-chat.messages');
+        Route::post('/orders/{order}/delivery-chat/messages', [OrderDeliveryChatController::class, 'shipperSend'])->middleware('throttle:30,1')->name('orders.delivery-chat.send');
+
+
+        // ==============================
+        // TRẠNG THÁI SHIPPER
+        // ==============================
+        Route::post('/status', [
+            ShipController::class,
+            'updateStatus'
+        ])->name('status.update');
+
+
+        // ==============================
+        // QUAY VỀ CHI NHÁNH / CÂN BẰNG ĐỘI
+        // ==============================
+        Route::get('/returning', [
+            ShipController::class,
+            'returning'
+        ])->name('returning');
+
+        Route::get('/returning/route', [
+            ShipController::class,
+            'returningRoute'
+        ])->name('returning.route');
+
+
+        // ==============================
+        // VỊ TRÍ
+        // ==============================
+        Route::post('/location', [
+            ShipController::class,
+            'updateLocation'
+        ])->name('location.update');
+
+
+        // ==============================
+        // BẢN ĐỒ
+        // ==============================
+        Route::get('/map/{id?}', [
+            ShipController::class,
+            'map'
+        ])->name('map');
+
+        // Dữ liệu tuyến cho chính map hiện tại (server tự xác định điểm đến)
+        Route::get('/map/{id}/route', [
+            ShipController::class,
+            'routeData'
+        ])->name('map.route');
+
+        // TTS dẫn đường cố định: mọi thiết bị dùng cùng một voice phía server.
+        Route::post('/navigation/voice', [
+            ShipController::class,
+            'navigationVoice'
+        ])->name('navigation.voice');
+
+
+        // ==============================
+        // LỊCH SỬ GIAO HÀNG
+        // ==============================
+        Route::get('/history', function () {
+            $shipper = \App\Models\Shipper::where(
+                'user_id',
+                auth()->id()
+            )->firstOrFail();
+
+            $orders = \App\Models\Order::where(
+                'shipper_id',
+                $shipper->id
+            )
+                ->whereIn('status', [
+                    'delivered',
+                    'completed'
+                ])
+                ->latest()
+                ->paginate(10);
+
+            return view(
+                'shipper.history',
+                compact('orders', 'shipper')
+            );
+        })->name('history');
+
+
+    // ==============================
+    // PROFILE
+    // ==============================
+    // Trang cá nhân
+    Route::get('/profile', [
+        ShipController::class,
+        'profile'
+    ])->name('profile');
+
+    // Cập nhật cá nhân
+    Route::put('/profile', [
+        ShipController::class,
+        'updateProfile'
+    ])->name('profile.update');
+    });
+
 
 Route::post('/register/guest-convert', [GuestConvertController::class, 'store'])
     ->middleware('guest')
@@ -105,14 +321,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
-    Route::patch('/group-orders/join/{code}/items/{item}/decrement', [GroupOrderController::class, 'decrementItem'])->name('group-orders.items.decrement');
     Route::delete('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'removeItem'])->name('group-orders.items.destroy');
     Route::get('/group-orders', [GroupOrderController::class, 'index'])->name('group-orders.index');
     Route::get('/group-orders/create', [GroupOrderController::class, 'create'])->name('group-orders.create');
     Route::post('/group-orders', [GroupOrderController::class, 'store'])->name('group-orders.store');
     Route::post('/group-orders/{code}/close', [GroupOrderController::class, 'close'])->name('group-orders.close');
     Route::post('/group-orders/{code}/cancel', [GroupOrderController::class, 'cancel'])->name('group-orders.cancel');
-    Route::post('/group-orders/pending-checkout/resume', [GroupOrderController::class, 'resumePendingCheckout'])->name('group-orders.pending-checkout.resume');
     Route::post('/group-orders/{code}/resume', [GroupOrderController::class, 'resume'])->name('group-orders.resume');
     Route::get('/favorites', [QuickOrderController::class, 'favorites'])->name('favorites.index');
     Route::post('/favorites/{product}', [QuickOrderController::class, 'toggleFavorite'])->name('favorites.toggle');
@@ -145,11 +359,6 @@ Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->
     Route::patch('/{conversation}/close', [AdminChatController::class, 'close'])->name('close');
 });
 
-Route::prefix('admin/order-issues')->name('admin.order-issues.')->middleware(['auth', 'cskh'])->group(function () {
-    Route::get('/', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'index'])->name('index');
-    Route::get('/{issue}/evidence', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'evidence'])->name('evidence');
-    Route::patch('/{issue}', [\App\Http\Controllers\Admin\OrderIssueReportController::class, 'update'])->name('update');
-});
 
 /*
 |--------------------------------------------------------------------------
@@ -180,18 +389,21 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
+    Route::get('/orders/{order}/track', [DeliveryTrackingController::class, 'show'])->name('orders.track');
+    Route::get('/orders/{order}/delivery-tracking', [DeliveryTrackingController::class, 'authenticated'])->name('orders.delivery-tracking');
+    Route::get('/orders/{order}/delivery-chat/messages', [OrderDeliveryChatController::class, 'customerMessages'])->name('orders.delivery-chat.messages');
+    Route::post('/orders/{order}/delivery-chat/messages', [OrderDeliveryChatController::class, 'customerSend'])->middleware('throttle:30,1')->name('orders.delivery-chat.send');
+    Route::get('/orders/{order}/issues', [ClientOrderIssueReportController::class, 'create'])->name('orders.issues.create');
+    Route::post('/orders/{order}/issues', [ClientOrderIssueReportController::class, 'store'])->name('orders.issues.store');
+    Route::get('/orders/{order}/issues/status', [ClientOrderIssueReportController::class, 'status'])->name('orders.issues.status');
+    Route::post('/orders/{order}/issues/{issue}/confirm', [ClientOrderIssueReportController::class, 'confirmResolution'])->name('orders.issues.confirm');
     Route::post('/orders/{order}/cancel', [ProfileController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{order}/confirm-received', [ProfileController::class, 'confirmReceived'])->name('orders.confirm-received');
-    Route::get('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'create'])->name('orders.issues.create');
-    Route::get('/orders/{order}/support/status', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'status'])->name('orders.issues.status');
-    Route::post('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'store'])->name('orders.issues.store');
-    Route::post('/orders/{order}/support/{issue}/confirm', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'confirmResolution'])->name('orders.issues.confirm');
     Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
     Route::post('/notifications/mark-all-read', [ProfileController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/profile/data-export', [ProfileController::class, 'exportData'])->name('profile.data-export');
     
     // Address Book Management
     Route::get('/profile/addresses', [\App\Http\Controllers\Client\ProfileAddressController::class, 'index'])->name('profile.addresses.index');
@@ -206,10 +418,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
     });
 });
-
-Route::view('/dieu-khoan', 'legal.page', ['page' => 'terms'])->name('legal.terms');
-Route::view('/doi-tra', 'legal.page', ['page' => 'returns'])->name('legal.returns');
-Route::view('/quyen-rieng-tu', 'legal.page', ['page' => 'privacy'])->name('legal.privacy');
 
 /*
 |--------------------------------------------------------------------------
@@ -256,6 +464,16 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSu
         Route::get('/slides', [BranchSlideController::class, 'index'])->name('slides.index');
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/recent', [OrderController::class, 'recent'])->name('orders.recent');
+        Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
+        Route::post('/orders/{order}/shipper-incident/resolve', [OrderShipmentIncidentController::class, 'resolve'])->name('orders.shipper-incident.resolve');
+        Route::get('/shipper-incidents', [ShipperIncidentController::class, 'index'])->name('shipper-incidents.index');
+        Route::get('/shipper-incidents/feed', [ShipperIncidentController::class, 'feed'])->name('shipper-incidents.feed');
+        Route::get('/order-issues', [AdminOrderIssueReportController::class, 'index'])->name('order-issues.index');
+        Route::patch('/order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
+        Route::get('/order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
+        Route::get('/cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
+        Route::post('/cod-settlements/shipper/{shipper}/confirm', [ShipperCodSettlementController::class, 'confirm'])->name('cod-settlements.confirm');
 
         Route::get('/group-orders', [AdminGroupOrderController::class, 'index'])->name('group-orders.index');
         Route::get('/group-orders/{groupOrder}', [AdminGroupOrderController::class, 'show'])->name('group-orders.show');
@@ -267,6 +485,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSu
         Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
 
         Route::get('/staff', [StaffManagementController::class, 'index'])->name('staff.index');
+        Route::put('/staff/delivery-fee-settings', [StaffManagementController::class, 'updateDeliveryFeeSettings'])
+            ->name('staff.delivery-fee-settings.update');
     });
 
     // Branch Management
@@ -311,6 +531,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
     Route::resource('orders', OrderController::class)->only(['index']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');
+    Route::post('orders/{order}/shipper-incident/resolve', [OrderShipmentIncidentController::class, 'resolve'])
+        ->name('orders.shipper-incident.resolve');
+    Route::get('shipper-incidents', [ShipperIncidentController::class, 'index'])->name('shipper-incidents.index');
+    Route::get('shipper-incidents/feed', [ShipperIncidentController::class, 'feed'])->name('shipper-incidents.feed');
+    Route::get('order-issues', [AdminOrderIssueReportController::class, 'index'])->name('order-issues.index');
+    Route::patch('order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
+    Route::get('order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
+    Route::get('cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
+    Route::post('cod-settlements/shipper/{shipper}/confirm', [ShipperCodSettlementController::class, 'confirm'])->name('cod-settlements.confirm');
     Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
     Route::put('group-orders/{groupOrder}/status', [AdminGroupOrderController::class, 'updateStatus'])->name('group-orders.updateStatus');
 
@@ -374,3 +603,16 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'staff'])->group(fun
 });
 
 require __DIR__.'/auth.php';
+
+
+/* V27_BRANCH_SHIPPING_FEE_ROUTES */
+\Illuminate\Support\Facades\Route::middleware(['auth', 'superadmin'])
+    ->prefix('admin/super-admin/shipping-fees')
+    ->name('admin.super-admin.shipping-fees.')
+    ->group(function () {
+        \Illuminate\Support\Facades\Route::get('/', [\App\Http\Controllers\Admin\BranchShippingFeeController::class, 'index'])->name('index');
+        \Illuminate\Support\Facades\Route::get('/{branch}', [\App\Http\Controllers\Admin\BranchShippingFeeController::class, 'show'])->name('show');
+        \Illuminate\Support\Facades\Route::put('/{branch}', [\App\Http\Controllers\Admin\BranchShippingFeeController::class, 'update'])->name('update');
+        \Illuminate\Support\Facades\Route::post('/{branch}/preview', [\App\Http\Controllers\Admin\BranchShippingFeeController::class, 'preview'])->name('preview');
+    });
+/* /V27_BRANCH_SHIPPING_FEE_ROUTES */

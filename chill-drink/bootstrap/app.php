@@ -19,15 +19,20 @@ return Application::configure(basePath: dirname(__DIR__))
                     session()->forget('url.intended');
                 }
 
-                return route('login');
+                return url('/login');
             }
         });
+
+        $middleware->web(append: [
+            \App\Http\Middleware\AutoCompleteDeliveredOrders::class,
+        ]);
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'superadmin' => \App\Http\Middleware\SuperAdminMiddleware::class,
             'cskh' => \App\Http\Middleware\CskhMiddleware::class,
             'staff' => \App\Http\Middleware\StaffMiddleware::class,
+            'shipper' => \App\Http\Middleware\ShipperMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

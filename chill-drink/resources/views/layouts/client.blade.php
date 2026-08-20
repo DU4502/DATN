@@ -374,7 +374,6 @@
             white-space: nowrap;
             transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
         }
-        button.active-group-return { font-family: inherit; cursor: pointer; }
 
         .active-group-return:hover { color: var(--c-primary-dark); background: #d9f5ee; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(13,147,115,.14); }
         .active-group-return__time { min-width: 3.15rem; font-variant-numeric: tabular-nums; }
@@ -1165,7 +1164,7 @@
             }
         }
         END COMMENT */
-    </style>
+</style>
 </head>
 
 <body>
@@ -1262,26 +1261,10 @@
 
                 <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
                     @if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*'))
-                        @if((int) session('checkout_group_order_id') === (int) $pendingCheckoutGroup->id)
-                            <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
-                                <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                                <span>Tiếp tục thanh toán</span>
-                                <span class="active-group-return__time" title="Đã chốt lúc {{ $pendingCheckoutGroup->closes_at?->format('H:i · d/m/Y') }}">
-                                    {{ $pendingCheckoutGroup->closes_at?->format('H:i') ?? '--:--' }}
-                                </span>
-                            </a>
-                        @else
-                            <form method="POST" action="{{ route('group-orders.pending-checkout.resume') }}" class="m-0">
-                                @csrf
-                                <button type="submit" class="active-group-return is-checkout" title="Khôi phục và tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
-                                    <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                                    <span>Tiếp tục thanh toán</span>
-                                    <span class="active-group-return__time" title="Đã chốt lúc {{ $pendingCheckoutGroup->closes_at?->format('H:i · d/m/Y') }}">
-                                        {{ $pendingCheckoutGroup->closes_at?->format('H:i') ?? '--:--' }}
-                                    </span>
-                                </button>
-                            </form>
-                        @endif
+                        <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
+                            <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
+                            <span>Tiếp tục thanh toán</span>
+                        </a>
                     @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
                         <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
                             <i class="bi bi-people-fill" aria-hidden="true"></i>
@@ -1337,8 +1320,8 @@
                                     </span>
                                 </div>
                                 @if(Auth::user()->unreadNotifications->count() > 0)
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-primary w-100" 
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary w-100"
                                         id="markAllReadBtn"
                                         style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                     <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
@@ -1769,12 +1752,15 @@
             setAddButtonState('loading');
 
             try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
                 const response = await fetch(form.action, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
                     },
+                    credentials: 'same-origin',
                     body: formData
                 });
 
@@ -1787,7 +1773,11 @@
                         errorData = {};
                     }
 
-                    showCartFeedback(errorData.message || 'Không thể thêm sản phẩm vào giỏ hàng.', {
+                    const fallbackMessage = response.status === 419
+                        ? 'Phiên đăng nhập hoặc CSRF token đã hết hạn. Hãy tải lại trang rồi thử lại.'
+                        : 'Không thể thêm sản phẩm vào giỏ hàng.';
+
+                    showCartFeedback(errorData.message || fallbackMessage, {
                         type: 'warning',
                         redirectUrl: errorData.redirect_url,
                         redirectLabel: errorData.redirect_label,
@@ -1890,7 +1880,7 @@
             if (!notificationContainer) return;
 
             const alerts = notificationContainer.querySelectorAll('.alert');
-            
+
             alerts.forEach(function(alert) {
                 // Auto-dismiss after 5 seconds
                 const dismissTimer = setTimeout(function() {
@@ -1898,7 +1888,7 @@
                     alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
                     alert.style.opacity = '0';
                     alert.style.transform = 'translateX(100%)';
-                    
+
                     // Remove from DOM after animation
                     setTimeout(function() {
                         if (alert.parentNode) {
@@ -1920,6 +1910,8 @@
         });
     </script>
     <script>
+        /* Automatic branch switching is intentionally disabled. */
+        /*
         document.addEventListener('DOMContentLoaded', function () {
             const activeGroupTimer = document.querySelector('[data-active-group-countdown]');
             if (!activeGroupTimer) return;
@@ -1956,6 +1948,7 @@
             window.addEventListener('pagehide', stopTimer, { once: true });
             startTimer();
         });
+        */
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -1965,7 +1958,7 @@
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {
-                fetch('{{ route('select-nearest-branch', [], false) }}', {
+                fetch('{{ route('select-nearest-branch') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1983,11 +1976,10 @@
                 .catch(err => console.error("Lỗi xác định vị trí chi nhánh:", err));
             }
 
-            // Kiểm tra trạng thái quyền vị trí
+            // Kiểm tra và tự động gửi tọa độ nếu đã được cấp quyền trước đó
             if (navigator.permissions) {
                 navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
                     if (result.state === 'granted') {
-                        // Đã cấp quyền trước đó → lấy ngay, không hỏi nữa
                         navigator.geolocation.getCurrentPosition(
                             pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
                             err => console.warn("Lỗi GPS:", err),
@@ -1998,15 +1990,7 @@
                         var banner = document.getElementById('location-permission-banner');
                         if (banner) banner.style.display = 'flex';
                     }
-                    // 'denied' → không làm gì
                 });
-            } else {
-                // Browser không hỗ trợ Permissions API → thử lấy thẳng
-                navigator.geolocation.getCurrentPosition(
-                    pos => submitLocation(pos.coords.latitude, pos.coords.longitude),
-                    err => console.warn("Lỗi GPS:", err),
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
-                );
             }
 
 
@@ -2035,9 +2019,10 @@
             @endauth
         });
     </script>
+    {{-- Disabled automatic branch switching on page load.
+         Branch selection now only happens when the user explicitly chooses it. --}}
     @include('partials.realtime')
     @include('partials.client-notifications')
-    @stack('scripts')
 </body>
 
 </html>

@@ -408,10 +408,6 @@ const groupOrderRoom = {
                         cache: 'no-store',
                         signal,
                     });
-                    if (response.redirected) {
-                        window.location.assign(response.url);
-                        return;
-                    }
                     if (!response.ok) return;
                     const page = new DOMParser().parseFromString(await response.text(), 'text/html');
                     this.replaceLiveSections(page, false);
@@ -526,10 +522,6 @@ const groupOrderRoom = {
                     });
                     if (!response.ok) return;
                     const state = await response.json();
-                    if (state.redirect_url) {
-                        window.location.assign(state.redirect_url);
-                        return;
-                    }
                     if (!state.is_open && !reloading) {
                         reloading = true;
                         window.location.reload();
@@ -561,7 +553,7 @@ const groupOrderChat = {
         initialMembers: { type: Array, required: true },
     },
     data() {
-        return { messages: [], members: this.initialMembers, recipientId: null, content: '', loading: false, syncing: false, sending: false, error: '', timer: null, visibilityHandler: null, unifiedToggleHandler: null, unifiedCloseHandler: null, unifiedHostHandler: null, unifiedHostReady: false, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '', groupIsOpen: this.groupIsOpen, echoChannel: null, showScrollToLatest: false };
+        return { messages: [], members: this.initialMembers, recipientId: null, content: '', loading: false, syncing: false, sending: false, error: '', timer: null, visibilityHandler: null, unifiedToggleHandler: null, unifiedCloseHandler: null, unifiedHostHandler: null, unifiedHostReady: false, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '', groupIsOpen: this.groupIsOpen, echoChannel: null };
     },
     computed: {
         currentMemberId() { return this.memberId; },
@@ -638,7 +630,6 @@ const groupOrderChat = {
         openChatDirect() {
             this.isOpen = true;
             window.dispatchEvent(new CustomEvent('group-chat-opened'));
-            this.$nextTick(() => this.scrollMessagesToBottom(true));
         },
         selectRecipient(id) {
             this.recipientId = id;
@@ -677,7 +668,9 @@ const groupOrderChat = {
 
                     if (!this.recipientId) {
                         this.messages.push(payloadMessage);
-                        if (this.isOpen) this.$nextTick(() => this.scrollMessagesToBottom());
+                        if (this.isOpen) {
+                            this.$nextTick(() => { const box = this.$refs.messages; if (box) box.scrollTop = box.scrollHeight; });
+                        }
                     } else {
                         this.groupUnread += 1;
                     }
@@ -755,7 +748,7 @@ const groupOrderChat = {
                 if (changed) {
                     const hasNewMessage = nextLast?.id !== currentLast?.id;
                     this.messages = nextMessages;
-                    if (hasNewMessage) this.$nextTick(() => this.scrollMessagesToBottom(showLoading));
+                    if (hasNewMessage) this.$nextTick(() => { const box = this.$refs.messages; if (box) box.scrollTop = box.scrollHeight; });
                 }
                 const newestUnread = [...nextMessages].reverse().find((message) => Number(message.sender_id) === requestedRecipientId && !message.read_at);
                 if (requestedRecipientId && this.isOpen && newestUnread && Number(newestUnread.id) > this.lastMarkedReadId) {
@@ -784,23 +777,6 @@ const groupOrderChat = {
             window.setTimeout(() => this.dismissNotification(notification.id), 6000);
         },
         dismissNotification(id) { this.notifications = this.notifications.filter((item) => item.id !== id); },
-        isNearMessageBottom() {
-            const box = this.$refs.messages;
-            return !box || (box.scrollHeight - box.scrollTop - box.clientHeight) < 72;
-        },
-        handleMessagesScroll() {
-            this.showScrollToLatest = !this.isNearMessageBottom();
-        },
-        scrollMessagesToBottom(force = false) {
-            const box = this.$refs.messages;
-            if (!box) return;
-            if (!force && !this.isNearMessageBottom()) {
-                this.showScrollToLatest = true;
-                return;
-            }
-            box.scrollTop = box.scrollHeight;
-            this.showScrollToLatest = false;
-        },
         openNotification(notification) {
             this.isOpen = true;
             window.dispatchEvent(new CustomEvent('group-chat-opened'));
@@ -825,7 +801,7 @@ const groupOrderChat = {
                 if (!response.ok) { this.error = data.message || 'Không thể gửi tin nhắn.'; return; }
                 this.messages.push(data.message);
                 this.content = '';
-                this.$nextTick(() => this.scrollMessagesToBottom(true));
+                this.$nextTick(() => { this.$refs.messages.scrollTop = this.$refs.messages.scrollHeight; });
             } catch { this.error = 'Kết nối bị gián đoạn.'; }
             finally { this.sending = false; }
         },
@@ -860,7 +836,7 @@ const groupOrderChat = {
                 <span class="member-avatar" style="width:26px;height:26px;font-size:.7rem;">{{ (members.find(m => Number(m.id) === Number(recipientId))?.name || '?').charAt(0).toUpperCase() }}</span>
                 <strong>{{ members.find(m => Number(m.id) === Number(recipientId))?.name || 'Thành viên' }}</strong>
             </div>
-            <div class="group-chat-messages" ref="messages" @scroll.passive="handleMessagesScroll">
+            <div class="group-chat-messages" ref="messages">
                 <div v-if="loading && !messages.length" class="text-center text-secondary">Đang tải tin nhắn...</div>
                 <div v-else-if="!messages.length" class="text-center text-secondary">Chưa có tin nhắn. Hãy bắt đầu trò chuyện!</div>
                 <div v-for="message in messages" :key="message.id" class="group-chat-message" :class="{ 'is-mine': Number(message.sender_id) === currentMemberId }">
@@ -871,7 +847,6 @@ const groupOrderChat = {
                 <div class="flex-grow-1"><input :value="content" @input="content = $event.target.value" maxlength="1000" class="form-control group-input" :placeholder="recipientId ? 'Nhắn riêng...' : 'Nhắn cho cả nhóm...'" :disabled="!groupIsOpen"></div>
                 <button class="btn btn-primary group-chat-send" :disabled="!groupIsOpen || sending || !content.trim()" aria-label="Gửi tin nhắn"><i class="bi bi-send"></i></button>
             </form>
-            <button v-if="showScrollToLatest" type="button" class="group-chat-scroll-latest" @click="scrollMessagesToBottom(true)" aria-label="Cuộn xuống tin nhắn mới nhất" title="Tin nhắn mới nhất"><i class="bi bi-arrow-down"></i></button>
             <div v-if="error" class="text-danger small px-3 pb-3">{{ error }}</div>
         </section>
         </div>`,

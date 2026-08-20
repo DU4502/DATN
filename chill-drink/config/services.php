@@ -65,6 +65,27 @@ return [
         ],
     ],
 
+    'delivery_routing' => [
+        // Chỉ là engine tính tuyến bằng tọa độ cho map hiện tại; có thể đổi sang server routing riêng.
+        'base_url' => env('ROUTING_BASE_URL', 'https://router.project-osrm.org'),
+        'profile' => env('ROUTING_PROFILE', 'driving'),
+        'timeout' => env('ROUTING_TIMEOUT', 6),
+        // Chỉ dùng cho màn hình dẫn đường shipper: ưu tiên đường nhỏ hơn, rồi mới fallback tuyến thường.
+        'navigation_exclude' => env('ROUTING_NAVIGATION_EXCLUDE', 'motorway'),
+    ],
+
+    'navigation_tts' => [
+        // Một voice Piper cố định chạy local trên server. Không cần API key/cloud.
+        'driver' => env('NAV_TTS_DRIVER', 'piper'),
+        'piper' => [
+            'binary' => env('PIPER_BINARY', 'tools/piper/piper.exe'),
+            'model' => env('PIPER_MODEL', 'storage/app/navigation_tts/voices/vi_VN-vais1000-medium.onnx'),
+            'config' => env('PIPER_MODEL_CONFIG', 'storage/app/navigation_tts/voices/vi_VN-vais1000-medium.onnx.json'),
+            'voice' => env('PIPER_VOICE', 'vi_VN-vais1000-medium'),
+            'timeout' => env('PIPER_TIMEOUT', 12),
+        ],
+    ],
+
     'password_reset' => [
         'expire_minutes' => env('PASSWORD_RESET_EXPIRE_MINUTES', 60),
         'smtp_host' => env('PASSWORD_RESET_SMTP_HOST'),

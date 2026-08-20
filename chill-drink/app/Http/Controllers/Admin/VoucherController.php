@@ -197,7 +197,7 @@ class VoucherController extends Controller
             'code' => strtoupper(trim((string) $data['code'])),
             'type' => $data['type'],
             'value' => (int) $data['value'],
-            'max_discount' => $data['type'] === Voucher::TYPE_PERCENT ? ($data['max_discount'] ?? 0) : 0,
+            'max_discount' => $data['type'] === Voucher::TYPE_PERCENT ? ($data['max_discount'] ?? null) : null,
             'description' => $data['description'] ?? null,
             'min_order' => (int) ($data['min_order'] ?? 0),
             'usage_limit' => (int) ($data['usage_limit'] ?? 0),

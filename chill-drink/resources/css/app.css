@@ -3,3 +3,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Hide Leaflet's default +/- zoom controls on every map in the app. */
+.leaflet-control-zoom {
+    display: none !important;
+}

@@ -2438,18 +2438,6 @@ class SuperAdminController extends Controller
             abort(403, 'Chỉ áp dụng cho nhân viên.');
         }
 
-        $name = $user->name;
-        $email = $user->email;
-        $user->delete();
-
-        SystemLog::record(
-            $request->user(),
-            "Đã xóa tài khoản nhân viên {$email}",
-            'admin',
-            'success',
-            [],
-        );
-
-        return redirect()->back()->with('success', "Đã xóa nhân viên {$name}.");
+        abort(403, 'Hệ thống không cho phép xóa nhân viên. Chỉ có thể sửa, khóa hoặc đổi chi nhánh.');
     }
 }

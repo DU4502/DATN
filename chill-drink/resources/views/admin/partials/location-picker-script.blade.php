@@ -197,10 +197,14 @@
         const coordinates = feature?.geometry?.coordinates || [];
         const longitude = Number.parseFloat(coordinates[0]);
         const latitude = Number.parseFloat(coordinates[1]);
-        const street = compactAddress(uniqueAddressParts([
-            properties.housenumber,
+        const houseNumber = String(properties.housenumber || properties.house_number || '').trim();
+        const roadName = compactAddress(uniqueAddressParts([
             properties.street,
             properties.name,
+        ]));
+        const street = compactAddress(uniqueAddressParts([
+            houseNumber,
+            roadName,
         ]));
         const area = compactAddress(uniqueAddressParts([
             properties.district,
@@ -214,6 +218,8 @@
         return {
             latitude,
             longitude,
+            house_number: houseNumber,
+            road_name: roadName || street,
             street: street || displayName,
             area,
             title: street || properties.name || displayName || 'Địa chỉ được gợi ý',
@@ -227,10 +233,13 @@
         const latitude = Number.parseFloat(item?.latitude);
         const longitude = Number.parseFloat(item?.longitude);
         const displayName = item?.full_address || item?.name || '';
+        const match = displayName.match(/^(?:so\s*)?(\d+[a-z]?(?:\/\d+[a-z]?)*)(?:\s+|-|,)+(.*)$/iu);
 
         return {
             latitude,
             longitude,
+            house_number: match?.[1] || '',
+            road_name: match?.[2]?.trim() || displayName,
             street: displayName,
             area: '',
             title: item?.name || displayName || 'Địa chỉ Chill Drink đã ghi nhận',
@@ -254,6 +263,9 @@
         const searchInput = container.querySelector('[data-location-search-input]');
         const suggestionsEl = container.querySelector('[data-location-search-suggestions]');
         const addressTargetSelector = container.dataset.addressTarget;
+        const houseTargetSelector = container.dataset.autoFillHouseTarget;
+        const areaTargetSelector = container.dataset.autoFillAreaTarget;
+        const streetTargetSelector = container.dataset.autoFillStreetTarget;
 
         if (!mapEl || !latInput || !lngInput) {
             return null;
@@ -266,8 +278,10 @@
         const defaultZoom = parseNumber(container.dataset.defaultZoom, DEFAULT_CENTER.zoom);
 
         const map = L.map(mapEl, {
-            zoomControl: true,
-            scrollWheelZoom: false,
+            zoomControl: false,
+            scrollWheelZoom: true,
+            touchZoom: true,
+            tap: true,
             center: Number.isFinite(initialLat) && Number.isFinite(initialLng)
                 ? [initialLat, initialLng]
                 : [defaultLat, defaultLng],
@@ -318,12 +332,37 @@
 
         };
 
+        const previewCoordinates = (lat, lng, message = 'Đây là vị trí tham chiếu. Hãy xác nhận lại nếu muốn dùng cho đơn hàng.') => {
+            const nextLat = Number.parseFloat(lat);
+            const nextLng = Number.parseFloat(lng);
+
+            if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) {
+                return;
+            }
+
+            marker.setLatLng([nextLat, nextLng]);
+            map.setView([nextLat, nextLng], Math.max(map.getZoom(), 15), { animate: true });
+
+            if (previewEl) {
+                previewEl.textContent = `Tham chiếu: ${formatCoordinates(nextLat, nextLng)}`;
+            }
+
+            if (statusEl && message) {
+                statusEl.textContent = message;
+            }
+        };
+
         const getAddressTargets = () => {
             const selectors = addressTargetSelector ? addressTargetSelector.split(',') : [];
 
             return {
-                streetInput: selectors[0] ? document.querySelector(selectors[0].trim()) : null,
-                areaInput: selectors[1] ? document.querySelector(selectors[1].trim()) : null,
+                houseInput: houseTargetSelector ? document.querySelector(houseTargetSelector.trim()) : null,
+                streetInput: streetTargetSelector
+                    ? document.querySelector(streetTargetSelector.trim())
+                    : (selectors[0] ? document.querySelector(selectors[0].trim()) : null),
+                areaInput: areaTargetSelector
+                    ? document.querySelector(areaTargetSelector.trim())
+                    : (selectors[1] ? document.querySelector(selectors[1].trim()) : null),
             };
         };
 
@@ -341,14 +380,21 @@
                 return;
             }
 
-            const { streetInput, areaInput } = getAddressTargets();
+            const { houseInput, streetInput, areaInput } = getAddressTargets();
 
             if (searchInput) {
                 searchInput.value = item.displayName || item.title || '';
             }
 
+            if (houseInput) {
+                houseInput.value = item.house_number || '';
+                houseInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
             if (streetInput) {
-                streetInput.value = item.street || item.displayName || item.title || '';
+                streetInput.value = houseInput
+                    ? (item.road_name || item.street || item.displayName || item.title || '')
+                    : (item.street || item.displayName || item.title || '');
                 streetInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
 
@@ -515,7 +561,7 @@
                 return;
             }
 
-            const { streetInput, areaInput } = getAddressTargets();
+            const { houseInput, streetInput, areaInput } = getAddressTargets();
 
             const originalText = getAddressBtn.innerHTML;
             getAddressBtn.disabled = true;
@@ -529,12 +575,17 @@
                     if (streetInput && areaInput) {
                         const address = data.address || {};
                         const compactHelper = (parts) => parts.filter(Boolean).join(', ');
-                        
-                        const streetLine = compactHelper([
-                            address.house_number,
+                        const houseNumber = String(address.house_number || address.housenumber || '').trim();
+                        const roadLine = compactHelper([
                             address.road || address.pedestrian || address.footway,
                             address.neighbourhood || address.suburb
-                        ]) || data.display_name || `${lat}, ${lng}`;
+                        ]);
+                        const streetLine = houseInput
+                            ? (roadLine || data.display_name || `${lat}, ${lng}`)
+                            : compactHelper([
+                                houseNumber,
+                                roadLine,
+                            ]) || data.display_name || `${lat}, ${lng}`;
 
                         const areaLine = compactHelper([
                             address.quarter || address.ward || address.suburb || address.village,
@@ -542,9 +593,17 @@
                             address.city || address.state
                         ]) || data.display_name || `${lat}, ${lng}`;
 
+                        if (houseInput) {
+                            houseInput.value = houseNumber;
+                            houseInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+
                         streetInput.value = streetLine;
                         areaInput.value = areaLine;
 
+                        if (houseInput) {
+                            houseInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
                         streetInput.dispatchEvent(new Event('input', { bubbles: true }));
                         areaInput.dispatchEvent(new Event('input', { bubbles: true }));
                     } else if (streetInput) {
@@ -590,6 +649,7 @@
             defaultLng,
             defaultZoom,
             setCoordinates,
+            previewCoordinates,
             clearSelection(message = 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.') {
                 latInput.value = '';
                 lngInput.value = '';
@@ -628,6 +688,12 @@
             const picker = mountPicker(container);
             if (picker) {
                 picker.setCoordinates(lat, lng, message);
+            }
+        },
+        preview(container, lat, lng, message = 'Đây là vị trí tham chiếu. Hãy xác nhận lại nếu muốn dùng cho đơn hàng.') {
+            const picker = mountPicker(container);
+            if (picker) {
+                picker.previewCoordinates(lat, lng, message);
             }
         },
         clear(container, message = 'Nhấn vào bản đồ để đặt vị trí, hoặc bấm lấy vị trí hiện tại.') {

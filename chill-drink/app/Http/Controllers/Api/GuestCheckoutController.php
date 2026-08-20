@@ -9,6 +9,7 @@ use App\Models\ProductSize;
 use App\Models\User;
 use App\Jobs\ProcessGuestOrderEmail;
 use App\Support\OrderDistancePolicy;
+use App\Support\ShippingFee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +32,7 @@ class GuestCheckoutController extends Controller
             'branch_id' => 'required|integer|exists:branches,id',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
+            'shipping_address' => 'nullable|string|max:500',
             'items' => 'required|array',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
@@ -44,16 +46,30 @@ class GuestCheckoutController extends Controller
         }
 
         $branch = Branch::availableForLocation()->find($request->branch_id);
-        $distance = $branch
-            ? OrderDistancePolicy::distanceFromBranch($branch, $request->latitude, $request->longitude)
-            : null;
-
-        if (! $branch || $distance === null || ! OrderDistancePolicy::isInsideServiceRadius($distance)) {
+        if (! $branch) {
             return response()->json([
                 'status' => 'error',
-                'errors' => [
-                    'branch_id' => [OrderDistancePolicy::message()],
-                ],
+                'errors' => ['branch_id' => ['Chi nhánh không khả dụng hoặc chưa có tọa độ.']],
+            ], 422);
+        }
+
+        $distance = OrderDistancePolicy::distanceFromBranch(
+            $branch,
+            $request->latitude,
+            $request->longitude
+        );
+
+        if ($distance === null) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => ['branch_id' => [OrderDistancePolicy::routingUnavailableMessage()]],
+            ], 503);
+        }
+
+        if (! OrderDistancePolicy::isInsideServiceRadius($distance)) {
+            return response()->json([
+                'status' => 'error',
+                'errors' => ['branch_id' => [OrderDistancePolicy::message()]],
             ], 422);
         }
 
@@ -85,6 +101,11 @@ class GuestCheckoutController extends Controller
                 ];
             }
 
+            $cupCount = max(1, (int) collect($itemsData)->sum('quantity'));
+            $shippingQuote = ShippingFee::calculate($distance, 'standard', $cupCount);
+            $shippingFee = (int) $shippingQuote['total_fee'];
+            $grandTotal = max(0, $totalAmount + $shippingFee);
+
             $orderToken = (string) Str::uuid();
 
             $orderData = [
@@ -95,14 +116,20 @@ class GuestCheckoutController extends Controller
                 'guest_token' => $orderToken,
                 'branch_id' => $request->branch_id,
                 'subtotal' => $totalAmount,
-                'total' => $totalAmount,
+                'shipping_fee' => $shippingFee,
+                'total' => $grandTotal,
+                'shipping_address_text' => trim((string) $request->input('shipping_address', '')) ?: null,
+                'shipping_latitude' => (float) $request->latitude,
+                'shipping_longitude' => (float) $request->longitude,
+                'fulfillment_type' => 'delivery',
+                'delivery_type' => 'now',
                 'status' => 'pending',
                 'payment_method' => 'cod',
                 'payment_status' => 'pending',
             ];
 
             if (Schema::hasColumn('orders', 'total_price')) {
-                $orderData['total_price'] = $totalAmount;
+                $orderData['total_price'] = $grandTotal;
             }
 
             $order = Order::create($orderData);
@@ -129,7 +156,11 @@ class GuestCheckoutController extends Controller
                 'data' => [
                     'order_id' => $order->id,
                     'order_token' => $order->guest_token,
-                    'total_amount' => $order->total,
+                    'subtotal' => (int) $order->subtotal,
+                    'shipping_fee' => (int) $order->shipping_fee,
+                    'distance_km' => $distance,
+                    'cup_count' => $cupCount,
+                    'total_amount' => (int) $order->total,
                     'potential_points' => $order->pointsEarnable(),
                 ]
             ], 201);

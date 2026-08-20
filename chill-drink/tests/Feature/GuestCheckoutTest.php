@@ -263,9 +263,8 @@ class GuestCheckoutTest extends TestCase
                 'guest_email' => 'guest@example.com',
                 'delivery_type' => 'delivery',
                 'branch_id' => $branchId,
-                'shipping_address_ui' => '123 Phố Huế, Hà Nội',
+                'shipping_address_ui' => 'Hà Nội',
                 'shipping_area_ui' => 'Hà Nội',
-                'note' => 'Giao tại sảnh tòa nhà, vui lòng gọi trước.',
                 'latitude' => 21.0278,
                 'longitude' => 105.8342,
             ])

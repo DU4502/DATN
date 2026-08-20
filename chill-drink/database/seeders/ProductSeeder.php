@@ -138,7 +138,7 @@ class ProductSeeder extends Seeder
                     'size_id' => $size->id,
                 ],
                 [
-                    'price' => $extra,
+                    'price' => $basePrice + $extra,
                 ]
             );
         }

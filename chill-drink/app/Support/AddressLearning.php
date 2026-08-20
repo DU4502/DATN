@@ -76,6 +76,46 @@ final class AddressLearning
         $this->promoteObservation($observation);
     }
 
+    /**
+     * Ghi nhận điểm giao thực tế từ GPS shipper vào chính kho dữ liệu địa chỉ hiện có.
+     * Không tạo map mới: điểm này dùng để tăng độ tin cậy cho địa chỉ khách hàng
+     * và được AddressLookupController khai thác lại cho các lần đặt sau.
+     */
+    public function recordShipperDeliveryPoint(Order $order, float $latitude, float $longitude, ?float $accuracy = null): ?AddressObservation
+    {
+        if (($order->fulfillment_type ?? 'delivery') !== 'delivery') {
+            return null;
+        }
+
+        $observation = $this->record([
+            'user_id' => $order->user_id,
+            'order_id' => $order->id,
+            'address_id' => $order->address_id ?? null,
+            'source_type' => 'shipper_delivery_gps',
+            'full_address' => $this->orderAddressText($order),
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'status' => 'delivery_success',
+            'confidence' => $accuracy !== null && $accuracy <= 30 ? 0.90 : 0.80,
+            'metadata' => [
+                'gps_accuracy_m' => $accuracy,
+                'captured_from' => 'shipper_delivery',
+            ],
+        ]);
+
+        if (! $observation) {
+            return null;
+        }
+
+        $observation->forceFill([
+            'delivered_at' => $order->delivered_at ?? now(),
+        ])->save();
+
+        $this->promoteObservation($observation);
+
+        return $observation;
+    }
+
     public function record(array $payload): ?AddressObservation
     {
         if (! Schema::hasTable('address_observations')) {
@@ -186,7 +226,7 @@ final class AddressLearning
     {
         $firstPart = trim(Str::before($address, ','));
 
-        if (preg_match('/^(?:so\s*)?(\d+[a-zA-Z]?(?:\/\d+[a-zA-Z]?)*)(?:\s+|-)+(.*)$/iu', $firstPart, $matches)) {
+        if (preg_match('/^(?:so\s*)?(\d+[a-zA-Z]?(?:\/\d+[a-zA-Z]?)*)(?:\s+|-|,)+(.*)$/iu', $firstPart, $matches)) {
             return [trim($matches[1]), $this->normalizeRoadName($matches[2])];
         }
 

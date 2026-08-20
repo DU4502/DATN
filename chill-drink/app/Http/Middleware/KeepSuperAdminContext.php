@@ -37,6 +37,7 @@ class KeepSuperAdminContext
         'admin.slides.trash' => 'admin.super-admin.manage.slides.trash',
 
         'admin.orders.index' => 'admin.super-admin.manage.orders.index',
+        'admin.shipper-incidents.index' => 'admin.super-admin.manage.shipper-incidents.index',
 
         'admin.group-orders.index' => 'admin.super-admin.manage.group-orders.index',
         'admin.group-orders.show' => 'admin.super-admin.manage.group-orders.show',
