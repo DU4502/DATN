@@ -8,36 +8,41 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('shippers', function (Blueprint $table) {
+        Schema::create('shipments', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('user_id')
-                ->constrained()
+            $table->integer('order_id');
+
+            $table->foreignId('shipper_id')
+                ->constrained('shippers')
                 ->cascadeOnDelete();
 
-            $table->string('code', 20)->unique();
+            $table->string('status', 30)
+                ->default('assigned');
 
-            $table->string('phone', 20);
+            $table->timestamp('assigned_at')
+                ->nullable();
 
-            $table->enum('vehicle_type', ['bike', 'car'])
-                ->default('bike');
+            $table->timestamp('picked_up_at')
+                ->nullable();
 
-            $table->string('license_plate')->nullable();
+            $table->timestamp('delivered_at')
+                ->nullable();
 
-            $table->string('avatar')->nullable();
-
-            $table->enum('status', ['offline', 'online', 'busy'])
-                ->default('offline');
-
-            $table->decimal('current_latitude', 10, 8)->nullable();
-            $table->decimal('current_longitude', 11, 8)->nullable();
+            $table->text('note')
+                ->nullable();
 
             $table->timestamps();
+
+            $table->foreign('order_id')
+                ->references('id')
+                ->on('orders')
+                ->cascadeOnDelete();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('shippers');
+        Schema::dropIfExists('shipments');
     }
 };

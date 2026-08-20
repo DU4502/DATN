@@ -20,12 +20,20 @@ class Shipper extends Model
         'license_plate',
         'avatar',
         'status',
+        'station_branch_id',
+        'returning_to_branch_id',
+        'returning_started_at',
+        'last_station_arrived_at',
         'current_latitude',
         'current_longitude',
     ];
 
     protected $casts = [
         'user_id' => 'integer',
+        'station_branch_id' => 'integer',
+        'returning_to_branch_id' => 'integer',
+        'returning_started_at' => 'datetime',
+        'last_station_arrived_at' => 'datetime',
         'current_latitude' => 'float',
         'current_longitude' => 'float',
     ];
@@ -36,6 +44,48 @@ class Shipper extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+
+    public function stationBranch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'station_branch_id');
+    }
+
+    public function returningBranch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'returning_to_branch_id');
+    }
+
+    public function codReceivables()
+    {
+        return $this->hasMany(ShipperCodReceivable::class);
+    }
+
+    public function codSettlements()
+    {
+        return $this->hasMany(ShipperCodSettlement::class);
+    }
+
+    public function isReturning(): bool
+    {
+        return ! empty($this->returning_to_branch_id);
+    }
+
+    /**
+     * Home branch cố định của shipper. Nguồn chuẩn duy nhất là users.branch_id.
+     * station_branch_id/returning_to_branch_id chỉ mô tả vị trí vận hành, không quyết định quyền nhận đơn.
+     */
+    public function homeBranchId(): ?int
+    {
+        $branchId = $this->user?->branch_id;
+
+        return is_numeric($branchId) && (int) $branchId > 0 ? (int) $branchId : null;
+    }
+
+    public function effectiveStationBranchId(): ?int
+    {
+        return $this->homeBranchId();
     }
 
     /**

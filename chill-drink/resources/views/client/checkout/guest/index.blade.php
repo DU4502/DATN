@@ -490,7 +490,7 @@
                             <i class="bi bi-shop"></i>
                             <div>
                                 <strong class="d-block">Chi nhánh xử lý</strong>
-                                <span class="small text-secondary" data-summary-branch>Chọn chi nhánh dưới 15 km để tiếp tục.</span>
+                                <span class="small text-secondary" data-summary-branch>Chọn chi nhánh trong phạm vi không quá 15 km đường bộ để tiếp tục.</span>
                             </div>
                         </div>
                     </div>
@@ -568,6 +568,7 @@
         const shouldPromptLocation = checkoutRoot?.dataset.shouldPromptLocation === '1';
         const reverseGeocodeUrl = checkoutRoot?.dataset.reverseGeocodeUrl || '/api/reverse-geocode';
         const addressLookupUrl = '/api/address-lookup';
+        const branchesListEndpoint = @json(route('api.branches.list'));
         const maxOrderDistanceKm = {{ json_encode(\App\Support\OrderDistancePolicy::MAX_DISTANCE_KM) }};
         const guestLatitudeInput = document.getElementById('guest_latitude');
         const guestLongitudeInput = document.getElementById('guest_longitude');
@@ -690,7 +691,7 @@
             }
 
             if (summaryBranch) {
-                summaryBranch.textContent = selectedBranchText || 'Chọn chi nhánh dưới 15 km để tiếp tục.';
+                summaryBranch.textContent = selectedBranchText || 'Chọn chi nhánh trong phạm vi không quá 15 km đường bộ để tiếp tục.';
             }
         }
 
@@ -772,7 +773,14 @@
             const hasLocation = Number.isFinite(guestLatitude) && Number.isFinite(guestLongitude);
             const center = hasLocation ? [guestLatitude, guestLongitude] : [19.8, 105.75];
             addressMapElement.classList.add('is-loading');
-            addressMap = L.map(addressMapElement, { scrollWheelZoom: false, center, zoom: hasLocation ? 15 : 7 });
+            addressMap = L.map(addressMapElement, {
+                scrollWheelZoom: true,
+                touchZoom: true,
+                tap: true,
+                zoomControl: false,
+                center,
+                zoom: hasLocation ? 15 : 7,
+            });
             const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap contributors',
@@ -790,16 +798,6 @@
                 const position = addressMarker.getLatLng();
                 setDraftLocation(position.lat, position.lng, '', '', 'Đã cập nhật vị trí. Bấm “Dùng vị trí này” để áp dụng.');
             });
-            addressMapElement.addEventListener('wheel', (event) => {
-                if (!event.ctrlKey || !addressMap) {
-                    return;
-                }
-
-                // Keep Ctrl + wheel as map zoom instead of browser page zoom.
-                event.preventDefault();
-                const zoomDelta = event.deltaY < 0 ? 1 : -1;
-                addressMap.setZoom(addressMap.getZoom() + zoomDelta, { animate: false });
-            }, { passive: false });
             [0, 100, 250, 500, 900].forEach((delay) => {
                 setTimeout(() => addressMap?.invalidateSize({ pan: false }), delay);
             });
@@ -1062,87 +1060,81 @@
             return R * c;
         }
 
-        function renderBranchOptions(latitude = null, longitude = null) {
-            if (!branchSelect) {
-                return;
-            }
+        async function renderBranchOptions(latitude = null, longitude = null) {
+            if (!branchSelect) return;
 
             const currentValue = branchSelect.value || '';
             const hasLocation = Number.isFinite(latitude) && Number.isFinite(longitude);
-            const branches = branchesData.map((branch) => {
-                const branchLat = Number.parseFloat(branch.latitude);
-                const branchLon = Number.parseFloat(branch.longitude);
-                const distance = hasLocation && Number.isFinite(branchLat) && Number.isFinite(branchLon)
-                    ? calculateDistance(latitude, longitude, branchLat, branchLon)
-                    : null;
 
-                return {
-                    ...branch,
-                    distance,
-                };
-            });
+            const writeOptions = (branches, roadMode = false) => {
+                branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
 
-            const availableBranches = hasLocation
-                ? branches.filter((branch) => branch.distance !== null && branch.distance < maxOrderDistanceKm)
-                : branches;
-
-            availableBranches.sort((a, b) => {
-                if (a.distance === null && b.distance === null) {
-                    return 0;
+                if (hasLocation && branches.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.disabled = true;
+                    option.textContent = 'Không có chi nhánh nào trong 15 km đường bộ';
+                    branchSelect.appendChild(option);
                 }
 
-                if (a.distance === null) {
-                    return 1;
+                branches.forEach((branch) => {
+                    const option = document.createElement('option');
+                    option.value = branch.id;
+                    option.dataset.latitude = branch.latitude || '';
+                    option.dataset.longitude = branch.longitude || '';
+                    const distance = branch.distance_km ?? null;
+                    option.dataset.distance = distance !== null ? Number(distance).toFixed(2) : '';
+
+                    let label = branch.name || 'Chi nhánh';
+                    if (branch.address) label += ' — ' + branch.address;
+                    if (distance !== null && Number.isFinite(Number(distance))) {
+                        label += ` — ${Number(distance).toFixed(1)} km${roadMode ? ' đường bộ' : ''}`;
+                    }
+                    option.textContent = label;
+                    branchSelect.appendChild(option);
+                });
+
+                if (currentValue && Array.from(branchSelect.options).some((option) => option.value === String(currentValue))) {
+                    branchSelect.value = String(currentValue);
                 }
+            };
 
-                if (b.distance === null) {
-                    return -1;
+            if (!hasLocation) {
+                writeOptions(branchesData, false);
+                if (branchSelectNote) {
+                    branchSelectNote.classList.remove('d-none');
+                    branchSelectNote.textContent = 'Vui lòng xác định vị trí giao hàng để tính quãng đường đường bộ.';
                 }
-
-                return a.distance - b.distance;
-            });
-
-            branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
-
-            if (hasLocation && availableBranches.length === 0) {
-                const option = document.createElement('option');
-                option.value = '';
-                option.disabled = true;
-                option.textContent = 'Không có chi nhánh nào dưới 15 km';
-                branchSelect.appendChild(option);
+                updateSummary();
+                return;
             }
 
-            availableBranches.forEach((branch) => {
-                const option = document.createElement('option');
-                option.value = branch.id;
-                option.dataset.latitude = branch.latitude || '';
-                option.dataset.longitude = branch.longitude || '';
-                option.dataset.distance = branch.distance !== null ? branch.distance.toFixed(2) : '';
+            branchSelect.innerHTML = '<option value="">Đang tính tuyến đường...</option>';
+            branchSelect.disabled = true;
 
-                let label = branch.name || 'Chi nhánh';
-                if (branch.address) {
-                    label += ' — ' + branch.address;
+            try {
+                const url = new URL(branchesListEndpoint, window.location.origin);
+                url.searchParams.set('latitude', String(latitude));
+                url.searchParams.set('longitude', String(longitude));
+                const response = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) throw new Error(payload.message || 'Không tải được chi nhánh.');
+
+                writeOptions(Array.isArray(payload.data) ? payload.data : [], true);
+                if (branchSelectNote) {
+                    branchSelectNote.classList.remove('d-none');
+                    branchSelectNote.textContent = 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng không quá 15 km theo lộ trình đường bộ.';
                 }
-                if (branch.distance !== null) {
-                    label += ' — ' + branch.distance.toFixed(1) + ' km';
+            } catch (error) {
+                writeOptions(branchesData, false);
+                if (branchSelectNote) {
+                    branchSelectNote.classList.remove('d-none');
+                    branchSelectNote.textContent = 'Chưa tải được tuyến đường. Hệ thống sẽ kiểm tra chính xác khi tiếp tục.';
                 }
-
-                option.textContent = label;
-                branchSelect.appendChild(option);
-            });
-
-            if (currentValue && Array.from(branchSelect.options).some((option) => option.value === currentValue)) {
-                branchSelect.value = currentValue;
+            } finally {
+                branchSelect.disabled = false;
+                updateSummary();
             }
-
-            if (branchSelectNote) {
-                branchSelectNote.classList.remove('d-none');
-                branchSelectNote.textContent = hasLocation
-                    ? 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng dưới 15 km.'
-                    : 'Bạn phải xác định vị trí giao hàng để kiểm tra chi nhánh dưới 15 km.';
-            }
-
-            syncGuestSummary();
         }
 
         function setLocationHint(message) {
@@ -1298,7 +1290,7 @@
         });
         if (branchSelect) {
             const validateBranchSelect = () => {
-                branchSelect.setCustomValidity(branchSelect.value ? '' : 'Vui lòng chọn chi nhánh dưới 15 km');
+                branchSelect.setCustomValidity(branchSelect.value ? '' : 'Vui lòng chọn chi nhánh trong phạm vi không quá 15 km đường bộ');
             };
 
             branchSelect.addEventListener('invalid', validateBranchSelect);

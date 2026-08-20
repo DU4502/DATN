@@ -3,6 +3,19 @@
 @section('page-title', 'Đơn hàng')
 
 @section('content')
+@php
+    $isSuperAdmin = auth()->user()?->isSuperAdmin() ?? false;
+    $isSuperAdminWorkspace = $isSuperAdmin && ! auth()->user()->isViewingAdminWorkspace();
+    $orderIndexRouteName = $isSuperAdminWorkspace
+        ? 'admin.super-admin.manage.orders.index'
+        : 'admin.orders.index';
+    $orderRecentRouteName = $isSuperAdminWorkspace
+        ? 'admin.super-admin.manage.orders.recent'
+        : 'admin.orders.recent';
+    $orderUpdateRouteName = $isSuperAdminWorkspace
+        ? 'admin.super-admin.manage.orders.updateStatus'
+        : 'admin.orders.updateStatus';
+@endphp
 <style>
     .order-detail-row > td {
         background: #f8fbfa;
@@ -86,20 +99,20 @@
         $currentStatus = $filters['status'] ?? '';
     @endphp
     
-    <a href="{{ route('admin.orders.index', array_merge(request()->query(), ['status' => ''])) }}" 
+    <a href="{{ route($orderIndexRouteName, array_merge(request()->query(), ['status' => ''])) }}" 
        class="status-pill status-pill-all {{ $currentStatus === '' ? 'active' : '' }}">
         Tất cả
     </a>
     
     @foreach(\App\Support\OrderStatus::adminLabels() as $value => $label)
-        <a href="{{ route('admin.orders.index', array_merge(request()->query(), ['status' => $value])) }}" 
+        <a href="{{ route($orderIndexRouteName, array_merge(request()->query(), ['status' => $value])) }}" 
            class="status-pill status-pill-{{ $value }} {{ $currentStatus === $value ? 'active' : '' }}">
             {{ $label }}
         </a>
     @endforeach
 </div>
 
-<form method="GET" action="{{ route('admin.orders.index') }}">
+<form method="GET" action="{{ route($orderIndexRouteName) }}">
     <input type="hidden" name="status" value="{{ $currentStatus }}">
     <section class="row g-3 align-items-end mb-4">
         <div class="col-xl-2 col-md-6">
@@ -144,7 +157,7 @@
         </div>
         <div class="col-xl-12 d-flex gap-2 justify-content-end">
             <button class="btn btn-primary text-nowrap px-4" type="submit">Áp dụng lọc</button>
-            <a href="{{ route('admin.orders.index') }}" class="btn btn-outline-primary text-nowrap px-4">Làm mới</a>
+            <a href="{{ route($orderIndexRouteName) }}" class="btn btn-outline-primary text-nowrap px-4">Làm mới</a>
         </div>
     </section>
 </form>
@@ -172,8 +185,12 @@
                 @php
                     $detailId = 'order-detail-'.$order->id;
                     $fulfillmentType = $order->fulfillment_type ?? 'delivery';
-                    $statusStepOptions = \App\Support\OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType);
-                    $nextStatus = \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType);
+                    $statusStepOptions = $isSuperAdmin
+                        ? \App\Support\OrderStatus::superAdminOptions((string) $order->status, $fulfillmentType)
+                        : \App\Support\OrderStatus::storeStepwiseOptions((string) $order->status, $fulfillmentType);
+                    $nextStatus = $isSuperAdmin
+                        ? \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType)
+                        : \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
                 @endphp
                 <tr data-order-id="{{ $order->id }}">
                     <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
@@ -233,16 +250,16 @@
                     </td>
                     <td class="text-end fw-bold text-primary">{{ number_format($order->total_price ?? $order->total ?? 0, 0, ',', '.') }}đ</td>
                     <td class="text-center">
-                        <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="order-status-form" data-order-id="{{ $order->id }}">
+                        <form action="{{ route($orderUpdateRouteName, $order->id) }}" method="POST" class="order-status-form" data-order-id="{{ $order->id }}">
                             @csrf
                             @method('PUT')
                             <div class="d-flex align-items-center gap-2 justify-content-center">
                                 <select name="status"
                                         class="form-select form-select-sm order-status-select"
-                                        data-original-status="{{ $order->status }}"
-                                        @disabled($nextStatus === null)>
+                                        data-original-status="{{ \App\Support\OrderStatus::normalize((string) $order->status) }}"
+                                        @disabled(count($statusStepOptions) <= 1)>
                                     @foreach($statusStepOptions as $value => $label)
-                                        <option value="{{ $value }}" @selected($order->status === $value)>{{ $label }}</option>
+                                        <option value="{{ $value }}" @selected(\App\Support\OrderStatus::normalize((string) $order->status) === $value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -307,6 +324,35 @@
                                         </div>
                                     </div>
 
+                                    @if(($order->fulfillment_type ?? 'delivery') === 'delivery')
+                                        <div class="mb-4">
+                                            <div class="admin-kicker mb-2 text-secondary fw-bold" style="letter-spacing:.05em;">NGƯỜI GIAO HÀNG</div>
+                                            @if($order->shipper)
+                                                <div class="p-3 bg-light border rounded-4 d-flex align-items-start gap-3">
+                                                    <div class="d-flex align-items-center justify-content-center flex-shrink-0 bg-white text-primary border" style="width:42px;height:42px;border-radius:13px;">
+                                                        <i class="bi bi-bicycle"></i>
+                                                    </div>
+                                                    <div class="small flex-grow-1">
+                                                        <div class="fw-bold text-dark">{{ $order->shipper->user?->name ?: $order->shipper->code ?: 'Shipper' }}</div>
+                                                        <div class="text-secondary mt-1">Mã: <strong>{{ $order->shipper->code ?: '-' }}</strong> · {{ $order->shipper->phone ?: $order->shipper->user?->phone ?: 'Chưa có SĐT' }}</div>
+                                                        <div class="text-secondary mt-1">{{ $order->shipper->vehicle_type ?: 'Chưa cập nhật xe' }} @if($order->shipper->license_plate)· <strong>{{ $order->shipper->license_plate }}</strong>@endif</div>
+                                                    </div>
+                                                    <span class="badge bg-warning text-dark">{{ strtoupper($order->shipper->status ?: 'assigned') }}</span>
+                                                </div>
+                                            @else
+                                                <div class="small text-secondary p-3 bg-light border rounded-4">Chưa có shipper được gán.</div>
+                                            @endif
+
+                                            @if(\App\Support\OrderStatus::normalize((string) $order->status) === \App\Support\OrderStatus::DELIVERED && $order->delivered_at)
+                                                <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
+                                                    <i class="bi bi-hourglass-split me-1"></i>
+                                                    Đang chờ khách xác nhận. Nếu khách không thao tác, hệ thống tự chuyển <strong>Hoàn thành</strong> lúc
+                                                    <strong>{{ $order->delivered_at->copy()->addMinutes(\App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES)->format('H:i · d/m/Y') }}</strong>.
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endif
+
                                     @if($order->status === \App\Support\OrderStatus::CANCELLED && $order->cancellation_reason)
                                         <!-- Lý do hủy đơn -->
                                         <div class="alert alert-danger d-flex align-items-start gap-2 mb-4" style="border-radius: 12px; border-left: 4px solid #dc2626;">
@@ -314,6 +360,44 @@
                                             <div class="flex-grow-1">
                                                 <div class="fw-bold mb-1">Lý do hủy đơn:</div>
                                                 <div>{{ $order->cancellation_reason }}</div>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @php
+                                        $shipmentIncident = $shipmentIncidents[(int) $order->id] ?? null;
+                                        $incidentResolveUrl = auth()->user()->isSuperAdmin() && !auth()->user()->isViewingAdminWorkspace()
+                                            ? route('admin.super-admin.manage.orders.shipper-incident.resolve', $order)
+                                            : route('admin.orders.shipper-incident.resolve', $order);
+                                    @endphp
+                                    @if($shipmentIncident)
+                                        <div class="alert alert-warning border-0 mb-4" style="border-radius:14px;box-shadow:0 8px 22px rgba(245,158,11,.12);">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <i class="bi bi-exclamation-triangle-fill mt-1" style="font-size:1.15rem;"></i>
+                                                <div class="flex-grow-1 min-w-0">
+                                                    <div class="fw-bold">Sự cố shipper cần xử lý</div>
+                                                    <div class="small mt-1"><strong>{{ $shipmentIncident['shipper_name'] }}</strong> · {{ $shipmentIncident['description'] }}</div>
+                                                    @if(!empty($shipmentIncident['reported_at_label']))
+                                                        <div class="small text-secondary mt-1">Báo lúc {{ $shipmentIncident['reported_at_label'] }}</div>
+                                                    @endif
+                                                    <div class="small mt-2">Đơn <strong>không bị hủy</strong>. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản trong tối đa {{ \App\Services\ShipperIncidentService::REASSIGN_MAX_RADIUS_KM }} km.</div>
+                                                    <div class="d-flex flex-wrap gap-2 mt-3">
+                                                        <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0">
+                                                            @csrf
+                                                            <input type="hidden" name="action" value="keep">
+                                                            <button class="btn btn-sm btn-outline-success" type="submit">
+                                                                <i class="bi bi-check-circle me-1"></i>Giữ shipper hiện tại
+                                                            </button>
+                                                        </form>
+                                                        <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0" onsubmit="return confirm('Xác nhận shipper hiện tại không thể tiếp tục và để hệ thống tự tìm người thay thế gần nhất?');">
+                                                            @csrf
+                                                            <input type="hidden" name="action" value="reassign">
+                                                            <button class="btn btn-sm btn-warning" type="submit">
+                                                                <i class="bi bi-arrow-repeat me-1"></i>Điều phối shipper khác
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     @endif
@@ -346,6 +430,15 @@
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">{{ strtoupper(\App\Support\OrderStatus::label((string) $order->status)) }}</strong>
                                                     </div>
+                                                    @if($order->payment_method === 'cod' && $order->codReceivable)
+                                                        <div class="mt-2">
+                                                            @if($order->codReceivable->settlement_id)
+                                                                <span class="badge bg-success"><i class="bi bi-cash-coin me-1"></i>COD đã đối soát công ty</span>
+                                                            @else
+                                                                <span class="badge bg-warning text-dark"><i class="bi bi-wallet2 me-1"></i>Shipper đang giữ {{ number_format((int)$order->codReceivable->amount,0,',','.') }}đ COD</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
                                                     @if($order->status_changed_at)
                                                         @php
                                                             $changedByUser = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
@@ -363,7 +456,7 @@
                                             <!-- Các nút hành động -->
                                             <div class="d-flex gap-2 align-items-stretch mt-3 w-100">
                                                 @if($nextStatus !== null)
-                                                    <form action="{{ route('admin.orders.updateStatus', $order->id) }}" method="POST" class="flex-grow-1 m-0">
+                                                    <form action="{{ route($orderUpdateRouteName, $order->id) }}" method="POST" class="flex-grow-1 m-0">
                                                         @csrf
                                                         @method('PUT')
                                                         <input type="hidden" name="status" value="{{ $nextStatus }}">
@@ -418,10 +511,10 @@
 <script>
     (function () {
         const csrfToken = @json(csrf_token());
-        const recentOrdersUrl = @json(route('admin.orders.recent'));
+        const recentOrdersUrl = @json(route($orderRecentRouteName));
         const hasActiveFilters = @json($hasActiveOrderFilters);
         const initialLatestId = @json($latestOrderId ?? 0);
-        window.isSuperAdmin = @json(auth()->user()->isSuperAdmin());
+        window.isSuperAdmin = @json($isSuperAdmin);
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -448,12 +541,48 @@
             return '<span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Chưa thanh toán</span>';
         }
 
+        function incidentAlertHtml(payload) {
+            const incident = payload.shipment_incident;
+            if (!incident) return '';
+
+            const resolveUrl = payload.incident_resolve_url || '#';
+            return `
+                <div class="alert alert-warning border-0 mb-4" style="border-radius:14px;box-shadow:0 8px 22px rgba(245,158,11,.12);">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">Sự cố shipper cần xử lý</div>
+                            <div class="small mt-1"><strong>${escapeHtml(incident.shipper_name || 'Shipper')}</strong> · ${escapeHtml(incident.description || 'Shipper báo sự cố.')}</div>
+                            ${incident.reported_at_label ? `<div class="small text-secondary mt-1">Báo lúc ${escapeHtml(incident.reported_at_label)}</div>` : ''}
+                            <div class="small mt-2">Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.</div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0">
+                                    <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                    <input type="hidden" name="action" value="keep">
+                                    <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Giữ shipper hiện tại</button>
+                                </form>
+                                <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0" onsubmit="return confirm('Xác nhận để hệ thống tự tìm shipper thay thế gần nhất?');">
+                                    <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                    <input type="hidden" name="action" value="reassign">
+                                    <button class="btn btn-sm btn-warning" type="submit"><i class="bi bi-arrow-repeat me-1"></i>Điều phối shipper khác</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function nextStatusLabel(payload) {
             const labels = {
-                pending: 'Chờ xử lý',
-                in_progress: 'Đang thực hiện',
-                shipper_accepted: 'Shipper đã nhận đơn',
-                arrived: 'Đơn hàng đã đến',
+                pending: 'Chờ xác nhận',
+                confirmed: 'Xác nhận đơn',
+                preparing: 'Bắt đầu pha chế',
+                ready_for_delivery: 'Sẵn sàng giao',
+                ready_for_pickup: 'Sẵn sàng lấy',
+                shipper_picked_up: 'Shipper đã lấy hàng',
+                delivering: 'Đang giao',
+                delivered: 'Đã giao',
                 completed: 'Hoàn thành',
                 cancelled: 'Đã hủy',
             };
@@ -464,22 +593,62 @@
         function statusStepHtml(payload) {
             const status = payload.status || 'pending';
             const updateUrl = payload.status_update_url || '#';
-            const nextStatus = payload.next_status || '';
             const currentLabel = payload.status_label || 'Chờ xử lý';
+            const providedOptions = payload.status_options && typeof payload.status_options === 'object'
+                ? payload.status_options
+                : null;
+            const statusOptions = providedOptions && Object.keys(providedOptions).length > 0
+                ? providedOptions
+                : {
+                    [status]: currentLabel,
+                    ...(payload.next_status ? { [payload.next_status]: nextStatusLabel(payload) } : {}),
+                };
 
-            const optionsHtml = `
-                <option value="${escapeHtml(status)}" selected>${escapeHtml(currentLabel)}</option>
-                ${nextStatus ? `<option value="${escapeHtml(nextStatus)}">${escapeHtml(nextStatusLabel(payload))}</option>` : ''}
-            `;
+            const optionsHtml = Object.entries(statusOptions).map(([value, label]) => `
+                <option value="${escapeHtml(value)}" ${String(value) === String(status) ? 'selected' : ''}>${escapeHtml(label)}</option>
+            `).join('');
+
+            const hasAlternative = Object.keys(statusOptions).some((value) => String(value) !== String(status));
+            const disabled = !hasAlternative;
 
             return `
-                <form action="${escapeHtml(updateUrl)}" method="POST" class="d-flex align-items-center gap-2 justify-content-center">
+                <form action="${escapeHtml(updateUrl)}" method="POST" class="order-status-form d-flex align-items-center gap-2 justify-content-center" data-order-id="${escapeHtml(payload.order_id || '')}">
                     <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
                     <input type="hidden" name="_method" value="PUT">
-                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" ${nextStatus ? '' : 'disabled'}>
+                    <select name="status"
+                            class="form-select form-select-sm order-status-select"
+                            data-original-status="${escapeHtml(status)}"
+                            ${disabled ? 'disabled' : ''}>
                         ${optionsHtml}
                     </select>
                 </form>
+            `;
+        }
+
+        function shipperInfoHtml(payload) {
+            const shipper = payload.shipper || null;
+            const deliveredWaiting = payload.status === 'delivered' && payload.auto_complete_at;
+
+            return `
+                <div class="mb-4">
+                    <div class="admin-kicker mb-2 text-secondary fw-bold" style="letter-spacing:.05em;">NGƯỜI GIAO HÀNG</div>
+                    ${shipper ? `
+                        <div class="p-3 bg-light border rounded-4 d-flex align-items-start gap-3">
+                            <div class="d-flex align-items-center justify-content-center flex-shrink-0 bg-white text-primary border" style="width:42px;height:42px;border-radius:13px;"><i class="bi bi-bicycle"></i></div>
+                            <div class="small flex-grow-1">
+                                <div class="fw-bold text-dark">${escapeHtml(shipper.name || shipper.code || 'Shipper')}</div>
+                                <div class="text-secondary mt-1">Mã: <strong>${escapeHtml(shipper.code || '-')}</strong> · ${escapeHtml(shipper.phone || 'Chưa có SĐT')}</div>
+                                <div class="text-secondary mt-1">${escapeHtml(shipper.vehicle_type || 'Chưa cập nhật xe')}${shipper.license_plate ? ` · <strong>${escapeHtml(shipper.license_plate)}</strong>` : ''}</div>
+                            </div>
+                            <span class="badge bg-warning text-dark">${escapeHtml(String(shipper.status || 'assigned').toUpperCase())}</span>
+                        </div>
+                    ` : '<div class="small text-secondary p-3 bg-light border rounded-4">Chưa có shipper được gán.</div>'}
+                    ${deliveredWaiting ? `
+                        <div class="alert alert-info py-2 px-3 mt-2 mb-0 small">
+                            <i class="bi bi-hourglass-split me-1"></i>Đang chờ khách xác nhận. Hệ thống tự chuyển <strong>Hoàn thành</strong> lúc <strong>${escapeHtml(payload.auto_complete_at)}</strong>.
+                        </div>
+                    ` : ''}
+                </div>
             `;
         }
 
@@ -541,6 +710,9 @@
                                             <span>${escapeHtml(payload.shipping_address || 'Chưa cập nhật địa chỉ')}</span>
                                         </div>
                                     </div>
+
+                                    ${shipperInfoHtml(payload)}
+                                    ${incidentAlertHtml(payload)}
 
                                     <!-- Thẻ tóm tắt thanh toán -->
                                     <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
@@ -690,6 +862,9 @@
                 status_update_url: payload.status_update_url || '#',
                 can_cancel: payload.can_cancel ?? true,
                 shipping_address: payload.shipping_address || '',
+                shipper: payload.shipper || null,
+                delivered_at: payload.delivered_at || null,
+                auto_complete_at: payload.auto_complete_at || null,
                 items: payload.items || [],
             }));
 
@@ -752,7 +927,7 @@
             if (statusSelect) {
                 statusSelect.value = payload.status;
                 
-                // If cancelled or completed, disable the dropdown
+                // Trạng thái cuối luôn khóa. Super Admin cũng không mở lại/đi lùi bằng dropdown.
                 if (payload.status === 'cancelled' || payload.status === 'completed') {
                     statusSelect.disabled = true;
                 }
@@ -884,7 +1059,7 @@
             cancelModal.addEventListener('show.bs.modal', function(event) {
                 const button = event.relatedTarget;
                 const orderId = button.getAttribute('data-order-id');
-                const updateUrl = '{{ route("admin.orders.updateStatus", ":id") }}'.replace(':id', orderId);
+                const updateUrl = @json(route($orderUpdateRouteName, ['id' => '__ORDER_ID__'])).replace('__ORDER_ID__', orderId);
                 
                 cancelForm.setAttribute('action', updateUrl);
                 cancelReasonTextarea.value = '';
@@ -903,6 +1078,29 @@
             const orderId = form.dataset.orderId;
             const newStatus = selectElement.value;
             const originalStatus = selectElement.dataset.originalStatus;
+            let cancellationReason = '';
+
+            if (newStatus === 'cancelled') {
+                const enteredReason = window.prompt(
+                    window.isSuperAdmin
+                        ? 'Super Admin hủy đơn ngoài luồng tiến trạng thái. Nhập lý do để lưu audit:'
+                        : 'Nhập lý do hủy đơn hàng:'
+                );
+
+                if (enteredReason === null) {
+                    selectElement.value = originalStatus;
+                    return;
+                }
+
+                cancellationReason = String(enteredReason || '').trim();
+                if (!window.isSuperAdmin && cancellationReason === '') {
+                    selectElement.value = originalStatus;
+                    if (typeof window.showRealtimeToast === 'function') {
+                        window.showRealtimeToast('Vui lòng nhập lý do hủy đơn hàng.', 'error');
+                    }
+                    return;
+                }
+            }
             
             // Show loading state
             selectElement.disabled = true;
@@ -914,6 +1112,9 @@
             formData.append('_token', '{{ csrf_token() }}');
             formData.append('_method', 'PUT');
             formData.append('status', newStatus);
+            if (newStatus === 'cancelled') {
+                formData.append('cancellation_reason', cancellationReason);
+            }
             
             // Send AJAX request
             fetch(form.action, {
@@ -925,7 +1126,17 @@
                 },
                 credentials: 'same-origin',
             })
-            .then(response => response.json())
+            .then(async (response) => {
+                const contentType = response.headers.get('content-type') || '';
+                const isJson = contentType.includes('application/json');
+                const payload = isJson ? await response.json() : { message: await response.text() };
+
+                if (!response.ok) {
+                    throw new Error(payload.message || `HTTP ${response.status}`);
+                }
+
+                return payload;
+            })
             .then(data => {
                 if (data.success) {
                     // Update original status
@@ -957,9 +1168,11 @@
                     setTimeout(() => {
                         window.location.reload();
                     }, 1000);
-                } else {
-                    throw new Error(data.message || 'Có lỗi xảy ra');
+
+                    return data;
                 }
+
+                throw new Error(data.message || 'Có lỗi xảy ra');
             })
             .catch(error => {
                 // Revert to original status

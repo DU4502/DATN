@@ -51,14 +51,18 @@ class AddressController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'max:30'],
             'area' => ['required', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:255'],
             'type' => ['required', 'string', 'max:100'],
             'is_default' => ['required', 'boolean'],
         ]);
 
+        $street = trim((string) $validated['street']);
+        $houseNumber = trim((string) ($validated['house_number'] ?? ''));
+
         return [
             'receiver_name' => $validated['name'], 'phone' => $validated['phone'],
-            'province' => $validated['area'], 'detail' => $validated['street'],
+            'province' => $validated['area'], 'detail' => trim($houseNumber.' '.$street),
             'label' => $validated['type'], 'is_default' => $validated['is_default'],
         ];
     }
@@ -76,11 +80,34 @@ class AddressController extends Controller
 
     private function payload(Address $address): array
     {
+        [$houseNumber, $street] = $this->splitHouseNumberAndStreet((string) ($address->detail ?? ''));
+
         return [
             'id' => (string) $address->id, 'name' => $address->receiver_name,
-            'phone' => $address->phone, 'street' => $address->detail,
+            'phone' => $address->phone, 'house_number' => $houseNumber, 'street' => $street,
             'area' => collect([$address->ward, $address->district, $address->province])->filter()->implode(', '),
             'type' => $address->label, 'isDefault' => (bool) $address->is_default,
         ];
+    }
+
+    private function splitHouseNumberAndStreet(string $value): array
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return [null, null];
+        }
+
+        if (preg_match('/^(?:so\s*)?(\d+[a-zA-Z]?(?:\/\d+[a-zA-Z]?)*)(?:\s+|-|,)+(.*)$/iu', $value, $matches)) {
+            $houseNumber = trim((string) ($matches[1] ?? ''));
+            $street = trim((string) ($matches[2] ?? ''));
+
+            return [
+                $houseNumber !== '' ? $houseNumber : null,
+                $street !== '' ? $street : null,
+            ];
+        }
+
+        return [null, $value];
     }
 }

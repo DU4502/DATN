@@ -8,8 +8,10 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Services\OrderCodeGenerator;
 use App\Support\GuestOrderAccess;
+use App\Support\OrderDistancePolicy;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\ShippingFee;
+use App\Support\OrderStatus;
 use App\Support\AddressLearning;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -135,8 +137,8 @@ class GuestCheckoutController extends CheckoutController
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
             'branch_id.required' => 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
-            'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
-            'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
+            'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra lộ trình không quá 15 km.',
+            'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra lộ trình không quá 15 km.',
             'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
         ]);
 
@@ -190,26 +192,38 @@ class GuestCheckoutController extends CheckoutController
 
         $cart = $this->hydrateCheckoutCart($cart);
         $subtotal = $this->cartSubtotal($cart);
+        $cupCount = max(1, (int) collect($cart)->sum(fn ($item) => (int) ($item['quantity'] ?? 1)));
         $paymentOptions = $this->paymentOptions();
         $deliveryType = $guestInfo['fulfillment_type'] ?? 'delivery';
+
+        $branch = ! empty($guestInfo['branch_id'])
+            ? Branch::query()->find($guestInfo['branch_id'])
+            : null;
 
         if ($deliveryType === 'pickup') {
             $shippingFee = 0;
         } else {
-            $shippingQuote = ShippingFee::quoteForAddress(
-                $guestInfo['shipping_address_ui'] ?? null,
-                $guestInfo['shipping_area_ui'] ?? null,
-                'standard'
-            );
+            $distance = $branch
+                ? OrderDistancePolicy::distanceFromBranch(
+                    $branch,
+                    $guestInfo['latitude'] ?? null,
+                    $guestInfo['longitude'] ?? null
+                )
+                : null;
+
+            if ($distance === null) {
+                return redirect()->route('checkout.guest.index')->with('error', OrderDistancePolicy::routingUnavailableMessage());
+            }
+
+            if (! OrderDistancePolicy::isInsideServiceRadius($distance)) {
+                return redirect()->route('checkout.guest.index')->with('error', OrderDistancePolicy::message());
+            }
+
+            $shippingQuote = ShippingFee::calculate($distance, 'standard', $cupCount);
             $shippingFee = $shippingQuote['total_fee'];
         }
 
         $grandTotal = max(0, $subtotal + $shippingFee);
-        $branch = null;
-
-        if (($guestInfo['fulfillment_type'] ?? '') === 'pickup' && ! empty($guestInfo['branch_id'])) {
-            $branch = Branch::query()->find($guestInfo['branch_id']);
-        }
 
         return view('client.checkout.guest.payment', compact(
             'cart',
@@ -273,6 +287,7 @@ class GuestCheckoutController extends CheckoutController
 
             $orderItems = $this->prepareOrderItems($cart);
             $subtotal = collect($orderItems)->sum('total_price');
+            $cupCount = max(1, (int) collect($orderItems)->sum(fn ($item) => (int) ($item['quantity'] ?? 1)));
             $deliveryType = $guestInfo['fulfillment_type'] ?? 'delivery';
 
             if ($deliveryType === 'pickup') {
@@ -280,18 +295,37 @@ class GuestCheckoutController extends CheckoutController
                 $addressText = Branch::query()->find($guestInfo['branch_id'] ?? 0)?->name ?? 'Chi nhánh';
                 $shippingNote = "Lấy tại chi nhánh: {$addressText}";
             } else {
-                $shippingQuote = ShippingFee::quoteForAddress(
-                    $guestInfo['shipping_address_ui'] ?? null,
-                    $guestInfo['shipping_area_ui'] ?? null,
-                    'standard'
-                );
+                $branchForDelivery = Branch::availableForLocation()->find($guestInfo['branch_id'] ?? 0);
+                $distance = $branchForDelivery
+                    ? OrderDistancePolicy::distanceFromBranch(
+                        $branchForDelivery,
+                        $guestInfo['latitude'] ?? null,
+                        $guestInfo['longitude'] ?? null
+                    )
+                    : null;
+
+                if ($distance === null) {
+                    throw ValidationException::withMessages([
+                        'branch_id' => OrderDistancePolicy::routingUnavailableMessage(),
+                    ]);
+                }
+
+                if (! OrderDistancePolicy::isInsideServiceRadius($distance)) {
+                    throw ValidationException::withMessages([
+                        'branch_id' => OrderDistancePolicy::message(),
+                    ]);
+                }
+
+                $shippingQuote = ShippingFee::calculate($distance, 'standard', $cupCount);
                 $shippingFee = $shippingQuote['total_fee'];
                 $addressText = trim(collect([
                     $guestInfo['shipping_address_ui'] ?? null,
                     $guestInfo['shipping_area_ui'] ?? null,
                 ])->filter()->implode(', '));
                 $shippingNote = sprintf(
-                    'Giao hàng: phí cố định %s%s',
+                    'Giao hàng: khoảng cách %.1f km, %d cốc, phí %s%s',
+                    $distance,
+                    $cupCount,
                     ShippingFee::formatCurrency($shippingFee),
                     $addressText ? ", địa chỉ: {$addressText}" : ''
                 );
@@ -499,11 +533,10 @@ class GuestCheckoutController extends CheckoutController
         try {
             DB::beginTransaction();
 
-            // If already paid via VNPay, change to in_progress, otherwise pending
-            $newStatus = $order->payment_status === 'paid' ? 'in_progress' : 'pending';
-            
+            // Xác nhận email chỉ mở đơn cho quán xử lý. Thanh toán VNPay là trạng thái
+            // thanh toán riêng, không được tự nhảy qua bước quán xác nhận/điều phối shipper.
             $order->update([
-                'status'                         => $newStatus,
+                'status'                         => OrderStatus::PENDING,
                 'confirmation_token'             => null,   // Dùng một lần, xoá sau khi dùng
                 'confirmation_token_expires_at'  => null,
             ]);

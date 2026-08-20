@@ -77,7 +77,7 @@ class AdminChatController extends Controller
                 'guest_email' => $c->guest_email,
                 'cskh_name'   => $c->cskh?->name,
                 'unread'      => (int) $c->unread_count,
-                'can_reply'   => $user->isAdmin() || !$c->cskh_id || $c->cskh_id === $user->id,
+                'can_reply'   => $user->isSuperAdmin() || $user->isAdmin() || !$c->cskh_id || $c->cskh_id === $user->id,
                 'last_at'     => $c->latestMessage?->created_at?->format('H:i'),
             ]),
             'total_unread' => $conversations->sum('unread_count'),
@@ -291,7 +291,7 @@ class AdminChatController extends Controller
         $user = auth()->user();
 
         // Admin và Super Admin luôn có quyền trả lời
-        if ($user->isAdmin()) {
+        if ($user->isSuperAdmin() || $user->isAdmin()) {
             return true;
         }
 

@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\ShipperDispatchService;
+use App\Services\ShipperIncidentService;
+use App\Services\OrderCancellationService;
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
 use Illuminate\Http\Request;
@@ -74,8 +77,9 @@ class StaffOrderController extends Controller
         }
 
         $orders = $this->applyBranchScope($orders)->latest()->paginate(12)->withQueryString();
+        $shipmentIncidents = app(ShipperIncidentService::class)->pendingForOrders($orders->getCollection());
 
-        return view('staff.orders.index', compact('orders', 'filters', 'statusOptions'));
+        return view('staff.orders.index', compact('orders', 'filters', 'statusOptions', 'shipmentIncidents'));
     }
 
     public function updateStatus(Request $request, $id)
@@ -100,8 +104,8 @@ class StaffOrderController extends Controller
             return redirect()->back()->with('error', 'Vui lòng nhập lý do hủy đơn hàng.');
         }
 
-        if (!OrderStatus::canAdvanceTo((string) $order->status, $newStatus, $fulfillmentType)) {
-            return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này.');
+        if (!OrderStatus::canStoreAdvanceTo((string) $order->status, $newStatus, $fulfillmentType)) {
+            return redirect()->back()->with('error', 'Quán chỉ được xử lý đơn giao hàng tới bước Sẵn sàng giao. Các bước sau thuộc tài xế.');
         }
 
         if ($newStatus === OrderStatus::CONFIRMED &&
@@ -112,39 +116,36 @@ class StaffOrderController extends Controller
 
         $oldStatus = $order->status;
 
-        DB::transaction(function () use ($order, $newStatus, $oldStatus, $request, $user) {
-            $order->status            = $newStatus;
-            $order->status_changed_at = now();
-            $order->status_changed_by = $user->id;
+        if ($newStatus === OrderStatus::CANCELLED && OrderStatus::normalize((string) $oldStatus) !== OrderStatus::CANCELLED) {
+            $cancelResult = app(OrderCancellationService::class)->cancel(
+                $order,
+                (string) $request->cancellation_reason,
+                $user
+            );
+            $order = $cancelResult['order'];
+        } else {
+            DB::transaction(function () use ($order, $newStatus, $oldStatus, $user) {
+                $order->status            = $newStatus;
+                $order->status_changed_at = now();
+                $order->status_changed_by = $user->id;
 
-            if ($newStatus === OrderStatus::CANCELLED) {
-                $order->cancellation_reason = $request->cancellation_reason;
-            }
-
-            if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
-                $order->delivered_at = now();
-            }
-
-            $order->save();
-
-            if ($newStatus === OrderStatus::CANCELLED && $oldStatus !== OrderStatus::CANCELLED) {
-                foreach ($order->orderItems as $item) {
-                    if ($item->product) {
-                        $item->product->increment('stock', $item->quantity);
-                    }
+                if ($newStatus === OrderStatus::DELIVERED && OrderStatus::normalize((string) $oldStatus) !== OrderStatus::DELIVERED) {
+                    $order->delivered_at = now();
                 }
 
-                if ($order->coupon_id) {
-                    \App\Models\Voucher::where('id', $order->coupon_id)
-                        ->where('used_count', '>', 0)
-                        ->decrement('used_count');
-                }
+                $order->save();
+            });
+        }
 
-                if ($oldStatus === OrderStatus::COMPLETED) {
-                    $order->revokeLoyaltyPoints();
-                }
-            }
-        });
+
+        $dispatchResult = null;
+        if ($newStatus === OrderStatus::CONFIRMED
+            && $oldStatus !== OrderStatus::CONFIRMED
+            && ($order->fulfillment_type ?? 'delivery') === 'delivery') {
+            $dispatchResult = app(ShipperDispatchService::class)
+                ->dispatchConfirmedOrder($order->fresh(['branch']));
+            $order->refresh();
+        }
 
         if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
             $order->payment_status = 'paid';
@@ -157,6 +158,27 @@ class StaffOrderController extends Controller
 
         RealtimeOrderNotifier::orderStatusUpdated($order);
 
-        return redirect()->back()->with('success', 'Đã cập nhật trạng thái: ' . OrderStatus::label($newStatus));
+        $message = 'Đã cập nhật trạng thái: ' . OrderStatus::label($newStatus) . '.';
+        if (($dispatchResult['status'] ?? null) === 'assigned') {
+            $shipperName = $dispatchResult['shipper']?->user?->name ?: $dispatchResult['shipper']?->code ?: 'shipper';
+            $mode = $dispatchResult['dispatch_mode'] ?? 'available';
+            $modeText = match ($mode) {
+                'returning' => ' (chuyển hướng shipper đang quay về)',
+                'bundle' => ' (ghép chuyến thuận đường)',
+                default => '',
+            };
+            $scoreText = isset($dispatchResult['dispatch_score'])
+                ? ' · score '.number_format((float) $dispatchResult['dispatch_score'], 1, ',', '.')
+                : '';
+            $etaSeconds = (float) ($dispatchResult['dispatch_features']['pickup_eta_s'] ?? 0);
+            $etaText = $etaSeconds > 0 ? ' · ETA tới quán ~'.number_format($etaSeconds / 60, 1, ',', '.').' phút' : '';
+            $message .= " Đã tự động gán cho {$shipperName}{$modeText}{$scoreText}{$etaText}.";
+        } elseif (($dispatchResult['status'] ?? null) === 'waiting') {
+            $message .= ' Chưa có shipper rảnh phù hợp, đơn đang chờ hệ thống điều phối.';
+        } elseif (($dispatchResult['status'] ?? null) === 'error') {
+            $message .= ' Điều phối shipper chưa thành công, vui lòng kiểm tra lại.';
+        }
+
+        return redirect()->back()->with('success', $message);
     }
 }

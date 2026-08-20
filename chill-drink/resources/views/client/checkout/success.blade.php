@@ -10,6 +10,24 @@
         'cod' => 'Thanh toán khi nhận hàng',
         'vnpay' => 'VNPay',
     ];
+    $liveTrackingUrl = null;
+    $deliveryChatMessagesUrl = null;
+    $deliveryChatSendUrl = null;
+    $guestTrackToken = null;
+    if ($order) {
+        if (auth()->check() && (int) auth()->id() === (int) $order->user_id) {
+            $liveTrackingUrl = route('orders.delivery-tracking', $order);
+            $deliveryChatMessagesUrl = route('orders.delivery-chat.messages', $order);
+            $deliveryChatSendUrl = route('orders.delivery-chat.send', $order);
+        } elseif ($order->isGuest()) {
+            $guestTrackToken = \App\Support\GuestOrderAccess::tokenFromRequest(request(), $order);
+            if (filled($guestTrackToken)) {
+                $liveTrackingUrl = route('checkout.guest.live', ['order' => $order->id, 'token' => $guestTrackToken]);
+                $deliveryChatMessagesUrl = route('checkout.guest.delivery-chat.messages', ['order' => $order->id, 'token' => $guestTrackToken]);
+                $deliveryChatSendUrl = route('checkout.guest.delivery-chat.send', ['order' => $order->id, 'token' => $guestTrackToken]);
+            }
+        }
+    }
 @endphp
 
 <style>
@@ -139,6 +157,25 @@
                         </div>
                         @endif
                     </div>
+
+                    @if($liveTrackingUrl)
+                        <div class="text-start">
+                            <x-delivery-live-tracking :order="$order" :live-url="$liveTrackingUrl" />
+                        </div>
+                    @endif
+
+                    @if($deliveryChatMessagesUrl && $deliveryChatSendUrl && ($order->fulfillment_type ?? 'delivery') === 'delivery')
+                        <div class="mt-3 d-flex justify-content-center">
+                            <x-order-delivery-chat
+                                :order="$order"
+                                :messages-url="$deliveryChatMessagesUrl"
+                                :send-url="$deliveryChatSendUrl"
+                                viewer="customer"
+                                peer-label="Tài xế"
+                                button-text="Chat với tài xế"
+                                button-class="btn btn-outline-primary px-4" />
+                        </div>
+                    @endif
                 @endif
 
                 <div class="result-actions">
@@ -149,6 +186,11 @@
                         <a href="{{ route('profile.orders') }}" class="btn btn-outline-secondary px-4 py-2">
                             <i class="bi bi-receipt me-2"></i>Xem đơn hàng
                         </a>
+                        @if($order && ($order->fulfillment_type ?? 'delivery') === 'delivery' && !in_array(\App\Support\OrderStatus::normalize((string) $order->status), ['cancelled', 'completed'], true))
+                            <a href="{{ route('orders.track', $order) }}" class="btn btn-outline-primary px-4 py-2">
+                                <i class="bi bi-geo-alt-fill me-2"></i>Theo dõi đơn hàng
+                            </a>
+                        @endif
                     @endauth
                     @if($order && $isFailed && auth()->check() && (int) auth()->id() === (int) $order->user_id)
                         <a href="{{ route('vnpay.payment', $order) }}" class="btn btn-outline-primary px-4 py-2">

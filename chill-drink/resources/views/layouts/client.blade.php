@@ -1164,7 +1164,7 @@
             }
         }
         END COMMENT */
-    </style>
+</style>
 </head>
 
 <body>
@@ -1320,8 +1320,8 @@
                                     </span>
                                 </div>
                                 @if(Auth::user()->unreadNotifications->count() > 0)
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-primary w-100" 
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary w-100"
                                         id="markAllReadBtn"
                                         style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                     <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
@@ -1752,12 +1752,15 @@
             setAddButtonState('loading');
 
             try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
                 const response = await fetch(form.action, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
                     },
+                    credentials: 'same-origin',
                     body: formData
                 });
 
@@ -1770,7 +1773,11 @@
                         errorData = {};
                     }
 
-                    showCartFeedback(errorData.message || 'Không thể thêm sản phẩm vào giỏ hàng.', {
+                    const fallbackMessage = response.status === 419
+                        ? 'Phiên đăng nhập hoặc CSRF token đã hết hạn. Hãy tải lại trang rồi thử lại.'
+                        : 'Không thể thêm sản phẩm vào giỏ hàng.';
+
+                    showCartFeedback(errorData.message || fallbackMessage, {
                         type: 'warning',
                         redirectUrl: errorData.redirect_url,
                         redirectLabel: errorData.redirect_label,
@@ -1873,7 +1880,7 @@
             if (!notificationContainer) return;
 
             const alerts = notificationContainer.querySelectorAll('.alert');
-            
+
             alerts.forEach(function(alert) {
                 // Auto-dismiss after 5 seconds
                 const dismissTimer = setTimeout(function() {
@@ -1881,7 +1888,7 @@
                     alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
                     alert.style.opacity = '0';
                     alert.style.transform = 'translateX(100%)';
-                    
+
                     // Remove from DOM after animation
                     setTimeout(function() {
                         if (alert.parentNode) {

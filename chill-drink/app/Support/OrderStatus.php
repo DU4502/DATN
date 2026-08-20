@@ -352,6 +352,151 @@ final class OrderStatus
         return $to === self::nextStatus($from, $fulfillmentType);
     }
 
+    /**
+     * Bước tiếp theo mà QUÁN/ADMIN/STAFF được phép thao tác.
+     *
+     * Với delivery, quán chỉ sở hữu chuỗi:
+     * pending -> confirmed -> preparing -> ready_for_delivery.
+     * Các bước pickup/delivering/delivered thuộc shipper và không được quán nhảy hộ.
+     */
+    public static function storeNextStatus(string $current, ?string $fulfillmentType = 'delivery'): ?string
+    {
+        $current = self::normalize($current);
+
+        if ($fulfillmentType === 'pickup') {
+            return self::nextStatus($current, $fulfillmentType);
+        }
+
+        return match ($current) {
+            self::PENDING => self::CONFIRMED,
+            self::CONFIRMED => self::PREPARING,
+            self::PREPARING => self::READY_FOR_DELIVERY,
+            default => null,
+        };
+    }
+
+    /**
+     * Dropdown trạng thái dành riêng cho quán/admin/staff.
+     * Không bao giờ đưa trạng thái do shipper sở hữu vào lựa chọn của quán.
+     */
+    public static function storeStepwiseOptions(string $current, ?string $fulfillmentType = 'delivery'): array
+    {
+        $current = self::normalize($current);
+
+        if ($fulfillmentType === 'pickup') {
+            return self::stepwiseOptions($current, $fulfillmentType);
+        }
+
+        $labels = self::actionLabels();
+        $options = [
+            $current => $labels[$current] ?? self::label($current),
+        ];
+
+        if (in_array($current, [self::COMPLETED, self::CANCELLED], true)) {
+            return $options;
+        }
+
+        $next = self::storeNextStatus($current, $fulfillmentType);
+        if ($next !== null && isset($labels[$next])) {
+            $options[$next] = $labels[$next];
+        }
+
+        if (in_array($current, [self::PENDING, self::CONFIRMED, self::PREPARING], true)) {
+            $options[self::CANCELLED] = $labels[self::CANCELLED];
+        }
+
+        return $options;
+    }
+
+    /**
+     * Dropdown trạng thái cho Super Admin.
+     *
+     * Super Admin có quyền thao tác trên mọi chi nhánh và có thể thực hiện cả các
+     * bước vốn thuộc Admin/Staff/Shipper, NHƯNG vẫn phải đi đúng state machine:
+     * chỉ trạng thái hiện tại + bước kế tiếp hợp lệ (và Hủy khi nghiệp vụ cho phép).
+     * Không cho nhảy cóc, đi lùi hoặc mở lại trạng thái kết thúc từ dropdown thường.
+     *
+     * @return array<string,string>
+     */
+    public static function superAdminOptions(string $current, ?string $fulfillmentType = 'delivery'): array
+    {
+        $current = self::normalize($current);
+        $labels = self::actionLabels();
+        $options = [
+            $current => $labels[$current] ?? self::label($current),
+        ];
+
+        // Super Admin có thể thực hiện bước của mọi vai trò, nhưng KHÔNG được chọn
+        // tùy ý trạng thái. Dropdown chỉ có trạng thái hiện tại + đúng 1 bước kế tiếp.
+        if (in_array($current, [self::COMPLETED, self::CANCELLED], true)) {
+            return $options;
+        }
+
+        $next = self::nextStatus($current, $fulfillmentType);
+        if ($next !== null) {
+            $options[$next] = $labels[$next] ?? self::label($next);
+        }
+
+        // Hủy là một nghiệp vụ riêng (nút/modal riêng), không trộn vào dropdown tiến trình.
+        return $options;
+    }
+
+    public static function canSuperAdminAdvanceTo(string $from, string $to, ?string $fulfillmentType = 'delivery'): bool
+    {
+        $from = self::normalize($from);
+        $to = self::normalize($to);
+
+        if ($to === $from) {
+            return true;
+        }
+
+        if (in_array($from, [self::COMPLETED, self::CANCELLED], true)) {
+            return false;
+        }
+
+        return $to === self::nextStatus($from, $fulfillmentType);
+    }
+
+    public static function canSuperAdminCancelFrom(string $from): bool
+    {
+        $from = self::normalize($from);
+
+        // Đã giao/hoàn thành là kết quả thực tế đã xảy ra, không cho biến thành hủy.
+        return in_array($from, [
+            self::PENDING,
+            self::CONFIRMED,
+            self::PREPARING,
+            self::READY_FOR_DELIVERY,
+            self::SHIPPER_PICKED_UP,
+            self::DELIVERING,
+            self::READY_FOR_PICKUP,
+        ], true);
+    }
+
+    /**
+     * Backend guard: quán/admin/staff không thể gọi API thủ công để nhảy sang
+     * shipper_picked_up / delivering / delivered của đơn giao hàng.
+     */
+    public static function canStoreAdvanceTo(string $from, string $to, ?string $fulfillmentType = 'delivery'): bool
+    {
+        $from = self::normalize($from);
+        $to = self::normalize($to);
+
+        if ($fulfillmentType === 'pickup') {
+            return self::canAdvanceTo($from, $to, $fulfillmentType);
+        }
+
+        if ($to === $from) {
+            return true;
+        }
+
+        if ($to === self::CANCELLED) {
+            return in_array($from, [self::PENDING, self::CONFIRMED, self::PREPARING], true);
+        }
+
+        return $to === self::storeNextStatus($from, $fulfillmentType);
+    }
+
     public static function userBadgeStyles(): array
     {
         return [

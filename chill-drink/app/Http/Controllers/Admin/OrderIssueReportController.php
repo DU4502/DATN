@@ -19,8 +19,13 @@ class OrderIssueReportController extends Controller
     public function index(Request $request): View
     {
         $query = OrderIssueReport::with(['order.branch', 'order.orderItems.product', 'order.orderItems.productSize', 'user', 'handler'])->latest();
-        if (! $request->user()->isSuperAdmin()) {
-            $query->whereHas('order', fn ($orderQuery) => $orderQuery->where('branch_id', $request->user()->branch_id));
+        $user = $request->user();
+        $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
+            ? $user->adminWorkspaceBranchId()
+            : ($user->isSuperAdmin() ? null : $user->branch_id);
+
+        if ($branchId !== null) {
+            $query->whereHas('order', fn ($orderQuery) => $orderQuery->where('branch_id', $branchId));
         }
         $reports = $query->paginate(20);
         return view('admin.order-issues.index', compact('reports'));
@@ -29,7 +34,12 @@ class OrderIssueReportController extends Controller
     public function update(Request $request, OrderIssueReport $issue): RedirectResponse
     {
         $issue->load('order');
-        abort_unless($request->user()->isSuperAdmin() || (int) $issue->order->branch_id === (int) $request->user()->branch_id, 403);
+        $user = $request->user();
+        $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
+            ? $user->adminWorkspaceBranchId()
+            : ($user->isSuperAdmin() ? null : $user->branch_id);
+        abort_unless($branchId === null || (int) $issue->order->branch_id === (int) $branchId, 403);
+
         $data = $request->validate([
             'status' => ['required', 'in:open,processing,resolved,rejected'],
             'resolution_type' => ['nullable', 'in:redelivery,voucher,other'],
@@ -112,7 +122,12 @@ class OrderIssueReportController extends Controller
     public function evidence(Request $request, OrderIssueReport $issue)
     {
         $issue->load('order');
-        abort_unless($request->user()->isSuperAdmin() || (int) $issue->order->branch_id === (int) $request->user()->branch_id, 403);
+        $user = $request->user();
+        $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
+            ? $user->adminWorkspaceBranchId()
+            : ($user->isSuperAdmin() ? null : $user->branch_id);
+        abort_unless($branchId === null || (int) $issue->order->branch_id === (int) $branchId, 403);
+
         $evidenceFiles = collect($issue->evidence_files ?? [])
             ->filter(fn ($file) => filled($file['path'] ?? null))
             ->values();

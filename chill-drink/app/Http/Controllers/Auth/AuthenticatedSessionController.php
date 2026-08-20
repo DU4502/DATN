@@ -82,6 +82,10 @@ class AuthenticatedSessionController extends Controller
                 ]
             );
 
+            // Shipper đã đăng nhập thì mặc định sẵn sàng nhận đơn.
+            // Các luồng nghiệp vụ như "đang quay về" vẫn được hiển thị riêng ở dashboard.
+            $shipper->forceFill(['status' => 'online'])->save();
+
             // Cập nhật thông tin đăng nhập
             $user->forceFill([
                 'last_login_at' => now(),

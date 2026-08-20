@@ -85,6 +85,20 @@ class Order extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    /**
+     * Tài xế hiện đang được gán cho đơn. Giữ quan hệ ở Order để Admin/Super Admin
+     * có thể hiển thị thông tin giao hàng mà không query tay trong Blade.
+     */
+    public function shipper()
+    {
+        return $this->belongsTo(Shipper::class, 'shipper_id');
+    }
+
+    public function codReceivable()
+    {
+        return $this->hasOne(ShipperCodReceivable::class);
+    }
+
     public function statusChangedBy()
     {
         return $this->belongsTo(User::class, 'status_changed_by');

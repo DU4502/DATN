@@ -406,6 +406,12 @@ $paymentLabels = $paymentLabels ?? [
                 <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
                 
                 <div class="d-flex flex-column gap-2 mt-2">
+                    @if(($order->fulfillment_type ?? 'delivery') === 'delivery' && !in_array($statusKey, ['cancelled', 'completed'], true))
+                        <a href="{{ route('orders.track', $order) }}" class="btn btn-sm btn-primary w-100 fw-semibold">
+                            <i class="bi bi-geo-alt-fill me-1"></i>Theo dõi đơn hàng
+                        </a>
+                    @endif
+
                     <form method="POST" action="{{ route('orders.reorder', $order) }}">
                         @csrf
                         <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
@@ -418,6 +424,11 @@ $paymentLabels = $paymentLabels ?? [
                     @endif
                     
                     @if($statusKey === 'delivered' || $order->status === 'delivered')
+                        @if($order->delivered_at)
+                            <div class="small text-secondary text-center">
+                                Tự hoàn thành lúc <strong>{{ $order->delivered_at->copy()->addMinutes(\App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES)->format('H:i') }}</strong> nếu bạn không xác nhận.
+                            </div>
+                        @endif
                         <form method="POST" action="{{ route('orders.confirm-received', $order) }}" onsubmit="return confirm('Xác nhận bạn đã nhận được đơn hàng này?');">
                             @csrf
                             <button type="submit" class="btn btn-sm btn-success w-100">

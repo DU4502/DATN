@@ -1,10 +1,19 @@
 @extends('layouts.shipper')
 
 @section('title', 'Thông tin cá nhân')
+@section('mobile-title', 'Cá nhân')
+@section('mobile-subtitle', 'Tài khoản & phương tiện')
 
 @section('content')
 
 <div class="profile-page">
+
+    <div class="ship-quick-grid mb-3">
+        <a href="{{ route('shipper.history') }}" class="ship-quick-link"><i class="fa-solid fa-clock-rotate-left"></i><span>Lịch sử</span></a>
+        <a href="{{ route('shipper.notifications.index') }}" class="ship-quick-link"><i class="fa-solid fa-bell"></i><span>Thông báo</span></a>
+        <a href="{{ route('shipper.orders') }}" class="ship-quick-link"><i class="fa-solid fa-box"></i><span>Đơn hàng</span></a>
+        <a href="{{ route('shipper.map') }}" class="ship-quick-link"><i class="fa-solid fa-location-arrow"></i><span>Dẫn đường</span></a>
+    </div>
 
     {{-- =========================================================
         HEADER
@@ -40,76 +49,6 @@
         </a>
 
     </div>
-
-
-    {{-- =========================================================
-        SUCCESS
-    ========================================================== --}}
-    @if(session('success'))
-
-        <div class="alert alert-success custom-alert alert-dismissible fade show mb-4">
-
-            <div class="d-flex align-items-center">
-
-                <div class="alert-icon success-icon">
-                    <i class="fa-solid fa-check"></i>
-                </div>
-
-                <div>
-                    <strong>Cập nhật thành công!</strong>
-
-                    <div class="small">
-                        {{ session('success') }}
-                    </div>
-                </div>
-
-            </div>
-
-            <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="alert">
-            </button>
-
-        </div>
-
-    @endif
-
-
-    {{-- =========================================================
-        ERROR
-    ========================================================== --}}
-    @if($errors->any())
-
-        <div class="alert alert-danger custom-alert mb-4">
-
-            <div class="d-flex align-items-start">
-
-                <div class="alert-icon danger-icon">
-                    <i class="fa-solid fa-exclamation"></i>
-                </div>
-
-                <div>
-
-                    <strong>Có lỗi xảy ra</strong>
-
-                    <ul class="mb-0 mt-1 ps-3">
-
-                        @foreach($errors->all() as $error)
-
-                            <li>{{ $error }}</li>
-
-                        @endforeach
-
-                    </ul>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    @endif
-
 
     <div class="row g-4">
 
@@ -841,40 +780,6 @@
         padding: 10px 16px;
     }
 
-
-    /* =========================
-       ALERT
-    ========================== */
-
-    .custom-alert {
-        border: none;
-        border-radius: 14px;
-        padding: 16px 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,.04);
-    }
-
-    .alert-icon {
-        width: 38px;
-        height: 38px;
-        min-width: 38px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-    }
-
-    .success-icon {
-        background: #d1e7dd;
-        color: #198754;
-    }
-
-    .danger-icon {
-        background: #f8d7da;
-        color: #dc3545;
-    }
-
-
     /* =========================
        PROFILE CARD
     ========================== */
@@ -1379,16 +1284,23 @@
         }
 
         .form-body {
-            padding: 18px;
+            padding: 18px 18px 118px;
         }
 
         .form-footer {
-            padding: 18px;
-            flex-direction: column-reverse;
+            padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+            position: sticky;
+            bottom: 74px;
+            z-index: 8;
+            background: rgba(255,255,255,.97);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 -10px 24px rgba(18,52,42,.08);
         }
 
         .form-footer .btn {
-            width: 100%;
+            flex: 1 1 0;
+            min-width: 0;
+            white-space: nowrap;
         }
 
         .location-card {
@@ -1453,6 +1365,10 @@
         .gps-value {
             font-size: 12px;
             word-break: break-all;
+        }
+
+        .form-body {
+            padding-bottom: 128px;
         }
 
     }

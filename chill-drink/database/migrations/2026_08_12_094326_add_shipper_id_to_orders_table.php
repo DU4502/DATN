@@ -7,31 +7,32 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Migration tương thích cho các DB cũ.
+     * shipper_id thuộc bảng shippers, không phải users.
      */
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->unsignedBigInteger('shipper_id')
-                ->nullable()
-                ->after('user_id');
+        if (Schema::hasColumn('orders', 'shipper_id')) {
+            return;
+        }
 
-            $table->foreign('shipper_id')
-                ->references('id')
-                ->on('users')
+        Schema::table('orders', function (Blueprint $table) {
+            $table->foreignId('shipper_id')
+                ->nullable()
+                ->after('user_id')
+                ->constrained('shippers')
                 ->nullOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
+        if (! Schema::hasColumn('orders', 'shipper_id')) {
+            return;
+        }
+
         Schema::table('orders', function (Blueprint $table) {
-            $table->dropForeign(['shipper_id']);
-            $table->dropColumn('shipper_id');
+            $table->dropConstrainedForeignId('shipper_id');
         });
     }
 };
-

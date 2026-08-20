@@ -5,11 +5,19 @@
 @section('content')
 @php
     $total = (int) ($subtotal ?? collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']));
+    $cartQuantity = max(1, (int) collect($cart)->sum(fn($item) => (int) ($item['quantity'] ?? 1)));
     $shippingDistanceOptions = $shippingDistanceOptions ?? \App\Support\ShippingFee::distanceOptions();
     $shippingMethods = $shippingMethods ?? \App\Support\ShippingFee::methods();
     $branches = $branches ?? \App\Models\Branch::where('status', true)->orderBy('name')->get();
     $user = auth()->user();
-    $primaryAddress = trim((string) ($user->address ?? ''));
+    $primaryAddressRaw = trim((string) ($user->address ?? ''));
+    $primaryAddressHouseNumber = null;
+    $primaryAddressStreet = $primaryAddressRaw;
+    if ($primaryAddressRaw !== '' && preg_match('/^(?:so\s*)?(\d+[a-zA-Z]?(?:\/\d+[a-zA-Z]?)*)(?:\s+|-|,)+(.*)$/iu', $primaryAddressRaw, $primaryAddressMatch)) {
+        $primaryAddressHouseNumber = trim((string) ($primaryAddressMatch[1] ?? '')) ?: null;
+        $primaryAddressStreet = trim((string) ($primaryAddressMatch[2] ?? '')) ?: '';
+    }
+    $primaryAddress = trim(collect([$primaryAddressHouseNumber, $primaryAddressStreet])->filter()->implode(' '));
     $primaryArea = trim((string) ($user->area ?? ''));
     $primaryAddressText = trim(collect([$primaryAddress, $primaryArea])->filter()->implode(', '));
     
@@ -22,7 +30,8 @@
     $shippingQuote = \App\Support\ShippingFee::quoteForAddress(
         old('shipping_address_ui', $primaryAddress),
         old('shipping_area_ui', $primaryArea),
-        $selectedShippingMethod
+        $selectedShippingMethod,
+        $cartQuantity
     );
     $shippingFee = $fulfillmentType === 'pickup' ? 0 : $shippingQuote['total_fee'];
     $availableVouchers = collect($availableVouchers ?? []);
@@ -931,13 +940,19 @@
                                 id="checkout_latitude"
                                 name="latitude"
                                 type="hidden"
-                                value="{{ old('latitude', $userLatitude) }}"
+                                value="{{ old('latitude') }}"
                             >
                             <input
                                 id="checkout_longitude"
                                 name="longitude"
                                 type="hidden"
-                                value="{{ old('longitude', $userLongitude) }}"
+                                value="{{ old('longitude') }}"
+                            >
+                            <input
+                                id="address_location_confirmed"
+                                name="address_location_confirmed"
+                                type="hidden"
+                                value="{{ old('address_location_confirmed') === '1' ? '1' : '' }}"
                             >
                             <input
                                 id="shipping_phone_ui"
@@ -995,34 +1010,13 @@
                                     data-user-longitude="{{ $userLongitude }}">
                                     <option value="">Chọn chi nhánh</option>
                                     @foreach($branches as $branch)
-                                        @php
-                                            $branchDistance = null;
-                                            if ($hasUserLocation && !empty($branch->latitude) && !empty($branch->longitude)) {
-                                                // Calculate distance using Haversine formula
-                                                $lat1 = deg2rad($userLatitude);
-                                                $lon1 = deg2rad($userLongitude);
-                                                $lat2 = deg2rad($branch->latitude);
-                                                $lon2 = deg2rad($branch->longitude);
-
-                                                $dlat = $lat2 - $lat1;
-                                                $dlon = $lon2 - $lon1;
-
-                                                $a = sin($dlat/2) * sin($dlat/2) + cos($lat1) * cos($lat2) * sin($dlon/2) * sin($dlon/2);
-                                                $c = 2 * asin(sqrt($a));
-                                                $radius = 6371; // Earth radius in kilometers
-                                                $branchDistance = $c * $radius;
-                                            }
-                                        @endphp
                                         <option value="{{ $branch->id }}"
                                             @selected((string) old('branch_id', session('group_branch_id')) === (string) $branch->id)
                                             data-latitude="{{ $branch->latitude ?? '' }}"
                                             data-longitude="{{ $branch->longitude ?? '' }}"
-                                            data-distance="{{ $branchDistance ?? '' }}">
+                                            data-distance="">
                                             {{ $branch->name }}
                                             @if($branch->address) — {{ $branch->address }}@endif
-                                            @if(!empty($branchDistance))
-                                                — {{ number_format($branchDistance, 1) }} km
-                                            @endif
                                         </option>
                                     @endforeach
                                 </select>
@@ -1311,20 +1305,25 @@
                         <label class="form-label small text-secondary mb-1" for="editAddressArea">Tỉnh/Thành phố, Quận/Huyện</label>
                         <input id="editAddressArea" type="text" class="form-control address-modal-field" value="{{ $primaryArea }}" placeholder="Ví dụ: Thanh Hóa, Phường Quảng Phú">
                     </div>
-                    <div class="col-12">
-                        <label class="form-label small text-secondary mb-1" for="editAddressStreet">Địa chỉ cụ thể</label>
-                        <textarea id="editAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Số nhà, tên đường, thôn/xóm...">{{ $primaryAddress }}</textarea>
+                    <div class="col-md-4">
+                        <label class="form-label small text-secondary mb-1" for="editAddressHouseNumber">Số nhà</label>
+                        <input id="editAddressHouseNumber" type="text" class="form-control address-modal-field" value="" placeholder="Ví dụ: 12/3">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label small text-secondary mb-1" for="editAddressStreet">Đường, thôn, hẻm...</label>
+                        <input id="editAddressStreet" type="text" class="form-control address-modal-field" placeholder="Tên đường, thôn/xóm...">
                     </div>
                     <div class="col-12">
                         @include('admin.partials.location-picker', [
                             'pickerId' => 'checkout-edit-location-picker',
                             'label' => 'Vị trí đã xác nhận',
                             'hint' => 'Chọn pin trực tiếp trên bản đồ để lưu vị trí nhận hàng.',
-                            'latValue' => $userLatitude ?? null,
-                            'lngValue' => $userLongitude ?? null,
+                            'latValue' => old('address_location_confirmed') === '1' ? old('latitude') : null,
+                            'lngValue' => old('address_location_confirmed') === '1' ? old('longitude') : null,
                             'defaultLat' => 16.047079,
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
+                            'autoFillHouseTarget' => '#editAddressHouseNumber',
                             'addressTarget' => '#editAddressStreet,#editAddressArea',
                             'showSearch' => true,
                             'searchPlaceholder' => 'Tìm số nhà, tên đường, phường/xã...',
@@ -1376,19 +1375,24 @@
                         <input id="newAddressArea" type="text" class="form-control address-modal-field" placeholder="Tỉnh/Thành phố, Quận/Huyện">
                     </div>
                     <div class="col-12">
-                        <label class="form-label small text-secondary mb-1" for="newAddressStreet">Địa chỉ cụ thể</label>
-                        <textarea id="newAddressStreet" rows="3" class="form-control address-modal-field" placeholder="Địa chỉ cụ thể"></textarea>
+                        <label class="form-label small text-secondary mb-1" for="newAddressHouseNumber">Số nhà</label>
+                        <input id="newAddressHouseNumber" type="text" class="form-control address-modal-field" placeholder="Ví dụ: 12/3">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small text-secondary mb-1" for="newAddressStreet">Đường, thôn, hẻm...</label>
+                        <input id="newAddressStreet" type="text" class="form-control address-modal-field" placeholder="Tên đường, thôn/xóm...">
                     </div>
                     <div class="col-12">
                         @include('admin.partials.location-picker', [
                             'pickerId' => 'checkout-new-location-picker',
                             'label' => 'Vị trí mới',
                             'hint' => 'Chọn pin trực tiếp trên bản đồ để lưu vị trí nhận hàng.',
-                            'latValue' => old('latitude'),
-                            'lngValue' => old('longitude'),
+                            'latValue' => old('address_location_confirmed') === '1' ? old('latitude') : null,
+                            'lngValue' => old('address_location_confirmed') === '1' ? old('longitude') : null,
                             'defaultLat' => 16.047079,
                             'defaultLng' => 108.206230,
                             'defaultZoom' => 5,
+                            'autoFillHouseTarget' => '#newAddressHouseNumber',
                             'addressTarget' => '#newAddressStreet,#newAddressArea',
                             'showSearch' => true,
                             'searchPlaceholder' => 'Tìm số nhà, tên đường, phường/xã...',
@@ -1647,6 +1651,11 @@
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
         const shippingPhoneInput = document.getElementById('shipping_phone_ui');
+        const checkoutLatitudeInput = document.getElementById('checkout_latitude');
+        const checkoutLongitudeInput = document.getElementById('checkout_longitude');
+        const addressLocationConfirmedInput = document.getElementById('address_location_confirmed');
+        const editAddressHouseNumber = document.getElementById('editAddressHouseNumber');
+        const newAddressHouseNumber = document.getElementById('newAddressHouseNumber');
         const fulfillmentDeliveryInput = document.getElementById('deliveryTypeDelivery');
         const selectedReceiver = document.getElementById('selectedReceiver');
         const selectedPhone = document.getElementById('selectedPhone');
@@ -1676,6 +1685,7 @@
             subtotal: {{ (int) $total }},
             discount: {{ (int) $discount }},
             fixedShippingFee: {{ (int) $shippingFee }},
+            cupCount: {{ (int) $cartQuantity }},
         };
         const shippingTiers = @json($shippingDistanceOptions);
         const maxOrderDistanceKm = {{ json_encode(\App\Support\OrderDistancePolicy::MAX_DISTANCE_KM) }};
@@ -1688,10 +1698,15 @@
         const summaryGrandTotal = document.getElementById('summaryGrandTotal');
         const branchSelectShell = document.querySelector('.branch-select-shell');
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
+        const latestDeliveryReference = @json($latestDeliveryReference ?? null);
+        const checkoutDeviceDriftRadiusM = 250;
+        const checkoutDeviceMaxAccuracyM = 1200;
 
         const addressStoreEndpoint = @json(route('checkout.addresses.store'));
         const addressUpdateEndpoint = @json(url('/checkout/addresses'));
         const nearestBranchEndpoint = @json(route('api.branches.nearest'));
+        const branchesListEndpoint = @json(route('api.branches.list'));
+        const deliveryQuoteEndpoint = @json(route('api.delivery.quote'));
         const addressLookupEndpoint = @json(route('api.address-lookup'));
         const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
         const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
@@ -1724,22 +1739,47 @@
             return /(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b)/iu.test(text);
         }
 
-        function showAddressHouseNumberWarning(message, shouldScroll = false) {
-            if (addressHouseNumberWarning) {
-                addressHouseNumberWarning.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${message}`;
-                addressHouseNumberWarning.classList.remove('d-none');
+        function renderAddressPanelWarning(message, shouldScroll = false) {
+            if (!addressHouseNumberWarning) {
+                return;
+            }
 
-                if (shouldScroll) {
-                    addressHouseNumberWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+            addressHouseNumberWarning.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${message}`;
+            addressHouseNumberWarning.classList.remove('d-none');
+
+            if (shouldScroll) {
+                addressHouseNumberWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
+        function showAddressHouseNumberWarning(message, shouldScroll = false) {
+            renderAddressPanelWarning(persistentAddressWarningMessage || message, shouldScroll);
+        }
+
         function hideAddressHouseNumberWarning() {
+            if (persistentAddressWarningMessage) {
+                renderAddressPanelWarning(persistentAddressWarningMessage);
+                return;
+            }
+
             addressHouseNumberWarning?.classList.add('d-none');
             if (addressHouseNumberWarning) {
                 addressHouseNumberWarning.textContent = '';
             }
+        }
+
+        function setPersistentAddressWarning(message, shouldScroll = false) {
+            persistentAddressWarningMessage = String(message || '').trim();
+            if (!persistentAddressWarningMessage) {
+                return;
+            }
+
+            renderAddressPanelWarning(persistentAddressWarningMessage, shouldScroll);
+        }
+
+        function clearPersistentAddressWarning() {
+            persistentAddressWarningMessage = '';
+            hideAddressHouseNumberWarning();
         }
 
         function syncNoteRequirement(isRequired) {
@@ -1778,6 +1818,28 @@
         function clearAddressHouseNumberWarning() {
             noteInput?.setCustomValidity('');
             noteInput?.classList.remove('is-invalid');
+        }
+
+        function haversineDistanceMeters(lat1, lng1, lat2, lng2) {
+            const earthRadius = 6371000;
+            const latDelta = (lat2 - lat1) * Math.PI / 180;
+            const lngDelta = (lng2 - lng1) * Math.PI / 180;
+            const startLat = lat1 * Math.PI / 180;
+            const endLat = lat2 * Math.PI / 180;
+            const a = Math.sin(latDelta / 2) ** 2
+                + Math.cos(startLat) * Math.cos(endLat) * Math.sin(lngDelta / 2) ** 2;
+
+            return earthRadius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function formatDistanceForCheckout(distanceMeters) {
+            const distance = Math.max(0, Number(distanceMeters) || 0);
+
+            if (distance >= 1000) {
+                return `${(distance / 1000).toFixed(1)} km`;
+            }
+
+            return `${Math.round(distance)} m`;
         }
         document.addEventListener('click', async function (event) {
             const button = event.target.closest('[data-checkout-cart-action]');
@@ -1827,6 +1889,7 @@
                 document.querySelector('[data-checkout-item-count]').textContent = payload.count;
                 document.querySelector('[data-checkout-subtotal]').textContent = payload.total_formatted;
                 shippingConfig.subtotal = Number(payload.total || 0);
+                shippingConfig.cupCount = Math.max(1, Number(payload.quantity_count || 1));
 
                 // Giá trị voucher phụ thuộc tạm tính, yêu cầu chọn lại để tổng tiền luôn chính xác.
                 selectedVoucherCode.value = '';
@@ -1879,13 +1942,53 @@
             updateBase: @json(url('/checkout/addresses')),
         };
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        let confirmedLocation = {
-            latitude: Number.parseFloat(@json($userLatitude ?? null) || '') || null,
-            longitude: Number.parseFloat(@json($userLongitude ?? null) || '') || null,
+        const restoredLocationConfirmed = @json(old('address_location_confirmed') === '1');
+        const restoredConfirmedLocation = restoredLocationConfirmed ? {
+            latitude: Number.parseFloat(@json(old('latitude')) || '') || null,
+            longitude: Number.parseFloat(@json(old('longitude')) || '') || null,
+        } : {
+            latitude: null,
+            longitude: null,
         };
+        let confirmedLocation = { ...restoredConfirmedLocation };
+        let checkoutAddressLocationSequence = 0;
+        let checkoutDeviceLocation = {
+            latitude: null,
+            longitude: null,
+            accuracy: null,
+        };
+        let checkoutDeviceLocationRequested = false;
+        let checkoutRecentOrderDrift = null;
+        let checkoutRecentOrderDriftAcknowledged = false;
+        let checkoutDriftPromptShown = false;
+        let persistentAddressWarningMessage = '';
 
         function compactAddress(parts) {
             return parts.filter(Boolean).join(', ');
+        }
+
+        function splitHouseNumberAndStreet(value) {
+            const text = String(value || '').trim();
+            if (!text) {
+                return { house_number: '', street: '' };
+            }
+
+            const match = text.match(/^(?:so\s*)?(\d+[a-zA-Z]?(?:\/\d+[a-zA-Z]?)*)(?:\s+|-|,)+(.*)$/iu);
+            if (!match) {
+                return { house_number: '', street: text };
+            }
+
+            return {
+                house_number: match[1] || '',
+                street: (match[2] || '').trim() || '',
+            };
+        }
+
+        function composeAddressLine(houseNumber, street) {
+            return [
+                String(houseNumber || '').trim(),
+                String(street || '').trim(),
+            ].filter(Boolean).join(' ');
         }
 
         function isValidCheckoutPhone(value) {
@@ -1944,6 +2047,205 @@
             return Number.isFinite(confirmedLocation.latitude) && Number.isFinite(confirmedLocation.longitude);
         }
 
+        function parseCheckoutCoordinate(value) {
+            const coordinate = Number.parseFloat(value);
+            return Number.isFinite(coordinate) ? coordinate : null;
+        }
+
+        function getAddressCoordinates(address) {
+            return {
+                latitude: parseCheckoutCoordinate(address?.latitude),
+                longitude: parseCheckoutCoordinate(address?.longitude),
+            };
+        }
+
+        function getLatestDeliveryReferenceCoordinates() {
+            return {
+                latitude: parseCheckoutCoordinate(latestDeliveryReference?.latitude),
+                longitude: parseCheckoutCoordinate(latestDeliveryReference?.longitude),
+            };
+        }
+
+        function hasCheckoutDeviceLocation() {
+            return Number.isFinite(checkoutDeviceLocation.latitude) && Number.isFinite(checkoutDeviceLocation.longitude);
+        }
+
+        function clearCheckoutRecentOrderDriftNotice() {
+            checkoutRecentOrderDrift = null;
+            clearPersistentAddressWarning();
+        }
+
+        function acknowledgeCheckoutRecentOrderDrift() {
+            checkoutRecentOrderDriftAcknowledged = true;
+            clearCheckoutRecentOrderDriftNotice();
+        }
+
+        function previewCheckoutDeviceLocationOnPicker(container, message) {
+            if (!container || !hasCheckoutDeviceLocation()) {
+                return false;
+            }
+
+            window.ChillDrinkLocationPicker?.preview(
+                container,
+                checkoutDeviceLocation.latitude,
+                checkoutDeviceLocation.longitude,
+                message || 'Đây là vị trí hiện tại của thiết bị. Hãy xác nhận lại nếu muốn dùng cho đơn hàng.'
+            );
+
+            return true;
+        }
+
+        function isCheckoutAddressModalOpen() {
+            return ['addressEditModal', 'addressAddModal', 'addressListModal'].some((id) => {
+                const element = document.getElementById(id);
+                return element?.classList.contains('show');
+            });
+        }
+
+        function maybeRequireAddressRefreshAgainstLatestOrder() {
+            if (!fulfillmentDeliveryInput?.checked || checkoutRecentOrderDriftAcknowledged || !hasCheckoutDeviceLocation()) {
+                return false;
+            }
+
+            const reference = getLatestDeliveryReferenceCoordinates();
+            const accuracy = Number(checkoutDeviceLocation.accuracy);
+
+            if (!Number.isFinite(reference.latitude) || !Number.isFinite(reference.longitude)) {
+                return false;
+            }
+
+            if (Number.isFinite(accuracy) && accuracy > checkoutDeviceMaxAccuracyM) {
+                return false;
+            }
+
+            const distanceMeters = haversineDistanceMeters(
+                checkoutDeviceLocation.latitude,
+                checkoutDeviceLocation.longitude,
+                reference.latitude,
+                reference.longitude
+            );
+            const thresholdMeters = Math.max(
+                checkoutDeviceDriftRadiusM,
+                Number.isFinite(accuracy) ? Math.round(accuracy * 1.4) : 0
+            );
+
+            if (distanceMeters <= thresholdMeters) {
+                clearCheckoutRecentOrderDriftNotice();
+                return false;
+            }
+
+            checkoutRecentOrderDrift = {
+                distance_m: distanceMeters,
+                threshold_m: thresholdMeters,
+                reference_order_code: latestDeliveryReference?.order_code || 'đơn gần nhất',
+                reference_address_text: latestDeliveryReference?.shipping_address_text || '',
+                placed_at_label: latestDeliveryReference?.placed_at_label || '',
+            };
+
+            if (addressLocationConfirmedInput) {
+                addressLocationConfirmedInput.value = '';
+            }
+
+            const placedText = checkoutRecentOrderDrift.placed_at_label
+                ? ` (${checkoutRecentOrderDrift.placed_at_label})`
+                : '';
+            const warningMessage = `Vị trí hiện tại lệch ${formatDistanceForCheckout(distanceMeters)} so với ${checkoutRecentOrderDrift.reference_order_code}${placedText}. Vui lòng cập nhật lại địa chỉ và xác nhận lại vị trí trên bản đồ trước khi đặt đơn.`;
+            setPersistentAddressWarning(warningMessage, !checkoutDriftPromptShown);
+
+            if (!checkoutDriftPromptShown) {
+                showAddressToast('Phát hiện vị trí hiện tại khác xa đơn gần nhất. Hãy kiểm tra lại địa chỉ giao hàng.', 'error');
+                checkoutDriftPromptShown = true;
+                if (!isCheckoutAddressModalOpen()) {
+                    window.setTimeout(() => openEditModal(selectedAddressId, { triggeredByDeviceDrift: true }), 180);
+                }
+            }
+
+            return true;
+        }
+
+        function requestCheckoutDeviceLocation() {
+            if (!navigator.geolocation || hasCheckoutDeviceLocation() || checkoutDeviceLocationRequested) {
+                return;
+            }
+
+            checkoutDeviceLocationRequested = true;
+            navigator.geolocation.getCurrentPosition((position) => {
+                checkoutDeviceLocationRequested = false;
+                checkoutDeviceLocation = {
+                    latitude: Number(position.coords.latitude),
+                    longitude: Number(position.coords.longitude),
+                    accuracy: Number(position.coords.accuracy),
+                };
+
+                maybeRequireAddressRefreshAgainstLatestOrder();
+            }, () => {
+                checkoutDeviceLocationRequested = false;
+                checkoutDeviceLocation = {
+                    latitude: null,
+                    longitude: null,
+                    accuracy: null,
+                };
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 60000,
+            });
+        }
+
+        function cacheAddressCoordinates(addressId, latitude, longitude) {
+            if (!addressId) {
+                return;
+            }
+
+            const lat = parseCheckoutCoordinate(latitude);
+            const lng = parseCheckoutCoordinate(longitude);
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                return;
+            }
+
+            addressBook = addressBook.map((item) => {
+                if (item.id !== addressId) {
+                    return item;
+                }
+
+                return {
+                    ...item,
+                    latitude: lat,
+                    longitude: lng,
+                };
+            });
+        }
+
+        function markAddressLocationConfirmed(latitude, longitude, shouldRenderBranches = true) {
+            const lat = Number.parseFloat(latitude);
+            const lng = Number.parseFloat(longitude);
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                return;
+            }
+
+            confirmedLocation = { latitude: lat, longitude: lng };
+            if (checkoutLatitudeInput) checkoutLatitudeInput.value = String(lat);
+            if (checkoutLongitudeInput) checkoutLongitudeInput.value = String(lng);
+            if (addressLocationConfirmedInput) addressLocationConfirmedInput.value = '1';
+
+            if (shouldRenderBranches) {
+                renderBranchOptions(lat, lng);
+            }
+        }
+
+        function clearAddressLocationConfirmation(shouldRenderBranches = true) {
+            confirmedLocation = { latitude: null, longitude: null };
+            if (checkoutLatitudeInput) checkoutLatitudeInput.value = '';
+            if (checkoutLongitudeInput) checkoutLongitudeInput.value = '';
+            if (addressLocationConfirmedInput) addressLocationConfirmedInput.value = '';
+
+            if (shouldRenderBranches) {
+                renderBranchOptions();
+            }
+        }
+
         async function lookupKnownAddress(street, area = '') {
             const query = compactAddress([street, area]).trim();
             if (query.length < 3) {
@@ -1991,17 +2293,7 @@
                 return;
             }
 
-            confirmedLocation = {
-                latitude: match.latitude,
-                longitude: match.longitude,
-            };
-
-            const latInput = document.getElementById('checkout_latitude');
-            const lngInput = document.getElementById('checkout_longitude');
-            if (latInput) latInput.value = String(match.latitude);
-            if (lngInput) lngInput.value = String(match.longitude);
-
-            renderBranchOptions(match.latitude, match.longitude);
+            markAddressLocationConfirmed(match.latitude, match.longitude);
             updateShippingSummary();
             updateBranchSelectorState();
         }
@@ -2018,6 +2310,55 @@
             } catch (error) {
                 console.error('Address lookup failed:', error);
                 return null;
+            }
+        }
+
+        async function ensureCheckoutLocationForAddress(address) {
+            const sequence = ++checkoutAddressLocationSequence;
+            const addressId = address?.id ?? null;
+            const coordinates = getAddressCoordinates(address);
+
+            if (Number.isFinite(coordinates.latitude) && Number.isFinite(coordinates.longitude)) {
+                markAddressLocationConfirmed(coordinates.latitude, coordinates.longitude);
+                updateShippingSummary();
+                updateBranchSelectorState();
+                return true;
+            }
+
+            clearAddressLocationConfirmation(false);
+            renderBranchOptions();
+            updateShippingSummary();
+            updateBranchSelectorState();
+
+            const addressLine = composeAddressLine(address?.house_number, address?.street) || String(address?.street || '').trim();
+            const area = String(address?.area || '').trim();
+
+            if (!addressLine && !area) {
+                return false;
+            }
+
+            try {
+                const match = await lookupKnownAddress(addressLine, area);
+
+                if (sequence !== checkoutAddressLocationSequence || selectedAddressId !== addressId) {
+                    return false;
+                }
+
+                const latitude = parseCheckoutCoordinate(match?.latitude);
+                const longitude = parseCheckoutCoordinate(match?.longitude);
+
+                if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || match?.canAutofillCoordinates === false) {
+                    return false;
+                }
+
+                cacheAddressCoordinates(addressId, latitude, longitude);
+                markAddressLocationConfirmed(latitude, longitude);
+                updateShippingSummary();
+                updateBranchSelectorState();
+                return true;
+            } catch (error) {
+                console.error('Auto checkout location lookup failed:', error);
+                return false;
             }
         }
 
@@ -2092,7 +2433,10 @@
             return shippingTiers.find((tier) => Number(distance) <= Number(tier.max)) || shippingTiers[shippingTiers.length - 1];
         }
 
-        window.updateShippingSummary = function updateShippingSummary() {
+        let deliveryQuoteSequence = 0;
+
+        window.updateShippingSummary = async function updateShippingSummary() {
+            const sequence = ++deliveryQuoteSequence;
             const methodInput = document.querySelector('input[name="shipping_method_ui"]:checked')
                 || document.querySelector('input[name="shipping_method_ui"]');
 
@@ -2104,64 +2448,94 @@
             const selectedOption = branchSelect?.options[branchSelect.selectedIndex];
             const isPickup = document.getElementById('deliveryTypePickup')?.checked === true;
 
-            let shippingFee = 0;
-            let distance = null;
-            let distanceLabel = 'Cố định';
-            let estimateLabel = 'Giao tận nơi';
-            let estimateDetail = 'Phí cố định';
-
             if (isPickup) {
-                shippingFee = 0;
-                distanceLabel = 'Tự nhận';
-                estimateLabel = 'Nhận tại cửa hàng';
-                estimateDetail = selectedOption?.value ? selectedOption.textContent.split(' — ')[0] : 'Chưa chọn chi nhánh';
-            } else {
-                const userLat = confirmedLocation.latitude;
-                const userLon = confirmedLocation.longitude;
-                const branchLat = selectedOption ? Number.parseFloat(selectedOption.dataset.latitude) : null;
-                const branchLon = selectedOption ? Number.parseFloat(selectedOption.dataset.longitude) : null;
+                const shippingFee = 0;
+                shippingConfig.fixedShippingFee = 0;
+                const grandTotal = Math.max(0, shippingConfig.subtotal - Number(shippingConfig.discount || 0));
+                if (shippingDistanceLabel) shippingDistanceLabel.textContent = 'Tự nhận';
+                if (shippingEstimateDetail) shippingEstimateDetail.textContent = `Nhận tại cửa hàng · ${selectedOption?.value ? selectedOption.textContent.split(' — ')[0] : 'Chưa chọn chi nhánh'}`;
+                if (shippingInlineFee) shippingInlineFee.textContent = formatVnd(0);
+                if (shippingEta) shippingEta.textContent = '';
+                summaryShippingFee.textContent = formatVnd(0);
+                summaryShippingDistance.textContent = 'Tự nhận tại chi nhánh';
+                summaryGrandTotal.textContent = formatVnd(grandTotal);
+                return;
+            }
 
-                if (Number.isFinite(userLat) && Number.isFinite(userLon) && Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
-                    distance = calculateDistance(userLat, userLon, branchLat, branchLon);
-                    
-                    // Find shipping tier
-                    const tier = tierForDistance(distance);
-                    const baseFee = Number(tier.base_fee);
-                    const surcharge = Number(methodInput.dataset.methodFee || 0);
-                    shippingFee = baseFee + surcharge;
-                    
-                    distanceLabel = `${distance.toFixed(1)} km`;
-                    estimateLabel = tier.label;
-                    estimateDetail = tier.description;
-                } else {
-                    // Fallback to fixed shipping fee
-                    shippingFee = Number(shippingConfig.fixedShippingFee || 15000) + Number(methodInput.dataset.methodFee || 0);
-                    distanceLabel = 'Chờ địa chỉ';
-                    estimateLabel = 'Ước tính';
-                    estimateDetail = 'Vui lòng chọn địa chỉ và chi nhánh';
+            const userLat = Number(confirmedLocation.latitude);
+            const userLon = Number(confirmedLocation.longitude);
+            const branchId = selectedOption?.value || '';
+
+            if (!Number.isFinite(userLat) || !Number.isFinite(userLon) || !branchId) {
+                const fallbackFee = Number(shippingConfig.fixedShippingFee || 0);
+                if (shippingDistanceLabel) shippingDistanceLabel.textContent = 'Chờ địa chỉ';
+                if (shippingEstimateDetail) shippingEstimateDetail.textContent = 'Ước tính · Vui lòng chọn địa chỉ và chi nhánh';
+                if (shippingInlineFee) shippingInlineFee.textContent = formatVnd(fallbackFee);
+                if (shippingEta) shippingEta.textContent = '';
+                summaryShippingFee.textContent = formatVnd(fallbackFee);
+                summaryShippingDistance.textContent = 'Chưa có lộ trình đường bộ';
+                summaryGrandTotal.textContent = formatVnd(Math.max(0, shippingConfig.subtotal + fallbackFee - Number(shippingConfig.discount || 0)));
+                return;
+            }
+
+            if (shippingDistanceLabel) shippingDistanceLabel.textContent = 'Đang tính tuyến...';
+            if (shippingEstimateDetail) shippingEstimateDetail.textContent = 'Đang lấy quãng đường thực tế';
+
+            try {
+                const url = new URL(deliveryQuoteEndpoint, window.location.origin);
+                url.searchParams.set('branch_id', branchId);
+                url.searchParams.set('latitude', String(userLat));
+                url.searchParams.set('longitude', String(userLon));
+                url.searchParams.set('method', methodInput.value || 'standard');
+                url.searchParams.set('cup_count', String(Math.max(1, Number(shippingConfig.cupCount || 1))));
+
+                const response = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                const payload = await response.json();
+                if (sequence !== deliveryQuoteSequence) return;
+                if (!response.ok || !payload.success) throw new Error(payload.message || 'Không tính được tuyến giao hàng.');
+
+                const distance = Number(payload.distance_km);
+                const shippingFee = Number(payload.shipping?.total_fee || 0);
+                shippingConfig.fixedShippingFee = shippingFee;
+                const durationSeconds = Number(payload.duration_s || 0);
+                const routeNote = payload.route_fallback ? ' · tuyến tạm tính' : ' · theo đường thực tế';
+
+                if (!payload.inside_service_radius) {
+                    if (shippingDistanceLabel) shippingDistanceLabel.textContent = `${distance.toFixed(1)} km`;
+                    if (shippingEstimateDetail) shippingEstimateDetail.textContent = `Ngoài phạm vi · tối đa ${Number(payload.max_distance_km || maxOrderDistanceKm).toFixed(0)} km`;
+                    if (shippingInlineFee) shippingInlineFee.textContent = '--';
+                    if (shippingEta) shippingEta.textContent = '';
+                    summaryShippingFee.textContent = '--';
+                    summaryShippingDistance.textContent = `Khoảng cách đường bộ: ${distance.toFixed(1)} km`;
+                    summaryGrandTotal.textContent = formatVnd(Math.max(0, shippingConfig.subtotal - Number(shippingConfig.discount || 0)));
+                    return;
                 }
-            }
 
-            const grandTotal = Math.max(0, shippingConfig.subtotal + shippingFee - Number(shippingConfig.discount || 0));
+                const grandTotal = Math.max(0, shippingConfig.subtotal + shippingFee - Number(shippingConfig.discount || 0));
+                if (shippingDistanceLabel) shippingDistanceLabel.textContent = `${distance.toFixed(1)} km`;
+                if (shippingEstimateDetail) {
+                    const tierLabel = payload.shipping?.cup_tier_label ? ` · ${payload.shipping.cup_tier_label}` : '';
+                    const rateLabel = Number(payload.shipping?.rate_per_km || 0) > 0 ? ` · ${formatVnd(payload.shipping.rate_per_km)}/km` : '';
+                    shippingEstimateDetail.textContent = `${payload.shipping?.distance_label || 'Giao hàng'}${tierLabel}${rateLabel}${routeNote}`;
+                }
+                if (shippingInlineFee) shippingInlineFee.textContent = formatVnd(shippingFee);
+                if (shippingEta) shippingEta.textContent = durationSeconds > 0 ? `Di chuyển khoảng ${Math.max(1, Math.round(durationSeconds / 60))} phút` : '';
+                summaryShippingFee.textContent = formatVnd(shippingFee);
+                summaryShippingDistance.textContent = `Khoảng cách đường bộ: ${distance.toFixed(1)} km`;
+                summaryGrandTotal.textContent = formatVnd(grandTotal);
 
-            if (shippingDistanceLabel) {
-                shippingDistanceLabel.textContent = distanceLabel;
+                if (selectedOption) {
+                    selectedOption.dataset.distance = String(distance);
+                }
+            } catch (error) {
+                if (sequence !== deliveryQuoteSequence) return;
+                if (shippingDistanceLabel) shippingDistanceLabel.textContent = 'Chưa tính được';
+                if (shippingEstimateDetail) shippingEstimateDetail.textContent = error.message || 'Không thể lấy tuyến đường lúc này';
+                if (shippingEta) shippingEta.textContent = '';
             }
-            if (shippingEstimateDetail) {
-                shippingEstimateDetail.textContent = `${estimateLabel} · ${estimateDetail}`;
-            }
-            if (shippingInlineFee) {
-                shippingInlineFee.textContent = formatVnd(shippingFee);
-            }
-            if (shippingEta) {
-                shippingEta.textContent = methodInput.dataset.methodEta || '';
-            }
-            summaryShippingFee.textContent = formatVnd(shippingFee);
-            summaryShippingDistance.textContent = distance !== null ? `Khoảng cách: ${distance.toFixed(1)} km` : 'Phí giao hàng';
-            summaryGrandTotal.textContent = formatVnd(grandTotal);
-        }
+        };
 
-        function renderBranchOptions(userLat = null, userLon = null) {
+        async function renderBranchOptions(userLat = null, userLon = null) {
             const branchSelect = document.getElementById('branch_id');
 
             if (!branchSelect) {
@@ -2170,7 +2544,6 @@
 
             const lat = Number.parseFloat(userLat);
             const lon = Number.parseFloat(userLon);
-
             const hasValidCoords = Number.isFinite(lat) && Number.isFinite(lon);
 
             if (hasValidCoords) {
@@ -2182,75 +2555,82 @@
             }
 
             const currentValue = branchSelect.disabled ? '' : (branchSelect.value || @json(old('branch_id', '')));
-            const branchesData = JSON.parse(branchSelect.dataset.branches || '[]');
-            const branchesWithDistance = branchesData.map((branch) => {
-                const branchLat = Number.parseFloat(branch.latitude);
-                const branchLon = Number.parseFloat(branch.longitude);
+            const localBranches = JSON.parse(branchSelect.dataset.branches || '[]');
 
-                if (hasValidCoords && Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
-                    return {
-                        ...branch,
-                        distance: calculateDistance(lat, lon, branchLat, branchLon),
-                    };
+            const writeOptions = (branches, roadMode = false) => {
+                branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
+
+                if (hasValidCoords && branches.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.disabled = true;
+                    option.textContent = 'Không có chi nhánh nào trong 15 km đường bộ';
+                    branchSelect.appendChild(option);
                 }
 
-                return {
-                    ...branch,
-                    distance: null,
-                };
-            });
+                branches.forEach((branch) => {
+                    const option = document.createElement('option');
+                    option.value = branch.id;
+                    option.dataset.latitude = branch.latitude || '';
+                    option.dataset.longitude = branch.longitude || '';
+                    const roadDistance = branch.distance_km ?? branch.distance ?? null;
+                    option.dataset.distance = roadDistance !== null ? Number(roadDistance).toFixed(2) : '';
 
-            const availableBranches = hasValidCoords
-                ? branchesWithDistance.filter((branch) => branch.distance !== null && branch.distance < maxOrderDistanceKm)
-                : branchesWithDistance;
+                    let label = branch.name || 'Chi nhánh';
+                    if (branch.address) label += ' — ' + branch.address;
+                    if (roadDistance !== null && Number.isFinite(Number(roadDistance))) {
+                        label += ` — ${Number(roadDistance).toFixed(1)} km${roadMode ? ' đường bộ' : ''}`;
+                    }
+                    option.textContent = label;
+                    branchSelect.appendChild(option);
+                });
 
-            availableBranches.sort((a, b) => {
-                if (a.distance === null && b.distance === null) return 0;
-                if (a.distance === null) return 1;
-                if (b.distance === null) return -1;
-                return a.distance - b.distance;
-            });
+                if (currentValue && Array.from(branchSelect.options).some((option) => option.value === String(currentValue))) {
+                    branchSelect.value = String(currentValue);
+                } else if (!branchSelect.value && branches.length === 1) {
+                    branchSelect.value = String(branches[0].id);
+                }
+            };
 
-            branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
-
-            if (hasValidCoords && availableBranches.length === 0) {
-                const option = document.createElement('option');
-                option.value = '';
-                option.disabled = true;
-                option.textContent = 'Không có chi nhánh nào dưới 15 km';
-                branchSelect.appendChild(option);
+            if (!hasValidCoords) {
+                writeOptions(localBranches, false);
+                if (branchSelectNote) {
+                    branchSelectNote.classList.remove('d-none');
+                    branchSelectNote.textContent = 'Vui lòng xác định vị trí giao hàng để tính quãng đường đường bộ.';
+                }
+                return;
             }
 
-            availableBranches.forEach((branch) => {
-                const option = document.createElement('option');
-                option.value = branch.id;
-                option.dataset.latitude = branch.latitude || '';
-                option.dataset.longitude = branch.longitude || '';
-                option.dataset.distance = branch.distance !== null ? branch.distance.toFixed(2) : '';
+            branchSelect.innerHTML = '<option value="">Đang tính tuyến đường...</option>';
+            branchSelect.disabled = true;
 
-                let label = branch.name;
-                if (branch.address) {
-                    label += ' — ' + branch.address;
+            try {
+                const url = new URL(branchesListEndpoint, window.location.origin);
+                url.searchParams.set('latitude', String(lat));
+                url.searchParams.set('longitude', String(lon));
+                const response = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                const payload = await response.json();
+                if (!response.ok || !payload.success) throw new Error(payload.message || 'Không tải được chi nhánh.');
+
+                writeOptions(Array.isArray(payload.data) ? payload.data : [], true);
+                if (branchSelectNote) {
+                    branchSelectNote.classList.remove('d-none');
+                    branchSelectNote.textContent = 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng không quá 15 km theo lộ trình đường bộ.';
                 }
-                if (branch.distance !== null) {
-                    label += ' — ' + branch.distance.toFixed(1) + ' km';
+            } catch (error) {
+                // UI fallback chỉ để vẫn chọn được chi nhánh; backend vẫn kiểm tra road-route khi đặt đơn.
+                writeOptions(localBranches, false);
+                if (branchSelectNote) {
+                    branchSelectNote.classList.remove('d-none');
+                    branchSelectNote.textContent = 'Chưa tải được tuyến đường. Hệ thống sẽ kiểm tra lại chính xác khi đặt đơn.';
                 }
-
-                option.textContent = label;
-                branchSelect.appendChild(option);
-            });
-
-            if (currentValue && Array.from(branchSelect.options).some((option) => option.value === currentValue)) {
-                branchSelect.value = currentValue;
-            }
-
-            if (branchSelectNote) {
-                branchSelectNote.classList.remove('d-none');
-                branchSelectNote.textContent = hasValidCoords
-                    ? 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng dưới 15 km.'
-                    : 'Vui lòng xác định vị trí giao hàng để kiểm tra chi nhánh dưới 15 km.';
+            } finally {
+                branchSelect.disabled = false;
+                window.updateShippingSummary?.();
             }
         }
+
+        window.renderCheckoutBranchOptions = renderBranchOptions;
 
         document.querySelector('[data-find-nearest-branch]')?.addEventListener('click', function () {
             const button = this;
@@ -2268,7 +2648,7 @@
             navigator.geolocation.getCurrentPosition((position) => {
                 const latitude = position.coords.latitude;
                 const longitude = position.coords.longitude;
-                confirmedLocation = { latitude, longitude };
+                markAddressLocationConfirmed(latitude, longitude, false);
                 renderBranchOptions(latitude, longitude);
 
                 if (!branchSelect.value) {
@@ -2317,22 +2697,8 @@
             const activeAddress = getAddressById(selectedAddressId);
             if (activeAddress) {
                 applyAddress(activeAddress);
-            }
-
-            const payloadLatitude = Number.parseFloat(payload?.address?.latitude);
-            const payloadLongitude = Number.parseFloat(payload?.address?.longitude);
-            if (Number.isFinite(payloadLatitude) && Number.isFinite(payloadLongitude)) {
-                confirmedLocation = {
-                    latitude: payloadLatitude,
-                    longitude: payloadLongitude,
-                };
-                renderBranchOptions(payloadLatitude, payloadLongitude);
             } else {
-                confirmedLocation = {
-                    latitude: null,
-                    longitude: null,
-                };
-                renderBranchOptions();
+                clearAddressLocationConfirmation();
             }
 
             updateBranchSelectorState();
@@ -2342,49 +2708,35 @@
             return addressBook.find((item) => item.id === id) || addressBook[0] || null;
         }
 
-        function applyAddress(address) {
+        function applyAddress(address, options = {}) {
             if (!address) {
                 return;
             }
 
+            const preserveCurrentLocation = options.preserveCurrentLocation === true;
             selectedAddressId = address.id;
             selectedReceiver.textContent = address.name || 'Chưa cập nhật';
             const addressHasPhone = isValidCheckoutPhone(address.phone);
             selectedPhone.textContent = addressHasPhone ? address.phone : '';
             selectedPhoneDivider?.classList.toggle('d-none', !addressHasPhone);
-            selectedAddressText.textContent = compactAddress([address.street, address.area]) || 'Chưa có địa chỉ. Bấm Thay đổi để thêm địa chỉ nhận hàng.';
+            const addressLine = composeAddressLine(address.house_number, address.street);
+            selectedAddressText.textContent = compactAddress([addressLine, address.area]) || 'Chưa có địa chỉ. Bấm Thay đổi để thêm địa chỉ nhận hàng.';
             selectedDefaultBadge.classList.toggle('d-none', !address.isDefault);
-            shippingAddressInput.value = address.street || '';
+            shippingAddressInput.value = addressLine || address.street || '';
             shippingAreaInput.value = address.area || '';
             clearAddressHouseNumberWarning();
             syncAddressHouseNumberNotice();
             if (shippingPhoneInput) {
                 shippingPhoneInput.value = address.phone || '';
             }
-            const addressLatitude = Number.parseFloat(address.latitude);
-            const addressLongitude = Number.parseFloat(address.longitude);
-            if (Number.isFinite(addressLatitude) && Number.isFinite(addressLongitude)) {
-                confirmedLocation = {
-                    latitude: addressLatitude,
-                    longitude: addressLongitude,
-                };
-                const latInput = document.getElementById('checkout_latitude');
-                const lngInput = document.getElementById('checkout_longitude');
-                if (latInput) latInput.value = String(addressLatitude);
-                if (lngInput) lngInput.value = String(addressLongitude);
-                renderBranchOptions(addressLatitude, addressLongitude);
-            } else {
-                confirmedLocation = {
-                    latitude: null,
-                    longitude: null,
-                };
-                const latInput = document.getElementById('checkout_latitude');
-                const lngInput = document.getElementById('checkout_longitude');
-                if (latInput) latInput.value = '';
-                if (lngInput) lngInput.value = '';
-                renderBranchOptions();
-            }
             renderAddressList();
+
+            if (preserveCurrentLocation && hasConfirmedLocation()) {
+                renderBranchOptions(confirmedLocation.latitude, confirmedLocation.longitude);
+            } else {
+                void ensureCheckoutLocationForAddress(address);
+            }
+
             updateShippingSummary();
             syncCheckoutPhoneState();
             updateBranchSelectorState();
@@ -2397,7 +2749,10 @@
 
             const rows = addressBook.map((address) => {
                 const isActive = address.id === selectedAddressId;
-                const fullAddress = compactAddress([address.street, address.area]) || 'Chưa có địa chỉ cụ thể';
+                const fullAddress = compactAddress([
+                    composeAddressLine(address.house_number, address.street),
+                    address.area,
+                ]) || 'Chưa có địa chỉ cụ thể';
                 const phoneText = isValidCheckoutPhone(address.phone) ? address.phone : '';
 
                 return `
@@ -2433,6 +2788,7 @@
             document.getElementById('editAddressName').value = address.name || '';
             document.getElementById('editAddressPhone').value = isValidCheckoutPhone(address.phone) ? address.phone : '';
             document.getElementById('editAddressArea').value = address.area || '';
+            document.getElementById('editAddressHouseNumber').value = address.house_number || '';
             document.getElementById('editAddressStreet').value = address.street || '';
             const searchInput = document.querySelector('[data-location-picker="checkout-edit-location-picker"] [data-location-search-input]');
             if (searchInput) {
@@ -2443,28 +2799,24 @@
             syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, !isValidCheckoutPhone(address.phone));
         }
 
-        function openEditModal(id = selectedAddressId) {
+        function openEditModal(id = selectedAddressId, options = {}) {
             const address = getAddressById(id);
             fillEditModal(address);
             selectedAddressId = id;
             const picker = document.querySelector('[data-location-picker="checkout-edit-location-picker"]');
-            const addressLatitude = Number.parseFloat(address?.latitude);
-            const addressLongitude = Number.parseFloat(address?.longitude);
-            if (Number.isFinite(addressLatitude) && Number.isFinite(addressLongitude)) {
-                confirmedLocation = {
-                    latitude: addressLatitude,
-                    longitude: addressLongitude,
-                };
-                renderBranchOptions(addressLatitude, addressLongitude);
-                window.ChillDrinkLocationPicker?.set(picker, addressLatitude, addressLongitude, 'Đã tải vị trí đã lưu.');
-            } else {
-                confirmedLocation = {
-                    latitude: null,
-                    longitude: null,
-                };
-                renderBranchOptions();
-                window.ChillDrinkLocationPicker?.clear(picker);
-            }
+            clearAddressLocationConfirmation();
+            window.ChillDrinkLocationPicker?.clear(
+                picker,
+                options.triggeredByDeviceDrift
+                    ? 'Vị trí hiện tại đang khác đơn gần nhất. Hãy cập nhật lại địa chỉ và chọn lại vị trí giao hàng.'
+                    : 'Vui lòng xác nhận lại vị trí cho đơn hàng này.'
+            );
+            previewCheckoutDeviceLocationOnPicker(
+                picker,
+                options.triggeredByDeviceDrift
+                    ? 'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
+                    : 'Đây là vị trí hiện tại của thiết bị. Bạn có thể dùng làm mốc để chỉnh lại pin.'
+            );
             updateBranchSelectorState();
             addressListModal.hide();
             addressEditModal.show();
@@ -2474,6 +2826,7 @@
             document.getElementById('newAddressName').value = @json($user->name);
             document.getElementById('newAddressPhone').value = @json($checkoutPhoneReady ? $selectedCheckoutPhone : '');
             document.getElementById('newAddressArea').value = '';
+            document.getElementById('newAddressHouseNumber').value = '';
             document.getElementById('newAddressStreet').value = '';
             const searchInput = document.querySelector('[data-location-picker="checkout-new-location-picker"] [data-location-search-input]');
             if (searchInput) {
@@ -2483,13 +2836,13 @@
             setTypeActive('new', 'Nhà Riêng');
             syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, !isValidCheckoutPhone(newAddressPhone?.value));
             const picker = document.querySelector('[data-location-picker="checkout-new-location-picker"]');
-            confirmedLocation = {
-                latitude: null,
-                longitude: null,
-            };
-            renderBranchOptions();
+            clearAddressLocationConfirmation();
             updateBranchSelectorState();
             window.ChillDrinkLocationPicker?.clear(picker);
+            previewCheckoutDeviceLocationOnPicker(
+                picker,
+                'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
+            );
             addressListModal.hide();
             addressAddModal.show();
         }
@@ -2554,6 +2907,7 @@
             const voucherCard = event.target.closest('[data-voucher-card]');
 
             if (selectButton) {
+                acknowledgeCheckoutRecentOrderDrift();
                 applyAddress(getAddressById(selectButton.dataset.selectAddress));
                 addressListModal.hide();
             }
@@ -2642,17 +2996,7 @@
                 return;
             }
 
-            confirmedLocation = {
-                latitude,
-                longitude,
-            };
-
-            const latInput = document.getElementById('checkout_latitude');
-            const lngInput = document.getElementById('checkout_longitude');
-            if (latInput) latInput.value = String(latitude);
-            if (lngInput) lngInput.value = String(longitude);
-
-            renderBranchOptions(latitude, longitude);
+            markAddressLocationConfirmed(latitude, longitude);
             updateBranchSelectorState();
         });
 
@@ -2661,24 +3005,31 @@
         newAddressPhone?.addEventListener('input', () => syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, true));
         newAddressPhone?.addEventListener('blur', () => syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, true));
 
-        let knownAddressLookupTimer = null;
+        [
+            ['edit', 'editAddressArea', 'editAddressHouseNumber', 'editAddressStreet'],
+            ['new', 'newAddressArea', 'newAddressHouseNumber', 'newAddressStreet'],
+        ].forEach(([scope, ...fieldIds]) => {
+            fieldIds.forEach((fieldId) => {
+                document.getElementById(fieldId)?.addEventListener('input', (event) => {
+                    if (!event.isTrusted) {
+                        return;
+                    }
+
+                    const picker = document.querySelector(`[data-location-picker="checkout-${scope}-location-picker"]`);
+                    window.ChillDrinkLocationPicker?.clear(picker, 'Địa chỉ vừa thay đổi. Vui lòng chọn lại vị trí trên bản đồ.');
+                    clearAddressLocationConfirmation();
+                });
+            });
+        });
+
         shippingAddressInput?.addEventListener('input', () => {
             clearAddressHouseNumberWarning();
             syncAddressHouseNumberNotice();
-            const latInput = document.getElementById('checkout_latitude');
-            const lngInput = document.getElementById('checkout_longitude');
-            if (latInput) latInput.value = '';
-            if (lngInput) lngInput.value = '';
-            confirmedLocation = { latitude: null, longitude: null };
-            window.clearTimeout(knownAddressLookupTimer);
-            knownAddressLookupTimer = window.setTimeout(() => {
-                resolveKnownAddressIfMissing(shippingAddressInput.value, shippingAreaInput?.value || '');
-            }, 500);
+            clearAddressLocationConfirmation();
         });
 
         shippingAddressInput?.addEventListener('blur', () => {
             syncAddressHouseNumberNotice();
-            resolveKnownAddressIfMissing(shippingAddressInput.value, shippingAreaInput?.value || '');
         });
 
         noteInput?.addEventListener('input', () => {
@@ -2689,6 +3040,18 @@
         });
 
         placeOrderButton?.closest('form')?.addEventListener('submit', function (event) {
+            if (fulfillmentDeliveryInput?.checked && addressLocationConfirmedInput?.value !== '1') {
+                event.preventDefault();
+                if (checkoutRecentOrderDrift) {
+                    setPersistentAddressWarning(persistentAddressWarningMessage || 'Vui lòng cập nhật lại địa chỉ vì vị trí hiện tại đang khác xa đơn gần nhất.', true);
+                    openEditModal(selectedAddressId, { triggeredByDeviceDrift: true });
+                } else {
+                    showAddressHouseNumberWarning('Vui lòng cập nhật địa chỉ và xác nhận lại vị trí trên bản đồ cho đơn hàng này.', true);
+                    addressListModal.show();
+                }
+                return;
+            }
+
             if (!fulfillmentDeliveryInput?.checked || hasHouseNumber(shippingAddressInput?.value || '')) {
                 clearAddressHouseNumberWarning();
                 hideAddressHouseNumberWarning();
@@ -2718,15 +3081,13 @@
             const name = document.getElementById('editAddressName').value.trim();
             const phone = document.getElementById('editAddressPhone').value.trim();
             const area = document.getElementById('editAddressArea').value.trim();
+            const houseNumber = document.getElementById('editAddressHouseNumber').value.trim();
             const street = document.getElementById('editAddressStreet').value.trim();
             let resolvedLocation = getPickerCoordinates('edit');
 
             if (!Number.isFinite(resolvedLocation?.latitude) || !Number.isFinite(resolvedLocation?.longitude)) {
-                const knownAddress = await lookupKnownAddress(street, area);
-                if (knownAddress) {
-                    resolvedLocation = knownAddress;
-                    applyKnownAddressLocation(knownAddress);
-                }
+                showAddressToast('Vui lòng chọn vị trí trên bản đồ, tìm địa chỉ hoặc lấy vị trí hiện tại.', 'error');
+                return;
             }
 
             if (!syncAddressPhoneInput(editAddressPhone, saveEditedAddressButton, true)) {
@@ -2738,6 +3099,7 @@
                 name,
                 phone,
                 area,
+                house_number: houseNumber,
                 street,
                 label: getTypeValue('edit'),
                 latitude: Number.isFinite(resolvedLocation?.latitude) ? resolvedLocation.latitude : null,
@@ -2766,6 +3128,7 @@
 
                 if (response.ok) {
                     try {
+                        acknowledgeCheckoutRecentOrderDrift();
                         syncAddressBook(data);
                         saved = true;
                     } catch (syncError) {
@@ -2794,15 +3157,13 @@
             const name = document.getElementById('newAddressName').value.trim();
             const phone = document.getElementById('newAddressPhone').value.trim();
             const area = document.getElementById('newAddressArea').value.trim();
+            const houseNumber = document.getElementById('newAddressHouseNumber').value.trim();
             const street = document.getElementById('newAddressStreet').value.trim();
             let resolvedLocation = getPickerCoordinates('new');
 
             if (!Number.isFinite(resolvedLocation?.latitude) || !Number.isFinite(resolvedLocation?.longitude)) {
-                const knownAddress = await lookupKnownAddress(street, area);
-                if (knownAddress) {
-                    resolvedLocation = knownAddress;
-                    applyKnownAddressLocation(knownAddress);
-                }
+                showAddressToast('Vui lòng chọn vị trí trên bản đồ, tìm địa chỉ hoặc lấy vị trí hiện tại.', 'error');
+                return;
             }
 
             if (!syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, true)) {
@@ -2814,6 +3175,7 @@
                 name,
                 phone,
                 area,
+                house_number: houseNumber,
                 street,
                 label: getTypeValue('new'),
                 latitude: Number.isFinite(resolvedLocation?.latitude) ? resolvedLocation.latitude : null,
@@ -2837,6 +3199,7 @@
 
                 if (response.ok) {
                     try {
+                        acknowledgeCheckoutRecentOrderDrift();
                         syncAddressBook(data);
                         saved = true;
                     } catch (syncError) {
@@ -2988,10 +3351,25 @@
         }
 
         renderAddressList();
-        applyAddress(getAddressById(selectedAddressId));
-        renderBranchOptions(confirmedLocation.latitude, confirmedLocation.longitude);
+        const initialAddress = getAddressById(selectedAddressId);
+        if (initialAddress) {
+            applyAddress(initialAddress, {
+                preserveCurrentLocation: restoredLocationConfirmed
+                    && Number.isFinite(restoredConfirmedLocation.latitude)
+                    && Number.isFinite(restoredConfirmedLocation.longitude),
+            });
+        } else if (
+            restoredLocationConfirmed
+            && Number.isFinite(restoredConfirmedLocation.latitude)
+            && Number.isFinite(restoredConfirmedLocation.longitude)
+        ) {
+            renderBranchOptions(restoredConfirmedLocation.latitude, restoredConfirmedLocation.longitude);
+        } else {
+            renderBranchOptions();
+        }
         updateShippingSummary();
         syncCheckoutPhoneState();
+        requestCheckoutDeviceLocation();
     });
 
     // Delivery type toggle
@@ -3019,6 +3397,13 @@
             }
             if (branchIdSelect) {
                 branchIdSelect.required = isPickup;
+            }
+
+            if (isPickup) {
+                clearCheckoutRecentOrderDriftNotice();
+            } else {
+                requestCheckoutDeviceLocation();
+                maybeRequireAddressRefreshAgainstLatestOrder();
             }
 
             // Update shipping fee display
@@ -3054,106 +3439,17 @@
         });
     });
 
-    // Haversine formula to calculate distance between two coordinates
-    function calculateDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // Earth's radius in kilometers
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = 
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    }
-    
-    // Initialize branch labels based on user coordinates
+    // Đồng bộ danh sách chi nhánh bằng road-route ở block checkout chính.
     function initializeBranchSorting() {
         const branchSelect = document.getElementById('branch_id');
-        const branchSelectNote = document.querySelector('[data-branch-select-note]');
-
-        if (!branchSelect) {
-            return;
-        }
-
+        if (!branchSelect || typeof window.renderCheckoutBranchOptions !== 'function') return;
         const userLat = Number.parseFloat(branchSelect.dataset.userLatitude || '');
         const userLon = Number.parseFloat(branchSelect.dataset.userLongitude || '');
-
-        if (!Number.isFinite(userLat) || !Number.isFinite(userLon)) {
-            return;
-        }
-
-        const branchesData = JSON.parse(branchSelect.dataset.branches || '[]');
-        const currentValue = branchSelect.disabled ? '' : (branchSelect.value || @json(old('branch_id', '')));
-
-        const branchesWithDistance = branchesData.map((branch) => {
-            const branchLat = Number.parseFloat(branch.latitude);
-            const branchLon = Number.parseFloat(branch.longitude);
-
-            if (Number.isFinite(branchLat) && Number.isFinite(branchLon)) {
-                return {
-                    ...branch,
-                    distance: calculateDistance(userLat, userLon, branchLat, branchLon),
-                };
-            }
-
-            return {
-                ...branch,
-                distance: null,
-            };
-        });
-
-        const availableBranches = branchesWithDistance.filter((branch) => branch.distance !== null && branch.distance < maxOrderDistanceKm);
-
-        availableBranches.sort((a, b) => {
-            if (a.distance === null && b.distance === null) return 0;
-            if (a.distance === null) return 1;
-            if (b.distance === null) return -1;
-            return a.distance - b.distance;
-        });
-
-        branchSelect.innerHTML = '<option value="">Chọn chi nhánh</option>';
-
-        if (availableBranches.length === 0) {
-            const option = document.createElement('option');
-            option.value = '';
-            option.disabled = true;
-            option.textContent = 'Không có chi nhánh nào dưới 15 km';
-            branchSelect.appendChild(option);
-        }
-
-        availableBranches.forEach((branch) => {
-            const option = document.createElement('option');
-            option.value = branch.id;
-            option.dataset.latitude = branch.latitude || '';
-            option.dataset.longitude = branch.longitude || '';
-            option.dataset.distance = branch.distance !== null ? branch.distance.toFixed(2) : '';
-
-            let label = branch.name;
-            if (branch.address) {
-                label += ' — ' + branch.address;
-            }
-            if (branch.distance !== null) {
-                label += ' — ' + branch.distance.toFixed(1) + ' km';
-            }
-
-            option.textContent = label;
-            branchSelect.appendChild(option);
-        });
-
-        if (currentValue && Array.from(branchSelect.options).some((option) => option.value === currentValue)) {
-            branchSelect.value = currentValue;
-        }
-
-        if (branchSelectNote) {
-            branchSelectNote.classList.remove('d-none');
-            branchSelectNote.textContent = 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng dưới 15 km.';
+        if (Number.isFinite(userLat) && Number.isFinite(userLon)) {
+            window.renderCheckoutBranchOptions(userLat, userLon);
         }
     }
-    
-    // Run initialization when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        initializeBranchSorting();
-    });
+
+    document.addEventListener('DOMContentLoaded', initializeBranchSorting);
 </script>
 @endsection

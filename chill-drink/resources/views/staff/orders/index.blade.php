@@ -94,8 +94,8 @@
                 @php
                     $detailId        = 'order-detail-' . $order->id;
                     $fulfillmentType = $order->fulfillment_type ?? 'delivery';
-                    $statusStepOpts  = \App\Support\OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType);
-                    $nextStatus      = \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType);
+                    $statusStepOpts  = \App\Support\OrderStatus::storeStepwiseOptions((string) $order->status, $fulfillmentType);
+                    $nextStatus      = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
                     $changedBy       = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
                 @endphp
                 <tr data-order-id="{{ $order->id }}">
@@ -201,6 +201,30 @@
                                     <div class="alert alert-danger border-0 py-2 px-3 mb-3" style="border-radius:10px;font-size:.82rem;">
                                         <i class="bi bi-exclamation-triangle me-1"></i>
                                         Lý do hủy: {{ $order->cancellation_reason }}
+                                    </div>
+                                    @endif
+
+                                    @php($shipmentIncident = $shipmentIncidents[(int) $order->id] ?? null)
+                                    @if($shipmentIncident)
+                                    <div class="alert alert-warning border-0 p-3 mb-3" style="border-radius:12px;font-size:.84rem;">
+                                        <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sự cố shipper cần xử lý</div>
+                                        <div><strong>{{ $shipmentIncident['shipper_name'] }}</strong> · {{ $shipmentIncident['description'] }}</div>
+                                        @if(!empty($shipmentIncident['reported_at_label']))
+                                            <div class="text-secondary mt-1">Báo lúc {{ $shipmentIncident['reported_at_label'] }}</div>
+                                        @endif
+                                        <div class="mt-2">Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản trong tối đa {{ \App\Services\ShipperIncidentService::REASSIGN_MAX_RADIUS_KM }} km.</div>
+                                        <div class="d-flex flex-wrap gap-2 mt-3">
+                                            <form action="{{ route('staff.orders.shipper-incident.resolve', $order) }}" method="POST" class="m-0">
+                                                @csrf
+                                                <input type="hidden" name="action" value="keep">
+                                                <button class="btn btn-sm btn-outline-success" type="submit">Giữ shipper hiện tại</button>
+                                            </form>
+                                            <form action="{{ route('staff.orders.shipper-incident.resolve', $order) }}" method="POST" class="m-0" onsubmit="return confirm('Để hệ thống tự tìm shipper thay thế gần nhất?');">
+                                                @csrf
+                                                <input type="hidden" name="action" value="reassign">
+                                                <button class="btn btn-sm btn-warning" type="submit">Điều phối shipper khác</button>
+                                            </form>
+                                        </div>
                                     </div>
                                     @endif
 

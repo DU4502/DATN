@@ -1,10 +1,23 @@
 @extends('layouts.shipper')
 
 @section('title', 'Chi tiết đơn hàng')
+@section('mobile-title', 'Chi tiết đơn')
+@section('mobile-subtitle', 'Thông tin & thao tác giao hàng')
 
 @section('content')
+@php
+    $normalizedStatusForBack = isset($order)
+        ? \App\Support\OrderStatus::normalize((string) $order->status)
+        : null;
+    $backRoute = in_array($normalizedStatusForBack, [
+        \App\Support\OrderStatus::DELIVERED,
+        \App\Support\OrderStatus::COMPLETED,
+    ], true)
+        ? route('shipper.history')
+        : route('shipper.orders');
+@endphp
 
-<div class="container-fluid">
+<div class="container-fluid ship-order-show-page">
 
     {{-- HEADER --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -20,7 +33,7 @@
             </p>
         </div>
 
-        <a href="{{ route('shipper.orders') }}"
+        <a href="{{ $backRoute }}"
            class="btn btn-outline-secondary">
 
             <i class="fas fa-arrow-left me-1"></i>
@@ -40,6 +53,27 @@
         </div>
 
     @else
+
+        @php
+            $normalizedStatus = \App\Support\OrderStatus::normalize((string) $order->status);
+            $statusLabel = \App\Support\OrderStatus::label((string) $order->status);
+            $handoverContext = is_array($handoverContext ?? null) ? $handoverContext : null;
+            $handoverPending = !empty($handoverContext);
+            $pendingIssue = is_array($pendingIssue ?? null) ? $pendingIssue : null;
+            $statusBadgeClass = match ($normalizedStatus) {
+                'pending' => 'bg-secondary',
+                'confirmed' => 'bg-info',
+                'preparing' => 'bg-primary',
+                'ready_for_delivery' => 'bg-warning text-dark',
+                'ready_for_pickup' => 'bg-info',
+                'shipper_picked_up' => 'bg-warning text-dark',
+                'delivering' => 'bg-warning text-dark',
+                'delivered' => 'bg-success',
+                'completed' => 'bg-success',
+                'cancelled' => 'bg-danger',
+                default => 'bg-secondary',
+            };
+        @endphp
 
         <div class="row g-4">
 
@@ -84,63 +118,9 @@
 
                                 <div>
 
-                                    @switch($order->status)
-
-                                        @case('pending')
-
-                                            <span class="badge bg-secondary">
-                                                Chờ xử lý
-                                            </span>
-
-                                        @break
-
-                                        @case('confirmed')
-
-                                            <span class="badge bg-info">
-                                                Đã xác nhận
-                                            </span>
-
-                                        @break
-
-                                        @case('processing')
-
-                                            <span class="badge bg-primary">
-                                                Đang xử lý
-                                            </span>
-
-                                        @break
-
-                                        @case('shipping')
-
-                                            <span class="badge bg-warning text-dark">
-                                                Đang giao
-                                            </span>
-
-                                        @break
-
-                                        @case('completed')
-
-                                            <span class="badge bg-success">
-                                                Hoàn thành
-                                            </span>
-
-                                        @break
-
-                                        @case('cancelled')
-
-                                            <span class="badge bg-danger">
-                                                Đã hủy
-                                            </span>
-
-                                        @break
-
-                                        @default
-
-                                            <span class="badge bg-secondary">
-                                                {{ $order->status }}
-                                            </span>
-
-                                    @endswitch
+                                    <span class="badge {{ $statusBadgeClass }}">
+                                        {{ $statusLabel }}
+                                    </span>
 
                                 </div>
 
@@ -222,7 +202,7 @@
 
                                 <div class="fw-bold">
 
-                                    {{ $order->customer_name ?? 'Khách hàng' }}
+                                    {{ $order->customerName() ?: 'Khách hàng' }}
 
                                 </div>
 
@@ -238,14 +218,15 @@
 
                                 <div>
 
-                                    @if(!empty($order->phone))
+                                    @php $phone = $order->customerPhone(); @endphp
+                                    @if(!empty($phone))
 
-                                        <a href="tel:{{ $order->phone }}"
+                                        <a href="tel:{{ $phone }}"
                                            class="text-decoration-none">
 
                                             <i class="fas fa-phone text-success me-1"></i>
 
-                                            {{ $order->phone }}
+                                            {{ $phone }}
 
                                         </a>
 
@@ -271,13 +252,13 @@
 
                                 <div class="mt-1">
 
-                                    @if(!empty($order->address))
+                                    @if($order->getShippingAddress() !== 'Chưa cập nhật địa chỉ')
 
                                         <div>
 
                                             <i class="fas fa-location-dot text-danger me-2"></i>
 
-                                            {{ $order->address }}
+                                            {{ $order->getShippingAddress() }}
 
                                         </div>
 
@@ -423,119 +404,84 @@
 
                     <div class="card-body">
 
-                        {{-- ĐƠN CHƯA CÓ SHIPPER --}}
-                        @if(empty($order->shipper_id))
+                        @if(!empty($bundleTrip))
+                            <div class="alert alert-info small">
+                                <strong><i class="fas fa-layer-group me-1"></i>{{ $bundleLabel ?? 'Chuyến ghép thuận đường' }}</strong><br>
+                                Đơn này đang đi chung một chuyến khác. Hệ thống tự quyết định thứ tự ghé quán/giao khách theo route tối ưu.
+                            </div>
+                        @endif
 
-                            <form action="{{ route('shipper.orders.accept', $order->id) }}"
-                                  method="POST">
-
-                                @csrf
-
-                                <button type="submit"
-                                        class="btn btn-success w-100"
-                                        onclick="return confirm('Bạn có muốn nhận đơn hàng này không?')">
-
-                                    <i class="fas fa-check me-2"></i>
-
-                                    Nhận đơn hàng
-
-                                </button>
-
-                            </form>
-
-
-                        {{-- ĐƠN THUỘC SHIPPER HIỆN TẠI --}}
-                        @elseif(
-                            isset($shipperInfo) &&
-                            $order->shipper_id == $shipperInfo->id
-                        )
-
-                            {{-- PROCESSING --}}
-                            @if($order->status === 'processing')
-
-                                <form action="{{ route('shipper.orders.start', $order->id) }}"
-                                      method="POST">
-
-                                    @csrf
-
-                                    <button type="submit"
-                                            class="btn btn-warning w-100">
-
-                                        <i class="fas fa-motorcycle me-2"></i>
-
-                                        Bắt đầu giao hàng
-
-                                    </button>
-
-                                </form>
-
-
-                            {{-- SHIPPING --}}
-                            @elseif($order->status === 'shipping')
-
-                                <a href="{{ route('shipper.map', $order->id) }}"
-                                   class="btn btn-primary w-100 mb-2">
-
-                                    <i class="fas fa-map-marked-alt me-2"></i>
-
-                                    Xem bản đồ giao hàng
-
-                                </a>
-
-
-                                <form action="{{ route('shipper.orders.complete', $order->id) }}"
-                                      method="POST">
-
-                                    @csrf
-
-                                    <button type="submit"
-                                            class="btn btn-success w-100"
-                                            onclick="return confirm('Xác nhận đã giao hàng thành công?')">
-
-                                        <i class="fas fa-check-circle me-2"></i>
-
-                                        Hoàn thành đơn hàng
-
-                                    </button>
-
-                                </form>
-
-
-                            {{-- COMPLETED --}}
-                            @elseif($order->status === 'completed')
-
-                                <div class="alert alert-success mb-0">
-
-                                    <i class="fas fa-check-circle me-2"></i>
-
-                                    Đơn hàng đã hoàn thành.
-
-                                </div>
-
-
-                            {{-- CANCELLED --}}
-                            @elseif($order->status === 'cancelled')
-
-                                <div class="alert alert-danger mb-0">
-
-                                    <i class="fas fa-times-circle me-2"></i>
-
-                                    Đơn hàng đã bị hủy.
-
-                                </div>
-
-                            @endif
-
-                        @else
-
+                        @if(empty($order->shipper_id) && in_array($normalizedStatus, ['confirmed', 'preparing', 'ready_for_delivery'], true))
                             <div class="alert alert-info mb-0">
-
-                                <i class="fas fa-info-circle me-2"></i>
-
-                                Đơn hàng đang thuộc shipper khác.
-
+                                <i class="fas fa-satellite-dish me-2"></i>Đơn đang chờ hệ thống điều phối shipper. Shipper không tự chọn đơn.
                             </div>
 
+                        @elseif(isset($shipperInfo) && $order->shipper_id == $shipperInfo->id)
+                            <a href="{{ route('shipper.map', ['id' => $order->id]) }}" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-map-marked-alt me-2"></i>Mở dẫn đường
+                            </a>
+
+                            @if($pendingIssue)
+                                <div class="alert alert-warning small mb-2">
+                                    <strong>Sự cố đã gửi:</strong> {{ $pendingIssue['description'] ?? 'Đang chờ cửa hàng/admin xử lý.' }}
+                                </div>
+                            @endif
+
+                            @if($handoverPending)
+                                <div class="alert alert-primary small mb-2">
+                                    <strong>Đang cứu chuyến:</strong> hàng đã rời quán. Hãy mở <strong>Dẫn đường</strong> để tới điểm bàn giao với shipper cũ. Sau khi GPS xác minh, nút <strong>Đã nhận bàn giao</strong> sẽ mở.
+                                </div>
+                                @if(empty($pendingIssue) && !empty($isAccepted))
+                                    <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#issueModal">
+                                        <i class="fas fa-triangle-exclamation me-2"></i>Báo sự cố
+                                    </button>
+                                @endif
+                            @elseif(in_array($normalizedStatus, ['confirmed', 'preparing'], true))
+                                <div class="alert alert-info small mb-2">
+                                    Quán đã xác nhận đơn. Bạn đã giữ chuyến này và có thể di chuyển tới cửa hàng để chờ bàn giao.
+                                </div>
+                            @elseif($normalizedStatus === 'ready_for_delivery')
+                                <div class="alert alert-success small mb-2">
+                                    Đơn đã sẵn sàng. Mở <strong>Dẫn đường</strong>; khi GPS ghi nhận bạn tới cửa hàng, nút <strong>Đã lấy hàng</strong> sẽ tự mở.
+                                </div>
+                                <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#issueModal">
+                                    <i class="fas fa-triangle-exclamation me-2"></i>Báo sự cố
+                                </button>
+                            @elseif($normalizedStatus === 'shipper_picked_up')
+                                @php
+                                    $isCurrentDeliveryStop = empty($bundleTrip)
+                                        || (($bundleCurrentStop['type'] ?? null) === 'delivery'
+                                            && (int) ($bundleCurrentStop['order_id'] ?? 0) === (int) $order->id);
+                                @endphp
+                                @if($isCurrentDeliveryStop)
+                                    <div class="alert alert-success small mb-2">
+                                        Bạn đã lấy hàng xong. Hệ thống sẽ tự chuyển sang chặng giao khi đơn này tới lượt, không cần vuốt Bắt đầu giao nữa.
+                                    </div>
+                                @else
+                                    <div class="alert alert-light border small mb-2">
+                                        <i class="fas fa-lock me-1"></i>Đơn này đang chờ trong chuyến ghép. Hãy hoàn tất điểm/đơn phía trước; hệ thống sẽ tự chuyển đơn này sang chặng giao khi tới lượt.
+                                    </div>
+                                    <a href="{{ route('shipper.map') }}" class="btn btn-primary w-100 mb-2"><i class="fas fa-location-arrow me-1"></i>Về điểm đang thực hiện</a>
+                                @endif
+                                <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#issueModal">
+                                    <i class="fas fa-triangle-exclamation me-2"></i>Báo sự cố
+                                </button>
+                            @elseif($normalizedStatus === 'delivering')
+                                <div class="alert alert-info small mb-2">
+                                    Xác nhận giao hàng trong màn <strong>Dẫn đường</strong> để hệ thống lưu GPS điểm giao thực tế.
+                                </div>
+                                <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#issueModal">
+                                    <i class="fas fa-triangle-exclamation me-2"></i>Báo sự cố
+                                </button>
+                            @elseif($normalizedStatus === 'delivered')
+                                <div class="alert alert-success mb-0">
+                                    <i class="fas fa-check-circle me-2"></i>Đã giao, đang chờ khách xác nhận.
+                                </div>
+                            @endif
+                        @else
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Đơn hàng đang thuộc shipper khác.
+                            </div>
                         @endif
 
                     </div>
@@ -604,8 +550,39 @@
 
         </div>
 
-    @endif
+
+
+@if(isset($shipperInfo) && $order->shipper_id == $shipperInfo->id && !empty($isAccepted) && in_array($normalizedStatus, ['confirmed','preparing','ready_for_delivery','shipper_picked_up','delivering'], true))
+<div class="modal fade" id="issueModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="POST" action="{{ route('shipper.orders.issue', $order->id) }}">
+            @csrf
+            <div class="modal-header"><h5 class="modal-title">Báo sự cố</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="alert alert-warning small"><strong>Không có hủy/từ chối chuyến.</strong> Báo sự cố chỉ gửi yêu cầu hỗ trợ; đơn vẫn thuộc chuyến của bạn cho tới khi cửa hàng/admin xử lý.</div>
+                <select class="form-select mb-3" name="reason" required>
+                    <option value="">Chọn sự cố</option>
+                    @foreach(($issueReasons ?? []) as $value => $label)<option value="{{ $value }}">{{ $label }}</option>@endforeach
+                </select>
+                <textarea class="form-control" name="reason_detail" rows="3" maxlength="1000" placeholder="Mô tả thêm..."></textarea>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button><button class="btn btn-warning">Gửi báo cáo</button></div>
+        </form>
+    </div>
+</div>
+@endif
+
+@endif
 
 </div>
+
+
+<style>
+.ship-order-show-page > .d-flex.justify-content-between{margin:2px 2px 10px!important;align-items:flex-start!important;gap:8px!important}
+.ship-order-show-page > .d-flex.justify-content-between h3{font-size:18px!important;margin:0!important}.ship-order-show-page > .d-flex.justify-content-between p{font-size:10.5px!important;margin-top:3px!important}.ship-order-show-page > .d-flex.justify-content-between>a{display:none!important}
+.ship-order-show-page .row.g-4{--bs-gutter-y:10px}.ship-order-show-page .card{margin-top:10px!important}.ship-order-show-page .card:first-child{margin-top:0!important}.ship-order-show-page .card-header{padding:12px 13px!important}.ship-order-show-page .card-header h5{font-size:13px!important}.ship-order-show-page .card-body{padding:13px!important}.ship-order-show-page label.text-muted{font-size:9.5px}.ship-order-show-page .fw-semibold,.ship-order-show-page .fw-bold{font-size:12px}.ship-order-show-page .fs-5{font-size:15px!important}.ship-order-show-page .badge{font-size:9.5px;padding:6px 8px!important}
+.ship-order-show-page .table-responsive{border:0!important;background:transparent!important;overflow:visible!important}.ship-order-show-page table thead{display:none}.ship-order-show-page table,.ship-order-show-page tbody{display:block;width:100%}.ship-order-show-page table tr{display:grid;grid-template-columns:1fr auto;gap:5px 10px;background:#f8faf9;border:1px solid var(--ship-line);border-radius:14px;padding:10px;margin:8px 0}.ship-order-show-page table td{display:block!important;border:0!important;padding:0!important;font-size:10.5px!important}.ship-order-show-page table td:nth-child(1){display:none!important}.ship-order-show-page table td:nth-child(2){font-weight:800;grid-column:1/-1}.ship-order-show-page table td:nth-child(3)::before{content:'SL: ';color:var(--ship-muted)}.ship-order-show-page table td:nth-child(4),.ship-order-show-page table td:nth-child(5){text-align:right!important}.ship-order-show-page table td:nth-child(5){font-weight:850;color:var(--ship-green-dark)}
+.ship-order-show-page .col-lg-4 .card:first-child{position:sticky;bottom:78px;z-index:15;box-shadow:0 12px 28px rgba(18,52,42,.14)!important}.ship-order-show-page .col-lg-4 .card:first-child .card-header{display:none}.ship-order-show-page .col-lg-4 .card:first-child .card-body{padding:10px!important}.ship-order-show-page .col-lg-4 .card:first-child .btn{font-size:11px;min-height:42px}.ship-order-show-page .col-lg-4 .card:first-child .alert{font-size:10px;padding:9px;margin-bottom:7px!important}.ship-order-show-page .modal-content{border:0;border-radius:22px}.ship-order-show-page .modal-dialog{margin:12px}.ship-order-show-page .modal-footer{display:grid;grid-template-columns:1fr 1fr}.ship-order-show-page .modal-footer .btn{width:100%;margin:0}
+</style>
 
 @endsection
