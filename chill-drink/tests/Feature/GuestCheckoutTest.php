@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
@@ -273,6 +274,11 @@ class GuestCheckoutTest extends TestCase
 
     private function sellableProduct(): array
     {
+        Branch::query()->firstOrCreate(
+            ['code' => 'HN'],
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
+        );
+
         $categoryName = 'Trà sữa '.uniqid();
         $categorySlug = 'tra-sua-'.uniqid();
         $productSlug = 'tra-sua-guest-'.uniqid();
@@ -288,9 +294,15 @@ class GuestCheckoutTest extends TestCase
             'name' => 'Trà sữa test guest',
             'slug' => $productSlug,
             'price' => 100000,
-            'stock' => 100,
             'status' => true,
         ]);
+        Branch::query()->where('status', true)->pluck('id')->each(function ($branchId) use ($product) {
+            BranchProductStatus::create([
+                'branch_id' => $branchId,
+                'product_id' => $product->id,
+                'is_available' => true,
+            ]);
+        });
 
         $size = Size::create([
             'name' => 'M',

@@ -2023,6 +2023,7 @@
          Branch selection now only happens when the user explicitly chooses it. --}}
     @include('partials.realtime')
     @include('partials.client-notifications')
+    @stack('scripts')
 </body>
 
 </html>

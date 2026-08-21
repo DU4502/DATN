@@ -27,7 +27,6 @@ class Product extends Model
         'gallery_images',
         'price',
         'description',
-        'stock',
         'status',
     ];
 
@@ -122,6 +121,32 @@ class Product extends Model
     public function productSizes()
     {
         return $this->hasMany(ProductSize::class, 'product_id');
+    }
+
+    public function branchStatuses()
+    {
+        return $this->hasMany(BranchProductStatus::class);
+    }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'branch_product_statuses')
+            ->withPivot('is_available')
+            ->withTimestamps();
+    }
+
+    public function availabilityAt(Branch|int|null $branch): ?bool
+    {
+        if (! $branch) {
+            return null;
+        }
+
+        $branchId = $branch instanceof Branch ? $branch->id : $branch;
+        $status = $this->relationLoaded('branchStatuses')
+            ? $this->branchStatuses->firstWhere('branch_id', $branchId)
+            : $this->branchStatuses()->where('branch_id', $branchId)->first();
+
+        return $status?->is_available;
     }
 
     /**

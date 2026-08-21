@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,9 +21,11 @@ class ProductApiController extends Controller
         $perPage = (int) ($validated['per_page'] ?? 12);
         $search = trim((string) ($validated['search'] ?? ''));
 
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
         $products = Product::query()
-            ->select(['id', 'category_id', 'name', 'slug', 'sku', 'image', 'price', 'description', 'stock', 'status'])
+            ->select(['id', 'category_id', 'name', 'slug', 'sku', 'image', 'price', 'description', 'status'])
             ->with(['category:id,name,slug'])
+            ->with(['branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->withCount([
                 'reviews as approved_reviews_count' => fn ($query) => $query->where('status', true),
             ])
@@ -44,7 +47,7 @@ class ProductApiController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        $products->through(fn (Product $product) => $this->productPayload($product));
+        $products->through(fn (Product $product) => $this->productPayload($product, $branch));
 
         return response()->json($products);
     }
@@ -53,8 +56,10 @@ class ProductApiController extends Controller
     {
         abort_unless((bool) $product->status, 404);
 
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
         $product->load([
             'category:id,name,slug',
+            'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id)),
             'reviews' => fn ($query) => $query
                 ->select(['id', 'user_id', 'product_id', 'order_id', 'rating', 'comment', 'status', 'created_at'])
                 ->where('status', true)
@@ -68,7 +73,7 @@ class ProductApiController extends Controller
 
         return response()->json([
             'data' => array_merge(
-                $this->productPayload($product),
+                $this->productPayload($product, $branch),
                 [
                     'gallery_images' => $product->gallery_images,
                     'reviews' => $product->reviews->map(fn ($review) => [
@@ -83,7 +88,7 @@ class ProductApiController extends Controller
         ]);
     }
 
-    private function productPayload(Product $product): array
+    private function productPayload(Product $product, $branch = null): array
     {
         return [
             'id' => $product->id,
@@ -91,7 +96,8 @@ class ProductApiController extends Controller
             'slug' => $product->slug,
             'sku' => $product->sku,
             'price' => (int) $product->price,
-            'stock' => (int) ($product->stock ?? 0),
+            'branch' => $branch ? ['id' => $branch->id, 'name' => $branch->name] : null,
+            'is_available' => $product->availabilityAt($branch),
             'description' => $product->display_description,
             'image_url' => $product->image_url,
             'category' => $product->category ? [

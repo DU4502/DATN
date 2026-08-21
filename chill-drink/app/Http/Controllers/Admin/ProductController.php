@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -21,7 +24,7 @@ class ProductController extends Controller
             'q' => trim((string) $request->query('q', '')),
             'category' => trim((string) $request->query('category', '')),
             'status' => trim((string) $request->query('status', '')),
-            'stock' => trim((string) $request->query('stock', '')),
+            'availability' => trim((string) $request->query('availability', '')),
             'sort' => trim((string) $request->query('sort', 'latest')),
         ];
 
@@ -30,8 +33,18 @@ class ProductController extends Controller
             ->get(['id', 'name', 'slug']);
         $categoryIds = $categories->pluck('id')->map(fn($id) => (string) $id)->all();
 
+        $user = $request->user();
+        $managedBranch = $user->isSuperAdmin() ? null : $user->branch;
+        $branches = $user->isSuperAdmin()
+            ? Branch::query()->where('status', true)->orderBy('name')->get()
+            : collect([$managedBranch])->filter();
+
         $productsQuery = Product::query()
-            ->with('category')
+            ->with(['category', 'branchStatuses.branch'])
+            ->when(! $user->isSuperAdmin(), function ($query) use ($managedBranch) {
+                $query->whereHas('branchStatuses', fn ($statusQuery) => $statusQuery
+                    ->where('branch_id', $managedBranch?->id));
+            })
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword = $filters['q'];
 
@@ -54,20 +67,37 @@ class ProductController extends Controller
             })
             ->when($filters['status'] === 'active', fn($query) => $query->where('status', true))
             ->when($filters['status'] === 'hidden', fn($query) => $query->where('status', false))
-            ->when($filters['stock'] === 'low', fn($query) => $query->where('stock', '>', 0)->where('stock', '<=', 5))
-            ->when($filters['stock'] === 'out', fn($query) => $query->where('stock', '<=', 0));
+            ->when(in_array($filters['availability'], ['available', 'out_of_stock', 'unassigned'], true), function ($query) use ($filters, $managedBranch, $request) {
+                $branchId = $managedBranch?->id ?: (int) $request->query('branch_id');
+
+                if (! $branchId) {
+                    return;
+                }
+
+                if ($filters['availability'] === 'unassigned') {
+                    $query->whereDoesntHave('branchStatuses', fn ($statusQuery) => $statusQuery->where('branch_id', $branchId));
+                    return;
+                }
+
+                $query->whereHas('branchStatuses', fn ($statusQuery) => $statusQuery
+                    ->where('branch_id', $branchId)
+                    ->where('is_available', $filters['availability'] === 'available'));
+            });
 
         match ($filters['sort']) {
             'name' => $productsQuery->orderBy('name'),
             'price_asc' => $productsQuery->orderBy('price'),
             'price_desc' => $productsQuery->orderByDesc('price'),
-            'stock_asc' => $productsQuery->orderBy('stock'),
             default => $productsQuery->latest(),
         };
 
         $products = $productsQuery->paginate(12)->withQueryString();
         $totalProducts = Product::count();
-        $lowStockProducts = Product::where('stock', '>', 0)->where('stock', '<=', 5)->count();
+        $unavailableProducts = $managedBranch
+            ? Product::query()->whereHas('branchStatuses', fn ($query) => $query
+                ->where('branch_id', $managedBranch->id)
+                ->where('is_available', false))->count()
+            : 0;
         $activeFiltersCount = collect($filters)
             ->filter(fn($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
             ->count();
@@ -81,7 +111,9 @@ class ProductController extends Controller
             'quickCategories',
             'filters',
             'totalProducts',
-            'lowStockProducts',
+            'unavailableProducts',
+            'branches',
+            'managedBranch',
             'activeFiltersCount'
         ));
     }
@@ -106,8 +138,11 @@ class ProductController extends Controller
             };
         })->values();
         $allToppings = \App\Models\Topping::where('status', true)->get();
+        $branches = auth()->user()->isSuperAdmin()
+            ? Branch::query()->where('status', true)->orderBy('name')->get()
+            : Branch::query()->whereKey(auth()->user()->branch_id)->where('status', true)->get();
 
-        return view('admin.products.create', compact('categories', 'allSizes', 'allToppings'));
+        return view('admin.products.create', compact('categories', 'allSizes', 'allToppings', 'branches'));
     }
 
     /**
@@ -123,8 +158,9 @@ class ProductController extends Controller
             'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'stock' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
+            'branch_statuses' => ['nullable', 'array'],
+            'branch_statuses.*' => ['required', 'boolean'],
         ]);
 
         if ($sizeError = $this->validateSizePrices($request)) {
@@ -137,7 +173,6 @@ class ProductController extends Controller
             'slug' => Str::slug($validated['name']),
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
-            'stock' => $validated['stock'] ?? 999,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -153,13 +188,23 @@ class ProductController extends Controller
             }
         }
 
-        $product = Product::create($data);
+        $product = DB::transaction(function () use ($data, $request) {
+            $product = Product::create($data);
+            if ($request->boolean('branch_statuses_submitted')) {
+                app(ProductAvailabilityService::class)->syncProduct(
+                    $product,
+                    $this->authorizedBranchStatuses($request)
+                );
+            }
 
-        $this->syncProductSizes($product, $request);
+            $this->syncProductSizes($product, $request);
 
-        if ($request->has('toppings')) {
-            $product->toppings()->sync($request->input('toppings'));
-        }
+            if ($request->has('toppings')) {
+                $product->toppings()->sync($request->input('toppings'));
+            }
+
+            return $product;
+        });
 
         return redirect()
             ->route('admin.products.index')
@@ -171,7 +216,12 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::with('category')
+        $product = Product::with([
+            'category',
+            'branchStatuses' => fn ($query) => $query
+                ->with('branch')
+                ->when(! auth()->user()->isSuperAdmin(), fn ($statusQuery) => $statusQuery->where('branch_id', auth()->user()->branch_id)),
+        ])
             ->withCount('orderItems')
             ->whereKey($id)
             ->orWhere('slug', $id)
@@ -209,8 +259,12 @@ class ProductController extends Controller
         $allToppings = \App\Models\Topping::all();
         $selectedSizes = $product->sizes()->pluck('product_sizes.price', 'sizes.id')->toArray();
         $selectedToppings = $product->toppings()->pluck('toppings.id')->toArray();
+        $branches = auth()->user()->isSuperAdmin()
+            ? Branch::query()->where('status', true)->orderBy('name')->get()
+            : Branch::query()->whereKey(auth()->user()->branch_id)->where('status', true)->get();
+        $branchStatuses = $product->branchStatuses()->pluck('is_available', 'branch_id')->all();
 
-        return view('admin.products.edit', compact('product', 'categories', 'allSizes', 'allToppings', 'selectedSizes', 'selectedToppings'));
+        return view('admin.products.edit', compact('product', 'categories', 'allSizes', 'allToppings', 'selectedSizes', 'selectedToppings', 'branches', 'branchStatuses'));
     }
 
     /**
@@ -230,8 +284,9 @@ class ProductController extends Controller
             'remove_gallery_images.*' => 'string',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'stock' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
+            'branch_statuses' => ['nullable', 'array'],
+            'branch_statuses.*' => ['required', 'boolean'],
         ]);
 
         if ($sizeError = $this->validateSizePrices($request)) {
@@ -244,7 +299,6 @@ class ProductController extends Controller
             'slug' => Str::slug($validated['name']),
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
-            'stock' => $validated['stock'] ?? 999,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -277,15 +331,22 @@ class ProductController extends Controller
             $data['gallery_images'] = $galleryImages;
         }
 
-        $product->update($data);
+        DB::transaction(function () use ($product, $data, $request) {
+            $product->update($data);
+            if ($request->boolean('branch_statuses_submitted')) {
+                app(ProductAvailabilityService::class)->syncProduct(
+                    $product,
+                    $this->authorizedBranchStatuses($request)
+                );
+            }
+            $this->syncProductSizes($product, $request);
 
-        $this->syncProductSizes($product, $request);
-
-        if ($request->has('toppings')) {
-            $product->toppings()->sync($request->input('toppings'));
-        } else {
-            $product->toppings()->detach();
-        }
+            if ($request->has('toppings')) {
+                $product->toppings()->sync($request->input('toppings'));
+            } else {
+                $product->toppings()->detach();
+            }
+        });
 
         return redirect()
             ->route('admin.products.index')
@@ -433,9 +494,29 @@ class ProductController extends Controller
         $page = (int) ($request->input('return_page') ?: $request->query('page'));
 
         return array_filter(array_merge(
-            request()->only(['q', 'category', 'status', 'stock', 'sort']),
+            request()->only(['q', 'category', 'status', 'availability', 'branch_id', 'sort']),
             $page > 1 ? ['page' => $page] : []
         ), fn($value) => $value !== null && $value !== '');
+    }
+
+    private function authorizedBranchStatuses(Request $request): array
+    {
+        $statuses = (array) $request->input('branch_statuses', []);
+        $user = $request->user();
+
+        if ($user->isSuperAdmin()) {
+            $allowedBranchIds = Branch::query()->where('status', true)->pluck('id')->map(fn ($id) => (string) $id);
+
+            return collect($statuses)->only($allowedBranchIds)->all();
+        }
+
+        if (! $user->branch_id) {
+            abort(403, 'Tài khoản chưa được gán chi nhánh.');
+        }
+
+        return array_key_exists((string) $user->branch_id, $statuses)
+            ? [$user->branch_id => $statuses[$user->branch_id]]
+            : [];
     }
 
     private function findProduct(string $id): Product

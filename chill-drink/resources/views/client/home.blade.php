@@ -1337,7 +1337,7 @@
                             <div class="product-image-cart-form">
                                 <button
                                     type="button"
-                                    class="product-cart-btn"
+                                    class="product-cart-btn {{ $product->availabilityAt($branch) === true ? '' : 'disabled' }}"
                                     aria-label="Chọn tùy chọn cho {{ $product->name }}"
                                     data-home-quick-add
                                     data-action="{{ route('cart.add', $product->id) }}"
@@ -1346,12 +1346,17 @@
                                     data-base-price="{{ (float) $product->price }}"
                                     data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
                                     data-image="{{ $product->image_url }}"
+                                    data-product-availability="{{ $product->id }}"
+                                    data-branch-id="{{ $branch?->id }}"
+                                    data-product-action
+                                    @disabled($product->availabilityAt($branch) !== true)
                                 >
-                                    <i class="bi bi-cart-plus" aria-hidden="true"></i>
+                                    <i class="bi {{ $product->availabilityAt($branch) === true ? 'bi-cart-plus' : 'bi-cart-x' }}" aria-hidden="true"></i>
                                 </button>
                             </div>
                         </div>
                         <div class="home-product__body">
+                            <x-product-availability-badge :product="$product" :branch="$branch" class="mb-2" />
                             <div class="home-product__rating">
                                 @if($reviewCount > 0)
                                     @for($star = 1; $star <= 5; $star++)

@@ -42,9 +42,12 @@ class OrderStatusUpdated implements ShouldBroadcastNow
         $payload = OrderStatus::notificationPayload($this->order);
 
         return [
-            'order_id' => $this->order->id,
+            'order_id' => (int) $this->order->id,
+            'order_code' => $this->order->displayCode(),
             'status' => $payload['status'],
             'status_label' => $payload['status_label'],
+            'status_icon' => OrderStatus::notificationIcon($payload['status']),
+            'updated_at' => $this->order->updated_at?->toIso8601String(),
             'message' => $payload['message'],
             'title' => $payload['title'],
             'cancellation_reason' => $this->order->cancellation_reason ?? null,

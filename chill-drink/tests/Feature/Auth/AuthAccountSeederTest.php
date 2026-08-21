@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use Database\Seeders\AuthAccountSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class AuthAccountSeederTest extends TestCase
@@ -22,5 +23,6 @@ class AuthAccountSeederTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => User::SUPER_ADMIN_EMAIL, 'role_id' => 3, 'is_active' => true]);
         $this->assertTrue(User::where('email', 'admin@chilldrink.com')->where('role_id', 2)->exists());
         $this->assertTrue(User::where('email', User::SUPER_ADMIN_EMAIL)->where('role_id', 3)->exists());
+        $this->assertFalse(Schema::hasColumn('users', 'plain_password'));
     }
 }

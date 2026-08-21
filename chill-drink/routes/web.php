@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\ShipperIncidentController;
 use App\Http\Controllers\Admin\ShipperCodSettlementController;
 use App\Http\Controllers\Admin\OrderIssueReportController as AdminOrderIssueReportController;
 use App\Http\Middleware\KeepSuperAdminContext;
+use App\Http\Controllers\Admin\ProductAvailabilityController;
 use App\Http\Controllers\Auth\GuestConvertController;
 use App\Http\Controllers\Client\OrderLookupController;
 use App\Http\Controllers\Client\DeliveryTrackingController;
@@ -565,6 +566,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
     Route::get('/slides/trash', [BranchSlideController::class, 'trash'])->name('slides.trash');
     Route::post('/slides/{id}/restore', [BranchSlideController::class, 'restore'])->name('slides.restore');
     Route::delete('/slides/{id}/force-delete', [BranchSlideController::class, 'forceDelete'])->name('slides.force-delete');
+
+    Route::patch('/products/{productId}/branches/{branch}/availability', [ProductAvailabilityController::class, 'update'])
+        ->name('products.branches.availability.update');
 
     // Staff Management (Admin và Super Admin quản lý nhân viên)
     Route::get('/staff', [StaffManagementController::class, 'index'])->name('staff.index');

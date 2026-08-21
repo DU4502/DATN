@@ -441,8 +441,8 @@
                                     @else
                                         <a href="{{ route('login') }}" class="cart-recommend-action is-favorite" aria-label="Đăng nhập để yêu thích"><i class="bi bi-heart"></i></a>
                                     @endauth
-                                    @if(($product->stock ?? 1) > 0)
-                                        <form method="POST" action="{{ route('cart.add', $product->id) }}" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="cart-recommend-action is-add" aria-label="Thêm {{ $product->name }} vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
+                                    @if($product->availabilityAt($branch) === true)
+                                        <form method="POST" action="{{ route('cart.add', $product->id) }}" data-ajax-cart data-product-availability="{{ $product->id }}" data-branch-id="{{ $branch?->id }}">@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="cart-recommend-action is-add" aria-label="Thêm {{ $product->name }} vào giỏ" data-product-action><i class="bi bi-plus-lg"></i></button></form>
                                     @endif
                                 </div>
                                 <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
@@ -455,6 +455,7 @@
                                         class="recommend-image"
                                     />
                                     <div class="p-3">
+                                        <x-product-availability-badge :product="$product" :branch="$branch" class="mb-2" />
                                         <h3 class="h5 fw-bold mb-1">{{ $product->name }}</h3>
                                         <p class="text-primary fw-semibold mb-0">{{ number_format($product->price, 0, ',', '.') }}đ</p>
                                     </div>

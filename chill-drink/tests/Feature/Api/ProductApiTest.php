@@ -59,7 +59,6 @@ class ProductApiTest extends TestCase
             'name' => $productName,
             'slug' => $productSlug,
             'price' => 49000,
-            'stock' => 30,
             'status' => true,
         ]);
 
@@ -68,7 +67,6 @@ class ProductApiTest extends TestCase
             'name' => 'Sản phẩm ẩn',
             'slug' => 'san-pham-an',
             'price' => 10000,
-            'stock' => 10,
             'status' => false,
         ]);
 
@@ -115,7 +113,6 @@ class ProductApiTest extends TestCase
             'name' => 'Cold Brew',
             'slug' => 'cold-brew',
             'price' => 55000,
-            'stock' => 20,
             'status' => true,
         ]);
 

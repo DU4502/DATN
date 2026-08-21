@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
@@ -48,8 +49,12 @@ class CheckoutBranchSelectionTest extends TestCase
             'name' => 'Trà kiểm thử',
             'slug' => 'tra-kiem-thu',
             'price' => 50000,
-            'stock' => 10,
             'status' => true,
+        ]);
+        BranchProductStatus::create([
+            'branch_id' => $branch->id,
+            'product_id' => $product->id,
+            'is_available' => true,
         ]);
 
         $size = Size::create(['name' => 'M', 'multiplier' => 1]);

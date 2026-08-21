@@ -65,6 +65,19 @@ class Branch extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    public function productStatuses()
+    {
+        return $this->hasMany(BranchProductStatus::class);
+    }
+
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'branch_product_statuses')
+            ->withPivot('is_available')
+            ->withTimestamps();
+    }
+
     public function slides()
     {
         return $this->hasMany(BranchSlide::class)->orderBy('sort_order')->orderBy('id');

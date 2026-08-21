@@ -572,7 +572,7 @@ final class OrderStatus
     public static function notificationPayload(Order $order): array
     {
         $status = self::normalize((string) $order->status);
-        $label = self::label($status);
+        $label = self::userBadgeStyles()[$status]['label'] ?? self::label($status);
         $orderCode = $order->displayCode();
         $customerMessage = self::customerMessages()[$status] ?? '';
 

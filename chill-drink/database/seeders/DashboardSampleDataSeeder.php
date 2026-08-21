@@ -132,14 +132,14 @@ class DashboardSampleDataSeeder extends Seeder
     private function seedProducts(array $categories): array
     {
         $rows = [
-            ['name' => 'Tra Sua Tran Chau Duong Den', 'slug' => 'tra-sua-tran-chau-duong-den', 'category' => 'tra-sua', 'price' => 62000, 'stock' => 320],
-            ['name' => 'Tra Sua Matcha', 'slug' => 'tra-sua-matcha', 'category' => 'tra-sua', 'price' => 58000, 'stock' => 280],
-            ['name' => 'Ca Phe Sua Da', 'slug' => 'ca-phe-sua-da', 'category' => 'ca-phe', 'price' => 45000, 'stock' => 300],
-            ['name' => 'Cold Brew Cam', 'slug' => 'cold-brew-cam', 'category' => 'ca-phe', 'price' => 55000, 'stock' => 220],
-            ['name' => 'Tra Dao Cam Sa', 'slug' => 'tra-dao-cam-sa', 'category' => 'tra-trai-cay', 'price' => 52000, 'stock' => 260],
-            ['name' => 'Tra Vai Nha Dam', 'slug' => 'tra-vai-nha-dam', 'category' => 'tra-trai-cay', 'price' => 54000, 'stock' => 240],
-            ['name' => 'Da Xay Socola', 'slug' => 'da-xay-socola', 'category' => 'da-xay', 'price' => 65000, 'stock' => 190],
-            ['name' => 'Da Xay Cookies', 'slug' => 'da-xay-cookies', 'category' => 'da-xay', 'price' => 68000, 'stock' => 170],
+            ['name' => 'Tra Sua Tran Chau Duong Den', 'slug' => 'tra-sua-tran-chau-duong-den', 'category' => 'tra-sua', 'price' => 62000],
+            ['name' => 'Tra Sua Matcha', 'slug' => 'tra-sua-matcha', 'category' => 'tra-sua', 'price' => 58000],
+            ['name' => 'Ca Phe Sua Da', 'slug' => 'ca-phe-sua-da', 'category' => 'ca-phe', 'price' => 45000],
+            ['name' => 'Cold Brew Cam', 'slug' => 'cold-brew-cam', 'category' => 'ca-phe', 'price' => 55000],
+            ['name' => 'Tra Dao Cam Sa', 'slug' => 'tra-dao-cam-sa', 'category' => 'tra-trai-cay', 'price' => 52000],
+            ['name' => 'Tra Vai Nha Dam', 'slug' => 'tra-vai-nha-dam', 'category' => 'tra-trai-cay', 'price' => 54000],
+            ['name' => 'Da Xay Socola', 'slug' => 'da-xay-socola', 'category' => 'da-xay', 'price' => 65000],
+            ['name' => 'Da Xay Cookies', 'slug' => 'da-xay-cookies', 'category' => 'da-xay', 'price' => 68000],
         ];
 
         $products = [];
@@ -150,7 +150,6 @@ class DashboardSampleDataSeeder extends Seeder
                 'description' => 'San pham mau phuc vu kiem thu dashboard doanh thu.',
                 'image' => null,
                 'price' => $row['price'],
-                'stock' => $row['stock'],
                 'status' => 1,
             ];
 

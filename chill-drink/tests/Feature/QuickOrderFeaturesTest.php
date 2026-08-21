@@ -7,6 +7,7 @@ use App\Models\GroupOrderMember;
 use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMessage;
 use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -178,12 +179,16 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame('Tên mới', $group->members()->where('user_id', $member->id)->value('name'));
     }
 
-    public function test_group_item_cannot_exceed_product_stock(): void
+    public function test_group_item_cannot_use_unavailable_product(): void
     {
         [$group] = $this->openGroup();
         $member = User::factory()->create();
-        GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $member->id, 'name' => 'Bạn A', 'member_token' => 'stock-member']);
-        $product = Product::factory()->create(['status' => true, 'stock' => 1]);
+        GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $member->id, 'name' => 'Bạn A', 'member_token' => 'availability-member']);
+        $product = Product::factory()->create(['status' => true]);
+        BranchProductStatus::query()
+            ->where('branch_id', $group->branch_id)
+            ->where('product_id', $product->id)
+            ->update(['is_available' => false]);
 
         $this->actingAs($member)->post(route('group-orders.items.store', $group->code), [
             'product_id' => $product->id, 'size' => 'M', 'sugar_level' => 50,
@@ -211,7 +216,7 @@ class QuickOrderFeaturesTest extends TestCase
         [$group] = $this->openGroup();
         $user = User::factory()->create();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $user->id, 'name' => 'Bạn A', 'member_token' => 'increment-owner']);
-        $product = Product::factory()->create(['status' => true, 'stock' => 5]);
+        $product = Product::factory()->create(['status' => true]);
         $item = GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 1, 'unit_price' => 45000]);
 
@@ -224,7 +229,7 @@ class QuickOrderFeaturesTest extends TestCase
     {
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'close-owner']);
-        $product = Product::factory()->create(['status' => true, 'stock' => 10, 'price' => 45000]);
+        $product = Product::factory()->create(['status' => true, 'price' => 45000]);
         $item = GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'M', 'quantity' => 1, 'unit_price' => 1, 'toppings' => []]);
 
@@ -238,7 +243,7 @@ class QuickOrderFeaturesTest extends TestCase
     {
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'cart-owner']);
-        $product = Product::factory()->create(['status' => true, 'stock' => 10]);
+        $product = Product::factory()->create(['status' => true]);
         $item = GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 1, 'unit_price' => (int) $product->price]);
         $personalCart = ['personal-key' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
@@ -252,13 +257,13 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame('cancelled', $group->fresh()->status);
     }
 
-    public function test_group_checkout_links_order_deducts_stock_and_restores_personal_cart(): void
+    public function test_group_checkout_links_order_and_restores_personal_cart(): void
     {
         $this->travelTo(now()->startOfDay()->addHours(9));
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
-        $product = Product::factory()->create(['status' => true, 'stock' => 8, 'price' => 40000]);
-        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 10.7769, 'longitude' => 106.7009, 'status' => true]);
+        $product = Product::factory()->create(['status' => true, 'price' => 40000]);
+        $branch = $this->activeBranch();
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
@@ -268,6 +273,7 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'closed']);
         $response = $this->post(route('checkout.process'), [
             'payment_method' => 'vnpay', 'shipping_method_ui' => 'standard',
+            'shipping_phone_ui' => '0901234567',
             'fulfillment_type' => 'delivery',
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ', 'shipping_area_ui' => 'Quận 1',
@@ -281,7 +287,6 @@ class QuickOrderFeaturesTest extends TestCase
         $group->refresh();
         $this->assertNotNull($group->order_id);
         $this->assertSame('ordered', $group->status);
-        $this->assertSame(5, (int) $product->fresh()->stock);
         $this->assertTrue($group->order->scheduled_at->equalTo($scheduledAt));
         $this->assertSame($personalCart, session('cart'));
         $response->assertRedirect(route('vnpay.payment', $group->order));
@@ -290,8 +295,8 @@ class QuickOrderFeaturesTest extends TestCase
     public function test_scheduled_delivery_requires_prepaid_payment(): void
     {
         $user = User::factory()->create();
-        $product = Product::factory()->create(['status' => true, 'stock' => 5, 'price' => 40000]);
-        $branch = Branch::create(['name' => 'Chi nhánh test', 'code' => 'TEST', 'address' => 'Quận 1', 'latitude' => 10.7769, 'longitude' => 106.7009, 'status' => true]);
+        $product = Product::factory()->create(['status' => true, 'price' => 40000]);
+        $branch = $this->activeBranch();
         $cart = [
             'scheduled-cart-item' => [
                 'product_id' => $product->id,
@@ -312,6 +317,7 @@ class QuickOrderFeaturesTest extends TestCase
         $this->actingAs($user)->withSession(['cart' => $cart])->post(route('checkout.process'), [
             'payment_method' => 'cod',
             'shipping_method_ui' => 'standard',
+            'shipping_phone_ui' => '0901234567',
             'fulfillment_type' => 'delivery',
             'branch_id' => $branch->id,
             'shipping_address_ui' => '123 Nguyễn Huệ',
@@ -382,9 +388,10 @@ class QuickOrderFeaturesTest extends TestCase
     private function openGroup(): array
     {
         $owner = User::factory()->create();
+        $branch = $this->activeBranch();
         $group = GroupOrder::create([
             'owner_id' => $owner->id, 'name' => 'Nhóm kiểm thử', 'code' => strtoupper(fake()->unique()->bothify('TEST####')),
-            'status' => 'open', 'closes_at' => now()->addHour(),
+            'branch_id' => $branch->id, 'status' => 'open', 'closes_at' => now()->addHour(),
         ]);
         return [$group, $owner];
     }

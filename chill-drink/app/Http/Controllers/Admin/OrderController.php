@@ -397,6 +397,25 @@ class OrderController extends Controller
         $oldStatus = OrderStatus::normalize((string) $order->status);
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
 
+        if ($oldStatus === $newStatus) {
+            $data = $this->statusUpdateData($order);
+            $message = 'Trạng thái đơn hàng không thay đổi.';
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'order_id' => $order->id,
+                    'status' => $oldStatus,
+                    'status_label' => $data['status_label'],
+                    'status_options' => $data['status_options'],
+                    'data' => $data,
+                ]);
+            }
+
+            return redirect()->back()->with('success', $message);
+        }
+
         // Super Admin có quyền thao tác mọi bước của đơn, kể cả bước vốn thuộc shipper,
         // nhưng vẫn phải đi ĐÚNG TRÌNH TỰ của state machine. Admin/Staff thường chỉ
         // được thao tác phần trạng thái thuộc cửa hàng.
@@ -442,7 +461,6 @@ class OrderController extends Controller
                     'message' => 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.',
                 ], 422);
             }
-
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
         }
 
@@ -547,6 +565,8 @@ class OrderController extends Controller
         }
 
         if ($request->expectsJson() || $request->ajax()) {
+            $data = $this->statusUpdateData($order->fresh());
+
             return response()->json([
                 'success' => true,
                 'message' => $message,
@@ -557,10 +577,34 @@ class OrderController extends Controller
                 'status_options' => $isSuperAdmin
                     ? OrderStatus::superAdminOptions($newStatus, $fulfillmentType)
                     : OrderStatus::storeStepwiseOptions($newStatus, $fulfillmentType),
+                'data' => $data,
             ]);
         }
 
         return redirect()->back()->with('success', $message);
+    }
+
+    private function statusUpdateData(Order $order): array
+    {
+        $status = OrderStatus::normalize((string) $order->status);
+        $isSuperAdmin = (bool) auth()->user()?->isSuperAdmin();
+        $statusOptions = $isSuperAdmin
+            ? OrderStatus::superAdminOptions($status, $order->fulfillment_type ?? 'delivery')
+            : OrderStatus::storeStepwiseOptions($status, $order->fulfillment_type ?? 'delivery');
+        $nextStatus = collect(array_keys($statusOptions))->first(fn (string $option) => $option !== $status);
+
+        return [
+            'id' => (int) $order->id,
+            'order_code' => $order->displayCode(),
+            'status' => $status,
+            'status_label' => OrderStatus::label($status),
+            'status_icon' => OrderStatus::notificationIcon($status),
+            'status_class' => 'status-text-'.$status,
+            'status_options' => $statusOptions,
+            'next_status' => $nextStatus,
+            'can_update' => count($statusOptions) > 1,
+            'updated_at' => $order->updated_at?->toIso8601String(),
+        ];
     }
 
     /**

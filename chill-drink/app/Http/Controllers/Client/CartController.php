@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Favorite;
 use App\Models\GroupOrder;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -42,12 +43,13 @@ class CartController extends Controller
      */
     public function index()
     {
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
         $cart = $this->refreshCartItems(session()->get('cart', []));
         session()->put('cart', $cart);
 
         $suggestions = Product::query()
             ->where('status', true)
-            ->with('category')
+            ->with(['category', 'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->inRandomOrder()
             ->limit(4)
             ->get();
@@ -56,7 +58,7 @@ class CartController extends Controller
             ? Favorite::where('user_id', auth()->id())->pluck('product_id')
             : collect();
 
-        return view('client.cart.index', compact('cart', 'suggestions', 'favoriteProductIds'));
+        return view('client.cart.index', compact('cart', 'suggestions', 'favoriteProductIds', 'branch'));
     }
 
     private function cartPayload(string $message): array
@@ -155,6 +157,23 @@ class CartController extends Controller
         $product = isset($demoProducts[$id])
             ? $this->resolveOrCreatePayableProduct($demoProducts[$id], $id)
             : Product::findOrFail($id);
+
+        $availability = app(ProductAvailabilityService::class);
+        $branch = $availability->currentBranch();
+
+        if (! $branch) {
+            abort(422, 'Hiện chưa có chi nhánh hoạt động để phục vụ sản phẩm.');
+        }
+
+        try {
+            $availability->assertAvailable($product, $branch);
+        } catch (\RuntimeException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $exception->getMessage()], 422);
+            }
+
+            return back()->with('error', $exception->getMessage());
+        }
         
         $cart = session()->get('cart', []);
         $sizes = $this->sizeOptions();
@@ -215,6 +234,8 @@ class CartController extends Controller
                 'image' => $image,
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
+                'branch_id' => (int) $branch->id,
+                'branch_name' => $branch->name,
                 'quantity' => $quantity,
                 'note' => $itemNote !== '' ? $itemNote : null,
             ];
@@ -295,7 +316,6 @@ class CartController extends Controller
             'name' => $name !== '' ? $name : 'Sản phẩm demo',
             'slug' => $slug,
             'price' => $price,
-            'stock' => 100,
             'status' => true,
             'description' => trim((string) ($demoProduct['description'] ?? '')) !== ''
                 ? $demoProduct['description']

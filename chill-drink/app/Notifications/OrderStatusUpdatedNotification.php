@@ -27,6 +27,8 @@ class OrderStatusUpdatedNotification extends Notification
         return [
             ...$payload,
             'order_id' => $this->order->id,
+            'order_code' => $this->order->displayCode(),
+            'updated_at' => $this->order->updated_at?->toIso8601String(),
             'link' => route('orders.index', ['order' => $this->order->id]),
         ];
     }

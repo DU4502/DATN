@@ -18,6 +18,12 @@ $paymentLabels = $paymentLabels ?? [
         background: #ffffff;
         overflow: hidden;
         box-shadow: 0 14px 34px rgba(79, 183, 168, 0.08);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .order-card.is-realtime-updated {
+        border-color: rgba(13, 147, 115, 0.55);
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.12), 0 14px 34px rgba(79, 183, 168, 0.12);
     }
 
     .order-card-header {
@@ -36,6 +42,9 @@ $paymentLabels = $paymentLabels ?? [
         padding: 0.35rem 0.85rem;
         font-size: 0.78rem;
         font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
     }
 
     .order-status-pending {
@@ -46,6 +55,24 @@ $paymentLabels = $paymentLabels ?? [
     .order-status-in-progress {
         background: #e8f4ff;
         color: #1d5f9c;
+    }
+
+    .order-status-confirmed,
+    .order-status-preparing {
+        background: #e8f4ff;
+        color: #1d5f9c;
+    }
+
+    .order-status-ready,
+    .order-status-delivered {
+        background: #e6f9f4;
+        color: #0a6b4e;
+    }
+
+    .order-status-shipper-picked-up,
+    .order-status-delivering {
+        background: #f1e9ff;
+        color: #5b3f9e;
     }
 
     .order-status-shipper-accepted {
@@ -212,7 +239,7 @@ $paymentLabels = $paymentLabels ?? [
     @forelse($profileOrders as $order)
     <?php $statusKey = $order->status_display_key ?? $order->status; ?>
     <?php $status = $orderStatusLabels[$statusKey] ?? ['label' => $order->status, 'class' => 'order-status-pending']; ?>
-    <article class="order-card mb-4" id="order-{{ $order->id }}" data-order-id="{{ $order->id }}">
+    <article class="order-card mb-4" id="order-{{ $order->id }}" data-order-id="{{ $order->id }}" data-order-status="{{ $statusKey }}">
         <div class="order-card-header">
             <div>
                 <div class="fw-bold text-primary">{{ $order->displayCode() }}</div>
@@ -221,7 +248,10 @@ $paymentLabels = $paymentLabels ?? [
                 <div class="small fw-semibold text-primary mt-1"><i class="bi bi-calendar-check me-1"></i>Nhận lúc {{ $order->scheduled_at->format('H:i · d/m/Y') }}</div>
                 @endif
             </div>
-            <span class="order-status-badge {{ $status['class'] }}" data-order-status-badge data-status="{{ $statusKey }}">{{ $status['label'] }}</span>
+            <span class="order-status-badge {{ $status['class'] }}" data-order-status-badge data-status="{{ $statusKey }}">
+                <i class="bi {{ \App\Support\OrderStatus::notificationIcon($statusKey) }}" data-order-status-icon aria-hidden="true"></i>
+                <span data-order-status-label>{{ $status['label'] }}</span>
+            </span>
         </div>
 
         @php
@@ -392,7 +422,7 @@ $paymentLabels = $paymentLabels ?? [
                     @endif
                 </div>
                 @if($order->status === 'cancelled' && $order->cancellation_reason)
-                <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
+                <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2 cancellation-reason-alert" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
                     <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
                     <div class="flex-grow-1">
                         <div class="fw-bold mb-1">Lý do hủy đơn:</div>
@@ -417,11 +447,16 @@ $paymentLabels = $paymentLabels ?? [
                         <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
                     </form>
                     
-                    @if($statusKey === 'pending' || $order->status === 'pending')
-                        <button type="button" class="btn btn-sm btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#customerCancelOrderModal" data-order-id="{{ $order->id }}">
-                            <i class="bi bi-x-circle me-1"></i>Hủy đơn hàng
-                        </button>
-                    @endif
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger w-100 {{ $statusKey === \App\Support\OrderStatus::PENDING ? '' : 'd-none' }}"
+                        data-bs-toggle="modal"
+                        data-bs-target="#customerCancelOrderModal"
+                        data-order-id="{{ $order->id }}"
+                        data-order-cancel-action
+                    >
+                        <i class="bi bi-x-circle me-1"></i>Hủy đơn hàng
+                    </button>
                     
                     @if($statusKey === 'delivered' || $order->status === 'delivered')
                         @if($order->delivered_at)
@@ -429,17 +464,23 @@ $paymentLabels = $paymentLabels ?? [
                                 Tự hoàn thành lúc <strong>{{ $order->delivered_at->copy()->addMinutes(\App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES)->format('H:i') }}</strong> nếu bạn không xác nhận.
                             </div>
                         @endif
-                        <form method="POST" action="{{ route('orders.confirm-received', $order) }}" onsubmit="return confirm('Xác nhận bạn đã nhận được đơn hàng này?');">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-success w-100">
-                                <i class="bi bi-check-circle me-1"></i>Xác nhận đã nhận
-                            </button>
-                        </form>
                     @endif
+                    <form
+                        method="POST"
+                        action="{{ route('orders.confirm-received', $order) }}"
+                        class="{{ $statusKey === \App\Support\OrderStatus::DELIVERED ? '' : 'd-none' }}"
+                        data-order-confirm-action
+                        onsubmit="return confirm('Xác nhận bạn đã nhận được đơn hàng này?');"
+                    >
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-success w-100">
+                            <i class="bi bi-check-circle me-1"></i>Xác nhận đã nhận
+                        </button>
+                    </form>
                 </div>
                 
                 @if($order->payment_method === 'vnpay' && in_array($order->payment_status, ['pending', 'failed']) && $order->status !== 'cancelled')
-                    <div class="mt-2">
+                    <div class="mt-2" data-order-payment-action>
                         @if($order->payment_status === 'failed')
                             <div class="badge bg-danger-subtle text-danger mb-2">
                                 <i class="bi bi-exclamation-triangle me-1"></i>
@@ -538,16 +579,19 @@ $paymentLabels = $paymentLabels ?? [
 </script>
 
 <script>
-    function highlightOrderCard(orderCard) {
+    function highlightOrderCard(orderCard, shouldScroll = false) {
         if (!orderCard) {
             return;
         }
 
-        orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        orderCard.style.boxShadow = '0 0 0 2px rgba(13, 147, 115, 0.25)';
+        if (shouldScroll) {
+            orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        orderCard.classList.add('is-realtime-updated');
 
         window.setTimeout(() => {
-            orderCard.style.boxShadow = '';
+            orderCard.classList.remove('is-realtime-updated');
         }, 2500);
     }
 
@@ -558,7 +602,8 @@ $paymentLabels = $paymentLabels ?? [
         if (orderId) {
             highlightOrderCard(
                 document.getElementById(`order-${orderId}`)
-                    || document.querySelector(`[data-order-id="${orderId}"]`)
+                    || document.querySelector(`[data-order-id="${orderId}"]`),
+                true
             );
         }
 
@@ -579,27 +624,56 @@ $paymentLabels = $paymentLabels ?? [
     });
 
     const statusClassMap = @json(collect(\App\Support\OrderStatus::userBadgeStyles())->mapWithKeys(fn ($item, $key) => [$key => $item['class']]));
+    const statusLabelMap = @json(collect(\App\Support\OrderStatus::userBadgeStyles())->mapWithKeys(fn ($item, $key) => [$key => $item['label']]));
+    const statusIconMap = @json(collect(array_keys(\App\Support\OrderStatus::userBadgeStyles()))->mapWithKeys(fn ($status) => [$status => \App\Support\OrderStatus::notificationIcon($status)]));
 
-    document.addEventListener('order:status-updated', function (event) {
-        const payload = event.detail || {};
-        const orderCard = document.querySelector(`[data-order-id="${payload.order_id}"]`);
+    function applyOrderStatusUpdate(payload) {
+        const orderId = String(payload?.order_id ?? '').trim();
+        const status = String(payload?.status ?? payload?.order_status ?? '').trim();
+        const orderCard = Array.from(document.querySelectorAll('.order-card[data-order-id]'))
+            .find(card => String(card.dataset.orderId) === orderId);
 
-        if (!orderCard || !payload.status) {
-            return;
+        if (!orderCard || !status) {
+            console.warn('[Order realtime] matching order card not found', { orderId, status });
+            return false;
         }
 
         const badge = orderCard.querySelector('[data-order-status-badge]');
 
         if (!badge) {
-            return;
+            console.warn('[Order realtime] status badge not found', { orderId, status });
+            return false;
         }
 
-        badge.dataset.status = payload.status;
-        badge.textContent = payload.status_label || payload.status;
-        badge.className = `order-status-badge ${statusClassMap[payload.status] || 'order-status-pending'}`;
+        let statusLabel = badge.querySelector('[data-order-status-label]');
+        let statusIcon = badge.querySelector('[data-order-status-icon]');
+
+        if (!statusLabel || !statusIcon) {
+            badge.replaceChildren();
+            statusIcon = document.createElement('i');
+            statusIcon.dataset.orderStatusIcon = '';
+            statusIcon.setAttribute('aria-hidden', 'true');
+            statusLabel = document.createElement('span');
+            statusLabel.dataset.orderStatusLabel = '';
+            badge.append(statusIcon, statusLabel);
+        }
+
+        orderCard.dataset.orderStatus = status;
+        if (payload.updated_at) orderCard.dataset.orderUpdatedAt = payload.updated_at;
+        badge.dataset.status = status;
+        statusLabel.textContent = statusLabelMap[status] || payload.status_label || status;
+        statusIcon.className = `bi ${payload.status_icon || statusIconMap[status] || 'bi-bell'}`;
+        badge.className = `order-status-badge ${statusClassMap[status] || 'order-status-pending'}`;
+
+        const cancelAction = orderCard.querySelector('[data-order-cancel-action]');
+        const confirmAction = orderCard.querySelector('[data-order-confirm-action]');
+        const paymentAction = orderCard.querySelector('[data-order-payment-action]');
+        if (cancelAction) cancelAction.classList.toggle('d-none', status !== 'pending');
+        if (confirmAction) confirmAction.classList.toggle('d-none', status !== 'delivered');
+        if (paymentAction && status === 'cancelled') paymentAction.classList.add('d-none');
         
         // If order is cancelled and has a reason, display it in the footer
-        if (payload.status === 'cancelled' && payload.cancellation_reason) {
+        if (status === 'cancelled' && payload.cancellation_reason) {
             const footer = orderCard.querySelector('.order-card-footer > div:first-child');
             if (footer) {
                 // Remove existing cancellation reason if any
@@ -623,6 +697,11 @@ $paymentLabels = $paymentLabels ?? [
         }
         
         highlightOrderCard(orderCard);
+        return true;
+    }
+
+    document.addEventListener('order:status-updated', function (event) {
+        applyOrderStatusUpdate(event.detail || {});
     });
 
     function escapeHtml(text) {

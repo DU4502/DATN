@@ -31,7 +31,14 @@ class RealtimeOrderNotifier
         $order = $order->fresh(['user']);
 
         if ($order->user) {
-            $order->user->notify(new OrderStatusUpdatedNotification($order));
+            try {
+                $order->user->notify(new OrderStatusUpdatedNotification($order));
+            } catch (\Throwable $exception) {
+                Log::warning('Không thể lưu thông báo cập nhật trạng thái đơn hàng.', [
+                    'order_id' => $order->id,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
         }
 
         if (! self::isConfigured()) {

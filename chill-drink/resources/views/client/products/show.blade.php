@@ -1075,7 +1075,11 @@
                         </p>
                     </div>
 
-                    @if(($product->stock ?? 1) > 0)
+                    <div data-product-availability="{{ $product->id ?? '' }}" data-branch-id="{{ $branch?->id }}">
+                        <x-product-availability-badge :product="$product" :branch="$branch" />
+                    </div>
+
+                    @if($product instanceof \App\Models\Product && $product->availabilityAt($branch) === true)
                     <div class="detail-quick-actions" aria-label="Tiện ích đặt hàng">
                         <a href="{{ route('group-orders.create') }}" class="detail-quick-action">
                             <i class="bi bi-people"></i>
@@ -1129,8 +1133,8 @@
                             <button type="button" data-qty-plus aria-label="Tăng số lượng">+</button>
                         </div>
 
-                        @if(($product->stock ?? 1) > 0)
-                        <div class="detail-action-content">
+                    @if($product instanceof \App\Models\Product && $product->availabilityAt($branch) === true)
+                        <div class="detail-action-content" data-product-availability="{{ $product->id }}" data-branch-id="{{ $branch?->id }}">
                             <form id="productOrderForm" action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
                                 @csrf
                                 <input type="hidden" name="size" value="S" data-size-input>
@@ -1139,10 +1143,10 @@
                                 <input type="hidden" name="toppings" value="" data-topping-input>
                                 <input type="hidden" name="quantity" value="1" data-qty-input>
                                 <div class="detail-button-row">
-                                    <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill">
+                                    <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill" data-product-action data-availability-label>
                                         <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
                                     </button>
-                                    <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill">Mua ngay</button>
+                                    <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill" data-product-action>Mua ngay</button>
                                 </div>
                             </form>
                             @auth
@@ -1155,7 +1159,9 @@
                             @endauth
                         </div>
                         @else
-                        <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
+                        <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">
+                            {{ $product instanceof \App\Models\Product && $product->availabilityAt($branch) === false ? 'Hết hàng' : 'Chưa phục vụ' }}
+                        </span>
                         @endif
                     </div>
 
@@ -1386,7 +1392,7 @@
                 @forelse($relatedProducts as $item)
                 <div class="col-sm-6 col-lg-3">
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
-                        @if(($item->stock ?? 1) > 0)
+                        @if($item->availabilityAt($branch) === true)
                         <form action="{{ route('cart.add', $item->id) }}" method="POST" class="related-add-form" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="related-add-btn" aria-label="Thêm {{ $item->name }} vào giỏ" title="Thêm vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
                         @endif
                         <a href="{{ route('products.show', $item->slug) }}">
