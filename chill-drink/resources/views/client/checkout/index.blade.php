@@ -2095,6 +2095,76 @@
             return true;
         }
 
+        function pickerHasSelectedCoordinates(container) {
+            if (!container) {
+                return false;
+            }
+
+            const latitude = Number.parseFloat(container.querySelector('[data-location-lat]')?.value || '');
+            const longitude = Number.parseFloat(container.querySelector('[data-location-lng]')?.value || '');
+
+            return Number.isFinite(latitude) && Number.isFinite(longitude);
+        }
+
+        function setCheckoutPickerStatus(container, message) {
+            const statusEl = container?.querySelector('[data-location-status]');
+            if (statusEl && message) {
+                statusEl.textContent = message;
+            }
+        }
+
+        function syncCheckoutDeviceLocationPreview() {
+            if (!hasCheckoutDeviceLocation()) {
+                return false;
+            }
+
+            let synced = false;
+
+            document.querySelectorAll('[data-location-picker="checkout-edit-location-picker"], [data-location-picker="checkout-new-location-picker"]').forEach((container) => {
+                const previewMessage = container?.dataset?.checkoutDevicePreviewMessage || '';
+
+                if (!previewMessage || pickerHasSelectedCoordinates(container)) {
+                    return;
+                }
+
+                if (previewCheckoutDeviceLocationOnPicker(container, previewMessage)) {
+                    synced = true;
+                }
+            });
+
+            return synced;
+        }
+
+        function markCheckoutDeviceLocationUnavailable(message = 'Không thể lấy vị trí hiện tại. Hãy chọn trực tiếp trên bản đồ.') {
+            document.querySelectorAll('[data-location-picker="checkout-edit-location-picker"], [data-location-picker="checkout-new-location-picker"]').forEach((container) => {
+                if (!container?.dataset?.checkoutDevicePreviewMessage || pickerHasSelectedCoordinates(container)) {
+                    return;
+                }
+
+                setCheckoutPickerStatus(container, message);
+            });
+        }
+
+        function primeCheckoutDeviceLocationOnPicker(container, message, waitingMessage = 'Đang lấy vị trí hiện tại của thiết bị...') {
+            if (!container) {
+                return false;
+            }
+
+            container.dataset.checkoutDevicePreviewMessage = message || 'Đây là vị trí hiện tại của thiết bị. Hãy xác nhận lại nếu muốn dùng cho đơn hàng.';
+
+            if (pickerHasSelectedCoordinates(container)) {
+                return true;
+            }
+
+            if (previewCheckoutDeviceLocationOnPicker(container, container.dataset.checkoutDevicePreviewMessage)) {
+                return true;
+            }
+
+            setCheckoutPickerStatus(container, waitingMessage);
+            requestCheckoutDeviceLocation();
+            return false;
+        }
+
         function isCheckoutAddressModalOpen() {
             return ['addressEditModal', 'addressAddModal', 'addressListModal'].some((id) => {
                 const element = document.getElementById(id);
@@ -2177,6 +2247,7 @@
                     accuracy: Number(position.coords.accuracy),
                 };
 
+                syncCheckoutDeviceLocationPreview();
                 maybeRequireAddressRefreshAgainstLatestOrder();
             }, () => {
                 checkoutDeviceLocationRequested = false;
@@ -2185,6 +2256,7 @@
                     longitude: null,
                     accuracy: null,
                 };
+                markCheckoutDeviceLocationUnavailable();
             }, {
                 enableHighAccuracy: true,
                 timeout: 10000,
@@ -2811,7 +2883,7 @@
                     ? 'Vị trí hiện tại đang khác đơn gần nhất. Hãy cập nhật lại địa chỉ và chọn lại vị trí giao hàng.'
                     : 'Vui lòng xác nhận lại vị trí cho đơn hàng này.'
             );
-            previewCheckoutDeviceLocationOnPicker(
+            primeCheckoutDeviceLocationOnPicker(
                 picker,
                 options.triggeredByDeviceDrift
                     ? 'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
@@ -2839,7 +2911,7 @@
             clearAddressLocationConfirmation();
             updateBranchSelectorState();
             window.ChillDrinkLocationPicker?.clear(picker);
-            previewCheckoutDeviceLocationOnPicker(
+            primeCheckoutDeviceLocationOnPicker(
                 picker,
                 'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
             );
@@ -3016,7 +3088,7 @@
                     }
 
                     const picker = document.querySelector(`[data-location-picker="checkout-${scope}-location-picker"]`);
-                    window.ChillDrinkLocationPicker?.clear(picker, 'Địa chỉ vừa thay đổi. Vui lòng chọn lại vị trí trên bản đồ.');
+                    window.ChillDrinkLocationPicker?.invalidate(picker, 'Địa chỉ vừa thay đổi. Vui lòng kiểm tra lại vị trí trên bản đồ trước khi lưu.');
                     clearAddressLocationConfirmation();
                 });
             });

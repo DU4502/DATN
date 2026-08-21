@@ -2,6 +2,7 @@
 <script>
     window.realtimeConfig = {
         isAdmin: @json(auth()->user()->isAdmin()),
+        adminBranchId: @json(auth()->user()->isAdmin() && is_numeric(auth()->user()->branch_id) ? (int) auth()->user()->branch_id : null),
         userId: @json(auth()->id()),
     };
 
@@ -11,12 +12,12 @@
         }
 
         if (window.realtimeConfig.isAdmin) {
-            window.Echo.private('admin-notifications')
-                .listen('.order.created', function (payload) {
-                    if (payload.message) {
-                        window.showRealtimeToast(payload.message, 'success');
-                    }
+            const adminChannel = window.realtimeConfig.adminBranchId
+                ? 'admin-notifications.' + window.realtimeConfig.adminBranchId
+                : 'admin-notifications';
 
+            window.Echo.private(adminChannel)
+                .listen('.order.created', function (payload) {
                     document.dispatchEvent(new CustomEvent('order:created', { detail: payload }));
                 });
         } else if (window.realtimeConfig.userId) {

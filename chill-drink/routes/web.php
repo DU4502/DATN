@@ -465,6 +465,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSu
 
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/recent', [OrderController::class, 'recent'])->name('orders.recent');
+        Route::get('/orders/pending-alerts', [OrderController::class, 'pendingAlerts'])->name('orders.pending-alerts');
         Route::put('/orders/{id}/status', [OrderController::class, 'updateStatus'])->name('orders.updateStatus');
         Route::post('/orders/{order}/shipper-incident/resolve', [OrderShipmentIncidentController::class, 'resolve'])->name('orders.shipper-incident.resolve');
         Route::get('/shipper-incidents', [ShipperIncidentController::class, 'index'])->name('shipper-incidents.index');
@@ -528,6 +529,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
 
     // Order Management
     Route::get('orders/recent', [OrderController::class, 'recent'])->name('orders.recent');
+    Route::get('orders/pending-alerts', [OrderController::class, 'pendingAlerts'])->name('orders.pending-alerts');
     Route::resource('orders', OrderController::class)->only(['index']);
     Route::put('orders/{id}/status', [OrderController::class, 'updateStatus'])
         ->name('orders.updateStatus');

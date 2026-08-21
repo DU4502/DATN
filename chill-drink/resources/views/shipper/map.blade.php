@@ -63,11 +63,8 @@
                 <div class="navigation-summary" id="navigationSummary">
                     <div class="navigation-turn-icon" id="nextTurnIcon"><i class="fa-solid fa-location-arrow"></i></div>
                     <div class="min-w-0 flex-grow-1">
-                        <div class="small opacity-75" id="navigationStage">
-                            {{ $handoverPending ? 'Tới điểm bàn giao với shipper cũ' : ($isGoingToStore ? 'Tới quán lấy hàng' : 'Tới khách giao hàng') }}
-                        </div>
-                        <div class="fw-bold text-truncate" id="nextInstruction">Đang lấy vị trí của bạn...</div>
-                        <div class="small opacity-75 text-truncate">{{ $targetLabel }} · {{ $targetAddress }}</div>
+                        <div class="small opacity-75" id="navigationStage">Đi thẳng</div>
+                        <div class="fw-bold text-truncate" id="nextInstruction">Còn -- m nữa</div>
                     </div>
                     <div class="navigation-metrics text-end">
                         <strong id="routeDistance">-- km</strong>
@@ -98,6 +95,16 @@
                         <button type="button" class="d-none" id="testGpsButton"><i class="fa-solid fa-flask"></i><span>Test GPS</span></button>
                         <button type="button" class="d-none" id="testDriveButton"><i class="fa-solid fa-play"></i><span>Chạy thử tuyến</span></button>
                         <button type="button" class="d-none" id="testStopButton"><i class="fa-solid fa-stop"></i><span>Dừng test</span></button>
+                        <div class="test-speed-control d-none" id="testSpeedControl">
+                            <label for="testSpeedRange">
+                                <span>Tốc độ test</span>
+                                <strong><span id="testSpeedValue">50</span> km/h</strong>
+                            </label>
+                            <div class="test-speed-inputs">
+                                <input type="range" id="testSpeedRange" min="5" max="80" step="1" value="50" aria-label="Tốc độ test GPS">
+                                <input type="number" id="testSpeedNumber" min="5" max="80" step="1" value="50" aria-label="Nhập tốc độ test GPS">
+                            </div>
+                        </div>
                         <div class="map-tools-source" id="routeSourcePill">Đang tính tuyến...</div>
                     </div>
                 </div>
@@ -543,11 +550,11 @@
         width:min(calc(100% - 16px), 408px) !important;
         max-width:calc(100% - 16px) !important;
         margin:0 !important;
-        padding:10px 12px !important;
-        gap:10px !important;
+        padding:8px 10px !important;
+        gap:8px !important;
         display:grid !important;
         grid-template-columns:38px minmax(0, 1fr) auto;
-        align-items:flex-start;
+        align-items:center;
         background:linear-gradient(135deg, rgba(18, 91, 71, .97), rgba(16, 78, 62, .95)) !important;
         border:1px solid rgba(255,255,255,.12);
         box-shadow:0 10px 22px rgba(0,0,0,.18);
@@ -563,22 +570,15 @@
         align-self:center;
     }
     .navigation-summary .small {
-        font-size:10px !important;
-        line-height:1.25 !important;
-    }
-    .navigation-summary .small:last-child {
-        display:-webkit-box !important;
-        -webkit-box-orient:vertical;
-        -webkit-line-clamp:1;
-        overflow:hidden;
+        font-size:9px !important;
+        line-height:1.15 !important;
     }
     .navigation-summary .fw-bold {
-        font-size:15px !important;
-        line-height:1.15;
-        display:-webkit-box;
-        -webkit-box-orient:vertical;
-        -webkit-line-clamp:2;
+        font-size:18px !important;
+        line-height:1.05;
+        white-space:nowrap;
         overflow:hidden;
+        text-overflow:ellipsis;
     }
     .navigation-metrics strong {
         font-size:15px !important;
@@ -662,6 +662,47 @@
         font-size:8px;
         line-height:1.3;
         overflow-wrap:anywhere;
+    }
+    .test-speed-control {
+        margin:3px 0 4px;
+        padding:7px;
+        background:#f8fbfa;
+        border:1px solid #e1ebe7;
+        color:#31443e;
+        font-size:10px;
+    }
+    .test-speed-control label {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:6px;
+        margin:0 0 6px;
+        font-weight:800;
+    }
+    .test-speed-control strong {
+        color:var(--ship-green-dark);
+        white-space:nowrap;
+    }
+    .test-speed-inputs {
+        display:grid;
+        grid-template-columns:minmax(0,1fr) 44px;
+        gap:6px;
+        align-items:center;
+    }
+    .test-speed-inputs input[type="range"] {
+        width:100%;
+        accent-color:var(--ship-green);
+    }
+    .test-speed-inputs input[type="number"] {
+        width:44px;
+        height:24px;
+        border:1px solid #d7e3df;
+        background:#fff;
+        color:#17322a;
+        font-size:10px;
+        font-weight:800;
+        text-align:center;
+        padding:2px;
     }
 
     .map-destination-card .card-body,
@@ -973,6 +1014,8 @@
     .shipper-navigation-page .map-tools-toggle,
     .shipper-navigation-page .map-tools-menu,
     .shipper-navigation-page .map-tools-menu button,
+    .shipper-navigation-page .test-speed-control,
+    .shipper-navigation-page .test-speed-inputs input,
     .shipper-navigation-page .map-tools-source,
     .shipper-navigation-page .modal-content,
     .shipper-navigation-page .btn-close {
@@ -1240,6 +1283,10 @@
     const testGpsButton = document.getElementById('testGpsButton');
     const testDriveButton = document.getElementById('testDriveButton');
     const testStopButton = document.getElementById('testStopButton');
+    const testSpeedControl = document.getElementById('testSpeedControl');
+    const testSpeedRange = document.getElementById('testSpeedRange');
+    const testSpeedNumber = document.getElementById('testSpeedNumber');
+    const testSpeedValue = document.getElementById('testSpeedValue');
     const arrivalGuard = document.getElementById('arrivalGuard');
     const arrivalGuardBadge = document.getElementById('arrivalGuardBadge');
     const arrivalGuardTitle = document.getElementById('arrivalGuardTitle');
@@ -1646,7 +1693,13 @@
     let displayedRouteGeometry = [];
     let lastRenderedRouteKey = '';
     let lastRenderedGlRouteKey = '';
-    const TEST_DRIVE_SPEED_KMH = 50;
+    let currentSpeedKmh = 0;
+    let lastSpeedSample = null;
+    const TEST_DRIVE_SPEED_MIN_KMH = 5;
+    const TEST_DRIVE_SPEED_MAX_KMH = 80;
+    const TEST_DRIVE_SPEED_DEFAULT_KMH = 50;
+    const TEST_DRIVE_SPEED_KEY = 'shipper_map_test_drive_speed_kmh_v1';
+    let testDriveSpeedKmh = TEST_DRIVE_SPEED_DEFAULT_KMH;
     let geoWatchId = null;
     const isLocalHost = ['127.0.0.1', 'localhost'].includes(window.location.hostname);
     const initialOrderStatus = String(mapEl.dataset.status || '');
@@ -1658,6 +1711,7 @@
     const NAV_GUIDE_TURN_ALERT_M = 32;
     const NAV_GUIDE_ARRIVE_ALERT_M = 120;
     const NAV_GUIDE_ARRIVE_NOW_M = 35;
+    const NAV_GUIDE_SPEED_SAMPLE_MAX_MS = 12000;
     const TEST_GPS_SESSION_KEY = 'shipper_map_test_gps_v1';
     const TEST_GPS_POINT_KEY = 'shipper_map_test_gps_point_v1';
 
@@ -1747,6 +1801,17 @@
         return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)} km` : `${Math.max(1, Math.round(n))} m`;
     };
     const minutes = seconds => `${Math.max(1, Math.round(Number(seconds || 0) / 60))} phút`;
+    const speedKmhFromDistanceDuration = (meters, seconds) => {
+        const distance = Number(meters);
+        const duration = Number(seconds);
+        if (!Number.isFinite(distance) || !Number.isFinite(duration) || distance <= 0 || duration <= 0) return null;
+        return (distance / duration) * 3.6;
+    };
+    const compactSpeed = speedKmh => {
+        const speed = Number(speedKmh);
+        if (!Number.isFinite(speed) || speed <= 0) return '';
+        return `~${Math.max(1, Math.round(speed))} km/h`;
+    };
 
     function haversine(a, b) {
         if (!a || !b) return Infinity;
@@ -1758,6 +1823,55 @@
         const lat2 = toRad(Number(b.latitude));
         const h = Math.sin(dLat/2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng/2) ** 2;
         return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1-h)));
+    }
+
+    function routeAverageSpeedKmh(route = currentRoute) {
+        if (!route) return null;
+        return speedKmhFromDistanceDuration(
+            route.display_distance_m ?? route.distance_m,
+            route.display_duration_s ?? route.duration_s
+        );
+    }
+
+    function updateCurrentSpeed(point, sampledAtMs = Date.now()) {
+        if (!point || !Number.isFinite(Number(point.latitude)) || !Number.isFinite(Number(point.longitude))) return currentSpeedKmh;
+
+        const nextSample = {
+            point: {
+                latitude:Number(point.latitude),
+                longitude:Number(point.longitude)
+            },
+            at:Number(sampledAtMs)
+        };
+
+        if (!lastSpeedSample) {
+            lastSpeedSample = nextSample;
+            return currentSpeedKmh;
+        }
+
+        const elapsedMs = nextSample.at - Number(lastSpeedSample.at || 0);
+        if (!Number.isFinite(elapsedMs) || elapsedMs < 1800) return currentSpeedKmh;
+
+        const movedMeters = haversine(lastSpeedSample.point, nextSample.point);
+        lastSpeedSample = nextSample;
+
+        if (!Number.isFinite(movedMeters) || elapsedMs <= 0 || elapsedMs > NAV_GUIDE_SPEED_SAMPLE_MAX_MS) return currentSpeedKmh;
+
+        const normalizedMeters = movedMeters < 2 ? 0 : movedMeters;
+        const rawSpeedKmh = (normalizedMeters / (elapsedMs / 1000)) * 3.6;
+        if (!Number.isFinite(rawSpeedKmh) || rawSpeedKmh > 110) return currentSpeedKmh;
+
+        currentSpeedKmh = currentSpeedKmh > 0
+            ? (currentSpeedKmh * 0.65) + (rawSpeedKmh * 0.35)
+            : rawSpeedKmh;
+
+        return currentSpeedKmh;
+    }
+
+    function effectiveTravelSpeedKmh() {
+        if (Number.isFinite(currentSpeedKmh) && currentSpeedKmh >= 4) return currentSpeedKmh;
+        const routeSpeed = routeAverageSpeedKmh(currentRoute);
+        return Number.isFinite(routeSpeed) ? routeSpeed : 0;
     }
 
     function toRad(value) {
@@ -2230,6 +2344,53 @@
         return `đường ${text}`;
     }
 
+    function stepRoadText(step) {
+        return [step?.name, step?.ref, step?.pronunciation].filter(Boolean).join(' ').trim();
+    }
+
+    function isStraightContinuationStep(step) {
+        if (!step) return true;
+        const type = String(step.type || '').trim().toLowerCase();
+        const modifier = String(step.modifier || '').trim().toLowerCase();
+        if (type === 'arrive') return false;
+        if (type === 'new name' || type === 'continue' || type === 'depart') return true;
+        if (type === 'turn') return !modifier || modifier === 'straight';
+        return modifier === 'straight';
+    }
+
+    function isMeaningfulGuidanceStep(step) {
+        if (!step) return false;
+        const type = String(step.type || '').trim().toLowerCase();
+        const modifier = String(step.modifier || '').trim().toLowerCase();
+        if (type === 'arrive') return true;
+        if (['roundabout', 'rotary', 'fork', 'merge', 'end of road'].includes(type)) return true;
+        if (type === 'turn') return Boolean(modifier && modifier !== 'straight');
+        if (modifier && modifier !== 'straight') return true;
+        return !isStraightContinuationStep(step) && Boolean(type);
+    }
+
+    function isNarrowRoadStep(step) {
+        const road = stepRoadText(step);
+        return /(ngõ|ngo|ngách|ngach|hẻm|hem|kiệt|kiet|xóm|xom)/i.test(road);
+    }
+
+    function guidanceThresholds(step, speedKmh = 0, nextSegmentDistance = Infinity) {
+        const speed = Number.isFinite(Number(speedKmh)) ? Number(speedKmh) : 0;
+        const tightRoad = isNarrowRoadStep(step)
+            || (Number.isFinite(Number(nextSegmentDistance)) && Number(nextSegmentDistance) <= 40);
+
+        if (tightRoad) {
+            if (speed >= 28) return { prepare:20, turn:10, arrive:40, arriveNow:16 };
+            if (speed >= 16) return { prepare:12, turn:6, arrive:28, arriveNow:12 };
+            return { prepare:8, turn:5, arrive:20, arriveNow:8 };
+        }
+
+        if (speed >= 42) return { prepare:100, turn:42, arrive:140, arriveNow:30 };
+        if (speed >= 28) return { prepare:70, turn:28, arrive:110, arriveNow:26 };
+        if (speed >= 16) return { prepare:45, turn:16, arrive:82, arriveNow:22 };
+        return { prepare:24, turn:10, arrive:56, arriveNow:18 };
+    }
+
     function routeTargetKind() {
         const kind = String(currentRoute?.target_type || '').trim();
         return kind || 'customer';
@@ -2255,6 +2416,30 @@
             default:
                 return 'Tới khách giao hàng';
         }
+    }
+
+    function routeTargetShortLabel() {
+        switch (routeTargetKind()) {
+            case 'branch':
+                return 'quán';
+            case 'handover':
+                return 'điểm bàn giao';
+            default:
+                return 'khách';
+        }
+    }
+
+    function compactInstructionDistance(distanceMeters) {
+        const meters = Number(distanceMeters);
+        if (!Number.isFinite(meters) || meters <= 0) return 'Ngay phía trước';
+        return `Còn ${compactDistance(meters)} nữa`;
+    }
+
+    function compactGuidanceStage(step, isApproaching = false) {
+        if (!step) return 'Đi thẳng';
+        if (step.type === 'arrive') return `Tới ${routeTargetShortLabel()}`;
+        if (!isApproaching) return 'Đi thẳng';
+        return capitalize(maneuverLabel(step));
     }
 
     function routeTargetKey(route = currentRoute) {
@@ -2404,14 +2589,20 @@
         let nextIndex = -1;
         for (let i = 1; i < steps.length; i++) {
             const step = steps[i] || {};
-            if (step.type === 'arrive' || step.modifier || ['turn','roundabout','rotary','fork','merge','end of road','new name'].includes(step.type)) {
+            if (isMeaningfulGuidanceStep(step)) {
                 nextIndex = i;
                 break;
             }
         }
 
-        if (nextIndex < 0 && steps.length > 1) nextIndex = 1;
-        if (nextIndex < 0) return { current:steps[0], next:null, distance:Number(steps[0]?.distance_m || 0), key:'continue' };
+        if (nextIndex < 0) {
+            return {
+                current:steps[0],
+                next:null,
+                distance:Number((route?.display_distance_m ?? route?.distance_m ?? steps[0]?.distance_m) || 0),
+                key:'continue'
+            };
+        }
 
         let distance = 0;
         for (let i = 0; i < nextIndex; i++) distance += Number(steps[i]?.distance_m || 0);
@@ -2423,7 +2614,15 @@
             ? `${next.type}|${next.modifier}|${loc.latitude.toFixed(5)}|${loc.longitude.toFixed(5)}`
             : `${next.type}|${next.modifier}|${next.name}|${nextIndex}`;
 
-        return { current:steps[0], next, distance, location:loc, key };
+        return {
+            current:steps[0],
+            next,
+            distance,
+            location:loc,
+            key,
+            nextSegmentDistance:Number.isFinite(Number(next?.distance_m)) ? Number(next.distance_m) : Infinity,
+            nextIndex
+        };
     }
 
     function wait(ms) {
@@ -2630,7 +2829,8 @@
 
     function refreshGuidance(forceIntro = false) {
         if (isGuidanceMutedByArrival()) {
-            summaryInstruction.textContent = pausedGuidanceText();
+            stageEl.textContent = `Đã tới ${routeTargetShortLabel()}`;
+            summaryInstruction.textContent = 'Chờ xác nhận tiếp theo';
             return;
         }
 
@@ -2638,7 +2838,8 @@
         const targetNoun = routeTargetNoun();
         if (!guide) {
             if (currentRoute && Number.isFinite(Number(currentRoute.distance_m))) {
-                const text = `Tiếp tục đi theo tuyến đường khoảng ${distanceText(Number(currentRoute.distance_m))} để tới ${targetNoun}.`;
+                const text = compactInstructionDistance(Number(currentRoute.distance_m));
+                stageEl.textContent = 'Đi thẳng';
                 summaryInstruction.textContent = text;
                 if (voiceEnabled && forceIntro) speak(text);
             }
@@ -2651,6 +2852,11 @@
 
         let distanceToManeuver = guide.distance;
         const progress = currentPosition ? routeProgressForPoint(currentPosition, routeGeometry) : null;
+        const progressedMeters = progress && Number.isFinite(Number(progress.meters)) ? Number(progress.meters || 0) : 0;
+        const routeRemaining = Number(currentRoute?.display_distance_m ?? currentRoute?.distance_m ?? 0);
+        const remainingRouteMeters = Number.isFinite(routeRemaining)
+            ? Math.max(0, routeRemaining - progressedMeters)
+            : Math.max(0, Number(guide.distance || 0));
         if (progress && Number.isFinite(Number(progress.meters))) {
             distanceToManeuver = Math.max(0, Number(guide.distance || 0) - Number(progress.meters || 0));
         }
@@ -2658,39 +2864,49 @@
             const direct = haversine(currentPosition, guide.location);
             if (Number.isFinite(direct) && direct < 250) distanceToManeuver = Math.min(distanceToManeuver, direct);
         }
+        const speedKmh = effectiveTravelSpeedKmh();
+        const thresholds = guidanceThresholds(guide.next, speedKmh, guide.nextSegmentDistance);
 
         if (!guide.next) {
-            const text = `Đi theo tuyến đường xanh để tới ${targetNoun}.`;
+            const text = compactInstructionDistance(remainingRouteMeters);
+            stageEl.textContent = 'Đi thẳng';
             summaryInstruction.textContent = text;
             return;
         }
 
         const action = maneuverLabel(guide.next);
         const voiceAction = maneuverVoiceText(guide.next, action);
-        let display = `${compactDistance(distanceToManeuver)} nữa · ${maneuverText(guide.next)}`;
-        if (guide.next.type === 'arrive') display = `${compactDistance(distanceToManeuver)} nữa · đến ${targetNoun}`;
+        if (guide.next.type !== 'arrive' && distanceToManeuver > thresholds.prepare) {
+            stageEl.textContent = 'Đi thẳng';
+            summaryInstruction.textContent = compactInstructionDistance(distanceToManeuver);
+            return;
+        }
+
+        stageEl.textContent = compactGuidanceStage(guide.next, true);
+        let display = compactInstructionDistance(distanceToManeuver);
+        if (guide.next.type === 'arrive') display = compactInstructionDistance(distanceToManeuver);
         summaryInstruction.textContent = display;
 
         if (!voiceEnabled) return;
 
         if (guide.next.type === 'arrive') {
-            if (distanceToManeuver <= NAV_GUIDE_ARRIVE_NOW_M && !guidanceState.arrived) {
+            if (distanceToManeuver <= thresholds.arriveNow && !guidanceState.arrived) {
                 guidanceState.arrived = true;
                 speak(`Bạn đã đến ${targetNoun}.`, true);
-            } else if (distanceToManeuver <= NAV_GUIDE_ARRIVE_ALERT_M && !guidanceState.warned) {
+            } else if (distanceToManeuver <= thresholds.arrive && !guidanceState.warned) {
                 guidanceState.warned = true;
                 speak(`Còn ${distanceText(distanceToManeuver)}, bạn sắp đến ${targetNoun}.`);
             }
             return;
         }
 
-        if (distanceToManeuver <= NAV_GUIDE_TURN_ALERT_M && !guidanceState.turn) {
+        if (distanceToManeuver <= thresholds.turn && !guidanceState.turn) {
             guidanceState.turn = true;
             speak(`${capitalize(voiceAction)}.`, true);
             return;
         }
 
-        if (distanceToManeuver <= NAV_GUIDE_PREPARE_ALERT_M && !guidanceState.warned) {
+        if (distanceToManeuver <= thresholds.prepare && !guidanceState.warned) {
             guidanceState.warned = true;
             speak(`Còn ${distanceText(distanceToManeuver)}, chuẩn bị ${voiceAction}.`);
             return;
@@ -2843,6 +3059,8 @@
 
             const displayDistance = bundleRoute?.display_distance_m ?? route.distance_m ?? 0;
             const displayDuration = bundleRoute?.display_duration_s ?? route.duration_s ?? 0;
+            currentRoute.display_distance_m = Number(displayDistance || 0);
+            currentRoute.display_duration_s = Number(displayDuration || 0);
             distanceEl.textContent = compactDistance(Number(displayDistance || 0));
             etaEl.textContent = minutes(Number(displayDuration || 0));
             stageEl.textContent = routeTargetActionLabel();
@@ -3007,6 +3225,7 @@
 
         const { latitude, longitude, accuracy } = geo.coords;
         currentPosition = { latitude, longitude, accuracy };
+        updateCurrentSpeed(currentPosition, Date.now());
         if (testMode && simulated) {
             persistTestGpsPoint(currentPosition);
         }
@@ -3130,6 +3349,49 @@
         };
     }
 
+    function normalizeTestDriveSpeed(value) {
+        const speed = Math.round(Number(value));
+        if (!Number.isFinite(speed)) return TEST_DRIVE_SPEED_DEFAULT_KMH;
+        return Math.min(TEST_DRIVE_SPEED_MAX_KMH, Math.max(TEST_DRIVE_SPEED_MIN_KMH, speed));
+    }
+
+    function setTestDriveSpeed(value, persist = true) {
+        testDriveSpeedKmh = normalizeTestDriveSpeed(value);
+        const nextValue = String(testDriveSpeedKmh);
+        if (testSpeedRange && testSpeedRange.value !== nextValue) testSpeedRange.value = nextValue;
+        if (testSpeedNumber && testSpeedNumber.value !== nextValue) testSpeedNumber.value = nextValue;
+        if (testSpeedValue) testSpeedValue.textContent = nextValue;
+
+        if (persist) {
+            try {
+                localStorage.setItem(TEST_DRIVE_SPEED_KEY, nextValue);
+            } catch (_) {}
+        }
+    }
+
+    function restoreTestDriveSpeed() {
+        let saved = null;
+        try {
+            saved = localStorage.getItem(TEST_DRIVE_SPEED_KEY);
+        } catch (_) {}
+
+        setTestDriveSpeed(saved ?? TEST_DRIVE_SPEED_DEFAULT_KMH, false);
+    }
+
+    testSpeedRange?.addEventListener('input', event => {
+        setTestDriveSpeed(event.target.value);
+    });
+
+    testSpeedNumber?.addEventListener('input', event => {
+        setTestDriveSpeed(event.target.value);
+    });
+
+    testSpeedNumber?.addEventListener('blur', () => {
+        setTestDriveSpeed(testSpeedNumber.value);
+    });
+
+    restoreTestDriveSpeed();
+
     function stopTestDrive() {
         if (testDriveFrameId) {
             cancelAnimationFrame(testDriveFrameId);
@@ -3158,6 +3420,7 @@
 
         testDriveButton?.classList.toggle('d-none', !testMode);
         testStopButton?.classList.add('d-none');
+        testSpeedControl?.classList.toggle('d-none', !testMode);
 
         if (testMode) {
             following = true;
@@ -3268,7 +3531,7 @@
                 return;
             }
 
-            const speedKmh = TEST_DRIVE_SPEED_KMH;
+            const speedKmh = testDriveSpeedKmh;
             const metersPerSecond = speedKmh / 3.6;
             const elapsedMs = testDriveLastFrameAt ? Math.min(220, frameAt - testDriveLastFrameAt) : 0;
             testDriveLastFrameAt = frameAt;
@@ -3287,7 +3550,7 @@
             testDriveFrameId = requestAnimationFrame(step);
         };
 
-        const speedKmh = TEST_DRIVE_SPEED_KMH;
+        const speedKmh = testDriveSpeedKmh;
         sourceEl.textContent = `TEST GPS: bắt đầu mô phỏng ${Math.round(speedKmh)} km/h...`;
         testDriveLastFrameAt = 0;
         testDriveFrameId = requestAnimationFrame(step);

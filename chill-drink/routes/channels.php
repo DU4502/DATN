@@ -18,6 +18,13 @@ Broadcast::channel('admin-notifications', function ($user) {
     return $user && $user->isAdmin();
 });
 
+Broadcast::channel('admin-notifications.{branchId}', function ($user, $branchId) {
+    return $user
+        && $user->isAdmin()
+        && is_numeric($user->branch_id)
+        && (int) $user->branch_id === (int) $branchId;
+});
+
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
 });

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Shipper;
+use App\Notifications\OrderArrivingSoonNotification;
 use App\Services\DeliveryRoutingService;
 use App\Services\ShipperIncidentService;
 use App\Services\ShipperBundleService;
@@ -34,6 +35,7 @@ class DeliveryTrackingController extends Controller
     private const TRACKING_MAX_SPEED_MPS = 24.0;
     private const TRACKING_MIN_ACCEPTED_JUMP_M = 40.0;
     private const TRACKING_MAX_ACCEPTED_JUMP_M = 260.0;
+    private const ARRIVING_SOON_RADIUS_M = 500.0;
 
     public function show(Request $request, Order $order): View
     {
@@ -72,7 +74,7 @@ class DeliveryTrackingController extends Controller
 
     private function payload(Request $request, Order $order, DeliveryRoutingService $routing): JsonResponse
     {
-        $order->loadMissing(['branch', 'address']);
+        $order->loadMissing(['branch', 'address', 'user']);
         $status = OrderStatus::normalize((string) $order->status);
         $isDelivery = ($order->fulfillment_type ?? 'delivery') === 'delivery';
         $journey = $this->journeyState($order);
@@ -227,9 +229,28 @@ class DeliveryTrackingController extends Controller
             }
         }
 
+        $distanceToCustomerMeters = $hasLiveGps
+            ? $this->distanceMeters(
+                (float) $current['latitude'],
+                (float) $current['longitude'],
+                (float) $customer['latitude'],
+                (float) $customer['longitude']
+            )
+            : null;
+        $arrivingSoon = $shipperAccepted
+            && $gpsFresh
+            && is_numeric($distanceToCustomerMeters)
+            && $distanceToCustomerMeters <= self::ARRIVING_SOON_RADIUS_M
+            && in_array($status, [OrderStatus::SHIPPER_PICKED_UP, OrderStatus::DELIVERING], true);
+
+        if ($arrivingSoon) {
+            $this->notifyCustomerArrivingSoon($order, (float) $distanceToCustomerMeters);
+        }
+
         $stage = match (true) {
             in_array($status, [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true) => 'Đơn hàng đã giao thành công',
             $arrivedCustomer => 'Tài xế đã đến điểm giao',
+            $arrivingSoon => 'Tài xế sắp đến điểm giao',
             $hasLiveGps && $shipperAccepted => 'Tài xế đang di chuyển trên hành trình',
             $shipperAccepted => 'Tài xế đã nhận đơn',
             $hasAssignedShipper => 'Hệ thống đã gán tài xế, đang chuẩn bị di chuyển',
@@ -241,6 +262,7 @@ class DeliveryTrackingController extends Controller
             $status === OrderStatus::PENDING => 'Đơn đã được tạo. Bản đồ hiển thị sẵn tuyến đường từ quán tới địa chỉ của bạn.',
             in_array($status, [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true) => 'Đơn đã giao thành công. Vị trí cuối cùng của chuyến được giữ lại trên bản đồ.',
             $arrivedCustomer => 'Tài xế đã vào phạm vi gần điểm giao. Bạn vui lòng chuẩn bị nhận hàng.',
+            $arrivingSoon => 'Tài xế còn trong bán kính 500m từ điểm giao. Bạn vui lòng chuẩn bị nhận hàng.',
             $hasLiveGps && $shipperAccepted => 'Vị trí tài xế đang được cập nhật theo GPS của chính chuyến này.',
             $shipperAccepted => 'Tài xế đã nhận đơn. Quán đang pha chế song song và tài xế có thể di chuyển tới cửa hàng.',
             $hasAssignedShipper => 'Hệ thống đã điều phối tài xế cho đơn.',
@@ -265,6 +287,7 @@ class DeliveryTrackingController extends Controller
             'timeline_label' => $journey['label'],
             'message' => $message,
             'arrived_customer' => $arrivedCustomer,
+            'arriving_soon' => $arrivingSoon,
             'shared_trip' => (bool) ($bundleNotice['shared_trip'] ?? false),
             'hidden_stops_before' => (int) ($bundleNotice['hidden_stops_before'] ?? 0),
             'mode' => $trackingMode,
@@ -277,6 +300,7 @@ class DeliveryTrackingController extends Controller
             'current' => $current,
             'destination' => $customer,
             'distance_m' => $distanceMeters,
+            'distance_to_customer_m' => $distanceToCustomerMeters,
             'duration_s' => $durationSeconds,
             'route' => $route,
             'route_refresh_after_ms' => match ($trackingMode) {
@@ -559,6 +583,30 @@ class DeliveryTrackingController extends Controller
             ->where('shipment_id', $shipmentId)
             ->where('status', 'accepted')
             ->exists();
+    }
+
+    private function notifyCustomerArrivingSoon(Order $order, float $distanceMeters): void
+    {
+        if (! $order->user_id || ! Schema::hasTable('notifications')) {
+            return;
+        }
+
+        $user = $order->user;
+
+        if (! $user) {
+            return;
+        }
+
+        $alreadyNotified = $user->notifications()
+            ->where('data->type', 'order_arriving_soon')
+            ->where('data->order_id', (int) $order->id)
+            ->exists();
+
+        if ($alreadyNotified) {
+            return;
+        }
+
+        $user->notify(new OrderArrivingSoonNotification($order, $distanceMeters));
     }
 
     private function shipperPayload(Shipper $shipper): array

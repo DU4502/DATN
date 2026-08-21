@@ -15,14 +15,18 @@ class OrderCreated implements ShouldBroadcastNow
 
     public function __construct(public Order $order)
     {
-        $this->order->loadMissing('user');
+        $this->order->loadMissing('user', 'branch');
     }
 
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('admin-notifications'),
-        ];
+        $branchId = is_numeric($this->order->branch_id)
+            ? (int) $this->order->branch_id
+            : null;
+
+        return $branchId
+            ? [new PrivateChannel('admin-notifications.'.$branchId)]
+            : [new PrivateChannel('admin-notifications')];
     }
 
     /**
@@ -40,9 +44,19 @@ class OrderCreated implements ShouldBroadcastNow
     {
         $customerName = $this->order->user->name ?? 'Khách hàng';
         $total = (int) ($this->order->total ?? $this->order->total_price ?? 0);
+        $orderCode = method_exists($this->order, 'displayCode')
+            ? $this->order->displayCode()
+            : ($this->order->order_code ?? ('#'.$this->order->id));
+        $branchId = is_numeric($this->order->branch_id)
+            ? (int) $this->order->branch_id
+            : null;
+        $branchName = $this->order->branch?->name ?? 'Chi nhánh';
 
         return [
             'order_id' => $this->order->id,
+            'order_code' => $orderCode,
+            'branch_id' => $branchId,
+            'branch_name' => $branchName,
             'customer_name' => $customerName,
             'customer_email' => $this->order->user->email ?? '',
             'total' => $total,
@@ -51,7 +65,8 @@ class OrderCreated implements ShouldBroadcastNow
             'payment_status' => $this->order->payment_status,
             'status' => $this->order->status,
             'created_at' => $this->order->created_at?->toDateTimeString(),
-            'message' => "Đơn hàng mới #{$this->order->id} từ {$customerName}",
+            'url' => route('admin.orders.index', ['q' => $orderCode]),
+            'message' => "Đơn hàng mới {$orderCode} từ {$customerName}",
         ];
     }
 }

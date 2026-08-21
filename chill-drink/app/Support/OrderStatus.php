@@ -555,7 +555,7 @@ final class OrderStatus
             'order_processing', 'order_in_progress', 'order_preparing' => self::PREPARING,
             'order_ready_for_delivery' => self::READY_FOR_DELIVERY,
             'order_shipper_picked_up' => self::SHIPPER_PICKED_UP,
-            'order_shipped', 'order_shipper_accepted', 'order_delivering' => self::DELIVERING,
+            'order_shipped', 'order_shipper_accepted', 'order_delivering', 'order_arriving_soon' => self::DELIVERING,
             'order_arrived', 'order_delivered' => self::DELIVERED,
             'order_ready_for_pickup' => self::READY_FOR_PICKUP,
             'order_completed' => self::COMPLETED,

@@ -182,6 +182,36 @@ class OrderController extends Controller
         ]);
     }
 
+    public function pendingAlerts(Request $request): JsonResponse
+    {
+        $orders = Order::query()
+            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size'])
+            ->where('status', OrderStatus::PENDING)
+            ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+
+        $orders = $this->applyBranchScope($orders);
+
+        $pendingOrders = $orders
+            ->orderBy('created_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (Order $order) => $this->orderBroadcastPayload($order))
+            ->values();
+
+        $pendingCountQuery = Order::query()
+            ->where('status', OrderStatus::PENDING)
+            ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+
+        $pendingCountQuery = $this->applyBranchScope($pendingCountQuery);
+        $pendingCount = (int) $pendingCountQuery->count();
+
+        return response()->json([
+            'orders' => $pendingOrders,
+            'pending_count' => $pendingCount,
+            'generated_at' => now()->toIso8601String(),
+        ]);
+    }
+
     private function orderBroadcastPayload(Order $order): array
     {
         $customerName = $order->customerName() ?: 'Khách hàng';
@@ -201,9 +231,19 @@ class OrderController extends Controller
         $canCancelForActor = $isSuperAdmin
             ? OrderStatus::canSuperAdminCancelFrom($currentStatus)
             : in_array($currentStatus, [OrderStatus::PENDING, OrderStatus::CONFIRMED, OrderStatus::PREPARING], true);
+        $orderCode = $order->displayCode();
+        $canConfirm = $currentStatus === OrderStatus::PENDING
+            && ! ($order->payment_method === 'vnpay' && $order->payment_status !== 'paid');
+        $confirmBlockReason = $canConfirm
+            ? null
+            : (($currentStatus !== OrderStatus::PENDING)
+                ? 'Đơn này không còn ở trạng thái chờ xác nhận.'
+                : 'Đơn VNPay phải thanh toán thành công trước khi xác nhận.');
 
         return [
             'order_id' => $order->id,
+            'order_code' => $orderCode,
+            'branch_id' => is_numeric($order->branch_id) ? (int) $order->branch_id : null,
             'branch_name' => $order->branch?->name ?? 'Chưa gán',
             'customer_name' => $customerName,
             'customer_email' => $customerEmail,
@@ -249,14 +289,20 @@ class OrderController extends Controller
             'status_options' => $statusOptionsForActor,
             'super_admin_override' => $isSuperAdmin,
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
+            'created_at_iso' => $order->created_at?->toIso8601String(),
             'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'delivery_type' => $order->delivery_type,
             'delivery_note' => $order->delivery_note,
             'scheduled_delivery_time' => $order->scheduled_delivery_time?->format('H:i · d/m/Y'),
-            'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
+            'message' => "Đơn hàng mới {$orderCode} từ {$customerName}",
+            'can_confirm' => $canConfirm,
+            'confirm_block_reason' => $confirmBlockReason,
             'status_update_url' => $isSuperAdminWorkspace
                 ? route('admin.super-admin.manage.orders.updateStatus', $order->id)
                 : route('admin.orders.updateStatus', $order->id),
+            'url' => $isSuperAdminWorkspace
+                ? route('admin.super-admin.manage.orders.index', ['q' => $orderCode])
+                : route('admin.orders.index', ['q' => $orderCode]),
             'shipment_incident' => $shipmentIncident ? [
                 'shipper_name' => $shipmentIncident['shipper_name'] ?? 'Shipper',
                 'description' => $shipmentIncident['description'] ?? 'Shipper báo sự cố.',

@@ -900,17 +900,14 @@
                     added += 1;
                 }
             });
-
-            if (added > 0 && typeof window.showRealtimeToast === 'function') {
-                const message = added === 1
-                    ? (orders[0].message || 'Có đơn hàng mới')
-                    : `Có ${added} đơn hàng mới`;
-                window.showRealtimeToast(message, 'success');
-            }
         }
 
+        let pollRecentOrders = null;
+
         document.addEventListener('order:created', function (event) {
-            handleNewOrders([event.detail || {}]);
+            if (typeof pollRecentOrders === 'function' && !hasActiveFilters) {
+                pollRecentOrders();
+            }
         });
 
         // Listen for order status updates (including cancellations)
@@ -983,7 +980,7 @@
             const liveBadge = document.getElementById('adminOrdersLiveBadge');
             liveBadge?.classList.remove('d-none');
 
-            const pollRecentOrders = async function () {
+            pollRecentOrders = async function () {
                 try {
                     const response = await fetch(`${recentOrdersUrl}?after_id=${lastOrderId}`, {
                         headers: {

@@ -80,6 +80,7 @@
             'order_processing': '{{ \App\Support\OrderStatus::notificationIconByType('order_processing') }}',
             'order_shipper_accepted': '{{ \App\Support\OrderStatus::notificationIconByType('order_shipper_accepted') }}',
             'order_shipped': '{{ \App\Support\OrderStatus::notificationIconByType('order_shipped') }}',
+            'order_arriving_soon': '{{ \App\Support\OrderStatus::notificationIconByType('order_arriving_soon') }}',
             'order_arrived': '{{ \App\Support\OrderStatus::notificationIconByType('order_arrived') }}',
             'order_completed': '{{ \App\Support\OrderStatus::notificationIconByType('order_completed') }}',
             'order_delivered': '{{ \App\Support\OrderStatus::notificationIconByType('order_delivered') }}',

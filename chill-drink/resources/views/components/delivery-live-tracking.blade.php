@@ -153,6 +153,17 @@
         if (!Number.isFinite(n)) return '--';
         return `Khoảng ${Math.max(1, Math.round(n / 60))} phút`;
     };
+    const speedKmhFromDistanceDuration = (meters, seconds) => {
+        const distance = Number(meters);
+        const duration = Number(seconds);
+        if (!Number.isFinite(distance) || !Number.isFinite(duration) || distance <= 0 || duration <= 0) return null;
+        return (distance / duration) * 3.6;
+    };
+    const speedText = (meters, seconds) => {
+        const speed = speedKmhFromDistanceDuration(meters, seconds);
+        if (!Number.isFinite(speed) || speed <= 0) return '';
+        return `~${Math.max(1, Math.round(speed))} km/h`;
+    };
     const toPoint = value => Array.isArray(value)
         ? [Number(value[0]), Number(value[1])]
         : value ? [Number(value.latitude), Number(value.longitude)] : null;
@@ -590,7 +601,12 @@
                 }
                 if (distanceEl && Number.isFinite(Number(data.distance_m))) distanceEl.textContent = distanceText(data.distance_m);
                 if (etaEl) {
-                    if (shipperMode && Number.isFinite(Number(data.duration_s))) etaEl.textContent = etaText(data.duration_s);
+                    if (shipperMode && Number.isFinite(Number(data.duration_s))) {
+                        const travelSpeed = speedText(data.distance_m, data.duration_s);
+                        etaEl.textContent = travelSpeed
+                            ? `${etaText(data.duration_s)} • ${travelSpeed}`
+                            : etaText(data.duration_s);
+                    }
                     else if (!shipperMode) etaEl.textContent = 'Quán → bạn';
                 }
                 if (shipperEl) shipperEl.textContent = data.shipper?.name || (shipperMode ? 'Tài xế Chill Drink' : 'Quán đang chuẩn bị');

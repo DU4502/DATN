@@ -664,6 +664,19 @@
                     statusEl.textContent = message;
                 }
             },
+            invalidateSelection(message = 'Địa chỉ vừa thay đổi. Vui lòng kiểm tra lại vị trí trên bản đồ.') {
+                const latitude = Number.parseFloat(latInput.value);
+                const longitude = Number.parseFloat(lngInput.value);
+
+                if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                    this.clearSelection(message);
+                    return;
+                }
+
+                if (statusEl) {
+                    statusEl.textContent = message;
+                }
+            },
             refresh() {
                 map.invalidateSize();
             },
@@ -700,6 +713,12 @@
             const picker = mountPicker(container);
             if (picker) {
                 picker.clearSelection(message);
+            }
+        },
+        invalidate(container, message = 'Địa chỉ vừa thay đổi. Vui lòng kiểm tra lại vị trí trên bản đồ.') {
+            const picker = mountPicker(container);
+            if (picker) {
+                picker.invalidateSelection(message);
             }
         },
     };
