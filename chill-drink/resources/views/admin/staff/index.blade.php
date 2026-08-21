@@ -28,6 +28,11 @@
     .delivery-tier-input { min-width:110px;font-size:.8rem; }
     .delivery-fee-preview { border:1px dashed #a7d9cc;border-radius:10px;background:#f7fffc;padding:.8rem; }
     .delivery-fee-preview strong { color:#047857; }
+    .delivery-fee-toggle { border:1px solid #d7e3df;border-radius:999px;background:#fff;color:#4b5563;padding:.35rem .7rem;font-size:.72rem;font-weight:700;display:inline-flex;align-items:center;gap:.4rem; }
+    .delivery-fee-toggle:hover { background:#f8fafc;color:#111827; }
+    .delivery-fee-toggle i:last-child { transition:transform .18s ease; }
+    .delivery-fee-card.is-open .delivery-fee-toggle i:last-child { transform:rotate(180deg); }
+    .delivery-fee-summary { font-size:.72rem;color:var(--sp-muted); }
 </style>
 
 <div class="staff-page">
@@ -114,7 +119,7 @@
         $deliveryFreeKm = (float) old('free_distance_km', $deliveryFeeSettings['free_distance_km'] ?? 5);
         $deliveryFastSurcharge = (int) old('fast_surcharge', $deliveryFeeSettings['fast_surcharge'] ?? 8000);
     @endphp
-    <div class="admin-card delivery-fee-card p-3 p-lg-4 mb-4" id="delivery-fee-settings">
+    <div class="admin-card delivery-fee-card p-3 p-lg-4 mb-4" id="delivery-fee-settings" data-delivery-fee-card>
         <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
             <div class="d-flex align-items-start gap-3">
                 <span class="delivery-fee-icon"><i class="bi bi-truck"></i></span>
@@ -123,158 +128,172 @@
                     <div class="text-secondary" style="font-size:.76rem;max-width:720px;">
                         Dùng quãng đường <strong>đường bộ thực tế</strong>. Phần nằm trong ngưỡng miễn phí không tính tiền; chỉ số km vượt ngưỡng mới nhân với đơn giá/km theo tổng số cốc.
                     </div>
+                    <div class="delivery-fee-summary mt-1">
+                        Miễn phí {{ rtrim(rtrim(number_format($deliveryFreeKm, 2, ',', '.'), '0'), ',') }} km ·
+                        phạm vi {{ (int) \App\Support\OrderDistancePolicy::MAX_DISTANCE_KM }} km ·
+                        giao nhanh +{{ number_format($deliveryFastSurcharge, 0, ',', '.') }}đ
+                    </div>
                 </div>
             </div>
+            <div class="d-flex align-items-center gap-2">
+                @if(auth()->user()->isSuperAdmin())
+                    <span class="staff-badge" style="background:#dcfce7;color:#166534;"><i class="bi bi-shield-check"></i> Super Admin được sửa</span>
+                @else
+                    <span class="staff-badge" style="background:#f3f4f6;color:#4b5563;"><i class="bi bi-eye"></i> Chỉ xem</span>
+                @endif
+                <button type="button" class="delivery-fee-toggle" data-delivery-fee-toggle aria-expanded="false">
+                    <i class="bi bi-sliders2"></i>
+                    <span data-delivery-fee-toggle-label>Xem</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+        </div>
+
+        <div data-delivery-fee-body hidden>
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <div class="delivery-fee-kpi">
+                        <div class="text-secondary" style="font-size:.7rem;">Miễn phí đầu tuyến</div>
+                        <div class="value">{{ rtrim(rtrim(number_format($deliveryFreeKm, 2, ',', '.'), '0'), ',') }} km</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="delivery-fee-kpi">
+                        <div class="text-secondary" style="font-size:.7rem;">Phạm vi giao tối đa</div>
+                        <div class="value">{{ (int) \App\Support\OrderDistancePolicy::MAX_DISTANCE_KM }} km</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="delivery-fee-kpi">
+                        <div class="text-secondary" style="font-size:.7rem;">Phụ phí giao nhanh</div>
+                        <div class="value">{{ number_format($deliveryFastSurcharge, 0, ',', '.') }}đ</div>
+                    </div>
+                </div>
+            </div>
+
+            @if($deliveryFeeBag->any())
+                <div class="alert alert-danger py-2 px-3" style="font-size:.76rem;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    {{ $deliveryFeeBag->first() }}
+                </div>
+            @endif
+
             @if(auth()->user()->isSuperAdmin())
-                <span class="staff-badge" style="background:#dcfce7;color:#166534;"><i class="bi bi-shield-check"></i> Super Admin được sửa</span>
+            <form method="POST" action="{{ route('admin.super-admin.manage.staff.delivery-fee-settings.update') }}" data-delivery-fee-form>
+                @csrf
+                @method('PUT')
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Miễn phí ship trong bao nhiêu km?</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="free_distance_km" value="{{ $deliveryFreeKm }}" min="0" max="15" step="0.1" class="form-control" required data-free-km>
+                            <span class="input-group-text">km</span>
+                        </div>
+                        <div class="form-text">Ví dụ 5 km: khách cách ≤ 5 km sẽ có phí giao tiêu chuẩn = 0đ.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Phụ phí giao nhanh</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="fast_surcharge" value="{{ $deliveryFastSurcharge }}" min="0" step="1000" class="form-control" required>
+                            <span class="input-group-text">đ</span>
+                        </div>
+                        <div class="form-text">Cộng thêm sau phí theo km; giao tiêu chuẩn không có phụ phí.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Phạm vi nhận đơn</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control" value="≤ {{ (int) \App\Support\OrderDistancePolicy::MAX_DISTANCE_KM }} km đường bộ" disabled>
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        </div>
+                        <div class="form-text">Giữ nguyên giới hạn 15 km đã chuẩn hóa ở luồng giao hàng.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                    <div>
+                        <div class="fw-bold" style="font-size:.84rem;">Đơn giá theo số lượng cốc</div>
+                        <div class="text-secondary" style="font-size:.7rem;">Mỗi đơn chỉ rơi vào đúng một bậc. Bậc cuối để trống giới hạn = không giới hạn.</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-success" data-add-delivery-tier style="font-size:.74rem;"><i class="bi bi-plus-lg me-1"></i>Thêm bậc</button>
+                </div>
+
+                <div class="table-responsive border rounded-3 mb-3">
+                    <table class="table delivery-tier-table mb-0" data-delivery-tier-table>
+                        <thead>
+                            <tr>
+                                <th>Bậc số lượng</th>
+                                <th>Đến ... cốc</th>
+                                <th>Giá / km vượt ngưỡng</th>
+                                <th class="text-center" style="width:64px;">Xóa</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($deliveryFeeTiers as $tier)
+                            <tr data-delivery-tier-row>
+                                <td class="delivery-tier-range" data-tier-range>{{ \App\Support\ShippingFee::tierLabel($tier) }}</td>
+                                <td>
+                                    <input type="number" name="tier_max[]" value="{{ $tier['max_cups'] ?? '' }}" min="1" step="1" class="form-control form-control-sm delivery-tier-input" placeholder="Không giới hạn" data-tier-max>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm delivery-tier-input">
+                                        <input type="number" name="tier_price[]" value="{{ (int) ($tier['price_per_km'] ?? 0) }}" min="0" step="500" class="form-control" required data-tier-price>
+                                        <span class="input-group-text">đ/km</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-remove-delivery-tier title="Xóa bậc"><i class="bi bi-trash3"></i></button>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row g-3 align-items-stretch">
+                    <div class="col-lg-8">
+                        <div class="delivery-fee-preview h-100">
+                            <div class="fw-bold mb-2" style="font-size:.78rem;"><i class="bi bi-calculator me-1"></i>Thử nhanh công thức</div>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-5">
+                                    <label class="form-label mb-1" style="font-size:.68rem;">Khách cách quán</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" value="7.5" min="0" max="15" step="0.1" class="form-control" data-preview-distance>
+                                        <span class="input-group-text">km</span>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label mb-1" style="font-size:.68rem;">Số cốc</label>
+                                    <input type="number" value="8" min="1" step="1" class="form-control form-control-sm" data-preview-cups>
+                                </div>
+                                <div class="col-3 text-end">
+                                    <div class="text-secondary" style="font-size:.66rem;">Phí tiêu chuẩn</div>
+                                    <strong data-preview-fee>--</strong>
+                                </div>
+                            </div>
+                            <div class="text-secondary mt-2" style="font-size:.68rem;" data-preview-formula></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 d-flex align-items-end justify-content-lg-end">
+                        <button type="submit" class="btn btn-success w-100" style="font-size:.8rem;font-weight:700;">
+                            <i class="bi bi-save2 me-1"></i>Lưu & áp dụng ngay
+                        </button>
+                    </div>
+                </div>
+            </form>
             @else
-                <span class="staff-badge" style="background:#f3f4f6;color:#4b5563;"><i class="bi bi-eye"></i> Chỉ xem</span>
+                <div class="table-responsive border rounded-3">
+                    <table class="table delivery-tier-table mb-0">
+                        <thead><tr><th>Số lượng</th><th>Đơn giá/km vượt ngưỡng</th></tr></thead>
+                        <tbody>
+                            @foreach($deliveryFeeTiers as $tier)
+                                <tr><td>{{ \App\Support\ShippingFee::tierLabel($tier) }}</td><td class="fw-semibold">{{ number_format((int) ($tier['price_per_km'] ?? 0), 0, ',', '.') }}đ/km</td></tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-secondary mt-2" style="font-size:.72rem;"><i class="bi bi-lock me-1"></i>Chỉ Super Admin có quyền thay đổi chính sách phí giao hàng toàn hệ thống.</div>
             @endif
         </div>
-
-        <div class="row g-2 mb-3">
-            <div class="col-md-4">
-                <div class="delivery-fee-kpi">
-                    <div class="text-secondary" style="font-size:.7rem;">Miễn phí đầu tuyến</div>
-                    <div class="value">{{ rtrim(rtrim(number_format($deliveryFreeKm, 2, ',', '.'), '0'), ',') }} km</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="delivery-fee-kpi">
-                    <div class="text-secondary" style="font-size:.7rem;">Phạm vi giao tối đa</div>
-                    <div class="value">{{ (int) \App\Support\OrderDistancePolicy::MAX_DISTANCE_KM }} km</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="delivery-fee-kpi">
-                    <div class="text-secondary" style="font-size:.7rem;">Phụ phí giao nhanh</div>
-                    <div class="value">{{ number_format($deliveryFastSurcharge, 0, ',', '.') }}đ</div>
-                </div>
-            </div>
-        </div>
-
-        @if($deliveryFeeBag->any())
-            <div class="alert alert-danger py-2 px-3" style="font-size:.76rem;">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                {{ $deliveryFeeBag->first() }}
-            </div>
-        @endif
-
-        @if(auth()->user()->isSuperAdmin())
-        <form method="POST" action="{{ route('admin.super-admin.manage.staff.delivery-fee-settings.update') }}" data-delivery-fee-form>
-            @csrf
-            @method('PUT')
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold">Miễn phí ship trong bao nhiêu km?</label>
-                    <div class="input-group input-group-sm">
-                        <input type="number" name="free_distance_km" value="{{ $deliveryFreeKm }}" min="0" max="15" step="0.1" class="form-control" required data-free-km>
-                        <span class="input-group-text">km</span>
-                    </div>
-                    <div class="form-text">Ví dụ 5 km: khách cách ≤ 5 km sẽ có phí giao tiêu chuẩn = 0đ.</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold">Phụ phí giao nhanh</label>
-                    <div class="input-group input-group-sm">
-                        <input type="number" name="fast_surcharge" value="{{ $deliveryFastSurcharge }}" min="0" step="1000" class="form-control" required>
-                        <span class="input-group-text">đ</span>
-                    </div>
-                    <div class="form-text">Cộng thêm sau phí theo km; giao tiêu chuẩn không có phụ phí.</div>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold">Phạm vi nhận đơn</label>
-                    <div class="input-group input-group-sm">
-                        <input type="text" class="form-control" value="≤ {{ (int) \App\Support\OrderDistancePolicy::MAX_DISTANCE_KM }} km đường bộ" disabled>
-                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    </div>
-                    <div class="form-text">Giữ nguyên giới hạn 15 km đã chuẩn hóa ở luồng giao hàng.</div>
-                </div>
-            </div>
-
-            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-                <div>
-                    <div class="fw-bold" style="font-size:.84rem;">Đơn giá theo số lượng cốc</div>
-                    <div class="text-secondary" style="font-size:.7rem;">Mỗi đơn chỉ rơi vào đúng một bậc. Bậc cuối để trống giới hạn = không giới hạn.</div>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-success" data-add-delivery-tier style="font-size:.74rem;"><i class="bi bi-plus-lg me-1"></i>Thêm bậc</button>
-            </div>
-
-            <div class="table-responsive border rounded-3 mb-3">
-                <table class="table delivery-tier-table mb-0" data-delivery-tier-table>
-                    <thead>
-                        <tr>
-                            <th>Bậc số lượng</th>
-                            <th>Đến ... cốc</th>
-                            <th>Giá / km vượt ngưỡng</th>
-                            <th class="text-center" style="width:64px;">Xóa</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($deliveryFeeTiers as $tier)
-                        <tr data-delivery-tier-row>
-                            <td class="delivery-tier-range" data-tier-range>{{ \App\Support\ShippingFee::tierLabel($tier) }}</td>
-                            <td>
-                                <input type="number" name="tier_max[]" value="{{ $tier['max_cups'] ?? '' }}" min="1" step="1" class="form-control form-control-sm delivery-tier-input" placeholder="Không giới hạn" data-tier-max>
-                            </td>
-                            <td>
-                                <div class="input-group input-group-sm delivery-tier-input">
-                                    <input type="number" name="tier_price[]" value="{{ (int) ($tier['price_per_km'] ?? 0) }}" min="0" step="500" class="form-control" required data-tier-price>
-                                    <span class="input-group-text">đ/km</span>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-remove-delivery-tier title="Xóa bậc"><i class="bi bi-trash3"></i></button>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="row g-3 align-items-stretch">
-                <div class="col-lg-8">
-                    <div class="delivery-fee-preview h-100">
-                        <div class="fw-bold mb-2" style="font-size:.78rem;"><i class="bi bi-calculator me-1"></i>Thử nhanh công thức</div>
-                        <div class="row g-2 align-items-end">
-                            <div class="col-5">
-                                <label class="form-label mb-1" style="font-size:.68rem;">Khách cách quán</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="number" value="7.5" min="0" max="15" step="0.1" class="form-control" data-preview-distance>
-                                    <span class="input-group-text">km</span>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <label class="form-label mb-1" style="font-size:.68rem;">Số cốc</label>
-                                <input type="number" value="8" min="1" step="1" class="form-control form-control-sm" data-preview-cups>
-                            </div>
-                            <div class="col-3 text-end">
-                                <div class="text-secondary" style="font-size:.66rem;">Phí tiêu chuẩn</div>
-                                <strong data-preview-fee>--</strong>
-                            </div>
-                        </div>
-                        <div class="text-secondary mt-2" style="font-size:.68rem;" data-preview-formula></div>
-                    </div>
-                </div>
-                <div class="col-lg-4 d-flex align-items-end justify-content-lg-end">
-                    <button type="submit" class="btn btn-success w-100" style="font-size:.8rem;font-weight:700;">
-                        <i class="bi bi-save2 me-1"></i>Lưu & áp dụng ngay
-                    </button>
-                </div>
-            </div>
-        </form>
-        @else
-            <div class="table-responsive border rounded-3">
-                <table class="table delivery-tier-table mb-0">
-                    <thead><tr><th>Số lượng</th><th>Đơn giá/km vượt ngưỡng</th></tr></thead>
-                    <tbody>
-                        @foreach($deliveryFeeTiers as $tier)
-                            <tr><td>{{ \App\Support\ShippingFee::tierLabel($tier) }}</td><td class="fw-semibold">{{ number_format((int) ($tier['price_per_km'] ?? 0), 0, ',', '.') }}đ/km</td></tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            <div class="text-secondary mt-2" style="font-size:.72rem;"><i class="bi bi-lock me-1"></i>Chỉ Super Admin có quyền thay đổi chính sách phí giao hàng toàn hệ thống.</div>
-        @endif
     </div>
 
     {{-- Filter --}}
@@ -542,6 +561,31 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const deliveryFeeCard = document.querySelector('[data-delivery-fee-card]');
+    const deliveryFeeBody = deliveryFeeCard?.querySelector('[data-delivery-fee-body]');
+    const deliveryFeeToggle = deliveryFeeCard?.querySelector('[data-delivery-fee-toggle]');
+    const deliveryFeeToggleLabel = deliveryFeeCard?.querySelector('[data-delivery-fee-toggle-label]');
+    if (!deliveryFeeCard || !deliveryFeeBody || !deliveryFeeToggle || !deliveryFeeToggleLabel) return;
+
+    const shouldOpenInitially = @json($deliveryFeeBag->any());
+
+    function setDeliveryFeeOpen(open) {
+        deliveryFeeCard.classList.toggle('is-open', open);
+        deliveryFeeBody.hidden = !open;
+        deliveryFeeToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        deliveryFeeToggleLabel.textContent = open ? 'Thu gọn' : 'Xem';
+    }
+
+    deliveryFeeToggle.addEventListener('click', function () {
+        setDeliveryFeeOpen(!deliveryFeeCard.classList.contains('is-open'));
+    });
+
+    setDeliveryFeeOpen(shouldOpenInitially);
+});
+</script>
+
 @if(auth()->user()->isSuperAdmin())
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -655,6 +699,8 @@ document.addEventListener('DOMContentLoaded', function () {
     recalcRanges();
 
     @if($deliveryFeeBag->any())
+        document.querySelector('[data-delivery-fee-card]')?.classList.add('is-open');
+        document.querySelector('[data-delivery-fee-body]')?.removeAttribute('hidden');
         document.getElementById('delivery-fee-settings')?.scrollIntoView({ block: 'start' });
     @endif
 });
