@@ -1844,6 +1844,8 @@
         document.addEventListener('click', async function (event) {
             const button = event.target.closest('[data-checkout-cart-action]');
             if (!button || button.disabled) return;
+            event.preventDefault();
+            event.stopPropagation();
             if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) return;
 
             button.disabled = true;
@@ -1962,6 +1964,10 @@
         let checkoutRecentOrderDriftAcknowledged = false;
         let checkoutDriftPromptShown = false;
         let persistentAddressWarningMessage = '';
+        let checkoutEditPickerHydratedAddressId = null;
+        let checkoutEditPickerAutoPrimed = false;
+        let checkoutNewPickerDraftInitialized = false;
+        let checkoutNewPickerAutoPrimed = false;
 
         function compactAddress(parts) {
             return parts.filter(Boolean).join(', ');
@@ -2165,6 +2171,105 @@
             return false;
         }
 
+        function applyCheckoutPickerSavedCoordinates(container, coordinates, message = 'Đã tải vị trí đã lưu cho địa chỉ này.') {
+            if (!container) {
+                return false;
+            }
+
+            const latitude = Number.parseFloat(coordinates?.latitude);
+            const longitude = Number.parseFloat(coordinates?.longitude);
+
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                return false;
+            }
+
+            window.ChillDrinkLocationPicker?.set(container, latitude, longitude, message);
+            return true;
+        }
+
+        function hydrateEditPickerForAddress(address, options = {}) {
+            const picker = document.querySelector('[data-location-picker="checkout-edit-location-picker"]');
+            if (!picker) {
+                return;
+            }
+
+            const addressId = address?.id ?? null;
+            const coordinates = getAddressCoordinates(address);
+            const sameAddress = String(checkoutEditPickerHydratedAddressId ?? '') === String(addressId ?? '');
+            const pickerHasCoordinates = pickerHasSelectedCoordinates(picker);
+            const driftMessage = options.triggeredByDeviceDrift
+                ? 'Vị trí hiện tại đang khác đơn gần nhất. Hãy cập nhật lại địa chỉ và chọn lại vị trí giao hàng.'
+                : 'Vui lòng xác nhận lại vị trí cho đơn hàng này.';
+
+            if (applyCheckoutPickerSavedCoordinates(
+                picker,
+                coordinates,
+                options.triggeredByDeviceDrift
+                    ? 'Đã tải vị trí đã lưu. Nếu giao điểm mới khác vị trí này, hãy chỉnh lại pin trước khi lưu.'
+                    : 'Đã tải vị trí đã lưu cho địa chỉ này.'
+            )) {
+                checkoutEditPickerHydratedAddressId = addressId;
+                checkoutEditPickerAutoPrimed = true;
+                return;
+            }
+
+            checkoutEditPickerHydratedAddressId = addressId;
+
+            if (pickerHasCoordinates && sameAddress) {
+                setCheckoutPickerStatus(picker, driftMessage);
+                return;
+            }
+
+            if (!checkoutEditPickerAutoPrimed && !pickerHasCoordinates) {
+                primeCheckoutDeviceLocationOnPicker(
+                    picker,
+                    options.triggeredByDeviceDrift
+                        ? 'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
+                        : 'Đây là vị trí hiện tại của thiết bị. Bạn có thể dùng làm mốc để chỉnh lại pin.'
+                );
+                checkoutEditPickerAutoPrimed = true;
+                return;
+            }
+
+            setCheckoutPickerStatus(picker, driftMessage);
+        }
+
+        function hydrateNewPickerDraft() {
+            const picker = document.querySelector('[data-location-picker="checkout-new-location-picker"]');
+            if (!picker) {
+                return;
+            }
+
+            if (!checkoutNewPickerDraftInitialized) {
+                document.getElementById('newAddressName').value = @json($user->name);
+                document.getElementById('newAddressPhone').value = @json($checkoutPhoneReady ? $selectedCheckoutPhone : '');
+                document.getElementById('newAddressArea').value = '';
+                document.getElementById('newAddressHouseNumber').value = '';
+                document.getElementById('newAddressStreet').value = '';
+                const searchInput = picker.querySelector('[data-location-search-input]');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                document.getElementById('newAddressDefault').checked = false;
+                setTypeActive('new', 'Nhà Riêng');
+                syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, !isValidCheckoutPhone(newAddressPhone?.value));
+                checkoutNewPickerDraftInitialized = true;
+            }
+
+            if (!checkoutNewPickerAutoPrimed && !pickerHasSelectedCoordinates(picker)) {
+                primeCheckoutDeviceLocationOnPicker(
+                    picker,
+                    'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
+                );
+                checkoutNewPickerAutoPrimed = true;
+                return;
+            }
+
+            if (!pickerHasSelectedCoordinates(picker)) {
+                setCheckoutPickerStatus(picker, 'Vui lòng chọn vị trí giao hàng trên bản đồ cho địa chỉ mới.');
+            }
+        }
+
         function isCheckoutAddressModalOpen() {
             return ['addressEditModal', 'addressAddModal', 'addressListModal'].some((id) => {
                 const element = document.getElementById(id);
@@ -2174,6 +2279,11 @@
 
         function maybeRequireAddressRefreshAgainstLatestOrder() {
             if (!fulfillmentDeliveryInput?.checked || checkoutRecentOrderDriftAcknowledged || !hasCheckoutDeviceLocation()) {
+                return false;
+            }
+
+            if (addressLocationConfirmedInput?.value === '1' && hasConfirmedLocation()) {
+                clearCheckoutRecentOrderDriftNotice();
                 return false;
             }
 
@@ -2235,6 +2345,10 @@
 
         function requestCheckoutDeviceLocation() {
             if (!navigator.geolocation || hasCheckoutDeviceLocation() || checkoutDeviceLocationRequested) {
+                return;
+            }
+
+            if (fulfillmentDeliveryInput?.checked && addressLocationConfirmedInput?.value === '1' && hasConfirmedLocation()) {
                 return;
             }
 
@@ -2875,46 +2989,17 @@
             const address = getAddressById(id);
             fillEditModal(address);
             selectedAddressId = id;
-            const picker = document.querySelector('[data-location-picker="checkout-edit-location-picker"]');
             clearAddressLocationConfirmation();
-            window.ChillDrinkLocationPicker?.clear(
-                picker,
-                options.triggeredByDeviceDrift
-                    ? 'Vị trí hiện tại đang khác đơn gần nhất. Hãy cập nhật lại địa chỉ và chọn lại vị trí giao hàng.'
-                    : 'Vui lòng xác nhận lại vị trí cho đơn hàng này.'
-            );
-            primeCheckoutDeviceLocationOnPicker(
-                picker,
-                options.triggeredByDeviceDrift
-                    ? 'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
-                    : 'Đây là vị trí hiện tại của thiết bị. Bạn có thể dùng làm mốc để chỉnh lại pin.'
-            );
+            hydrateEditPickerForAddress(address, options);
             updateBranchSelectorState();
             addressListModal.hide();
             addressEditModal.show();
         }
 
         function openAddModal() {
-            document.getElementById('newAddressName').value = @json($user->name);
-            document.getElementById('newAddressPhone').value = @json($checkoutPhoneReady ? $selectedCheckoutPhone : '');
-            document.getElementById('newAddressArea').value = '';
-            document.getElementById('newAddressHouseNumber').value = '';
-            document.getElementById('newAddressStreet').value = '';
-            const searchInput = document.querySelector('[data-location-picker="checkout-new-location-picker"] [data-location-search-input]');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            document.getElementById('newAddressDefault').checked = false;
-            setTypeActive('new', 'Nhà Riêng');
-            syncAddressPhoneInput(newAddressPhone, saveNewAddressButton, !isValidCheckoutPhone(newAddressPhone?.value));
-            const picker = document.querySelector('[data-location-picker="checkout-new-location-picker"]');
             clearAddressLocationConfirmation();
             updateBranchSelectorState();
-            window.ChillDrinkLocationPicker?.clear(picker);
-            primeCheckoutDeviceLocationOnPicker(
-                picker,
-                'Đây là vị trí hiện tại của thiết bị. Hệ thống chưa dùng vị trí này cho đơn, bạn cần tự xác nhận lại nếu đúng.'
-            );
+            hydrateNewPickerDraft();
             addressListModal.hide();
             addressAddModal.show();
         }
@@ -3010,49 +3095,6 @@
                 setVoucherActive(voucherCard);
             }
 
-            const cartActionBtn = event.target.closest('[data-checkout-cart-action]');
-            if (cartActionBtn) {
-                event.preventDefault();
-                
-                const confirmMsg = cartActionBtn.dataset.confirm;
-                if (confirmMsg && !confirm(confirmMsg)) {
-                    return;
-                }
-
-                const url = cartActionBtn.dataset.checkoutCartAction;
-                const method = cartActionBtn.dataset.method || 'POST';
-                const quantity = cartActionBtn.dataset.quantity;
-
-                const payload = {
-                    _token: csrfToken,
-                    _method: method,
-                };
-                if (quantity !== undefined) {
-                    payload.quantity = quantity;
-                }
-
-                cartActionBtn.disabled = true;
-
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                }).then(async (res) => {
-                    if (res.ok || res.redirected) {
-                        window.location.reload();
-                    } else {
-                        const data = await res.json().catch(() => ({}));
-                        alert(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
-                        cartActionBtn.disabled = false;
-                    }
-                }).catch(() => {
-                    alert('Lỗi kết nối, vui lòng thử lại.');
-                    cartActionBtn.disabled = false;
-                });
-            }
         });
 
         document.addEventListener('location-picker:change', function (event) {

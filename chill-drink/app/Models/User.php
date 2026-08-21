@@ -6,6 +6,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -49,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'remember_token',
         'reset_token',
+        'cod_settlement_pin_hash',
     ];
 
     /**
@@ -60,9 +62,32 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'reset_expire' => 'datetime',
+            'cod_settlement_pin_set_at' => 'datetime',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
         ];
+    }
+
+    public function hasCodSettlementPin(): bool
+    {
+        return filled($this->cod_settlement_pin_hash);
+    }
+
+    public function verifyCodSettlementPin(?string $pin): bool
+    {
+        if (! $this->hasCodSettlementPin() || blank($pin)) {
+            return false;
+        }
+
+        return Hash::check((string) $pin, (string) $this->cod_settlement_pin_hash);
+    }
+
+    public function setCodSettlementPin(string $pin): void
+    {
+        $this->forceFill([
+            'cod_settlement_pin_hash' => Hash::make($pin),
+            'cod_settlement_pin_set_at' => now(),
+        ])->save();
     }
 
     /**
