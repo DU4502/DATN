@@ -1681,8 +1681,10 @@
     let latestArrivalSnapshotTargetKey = '';
     let currentAudio = null;
     let voiceRequestId = 0;
+    let voiceRequestController = null;
     const voiceCache = new Map();
     let ttsWarningShown = false;
+    let ttsUnavailable = false;
     let testMode = false;
     let testDriveFrameId = null;
     let testDriveLastFrameAt = 0;
@@ -1769,11 +1771,16 @@
         repeatButton?.classList.toggle('d-none', !voiceEnabled);
 
         if (voiceEnabled) {
+            ttsUnavailable = false;
             speak('Đã bật hướng dẫn bằng giọng nói.', true);
             setTimeout(() => refreshGuidance(true), 450);
-        } else if (currentAudio) {
-            currentAudio.pause();
-            currentAudio.currentTime = 0;
+        } else {
+            voiceRequestController?.abort();
+            voiceRequestController = null;
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
         }
         closeMapTools();
     });
@@ -2666,7 +2673,7 @@
     }
 
     async function speak(text, force = false) {
-        if (!voiceEnabled || !text || !ttsUrl) return;
+        if (!voiceEnabled || ttsUnavailable || !text || !ttsUrl) return;
         const now = Date.now();
         if (!force && now - lastSpeakAt < 3500) return;
         lastSpeakAt = now;
@@ -2676,14 +2683,19 @@
         try {
             let objectUrl = voiceCache.get(text);
             if (!objectUrl) {
+                voiceRequestController?.abort();
+                voiceRequestController = new AbortController();
                 const response = await fetch(ttsUrl, {
                     method:'POST',
                     headers:{'Content-Type':'application/json','Accept':'audio/*','X-CSRF-TOKEN':csrf},
-                    body:JSON.stringify({text})
+                    body:JSON.stringify({text}),
+                    signal:voiceRequestController.signal
                 });
                 if (!response.ok) {
                     const error = await response.json().catch(() => ({}));
-                    throw new Error(error.message || 'Chưa tải được giọng Piper cố định.');
+                    const requestError = new Error(error.message || 'Chưa tải được giọng Piper cố định.');
+                    requestError.ttsUnavailable = response.status === 503;
+                    throw requestError;
                 }
                 const blob = await response.blob();
                 objectUrl = URL.createObjectURL(blob);
@@ -2710,12 +2722,23 @@
             if ('webkitPreservesPitch' in currentAudio) currentAudio.webkitPreservesPitch = true;
             await currentAudio.play();
         } catch (error) {
+            if (error?.name === 'AbortError') return;
+            if (error?.ttsUnavailable) ttsUnavailable = true;
             if (!ttsWarningShown) {
                 ttsWarningShown = true;
                 sourceEl.textContent = error.message || 'Chưa cài Piper TTS local';
             }
+        } finally {
+            if (requestId === voiceRequestId) {
+                voiceRequestController = null;
+            }
         }
     }
+
+    window.addEventListener('beforeunload', () => {
+        voiceRequestController?.abort();
+        voiceCache.forEach(objectUrl => URL.revokeObjectURL(objectUrl));
+    });
 
     function updateArrivalUi(arrival) {
         if (!arrival || !arrival.required) return;

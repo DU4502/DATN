@@ -15,7 +15,7 @@ return new class extends Migration
                 $table->unsignedBigInteger('branch_id')->nullable()->index();
                 $table->decimal('amount', 14, 2)->default(0);
                 $table->unsignedInteger('order_count')->default(0);
-                $table->unsignedBigInteger('confirmed_by')->nullable()->index();
+                $table->integer('confirmed_by')->nullable()->index();
                 $table->timestamp('confirmed_at')->nullable()->index();
                 $table->string('note', 500)->nullable();
                 $table->timestamps();
@@ -25,7 +25,7 @@ return new class extends Migration
         if (! Schema::hasTable('shipper_cod_receivables')) {
             Schema::create('shipper_cod_receivables', function (Blueprint $table) {
                 $table->id();
-                $table->unsignedBigInteger('order_id')->unique();
+                $table->integer('order_id')->unique();
                 $table->string('order_code', 80)->nullable()->index();
                 $table->unsignedBigInteger('shipper_id')->index();
                 $table->unsignedBigInteger('order_branch_id')->nullable()->index();

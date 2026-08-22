@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * ShipperMiddleware — chỉ cho phép tài khoản shipper (role_id = 5) truy cập khu vực shipper.
+ * ShipperMiddleware — chỉ cho phép tài khoản shipper (role_id = 6) truy cập khu vực shipper.
  */
 class ShipperMiddleware
 {

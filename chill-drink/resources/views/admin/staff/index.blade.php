@@ -415,6 +415,9 @@
                         @php $transferState = $branchTransferStates[(int)$staff->id] ?? ['allowed' => true, 'reason' => null]; @endphp
                         @if($transferState['allowed'])
                             <select name="branch_id" class="form-select @error('branch_id', $editBag) is-invalid @enderror" required>
+                                @if($staff->branch && ! $staff->branch->status && ! $branches->contains('id', $staff->branch->id))
+                                    <option value="{{ $staff->branch->id }}" selected>{{ $staff->branch->name }} (Ngừng hoạt động - hiện tại)</option>
+                                @endif
                                 @foreach($branches as $b)
                                     <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
                                 @endforeach

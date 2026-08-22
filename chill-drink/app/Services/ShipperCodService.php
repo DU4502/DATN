@@ -8,6 +8,7 @@ use App\Models\ShipperCodReceivable;
 use App\Models\ShipperCodSettlement;
 use App\Models\SystemLog;
 use App\Models\User;
+use App\Support\OrderStatus;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -24,25 +25,46 @@ class ShipperCodService
      */
     public function recordCollection(Order $order, Shipper $shipper): ?ShipperCodReceivable
     {
-        if (strtolower((string) $order->payment_method) !== 'cod') {
+        if (! Schema::hasTable('shipper_cod_receivables')) {
             return null;
         }
 
-        $amount = max(0, (int) ($order->total ?? $order->total_price ?? 0));
-        if ($amount <= 0) {
-            return null;
-        }
+        return DB::transaction(function () use ($order, $shipper) {
+            $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->first();
+            $assignedShipper = Shipper::query()->with('user')->whereKey($shipper->id)->first();
 
-        return ShipperCodReceivable::query()->firstOrCreate(
-            ['order_id' => (int) $order->id],
-            [
-                'order_code' => $order->displayCode(),
-                'shipper_id' => (int) $shipper->id,
-                'order_branch_id' => $shipper->homeBranchId() ?: ($order->branch_id ? (int) $order->branch_id : null),
-                'amount' => $amount,
-                'collected_at' => $order->delivered_at ?: now(),
-            ]
-        );
+            if (! $lockedOrder
+                || ! $assignedShipper?->user?->isShipper()
+                || ! $assignedShipper->user->is_active
+                || (int) $lockedOrder->shipper_id !== (int) $assignedShipper->id
+                || ($lockedOrder->fulfillment_type ?? 'delivery') !== 'delivery'
+                || strtolower((string) $lockedOrder->payment_method) !== 'cod'
+                || ! in_array(OrderStatus::normalize((string) $lockedOrder->status), [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true)) {
+                return null;
+            }
+
+            $amount = max(0, (int) round((float) $lockedOrder->total));
+            if ($amount <= 0) {
+                return null;
+            }
+
+            if (strtolower((string) $lockedOrder->payment_status) !== 'paid') {
+                $lockedOrder->forceFill(['payment_status' => 'paid'])->saveQuietly();
+            }
+
+            return ShipperCodReceivable::query()->firstOrCreate(
+                ['order_id' => (int) $lockedOrder->id],
+                [
+                    'order_code' => $lockedOrder->displayCode(),
+                    'shipper_id' => (int) $assignedShipper->id,
+                    'order_branch_id' => $lockedOrder->branch_id
+                        ? (int) $lockedOrder->branch_id
+                        : $assignedShipper->homeBranchId(),
+                    'amount' => $amount,
+                    'collected_at' => $lockedOrder->delivered_at ?: now(),
+                ]
+            );
+        }, 3);
     }
 
     /**
@@ -61,6 +83,11 @@ class ShipperCodService
             : Shipper::query()->find((int) $shipper);
 
         if (! $shipperModel || ! Schema::hasTable('shipper_cod_receivables')) {
+            return 0;
+        }
+
+        $shipperModel->loadMissing('user');
+        if (! $shipperModel->user?->isShipper() || ! $shipperModel->user->is_active) {
             return 0;
         }
 
@@ -93,7 +120,7 @@ class ShipperCodService
         $created = 0;
 
         foreach ($orders as $order) {
-            $amount = max(0, (int) round((float) ($order->total ?? $order->total_price ?? 0)));
+            $amount = max(0, (int) round((float) $order->total));
             if ($amount <= 0) {
                 continue;
             }
@@ -103,7 +130,9 @@ class ShipperCodService
                 [
                     'order_code' => $order->displayCode(),
                     'shipper_id' => $shipperId,
-                    'order_branch_id' => $shipperModel->homeBranchId() ?: ($order->branch_id ? (int) $order->branch_id : null),
+                    'order_branch_id' => $order->branch_id
+                        ? (int) $order->branch_id
+                        : $shipperModel->homeBranchId(),
                     'amount' => $amount,
                     'collected_at' => $order->delivered_at ?: $order->updated_at ?: now(),
                 ]
@@ -197,8 +226,17 @@ class ShipperCodService
     {
         $shipper->loadMissing('user.branch');
         $homeBranchId = $shipper->homeBranchId();
+        if (! $actor->isAdmin() && ! $actor->isSuperAdmin()) {
+            throw new RuntimeException('Tài khoản hiện tại không có quyền xác nhận đối soát COD.');
+        }
+        if (! $shipper->user?->isShipper()) {
+            throw new RuntimeException('Tài khoản được chọn không phải shipper hợp lệ.');
+        }
         if (! $homeBranchId) {
             throw new RuntimeException('Shipper chưa có home branch nên chưa thể đối soát COD.');
+        }
+        if ($actor->isAdmin() && (int) $actor->branch_id !== $homeBranchId) {
+            throw new RuntimeException('Admin chỉ được xác nhận COD của shipper thuộc chi nhánh mình quản lý.');
         }
         if ((int) $branchId !== $homeBranchId) {
             throw new RuntimeException('COD chỉ được nộp và xác nhận tại home branch của shipper.');

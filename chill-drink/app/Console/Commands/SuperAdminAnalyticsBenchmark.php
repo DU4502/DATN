@@ -684,7 +684,7 @@ class SuperAdminAnalyticsBenchmark extends Command
     {
         return match ($sequence % 10) {
             0, 1 => ['status' => 'completed', 'payment_status' => 'paid', 'payment_method' => 'cod'],
-            2, 3 => ['status' => 'processing', 'payment_status' => 'paid', 'payment_method' => 'bank_transfer'],
+            2, 3 => ['status' => 'preparing', 'payment_status' => 'paid', 'payment_method' => 'bank_transfer'],
             4 => ['status' => 'preparing', 'payment_status' => 'paid', 'payment_method' => 'vnpay'],
             5 => ['status' => 'delivering', 'payment_status' => 'paid', 'payment_method' => 'momo'],
             6 => ['status' => 'completed', 'payment_status' => 'pending', 'payment_method' => 'cod'],

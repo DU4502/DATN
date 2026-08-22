@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('free_distance_km', 6, 2)->default(5.00);
             $table->unsignedInteger('fast_surcharge')->default(8000);
             $table->json('cup_tiers');
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->integer('updated_by')->nullable()->index();
             $table->timestamps();
         });
 

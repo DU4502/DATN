@@ -12,6 +12,7 @@ use App\Models\Size;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CheckoutBranchSelectionTest extends TestCase
@@ -20,6 +21,8 @@ class CheckoutBranchSelectionTest extends TestCase
 
     public function test_checkout_stores_the_selected_active_branch(): void
     {
+        $this->fakeRoutingDistance(1000);
+
         $user = User::create([
             'name' => 'Khách hàng kiểm thử',
             'email' => 'branch-checkout@example.com',
@@ -97,6 +100,7 @@ class CheckoutBranchSelectionTest extends TestCase
                 'branch_id' => $branch->id,
                 'latitude' => 10.7769,
                 'longitude' => 106.7009,
+                'address_location_confirmed' => '1',
             ]);
 
         $order = Order::latest('id')->firstOrFail();
@@ -138,12 +142,15 @@ class CheckoutBranchSelectionTest extends TestCase
 
     public function test_checkout_rejects_delivery_branch_outside_15_km(): void
     {
+        $this->fakeRoutingDistance(20000);
+
         $user = User::create([
             'name' => 'Khách hàng kiểm thử',
             'email' => 'far-branch@example.com',
             'password' => Hash::make('password'),
             'role_id' => 1,
             'is_active' => true,
+            'email_verified_at' => now(),
         ]);
 
         $branch = Branch::create([
@@ -194,10 +201,28 @@ class CheckoutBranchSelectionTest extends TestCase
                 'branch_id' => $branch->id,
                 'latitude' => 21.0278,
                 'longitude' => 105.8342,
+                'address_location_confirmed' => '1',
+                'note' => 'Giao tại sảnh chính',
             ])
             ->assertRedirect(route('checkout.index'))
             ->assertSessionHasErrors('branch_id');
 
         $this->assertDatabaseCount('orders', 0);
+    }
+
+    private function fakeRoutingDistance(int $distanceMeters): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => $distanceMeters,
+                    'duration' => 180,
+                    'geometry' => ['coordinates' => [[106.7009, 10.7769], [105.8342, 21.0278]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
     }
 }

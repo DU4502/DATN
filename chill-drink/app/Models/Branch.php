@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Branch extends Model
 {
@@ -23,6 +25,11 @@ class Branch extends Model
     protected $casts = [
         'status' => 'boolean',
     ];
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', true);
+    }
 
     public function scopeAvailableForLocation($query)
     {
@@ -81,5 +88,10 @@ class Branch extends Model
     public function slides()
     {
         return $this->hasMany(BranchSlide::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class);
     }
 }

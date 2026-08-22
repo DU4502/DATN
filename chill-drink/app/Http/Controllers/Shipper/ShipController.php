@@ -50,8 +50,7 @@ class ShipController extends Controller
     ];
 
     private const ARRIVAL_ACCURACY_MAX_M = 120.0;
-    private const ARRIVAL_RADIUS_MIN_M = 45.0;
-    private const ARRIVAL_RADIUS_MAX_M = 90.0;
+    private const ARRIVAL_RADIUS_M = 50.0;
     private const ARRIVAL_SINGLE_POINT_ACCURACY_M = 50.0;
     private const ARRIVAL_FUZZY_REQUIRED_POINTS = 2;
     private const ARRIVAL_FUZZY_WINDOW_SECONDS = 15;
@@ -1621,7 +1620,8 @@ class ShipController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => $exception->getMessage(),
+                'code' => 'tts_unavailable',
+                'message' => 'Hướng dẫn giọng nói tạm thời không khả dụng. Bạn vẫn có thể tiếp tục theo chỉ dẫn trên bản đồ.',
             ], 503);
         }
     }
@@ -1647,7 +1647,7 @@ class ShipController extends Controller
         }
 
         $distance = $this->distanceMeters($latitude, $longitude, (float) $target['latitude'], (float) $target['longitude']);
-        $radius = $this->arrivalRadius($accuracy);
+        $radius = self::ARRIVAL_RADIUS_M;
         $accuracyOk = $accuracy <= self::ARRIVAL_ACCURACY_MAX_M;
         $inside = $distance <= $radius;
         $shipmentId = $this->latestShipmentId($order->id, $shipper->id);
@@ -1753,7 +1753,7 @@ class ShipController extends Controller
             return;
         }
 
-        $radius = $this->arrivalRadius($accuracy);
+        $radius = self::ARRIVAL_RADIUS_M;
         $distance = $this->distanceMeters(
             $latitude,
             $longitude,
@@ -1796,11 +1796,6 @@ class ShipController extends Controller
             default => 'GPS tự động ghi nhận shipper đã vào phạm vi điểm giao (cách '.(int) round($distance).'m, sai số ±'.(int) round($accuracy).'m).',
         };
         $this->addShipmentHistory($shipmentId, $event, $description);
-    }
-
-    private function arrivalRadius(float $accuracy): float
-    {
-        return max(self::ARRIVAL_RADIUS_MIN_M, min(self::ARRIVAL_RADIUS_MAX_M, $accuracy + 25.0));
     }
 
     private function arrivalEventForOrder(Order $order, Shipper $shipper, string $status): ?string

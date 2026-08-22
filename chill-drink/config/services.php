@@ -76,11 +76,13 @@ return [
 
     'navigation_tts' => [
         // Một voice Piper cố định chạy local trên server. Không cần API key/cloud.
+        'enabled' => env('NAV_TTS_ENABLED', true),
         'driver' => env('NAV_TTS_DRIVER', 'piper'),
         'piper' => [
             'binary' => env('PIPER_BINARY', 'tools/piper/piper.exe'),
             'model' => env('PIPER_MODEL', 'storage/app/navigation_tts/voices/vi_VN-vais1000-medium.onnx'),
             'config' => env('PIPER_MODEL_CONFIG', 'storage/app/navigation_tts/voices/vi_VN-vais1000-medium.onnx.json'),
+            'cache' => env('PIPER_CACHE_PATH', 'storage/app/navigation_tts/cache'),
             'voice' => env('PIPER_VOICE', 'vi_VN-vais1000-medium'),
             'timeout' => env('PIPER_TIMEOUT', 12),
         ],

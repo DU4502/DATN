@@ -247,7 +247,7 @@ Route::middleware(['auth', 'shipper'])
         Route::post('/navigation/voice', [
             ShipController::class,
             'navigationVoice'
-        ])->name('navigation.voice');
+        ])->middleware('throttle:20,1')->name('navigation.voice');
 
 
         // ==============================
@@ -385,6 +385,10 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('staff.dashboard');
         }
 
+        if (auth()->user()->isShipper()) {
+            return redirect()->route('shipper.dashboard');
+        }
+
         return view('dashboard');
     })->name('dashboard');
 
@@ -512,7 +516,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
     Route::resource('vouchers', VoucherController::class)->except(['show']);
 
     // Topping Management
-    Route::resource('toppings', ToppingController::class)->except(['show']);
+    Route::resource('toppings', ToppingController::class)->only(['index', 'store', 'update', 'destroy']);
 
     // Product Trash Management
     Route::get('/products/trash', [AdminProductController::class, 'trash'])->name('products.trash');

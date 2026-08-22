@@ -75,11 +75,20 @@ class BranchShippingFee
         unset(self::$settingsCache[$branchId]);
     }
 
+    public static function clearSettingsCache(): void
+    {
+        self::$settingsCache = [];
+    }
+
     /**
      * Hook dùng bởi App\Support\ShippingFee::calculate().
      * Chỉ override khi request hiện tại xác định được branch_id VÀ chi nhánh đã có cấu hình riêng.
      */
-    public static function quoteFromCurrentContext(float|int|string|null $distanceKm, string $method = 'standard'): ?array
+    public static function quoteFromCurrentContext(
+        float|int|string|null $distanceKm,
+        string $method = 'standard',
+        int|float|string|null $cupCount = null
+    ): ?array
     {
         $branchId = self::resolveBranchId();
         if (! $branchId) {
@@ -93,7 +102,7 @@ class BranchShippingFee
 
         $distance = is_numeric($distanceKm) ? (float) $distanceKm : 0.0;
         $distance = round(max(0.0, min($distance, self::MAX_DISTANCE_KM)), 2);
-        $cupCount = max(1, self::resolveCupCount());
+        $cupCount = max(1, (int) (is_numeric($cupCount) ? $cupCount : self::resolveCupCount()));
 
         $tier = self::tierForCupCount($settings['tiers'], $cupCount);
         $chargeableKm = max(0.0, $distance - (float) $settings['free_km']);

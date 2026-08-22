@@ -413,7 +413,7 @@ class DashboardSampleDataSeeder extends Seeder
             ];
         }
 
-        $otherStatuses = ['pending', 'processing', 'cancelled', 'shipped', 'delivering'];
+        $otherStatuses = ['pending', 'preparing', 'cancelled', 'delivering'];
         for ($i = 1; $i <= 7; $i++) {
             $slots[] = [
                 'status' => $otherStatuses[array_rand($otherStatuses)],

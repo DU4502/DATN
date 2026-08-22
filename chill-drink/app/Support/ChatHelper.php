@@ -5,11 +5,109 @@ namespace App\Support;
 use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Order;
+use App\Models\OrderIssueReport;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class ChatHelper
 {
+    public static function notifyOrderIssue(OrderIssueReport $issue): void
+    {
+        $issue->loadMissing(['order.branch', 'user']);
+        $order = $issue->order;
+        $customer = $issue->user;
+
+        if (! $order?->branch_id || ! $customer) {
+            return;
+        }
+
+        $conversation = Conversation::query()
+            ->where('user_id', $customer->id)
+            ->where('branch_id', $order->branch_id)
+            ->where('status', 'open')
+            ->latest('last_message_at')
+            ->first();
+
+        if (! $conversation) {
+            $conversation = Conversation::create([
+                'user_id' => $customer->id,
+                'branch_id' => $order->branch_id,
+                'order_id' => $order->id,
+                'subject' => 'Hỗ trợ đơn '.$order->displayCode(),
+                'status' => 'open',
+            ]);
+        }
+
+        $typeLabels = [
+            'missing_item' => 'Thiếu món',
+            'wrong_item' => 'Sai món',
+            'quality_issue' => 'Chất lượng đồ uống',
+            'other' => 'Vấn đề khác',
+        ];
+        $content = "[YÊU CẦU HỖ TRỢ ĐƠN {$order->displayCode()}]"
+            ."\nVấn đề: ".($typeLabels[$issue->type] ?? 'Vấn đề khác')
+            ."\nNội dung: ".trim($issue->description)
+            .($issue->evidence_path ? "\nKhách đã gửi ảnh bằng chứng trong mục Yêu cầu hỗ trợ." : '');
+
+        $message = $conversation->messages()->create([
+            'sender_id' => $customer->id,
+            'content' => $content,
+            'is_read' => false,
+        ]);
+
+        $conversation->update(['last_message_at' => now()]);
+        $message->load(['sender', 'displayAsSender']);
+
+        try {
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Throwable) {
+        }
+    }
+
+    public static function notifyOrderIssueStatus(OrderIssueReport $issue, User $staff): void
+    {
+        $issue->loadMissing('order');
+        $order = $issue->order;
+
+        if (! $order?->branch_id) {
+            return;
+        }
+
+        $conversation = Conversation::query()
+            ->where('user_id', $issue->user_id)
+            ->where('branch_id', $order->branch_id)
+            ->where('status', 'open')
+            ->latest('last_message_at')
+            ->first();
+
+        if (! $conversation) {
+            return;
+        }
+
+        $labels = [
+            'open' => 'Đang chờ xử lý',
+            'processing' => 'Đang xử lý',
+            'resolved' => 'Hoàn tất',
+            'rejected' => 'Không được chấp nhận',
+        ];
+        $content = "[CẬP NHẬT HỖ TRỢ ĐƠN {$order->displayCode()}]"
+            ."\nTrạng thái: ".($labels[$issue->status] ?? $issue->status)
+            .($issue->resolution_value ? "\nPhương án: {$issue->resolution_value}" : '')
+            .($issue->admin_note ? "\nPhản hồi: {$issue->admin_note}" : '');
+        $message = $conversation->messages()->create([
+            'sender_id' => $staff->id,
+            'content' => $content,
+            'is_read' => false,
+        ]);
+        $conversation->update(['last_message_at' => now()]);
+        $message->load(['sender', 'displayAsSender']);
+
+        try {
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Throwable) {
+        }
+    }
+
     /**
      * Đảm bảo user có conversation chat với chi nhánh nhận đơn hàng.
      *

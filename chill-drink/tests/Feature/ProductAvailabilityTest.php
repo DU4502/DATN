@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -96,13 +97,30 @@ class ProductAvailabilityTest extends TestCase
 
     public function test_checkout_rechecks_availability_before_creating_order(): void
     {
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => 1000,
+                    'duration' => 180,
+                    'geometry' => ['coordinates' => [[106.7009, 10.7769], [106.701, 10.777]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
+
         $branch = $this->branch('CHECKOUT');
         $product = Product::factory()->create(['price' => 45000]);
         BranchProductStatus::query()
             ->where('branch_id', $branch->id)
             ->where('product_id', $product->id)
             ->update(['is_available' => false]);
-        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $customer = User::factory()->create([
+            'role_id' => 1,
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
         $cart = [
             'availability-item' => [
                 'product_id' => $product->id,
@@ -124,6 +142,9 @@ class ProductAvailabilityTest extends TestCase
                 'shipping_address_ui' => '123 Nguyễn Huệ',
                 'shipping_area_ui' => 'Quận 1',
                 'shipping_phone_ui' => '0901234567',
+                'latitude' => 10.777,
+                'longitude' => 106.701,
+                'address_location_confirmed' => '1',
             ])
             ->assertRedirect(route('checkout.index'))
             ->assertSessionHas('error');
@@ -136,6 +157,8 @@ class ProductAvailabilityTest extends TestCase
         return Branch::create([
             'name' => 'Chi nhánh '.$code,
             'code' => $code,
+            'latitude' => 10.7769,
+            'longitude' => 106.7009,
             'status' => true,
         ]);
     }

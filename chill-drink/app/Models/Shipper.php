@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Shipper extends Model
 {
@@ -44,6 +45,26 @@ class Shipper extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'shipper_id');
+    }
+
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(Shipment::class, 'shipper_id');
+    }
+
+    public function bundleTrips(): HasMany
+    {
+        return $this->hasMany(DeliveryBundleTrip::class, 'shipper_id');
+    }
+
+    public function dispatchDecisions(): HasMany
+    {
+        return $this->hasMany(DeliveryDispatchDecision::class, 'shipper_id');
     }
 
 

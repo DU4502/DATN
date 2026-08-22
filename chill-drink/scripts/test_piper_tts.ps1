@@ -13,7 +13,7 @@ $ErrorFile = Join-Path $OutDir 'TEST_PIPER_ERROR.txt'
 
 foreach ($f in @($PiperExe, $Model, $Config)) {
     if (!(Test-Path $f)) {
-        throw "Thieu file: $f. Hay chay CAI_PIPER_TTS.bat truoc."
+        throw "Thieu file: $f. Hay chay scripts/install_piper_tts.ps1 truoc."
     }
 }
 

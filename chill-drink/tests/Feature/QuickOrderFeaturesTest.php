@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\GroupOrderGroupMessageSent;
 use App\Models\GroupOrder;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderItem;
@@ -11,6 +12,8 @@ use App\Models\BranchProductStatus;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class QuickOrderFeaturesTest extends TestCase
@@ -259,6 +262,19 @@ class QuickOrderFeaturesTest extends TestCase
 
     public function test_group_checkout_links_order_and_restores_personal_cart(): void
     {
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => 1000,
+                    'duration' => 180,
+                    'geometry' => ['coordinates' => [[106.7009, 10.7769], [106.701, 10.777]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
+
         $this->travelTo(now()->startOfDay()->addHours(9));
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
@@ -280,6 +296,7 @@ class QuickOrderFeaturesTest extends TestCase
             'shipping_phone_ui' => '0912345678',
             'latitude' => 10.7769,
             'longitude' => 106.7009,
+            'address_location_confirmed' => '1',
             'scheduled_at' => $scheduledAt->format('Y-m-d H:i:s'),
         ]);
 
@@ -364,6 +381,8 @@ class QuickOrderFeaturesTest extends TestCase
 
     public function test_group_members_can_use_group_and_private_chat(): void
     {
+        Event::fake([GroupOrderGroupMessageSent::class]);
+
         [$group, $owner] = $this->openGroup();
         $otherUser = User::factory()->create();
         $ownerMember = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'chat-owner']);

@@ -2,13 +2,20 @@
 
 namespace App\Services;
 
+use Illuminate\Process\Exceptions\ProcessTimedOutException;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 use RuntimeException;
+use Throwable;
 
 class NavigationTtsService
 {
     public function synthesize(string $text): array
     {
+        if (! (bool) config('services.navigation_tts.enabled', true)) {
+            throw new RuntimeException('Navigation TTS đang bị tắt trong cấu hình môi trường.');
+        }
+
         $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
         $text = $this->normalizeForVietnameseSpeech($text);
         if ($text === '' || mb_strlen($text) > 320) {
@@ -42,10 +49,10 @@ class NavigationTtsService
             }
         }
         if ($missing) {
-            throw new RuntimeException('Chưa cài Piper local. Chạy CAI_PIPER_TTS.bat ở thư mục project. Thiếu: '.implode(' | ', $missing));
+            throw new RuntimeException('Piper local chưa sẵn sàng. Chạy scripts/install_piper_tts.ps1 từ thư mục project. Thiếu: '.implode(' | ', $missing));
         }
 
-        $cacheDir = storage_path('app/navigation_tts/cache');
+        $cacheDir = $this->resolvePath((string) config('services.navigation_tts.piper.cache', 'storage/app/navigation_tts/cache'));
         if (! File::isDirectory($cacheDir)) {
             File::makeDirectory($cacheDir, 0755, true);
         }
@@ -79,73 +86,39 @@ class NavigationTtsService
             '--output_file', $tempPath,
         ];
 
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $options = PHP_OS_FAMILY === 'Windows' ? ['bypass_shell' => true] : [];
-        $process = @proc_open($command, $descriptors, $pipes, dirname($binary), null, $options);
-        if (! is_resource($process)) {
-            throw new RuntimeException('Không khởi chạy được Piper local. Kiểm tra piper.exe và quyền chạy file.');
-        }
-
-        // Gửi UTF-8 thẳng vào stdin, không qua cmd.exe để tên đường tiếng Việt không bị lỗi dấu.
-        fwrite($pipes[0], $text."\n");
-        fclose($pipes[0]);
-        stream_set_blocking($pipes[1], false);
-        stream_set_blocking($pipes[2], false);
-
-        $stdout = '';
-        $stderr = '';
-        $startedAt = microtime(true);
-        $timedOut = false;
-
-        do {
-            $stdout .= stream_get_contents($pipes[1]) ?: '';
-            $stderr .= stream_get_contents($pipes[2]) ?: '';
-            $status = proc_get_status($process);
-
-            if (! $status['running']) {
-                break;
+        try {
+            try {
+                // Command dạng mảng không đi qua shell; nội dung UTF-8 chỉ được truyền qua stdin.
+                $result = Process::path(dirname($binary))
+                    ->timeout($timeout)
+                    ->input($text."\n")
+                    ->run($command);
+            } catch (ProcessTimedOutException $exception) {
+                throw new RuntimeException('Piper tạo giọng quá lâu (timeout '.$timeout.' giây).', previous: $exception);
+            } catch (Throwable $exception) {
+                throw new RuntimeException('Không khởi chạy được Piper local. Kiểm tra binary và quyền chạy file.', previous: $exception);
             }
 
-            if ((microtime(true) - $startedAt) > $timeout) {
-                $timedOut = true;
-                proc_terminate($process);
-                break;
+            if ($result->failed() || ! is_file($tempPath) || filesize($tempPath) <= 256) {
+                $detail = trim($result->errorOutput() ?: $result->output());
+                if (mb_strlen($detail) > 280) {
+                    $detail = mb_substr($detail, 0, 280).'…';
+                }
+                throw new RuntimeException('Piper chưa tạo được audio'.($detail !== '' ? ': '.$detail : ' (exit '.$result->exitCode().').'));
             }
 
-            usleep(20000);
-        } while (true);
-
-        $stdout .= stream_get_contents($pipes[1]) ?: '';
-        $stderr .= stream_get_contents($pipes[2]) ?: '';
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $exitCode = proc_close($process);
-
-        if ($timedOut) {
-            @unlink($tempPath);
-            throw new RuntimeException('Piper tạo giọng quá lâu (timeout '.$timeout.' giây).');
-        }
-
-        if (! is_file($tempPath) || filesize($tempPath) <= 256) {
-            @unlink($tempPath);
-            $detail = trim($stderr ?: $stdout);
-            if (mb_strlen($detail) > 280) {
-                $detail = mb_substr($detail, 0, 280).'…';
-            }
-            throw new RuntimeException('Piper chưa tạo được audio'.($detail !== '' ? ': '.$detail : ' (exit '.$exitCode.').'));
-        }
-
-        // Rename gần-atomic: hai request cùng câu cũng không làm hỏng cache.
-        if (! @rename($tempPath, $path)) {
-            if (! File::exists($path)) {
+            // Rename gần-atomic: hai request cùng câu cũng không làm hỏng cache.
+            if (! @rename($tempPath, $path) && ! File::exists($path)) {
                 File::copy($tempPath, $path);
             }
-            @unlink($tempPath);
+        } finally {
+            if (is_file($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+
+        if (! File::exists($path) || File::size($path) <= 256) {
+            throw new RuntimeException('Piper chưa tạo được file audio hợp lệ.');
         }
 
         return [

@@ -13,7 +13,7 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_super_admin_overview_applies_month_filter_and_keeps_summary_bar_with_canonical_branch_ids(): void
+    public function test_super_admin_overview_applies_month_filter_globally(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
 
@@ -35,16 +35,10 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         ]));
 
         $response->assertOk()
-            ->assertSee('Bộ lọc dữ liệu kinh doanh', false)
-            ->assertSee('Kỳ: Tháng 07/2026', false)
-            ->assertSee('Chi nhánh: Chi nhánh A', false)
-            ->assertSee('Tháng này · Không so sánh', false)
-            ->assertSee('120.000đ trong tháng 07/2026', false)
-            ->assertSee('name="analytics_branch_ids[]"', false)
-            ->assertDontSee('name="branch_ids[]"', false);
+            ->assertViewHas('analyticsContext', fn ($context) => $context->periodType === 'month' && $context->isAllBranches());
     }
 
-    public function test_legacy_single_branch_id_is_accepted_and_rendered(): void
+    public function test_legacy_single_branch_id_does_not_change_global_overview_scope(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
 
@@ -58,10 +52,10 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         ]));
 
         $response->assertOk()
-            ->assertSee('Chi nhánh: Chi nhánh Legacy', false);
+            ->assertViewHas('analyticsContext', fn ($context) => $context->isAllBranches());
     }
 
-    public function test_legacy_branch_ids_array_is_accepted_and_rendered(): void
+    public function test_legacy_branch_ids_array_does_not_change_global_overview_scope(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
 
@@ -76,10 +70,10 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         ]));
 
         $response->assertOk()
-            ->assertSee('Chi nhánh: 2 chi nhánh được chọn', false);
+            ->assertViewHas('analyticsContext', fn ($context) => $context->isAllBranches());
     }
 
-    public function test_canonical_branch_ids_take_priority_over_legacy_inputs(): void
+    public function test_branch_scope_inputs_do_not_change_global_overview_scope(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
 
@@ -95,11 +89,10 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         ]));
 
         $response->assertOk()
-            ->assertSee('Chi nhánh: Chi nhánh Canonical', false)
-            ->assertDontSee('Chi nhánh: Chi nhánh Legacy', false);
+            ->assertViewHas('analyticsContext', fn ($context) => $context->isAllBranches());
     }
 
-    public function test_duplicate_branch_ids_are_normalized(): void
+    public function test_duplicate_branch_ids_do_not_change_global_overview_scope(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
 
@@ -113,8 +106,7 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         ]));
 
         $response->assertOk()
-            ->assertSee('Chi nhánh: Chi nhánh Duplicates', false)
-            ->assertDontSee('3 chi nhánh được chọn', false);
+            ->assertViewHas('analyticsContext', fn ($context) => $context->isAllBranches());
     }
 
     public function test_empty_branch_ids_default_to_all_branches(): void
@@ -126,7 +118,7 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         $response = $this->actingAs($superAdmin)->get('/admin/super-admin?analytics_period_type=month&analytics_month=2026-07&analytics_branch_ids%5B0%5D=');
 
         $response->assertOk()
-            ->assertSee('Chi nhánh: Tất cả chi nhánh', false);
+            ->assertViewHas('analyticsContext', fn ($context) => $context->isAllBranches());
     }
 
     public function test_invalid_canonical_branch_ids_are_rejected(): void
@@ -172,7 +164,7 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
             ->assertSessionHasErrors(['analytics_branch_id']);
     }
 
-    public function test_multiple_branch_ids_are_accepted_and_displayed_in_context(): void
+    public function test_multiple_branch_ids_do_not_change_global_overview_scope(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-07-27 12:00:00'));
 
@@ -187,8 +179,7 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         ]));
 
         $response->assertOk()
-            ->assertSee('Chi nhánh: 2 chi nhánh được chọn', false)
-            ->assertSee('Đã chọn 2 chi nhánh', false);
+            ->assertViewHas('analyticsContext', fn ($context) => $context->isAllBranches());
     }
 
     public function test_invalid_product_sort_is_rejected_by_validation(): void

@@ -159,25 +159,6 @@ class OrderCancellationService
                 'shipper_id' => null,
             ])->save();
 
-            /*
-             * Chỉ hoàn tồn kho khi hàng chưa bước tới giai đoạn sẵn sàng/bàn giao.
-             * Với timeout 24h ở ready/picked_up/delivering, đồ uống có thể đã được
-             * pha hoặc đã rời quán; cộng tồn kho lại sẽ tạo tồn ảo.
-             */
-            $restoreInventory = in_array($oldStatus, [
-                OrderStatus::PENDING,
-                OrderStatus::CONFIRMED,
-                OrderStatus::PREPARING,
-            ], true);
-
-            if ($restoreInventory) {
-                foreach ($locked->orderItems as $item) {
-                    if ($item->product) {
-                        $item->product->increment('stock', (int) $item->quantity);
-                    }
-                }
-            }
-
             // Đơn bị hủy thì trả lại lượt sử dụng voucher, bất kể hủy thủ công hay timeout.
             if ($locked->coupon_id) {
                 Voucher::query()

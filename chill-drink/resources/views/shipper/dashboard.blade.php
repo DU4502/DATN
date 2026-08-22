@@ -30,7 +30,19 @@
         <h1>Xin chào, {{ $shipperUser->name ?? 'Shipper' }} 👋</h1>
         <p>{{ $homeBranchName }} · {{ now()->format('d/m/Y') }}</p>
     </div>
-    <span class="ship-status-pill {{ $statusClass }}"><span class="ship-status-dot"></span>{{ $statusLabel }}</span>
+    <div class="text-end">
+        <span class="ship-status-pill {{ $statusClass }}"><span class="ship-status-dot"></span>{{ $statusLabel }}</span>
+        @if(!$returnPlan && in_array($shipperInfo->status, ['online', 'offline'], true))
+            <form action="{{ route('shipper.status.update') }}" method="POST" class="mt-2">
+                @csrf
+                <input type="hidden" name="status" value="{{ $shipperInfo->status === 'online' ? 'offline' : 'online' }}">
+                <button type="submit" class="btn btn-sm {{ $shipperInfo->status === 'online' ? 'btn-outline-secondary' : 'btn-success' }}">
+                    <i class="fa-solid {{ $shipperInfo->status === 'online' ? 'fa-circle-pause' : 'fa-play' }} me-1"></i>
+                    {{ $shipperInfo->status === 'online' ? 'Ngừng nhận đơn' : 'Bắt đầu nhận đơn' }}
+                </button>
+            </form>
+        @endif
+    </div>
 </div>
 
 <div class="ship-stat-grid">

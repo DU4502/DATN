@@ -12,6 +12,7 @@ use App\Models\Size;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -183,6 +184,7 @@ class GuestCheckoutTest extends TestCase
     public function test_guest_checkout_can_convert_demo_cart_items_into_payable_products(): void
     {
         Mail::fake();
+        $this->fakeRoutingDistance(1000);
 
         $branchId = Branch::query()->updateOrCreate(
             ['code' => 'HN'],
@@ -235,6 +237,8 @@ class GuestCheckoutTest extends TestCase
 
     public function test_guest_checkout_rejects_delivery_branch_outside_15_km(): void
     {
+        $this->fakeRoutingDistance(20000);
+
         [$product, $productSize] = $this->sellableProduct();
         $branchId = Branch::query()->create([
             'code' => 'HCM-FAR',
@@ -268,8 +272,25 @@ class GuestCheckoutTest extends TestCase
                 'shipping_area_ui' => 'Hà Nội',
                 'latitude' => 21.0278,
                 'longitude' => 105.8342,
+                'note' => 'Giao tại sảnh chính',
             ])
             ->assertSessionHasErrors('branch_id');
+    }
+
+    private function fakeRoutingDistance(int $distanceMeters): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => $distanceMeters,
+                    'duration' => 180,
+                    'geometry' => ['coordinates' => [[106.7009, 10.7769], [105.8342, 21.0278]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
     }
 
     private function sellableProduct(): array

@@ -150,6 +150,10 @@ class StaffOrderController extends Controller
         if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
             $order->payment_status = 'paid';
             $order->save();
+
+            if ($order->shipper_id && ($shipper = \App\Models\Shipper::query()->find($order->shipper_id))) {
+                app(\App\Services\ShipperCodService::class)->recordCollection($order->fresh(), $shipper);
+            }
         }
 
         if ($newStatus === OrderStatus::COMPLETED && $oldStatus !== OrderStatus::COMPLETED) {

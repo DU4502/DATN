@@ -202,7 +202,11 @@ class ShippingFee
                     }
                 }
             }
-            $v27BranchQuote = \App\Support\BranchShippingFee::quoteFromCurrentContext($v27Distance, (string) $v27Method);
+            $v27BranchQuote = \App\Support\BranchShippingFee::quoteFromCurrentContext(
+                $v27Distance,
+                (string) $v27Method,
+                $cupCount
+            );
             if ($v27BranchQuote !== null) {
                 return $v27BranchQuote;
             }

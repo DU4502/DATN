@@ -1,7 +1,7 @@
 @extends('layouts.staff')
 
 @section('page-title', 'Chi tiết đơn nhóm')
-@section('hide-topbar-search')
+@section('hide-topbar-search', true)
 
 @section('content')
 @php

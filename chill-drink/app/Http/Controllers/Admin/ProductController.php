@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -150,9 +151,19 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'slug' => Str::slug((string) $request->input('name', '')),
+        ]);
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products', 'slug')->whereNull('deleted_at'),
+            ],
             'image' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'gallery_images' => 'nullable|array',
             'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
@@ -170,7 +181,7 @@ class ProductController extends Controller
         $data = [
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
-            'slug' => Str::slug($validated['name']),
+            'slug' => $validated['slug'],
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
             'status' => $validated['status'] ?? true,
@@ -274,9 +285,21 @@ class ProductController extends Controller
     {
         $product = $this->findProduct($id);
 
+        $request->merge([
+            'slug' => Str::slug((string) $request->input('name', '')),
+        ]);
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products', 'slug')
+                    ->ignore($product->id)
+                    ->whereNull('deleted_at'),
+            ],
             'image' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'gallery_images' => 'nullable|array',
             'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
@@ -296,7 +319,7 @@ class ProductController extends Controller
         $data = [
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
-            'slug' => Str::slug($validated['name']),
+            'slug' => $validated['slug'],
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
             'status' => $validated['status'] ?? true,

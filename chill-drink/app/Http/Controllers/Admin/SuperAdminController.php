@@ -11,8 +11,10 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\SystemLog;
 use App\Models\User;
+use App\Rules\ActiveBranchAssignment;
 use App\Services\AnalyticsPeriodContext;
 use App\Services\SuperAdminAnalyticsService;
+use App\Services\SuperAdminAnalyticsPeriodResolver;
 use App\Support\SimpleXlsxWriter;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -149,7 +151,21 @@ class SuperAdminController extends Controller
         }
 
         $rankingPeriod = 'all';
-        $analyticsContext = $request->analyticsPeriodContext();
+        $overviewAnalyticsData = $request->validated();
+        foreach ([
+            'analytics_branch_id',
+            'analytics_branch_ids',
+            'branch_ids',
+            'analytics_compare_date',
+            'analytics_compare_month',
+            'analytics_compare_year',
+            'analytics_compare_start_date',
+            'analytics_compare_end_date',
+        ] as $overviewIgnoredField) {
+            unset($overviewAnalyticsData[$overviewIgnoredField]);
+        }
+        $overviewAnalyticsData['analytics_compare_type'] = 'none';
+        $analyticsContext = app(SuperAdminAnalyticsPeriodResolver::class)->resolve($overviewAnalyticsData);
         $analyticsBranchIds = $analyticsContext->normalizedBranchIds();
 
         if ($search !== '') {
@@ -195,7 +211,7 @@ class SuperAdminController extends Controller
         $allAdmins = User::admins()->get();
 
         // Danh sách nhân viên (role_id = 5)
-        $staffUsers = User::where('role_id', 5)->with('branch')->orderBy('name')->get();
+        $staffUsers = User::where('role_id', User::STAFF_ROLE_ID)->with('branch')->orderBy('name')->get();
         $loginHistoryByAdmin = $this->loginHistoryByAdmin($adminUsers);
         $businessSummary = $this->analyticsService->businessSummary($analyticsContext);
         $branchSummaryStats = $this->branchSummaryStats($analyticsContext);
@@ -2286,7 +2302,7 @@ class SuperAdminController extends Controller
         }
 
         $validated = $request->validate([
-            'role_id' => ['required', 'in:2,3,4,5'],
+            'role_id' => ['required', 'in:2,3,5'],
         ]);
 
         $roleId = (int) $validated['role_id'];
@@ -2332,7 +2348,7 @@ class SuperAdminController extends Controller
             'name'      => ['required', 'string', 'max:150'],
             'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment()],
         ], [
             'name.required'      => 'Vui lòng nhập tên nhân viên.',
             'email.required'     => 'Vui lòng nhập email.',
@@ -2356,7 +2372,7 @@ class SuperAdminController extends Controller
                 'name'      => $validated['name'],
                 'email'     => $validated['email'], // đã lowercase từ bước merge trước validate
                 'password'  => \Illuminate\Support\Facades\Hash::make($validated['password']),
-                'role_id'   => 5, // Nhân viên
+                'role_id'   => User::STAFF_ROLE_ID,
                 'branch_id' => $validated['branch_id'] ?? null,
                 'is_active' => true,
             ]);
@@ -2398,7 +2414,7 @@ class SuperAdminController extends Controller
         }
 
         $validated = $request->validate([
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment($user->branch_id ? (int) $user->branch_id : null)],
         ]);
 
         $user->update(['branch_id' => $validated['branch_id'] ?? null]);

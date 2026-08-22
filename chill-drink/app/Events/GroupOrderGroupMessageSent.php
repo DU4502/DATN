@@ -28,6 +28,11 @@ class GroupOrderGroupMessageSent implements ShouldBroadcastNow
         return 'group-order.message.sent';
     }
 
+    public function broadcastWhen(): bool
+    {
+        return $this->message->recipient_member_id === null;
+    }
+
     public function broadcastWith(): array
     {
         return [

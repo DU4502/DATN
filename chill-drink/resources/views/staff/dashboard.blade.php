@@ -1,7 +1,7 @@
 @extends('layouts.staff')
 
 @section('page-title', 'Tổng quát')
-@section('hide-topbar-search')
+@section('hide-topbar-search', true)
 
 @section('content')
 <div class="mb-4">

@@ -94,6 +94,31 @@ class Order extends Model
         return $this->belongsTo(Shipper::class, 'shipper_id');
     }
 
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class, 'order_id');
+    }
+
+    public function bundleTripOrder()
+    {
+        return $this->hasOne(DeliveryBundleTripOrder::class, 'order_id');
+    }
+
+    public function dispatchDecisions()
+    {
+        return $this->hasMany(DeliveryDispatchDecision::class, 'order_id');
+    }
+
+    public function deliveryMessages()
+    {
+        return $this->hasMany(DeliveryOrderMessage::class, 'order_id');
+    }
+
+    public function issueReports()
+    {
+        return $this->hasMany(OrderIssueReport::class, 'order_id');
+    }
+
     public function codReceivable()
     {
         return $this->hasOne(ShipperCodReceivable::class);

@@ -39,14 +39,14 @@ class ProductManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get(route('admin.products.index', ['q' => 'TS-SEARCH']))
+            ->get(route('admin.super-admin.manage.products.index', ['q' => 'TS-SEARCH']))
             ->assertOk()
             ->assertSee('Trà sữa tìm kiếm')
             ->assertDontSee('Cà phê không khớp')
             ->assertSee('value="TS-SEARCH"', false);
 
         $this->actingAs($admin)
-            ->get(route('admin.products.index', ['q' => 'Cà Phê']))
+            ->get(route('admin.super-admin.manage.products.index', ['q' => 'Cà Phê']))
             ->assertOk()
             ->assertSee('Cà phê không khớp')
             ->assertDontSee('Trà sữa tìm kiếm');
@@ -84,7 +84,7 @@ class ProductManagementTest extends TestCase
         BranchProductStatus::create(['branch_id' => $branch->id, 'product_id' => $unavailableProduct->id, 'is_available' => false]);
 
         $this->actingAs($admin)
-            ->get(route('admin.products.index', [
+            ->get(route('admin.super-admin.manage.products.index', [
                 'category' => $teaCategory->id,
                 'status' => 'active',
                 'branch_id' => $branch->id,
@@ -97,7 +97,7 @@ class ProductManagementTest extends TestCase
             ->assertSee('selected', false);
 
         $this->actingAs($admin)
-            ->get(route('admin.products.index', ['branch_id' => $branch->id, 'availability' => 'out_of_stock']))
+            ->get(route('admin.super-admin.manage.products.index', ['branch_id' => $branch->id, 'availability' => 'out_of_stock']))
             ->assertOk()
             ->assertSee('Cà phê hết hàng')
             ->assertDontSee('Trà đang bán sắp hết');
@@ -129,7 +129,7 @@ class ProductManagementTest extends TestCase
         }
 
         $this->actingAs($admin)
-            ->get(route('admin.products.index'))
+            ->get(route('admin.super-admin.manage.products.index'))
             ->assertOk()
             ->assertSee('2/3 chi nhánh còn hàng')
             ->assertSee('1 chi nhánh hết hàng')
@@ -161,6 +161,69 @@ class ProductManagementTest extends TestCase
         $response->assertRedirect(route('admin.products.index'));
     }
 
+    public function test_admin_cannot_create_a_product_with_an_existing_generated_slug(): void
+    {
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Nước Ép',
+            'slug' => 'nuoc-ep',
+            'status' => true,
+        ]);
+
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Nước Ép Cam',
+            'slug' => 'nuoc-ep-cam',
+            'sku' => 'CD-NE-001',
+            'price' => 35000,
+            'status' => true,
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->from(route('admin.products.create'))
+            ->post(route('admin.products.store'), [
+                'category_id' => $category->id,
+                'name' => 'Nước Ép Cam',
+                'price' => 39000,
+                'status' => '1',
+            ]);
+
+        $response
+            ->assertRedirect(route('admin.products.create'))
+            ->assertSessionHasErrors('slug');
+        $this->assertDatabaseCount('products', 1);
+    }
+
+    public function test_generated_sku_does_not_reuse_a_soft_deleted_catalog_sku(): void
+    {
+        $category = Category::create([
+            'name' => 'Nước Ép',
+            'slug' => 'nuoc-ep',
+            'status' => true,
+        ]);
+
+        $deletedProduct = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Nước Ép Cam',
+            'slug' => 'nuoc-ep-cam-cu',
+            'sku' => 'CD-NE-001',
+            'price' => 35000,
+            'status' => true,
+        ]);
+        $deletedProduct->delete();
+
+        $replacement = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Nước Ép Cam',
+            'slug' => 'nuoc-ep-cam',
+            'price' => 39000,
+            'status' => true,
+        ]);
+
+        $this->assertNotSame($deletedProduct->sku, $replacement->sku);
+        $this->assertSame('CD-NE-002', $replacement->sku);
+    }
+
     public function test_admin_can_upload_image_when_creating_product(): void
     {
         Storage::fake('public');
@@ -190,7 +253,7 @@ class ProductManagementTest extends TestCase
         $response->assertRedirect(route('admin.products.index'));
 
         $this->actingAs($admin)
-            ->get(route('admin.products.show', $product->id))
+            ->get(route('admin.super-admin.manage.products.show', $product->id))
             ->assertOk()
             ->assertSee('/storage/products/', false);
     }
@@ -267,7 +330,7 @@ class ProductManagementTest extends TestCase
         $response->assertRedirect(route('admin.products.index'));
 
         $this->actingAs($admin)
-            ->get(route('admin.products.edit', $product->id))
+            ->get(route('admin.super-admin.manage.products.edit', $product->id))
             ->assertOk()
             ->assertSee('/storage/products/', false);
     }

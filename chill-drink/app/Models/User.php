@@ -16,6 +16,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public const SUPER_ADMIN_EMAIL = 'superadmin@chilldrink.com';
 
+    public const STAFF_ROLE_ID = 5;
+
+    public const SHIPPER_ROLE_ID = 6;
+
     /**
      * Các trường được phép mass assignment.
      */
@@ -137,7 +141,8 @@ class User extends Authenticatable implements MustVerifyEmail
     | 2 = Admin
     | 3 = Super Admin
     | 4 = CSKH
-    | 5 = Shipper
+    | 5 = Staff
+    | 6 = Shipper
     |
     */
 
@@ -226,17 +231,17 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isShipper(): bool
     {
-        return (int) ($this->role_id ?? 1) === 5;
+        return (int) ($this->role_id ?? 1) === self::SHIPPER_ROLE_ID;
     }
 
     /**
-     * Nhân viên Shipper.
+     * Nhân viên cửa hàng.
      *
      * role_id = 5.
      */
     public function isStaffOnly(): bool
     {
-        return (int) ($this->role_id ?? 1) === 5;
+        return (int) ($this->role_id ?? 1) === self::STAFF_ROLE_ID;
     }
 
     /**
@@ -245,13 +250,14 @@ class User extends Authenticatable implements MustVerifyEmail
      * Admin       = 2
      * Super Admin = 3
      * CSKH        = 4
-     * Shipper     = 5
+     * Staff       = 5
+     * Shipper     = 6
      */
     public function isStaff(): bool
     {
         return in_array(
             (int) ($this->role_id ?? 1),
-            [2, 3, 4, 5],
+            [2, 3, 4, self::STAFF_ROLE_ID, self::SHIPPER_ROLE_ID],
             true
         );
     }
@@ -261,13 +267,14 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * Admin       = 2
      * Super Admin = 3
-     * Shipper     = 5
+     * Staff       = 5
+     * Shipper     = 6
      */
     public function canManageOrders(): bool
     {
         return in_array(
             (int) ($this->role_id ?? 1),
-            [2, 3, 5],
+            [2, 3, self::STAFF_ROLE_ID, self::SHIPPER_ROLE_ID],
             true
         );
     }
@@ -316,7 +323,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function scopeShippers($query)
     {
-        return $query->where('role_id', 5);
+        return $query->where('role_id', self::SHIPPER_ROLE_ID);
     }
 
     /*

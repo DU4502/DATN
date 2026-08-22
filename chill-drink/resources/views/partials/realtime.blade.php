@@ -1,13 +1,20 @@
 @if(\App\Support\RealtimeOrderNotifier::isConfigured())
 <script>
     @php
-        $realtimeBranchIds = auth()->user()?->isSuperAdmin()
+        $realtimeUser = auth()->user();
+        $realtimeBranchIds = $realtimeUser?->isSuperAdmin()
             ? \App\Models\Branch::query()->where('status', true)->pluck('id')->map(fn ($id) => (int) $id)->all()
-            : array_values(array_filter([(int) (session('nearest_branch_id') ?? auth()->user()?->branch_id)]));
+            : array_values(array_filter([(int) (session('nearest_branch_id') ?? $realtimeUser?->branch_id)]));
+        $realtimeAdminChannels = $realtimeUser?->isSuperAdmin()
+            ? array_merge(['admin-notifications'], array_map(fn ($branchId) => 'admin-notifications.'.$branchId, $realtimeBranchIds))
+            : ($realtimeUser?->isAdmin() && is_numeric($realtimeUser?->branch_id)
+                ? ['admin-notifications.'.(int) $realtimeUser->branch_id]
+                : []);
     @endphp
     window.realtimeConfig = {
-        isAdmin: @json(auth()->user()?->isAdmin() ?? false),
-        adminBranchId: @json(auth()->user()?->isAdmin() && is_numeric(auth()->user()?->branch_id) ? (int) auth()->user()->branch_id : null),
+        isAdmin: @json(($realtimeUser?->isAdmin() || $realtimeUser?->isSuperAdmin()) ?? false),
+        adminBranchId: @json($realtimeUser?->isAdmin() && is_numeric($realtimeUser?->branch_id) ? (int) $realtimeUser->branch_id : null),
+        adminChannels: @json($realtimeAdminChannels),
         userId: @json(auth()->id()),
         branchId: @json(session('nearest_branch_id') ?? auth()->user()?->branch_id),
         branchIds: @json($realtimeBranchIds),
@@ -86,14 +93,15 @@
         });
 
         if (window.realtimeConfig.isAdmin) {
-            const adminChannel = window.realtimeConfig.adminBranchId
-                ? 'admin-notifications.' + window.realtimeConfig.adminBranchId
-                : 'admin-notifications';
-
-            window.Echo.private(adminChannel)
-                .listen('.order.created', function (payload) {
-                    document.dispatchEvent(new CustomEvent('order:created', { detail: payload }));
-                });
+            window.realtimeConfig.adminChannels.forEach(function (adminChannel) {
+                window.Echo.private(adminChannel)
+                    .listen('.order.created', function (payload) {
+                        document.dispatchEvent(new CustomEvent('order:created', { detail: payload }));
+                    })
+                    .listen('.order.status.updated', function (payload) {
+                        window.dispatchOrderStatusUpdate(payload, { toast: false });
+                    });
+            });
         } else if (window.realtimeConfig.userId) {
             window.Echo.private('user.' + window.realtimeConfig.userId)
                 .listen('.order.status.updated', function (payload) {

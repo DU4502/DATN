@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Shipper;
+use App\Models\User;
 use App\Notifications\ShipperOrderAssignedNotification;
 use App\Support\OrderStatus;
 use Illuminate\Support\Collection;
@@ -152,7 +153,7 @@ class ShipperDispatchService
             ->with(['user.branch', 'stationBranch', 'returningBranch'])
             ->where('status', 'online')
             ->whereHas('user', fn ($query) => $query
-                ->where('role_id', 5)
+                ->where('role_id', User::SHIPPER_ROLE_ID)
                 ->where('is_active', 1)
                 ->where('branch_id', $snapshot->branch_id));
 
@@ -177,7 +178,7 @@ class ShipperDispatchService
                 /** @var Shipper|null $shipper */
                 $shipper = Shipper::query()->with(['user.branch', 'stationBranch', 'returningBranch'])
                     ->whereKey($row['shipper']->id)->lockForUpdate()->first();
-                if (! $shipper || $shipper->status !== 'online') {
+                if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'online') {
                     return ['status' => 'candidate_changed'];
                 }
                 if ((int) ($shipper->user?->branch_id ?? 0) !== (int) $lockedOrder->branch_id) {
@@ -236,7 +237,7 @@ class ShipperDispatchService
             ->whereNotNull('current_latitude')
             ->whereNotNull('current_longitude')
             ->whereHas('user', fn ($q) => $q
-                ->where('role_id', 5)
+                ->where('role_id', User::SHIPPER_ROLE_ID)
                 ->where('is_active', 1)
                 ->where('branch_id', $snapshot->branch_id));
         if ($busyIds->isNotEmpty()) {
@@ -256,7 +257,7 @@ class ShipperDispatchService
 
                 /** @var Shipper|null $shipper */
                 $shipper = Shipper::query()->with('user')->whereKey($row['shipper']->id)->lockForUpdate()->first();
-                if (! $shipper || $shipper->status !== 'online' || ! $shipper->returning_to_branch_id) {
+                if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'online' || ! $shipper->returning_to_branch_id) {
                     return ['status' => 'candidate_changed'];
                 }
                 if ((int) ($shipper->user?->branch_id ?? 0) !== (int) $lockedOrder->branch_id
@@ -316,7 +317,7 @@ class ShipperDispatchService
 
             /** @var Shipper|null $shipper */
             $shipper = Shipper::query()->with('user')->whereKey($evaluation['shipper']->id)->lockForUpdate()->first();
-            if (! $shipper || $shipper->status !== 'busy') {
+            if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'busy') {
                 return ['status' => 'waiting', 'shipper' => null, 'message' => 'Chuyến ghép vừa thay đổi trạng thái.'];
             }
 
@@ -443,6 +444,13 @@ class ShipperDispatchService
         }
 
         return null;
+    }
+
+    private function isEligibleLockedShipper(?Shipper $shipper): bool
+    {
+        return $shipper !== null
+            && $shipper->user?->isShipper()
+            && (bool) $shipper->user->is_active;
     }
 
     private function assignStandard(Order $order, Shipper $shipper, string $historyStatus, string $description): void

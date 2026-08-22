@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ShipmentTracking extends Model
 {
@@ -24,7 +25,7 @@ class ShipmentTracking extends Model
         'recorded_at' => 'datetime',
     ];
 
-    public function shipment()
+    public function shipment(): BelongsTo
     {
         return $this->belongsTo(Shipment::class);
     }

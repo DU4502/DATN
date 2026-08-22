@@ -14,11 +14,30 @@ use App\Models\Voucher;
 use App\Support\ShippingFee;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CheckoutVoucherTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => 1000,
+                    'duration' => 180,
+                    'geometry' => ['coordinates' => [[106.7009, 10.7769], [106.701, 10.777]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
+    }
 
     public function test_checkout_page_only_offers_cod_and_vnpay(): void
     {
@@ -62,6 +81,44 @@ class CheckoutVoucherTest extends TestCase
             ->assertSessionHasErrors('payment_method');
     }
 
+    public function test_authenticated_pickup_checkout_does_not_require_coordinates(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $branch = $this->activeBranch();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    'cart-1' => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                    ],
+                ],
+            ])
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
+                'fulfillment_type' => 'pickup',
+                'branch_id' => $branch->id,
+            ]);
+
+        $order = Order::latest()->firstOrFail();
+
+        $response->assertRedirect(route('checkout.success', $order));
+        $this->assertSame('pickup', $order->fulfillment_type);
+        $this->assertSame(0, (int) $order->shipping_fee);
+        $this->assertNull($order->shipping_latitude);
+        $this->assertNull($order->shipping_longitude);
+        Http::assertNothingSent();
+    }
+
     public function test_checkout_redirects_vnpay_order_to_payment_gateway_route(): void
     {
         $user = $this->customer();
@@ -92,6 +149,7 @@ class CheckoutVoucherTest extends TestCase
                 'branch_id' => $this->activeBranch()->id,
                 'latitude' => 10.7769,
                 'longitude' => 106.7009,
+                'address_location_confirmed' => '1',
             ]);
 
         $order = Order::latest()->first();
@@ -196,6 +254,7 @@ class CheckoutVoucherTest extends TestCase
                 'latitude' => 10.7769,
                 'longitude' => 106.7009,
                 'voucher_code' => 'TESTCHILL10',
+                'address_location_confirmed' => '1',
                 'note' => '',
             ]);
 
@@ -257,6 +316,7 @@ class CheckoutVoucherTest extends TestCase
                 'latitude' => 10.7769,
                 'longitude' => 106.7009,
                 'voucher_code' => 'MIN200',
+                'address_location_confirmed' => '1',
             ])
             ->assertRedirect(route('checkout.index'))
             ->assertSessionHas('error');
@@ -348,6 +408,7 @@ class CheckoutVoucherTest extends TestCase
                 'latitude' => 10.7769,
                 'longitude' => 106.7009,
                 'voucher_code' => 'DBPRICE',
+                'address_location_confirmed' => '1',
             ]);
 
         $order = Order::latest()->first();
@@ -411,10 +472,7 @@ class CheckoutVoucherTest extends TestCase
             'price' => 100000,
             'status' => true,
         ]);
-        $branch = Branch::query()->firstOrCreate(
-            ['code' => 'CHECKOUT-TEST'],
-            ['name' => 'Chi nhánh checkout', 'status' => true]
-        );
+        $branch = $this->activeBranch();
         BranchProductStatus::query()->updateOrCreate(
             ['branch_id' => $branch->id, 'product_id' => $product->id],
             ['is_available' => true]

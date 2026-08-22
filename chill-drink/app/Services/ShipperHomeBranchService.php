@@ -97,9 +97,13 @@ class ShipperHomeBranchService
             throw new RuntimeException('Chỉ Super Admin được điều chuyển home branch của shipper.');
         }
 
-        $branch = Branch::query()->whereKey($branchId)->first();
+        if ((int) ($user->branch_id ?? 0) === $branchId) {
+            return $user->fresh(['branch', 'shipper']);
+        }
+
+        $branch = Branch::query()->active()->whereKey($branchId)->first();
         if (! $branch) {
-            throw new RuntimeException('Chi nhánh đích không tồn tại.');
+            throw new RuntimeException('Chi nhánh đích không tồn tại hoặc đã ngừng hoạt động.');
         }
 
         return DB::transaction(function () use ($user, $branch, $actor) {

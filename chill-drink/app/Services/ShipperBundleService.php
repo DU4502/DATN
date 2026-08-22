@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Shipper;
+use App\Models\User;
 use App\Support\OrderStatus;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -86,7 +87,7 @@ class ShipperBundleService
             ->whereNotNull('current_longitude')
             ->whereHas('user', fn ($query) => $query
                 ->where('is_active', 1)
-                ->where('role_id', 5))
+                ->where('role_id', User::SHIPPER_ROLE_ID))
             ->get()
             ->map(fn (Shipper $shipper) => [
                 'shipper' => $shipper,
@@ -241,8 +242,8 @@ class ShipperBundleService
             DB::table('delivery_bundle_trips')->where('id', $tripId)->update($values);
 
             DB::table('delivery_bundle_trip_orders')->updateOrInsert(
-                ['trip_id' => $tripId, 'order_id' => $newOrder->id],
-                ['role' => 'merged', 'created_at' => now(), 'updated_at' => now()]
+                ['order_id' => $newOrder->id],
+                ['trip_id' => $tripId, 'role' => 'merged', 'created_at' => now(), 'updated_at' => now()]
             );
 
             return $tripId;
@@ -252,17 +253,17 @@ class ShipperBundleService
             'created_at' => now(),
         ]));
 
-        $rows = [];
         foreach ($allOrderIds as $index => $orderId) {
-            $rows[] = [
-                'trip_id' => $tripId,
-                'order_id' => (int) $orderId,
-                'role' => $index === 0 ? 'primary' : 'merged',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
+            DB::table('delivery_bundle_trip_orders')->updateOrInsert(
+                ['order_id' => (int) $orderId],
+                [
+                    'trip_id' => $tripId,
+                    'role' => $index === 0 ? 'primary' : 'merged',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
-        DB::table('delivery_bundle_trip_orders')->insert($rows);
 
         return $tripId;
     }

@@ -326,7 +326,7 @@ class ShipperIncidentService
                 ->where('status', 'online')
                 ->whereHas('user', fn ($query) => $query
                     ->where('is_active', 1)
-                    ->where('role_id', 5)
+                    ->where('role_id', User::SHIPPER_ROLE_ID)
                     ->where('branch_id', $incidentTransferOrder->branch_id));
 
             if (Schema::hasColumn('shippers', 'returning_to_branch_id')) {

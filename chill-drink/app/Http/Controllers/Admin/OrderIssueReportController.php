@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class OrderIssueReportController extends Controller
@@ -47,75 +48,89 @@ class OrderIssueReportController extends Controller
             'admin_note' => ['nullable', 'string', 'max:1500'],
         ]);
 
-        $allowedTransitions = [
-            'open' => ['open', 'processing', 'rejected'],
-            'processing' => ['processing', 'resolved', 'rejected'],
-            'resolved' => ['resolved'],
-            'rejected' => ['rejected'],
-        ];
-        if (! in_array($data['status'], $allowedTransitions[$issue->status] ?? [$issue->status], true)) {
-            return back()->withErrors(['status' => 'Không thể chuyển lùi hoặc bỏ qua bước xử lý của yêu cầu.'])->withInput();
-        }
-        if ($data['status'] === 'resolved' && empty($data['resolution_type'])) {
-            return back()->withErrors(['resolution_type' => 'Hãy chọn phương án hỗ trợ cho khách trước khi hoàn tất.'])->withInput();
-        }
+        [$issue, $changed] = DB::transaction(function () use ($issue, $request, $data): array {
+            $lockedIssue = OrderIssueReport::query()->lockForUpdate()->with(['order', 'user'])->findOrFail($issue->id);
+            $user = $request->user();
+            $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
+                ? $user->adminWorkspaceBranchId()
+                : ($user->isSuperAdmin() ? null : $user->branch_id);
+            abort_unless($branchId === null || (int) $lockedIssue->order->branch_id === (int) $branchId, 403);
 
-        if ($data['resolution_type'] === 'voucher' && $data['status'] === 'resolved' && ! $issue->voucher_coupon_id) {
-            $voucherAmount = (int) $issue->order->total;
-            if ($voucherAmount <= 0) {
-                return back()->withErrors(['resolution_type' => 'Không thể cấp voucher vì tổng tiền đơn không hợp lệ.'])->withInput();
+            $allowedTransitions = [
+                'open' => ['open', 'processing', 'rejected'],
+                'processing' => ['processing', 'resolved', 'rejected'],
+                'resolved' => ['resolved'],
+                'rejected' => ['rejected'],
+            ];
+
+            if (! in_array($data['status'], $allowedTransitions[$lockedIssue->status] ?? [$lockedIssue->status], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Không thể chuyển lùi hoặc bỏ qua bước xử lý của yêu cầu.',
+                ]);
+            }
+            if ($data['status'] === 'resolved' && empty($data['resolution_type'])) {
+                throw ValidationException::withMessages([
+                    'resolution_type' => 'Hãy chọn phương án hỗ trợ cho khách trước khi hoàn tất.',
+                ]);
             }
 
-            DB::transaction(function () use ($issue, $voucherAmount, &$data): void {
-                $issue = OrderIssueReport::query()->lockForUpdate()->with('order')->findOrFail($issue->id);
-                if ($issue->voucher_coupon_id) {
-                    $data['resolution_value'] = $issue->resolution_value;
-                    return;
+            if (($data['resolution_type'] ?? null) === 'voucher' && $data['status'] === 'resolved') {
+                $voucherAmount = (int) $lockedIssue->order->total;
+                if ($voucherAmount <= 0) {
+                    throw ValidationException::withMessages([
+                        'resolution_type' => 'Không thể cấp voucher vì tổng tiền đơn không hợp lệ.',
+                    ]);
                 }
-                $code = 'HT'.str_pad((string) $issue->id, 6, '0', STR_PAD_LEFT).'-'.Str::upper(Str::random(6));
-                $voucher = Voucher::create([
-                    'code' => $code,
-                    'type' => Voucher::TYPE_FIXED,
-                    'value' => $voucherAmount,
-                    'max_discount' => 0,
-                    'description' => 'Voucher hỗ trợ cho đơn '.($issue->order->order_code ?? '#'.$issue->order_id),
-                    'min_order' => 0,
-                    'usage_limit' => 1,
-                    'used_count' => 0,
-                    'starts_at' => now(),
-                    'expires_at' => now()->addDays(30),
-                    'status' => true,
-                    'point_cost' => 0,
-                    'is_redeemable' => false,
-                    'created_at' => now(),
-                ]);
-                UserVoucher::create([
-                    'user_id' => $issue->user_id,
-                    'coupon_id' => $voucher->id,
-                    'code' => $voucher->code,
-                    'is_used' => false,
-                    'expires_at' => $voucher->expires_at,
-                    'redeemed_at' => now(),
-                ]);
-                $issue->update(['voucher_coupon_id' => $voucher->id]);
-                $data['resolution_value'] = 'Mã '.$voucher->code.' giảm '.number_format($voucherAmount, 0, ',', '.').'đ, dùng đến '.$voucher->expires_at->format('d/m/Y');
-            });
-            $issue->refresh();
-        }
-        if ($data['resolution_type'] === 'voucher' && $issue->voucher_coupon_id) {
-            $data['resolution_value'] = $issue->resolution_value;
-        }
 
-        $timestamps = match ($data['status']) {
-            'processing' => ['processing_at' => $issue->processing_at ?? now()],
-            'resolved' => ['resolved_at' => $issue->resolved_at ?? now()],
-            'rejected' => ['rejected_at' => $issue->rejected_at ?? now()],
-            default => [],
-        };
-        $issue->update([...$data, ...$timestamps, 'estimated_at' => null, 'handled_by' => $request->user()->id]);
-        $issue->load('order');
-        \App\Support\ChatHelper::notifyOrderIssueStatus($issue, $request->user());
-        $issue->user->notify(new OrderIssueReportStatusNotification($issue));
+                if (! $lockedIssue->voucher_coupon_id) {
+                    $code = 'HT'.str_pad((string) $lockedIssue->id, 6, '0', STR_PAD_LEFT).'-'.Str::upper(Str::random(6));
+                    $voucher = Voucher::create([
+                        'code' => $code,
+                        'type' => Voucher::TYPE_FIXED,
+                        'value' => $voucherAmount,
+                        'max_discount' => 0,
+                        'description' => 'Voucher hỗ trợ cho đơn '.($lockedIssue->order->order_code ?? '#'.$lockedIssue->order_id),
+                        'min_order' => 0,
+                        'usage_limit' => 1,
+                        'used_count' => 0,
+                        'starts_at' => now(),
+                        'expires_at' => now()->addDays(30),
+                        'status' => true,
+                        'point_cost' => 0,
+                        'is_redeemable' => false,
+                        'created_at' => now(),
+                    ]);
+                    UserVoucher::create([
+                        'user_id' => $lockedIssue->user_id,
+                        'coupon_id' => $voucher->id,
+                        'code' => $voucher->code,
+                        'is_used' => false,
+                        'expires_at' => $voucher->expires_at,
+                        'redeemed_at' => now(),
+                    ]);
+                    $lockedIssue->voucher_coupon_id = $voucher->id;
+                    $data['resolution_value'] = 'Mã '.$voucher->code.' giảm '.number_format($voucherAmount, 0, ',', '.').'đ, dùng đến '.$voucher->expires_at->format('d/m/Y');
+                } else {
+                    $data['resolution_value'] = $lockedIssue->resolution_value;
+                }
+            }
+
+            $timestamps = match ($data['status']) {
+                'processing' => ['processing_at' => $lockedIssue->processing_at ?? now()],
+                'resolved' => ['resolved_at' => $lockedIssue->resolved_at ?? now()],
+                'rejected' => ['rejected_at' => $lockedIssue->rejected_at ?? now()],
+                default => [],
+            };
+            $lockedIssue->fill([...$data, ...$timestamps, 'estimated_at' => null, 'handled_by' => $request->user()->id]);
+            $changed = $lockedIssue->isDirty();
+            $lockedIssue->save();
+
+            return [$lockedIssue->fresh(['order', 'user']), $changed];
+        });
+        if ($changed) {
+            \App\Support\ChatHelper::notifyOrderIssueStatus($issue, $request->user());
+            $issue->user->notify(new OrderIssueReportStatusNotification($issue));
+        }
         return back()->with('success', 'Đã cập nhật yêu cầu hỗ trợ.');
     }
 

@@ -8,6 +8,7 @@ use App\Models\DeliveryFeeSetting;
 use App\Models\Shipper;
 use App\Models\User;
 use App\Models\SystemLog;
+use App\Rules\ActiveBranchAssignment;
 use App\Services\ShipperHomeBranchService;
 use App\Support\ShippingFee;
 use Illuminate\Http\RedirectResponse;
@@ -31,7 +32,7 @@ class StaffManagementController extends Controller
         $search   = trim((string) $request->query('q', ''));
         $status   = (string) $request->query('status', 'all');
 
-        $query = User::where('role_id', 5)->with(['branch', 'shipper'])->orderBy('name');
+        $query = User::where('role_id', User::SHIPPER_ROLE_ID)->with(['branch', 'shipper'])->orderBy('name');
 
         // Admin chỉ thấy nhân viên của chi nhánh mình
         if ($authUser->isAdmin() && ! $authUser->isSuperAdmin()) {
@@ -59,18 +60,18 @@ class StaffManagementController extends Controller
 
         // Dropdown chi nhánh: Super Admin thấy tất cả, Admin chỉ thấy chi nhánh mình
         $branches = $authUser->isSuperAdmin()
-            ? Branch::orderBy('name')->get()
-            : Branch::where('id', $authUser->branch_id)->get();
+            ? Branch::active()->orderBy('name')->get()
+            : Branch::active()->where('id', $authUser->branch_id)->get();
 
         $stats = [
             'total'  => (clone $query->getQuery())->count(),
-            'active' => User::where('role_id', 5)->when(
+            'active' => User::where('role_id', User::SHIPPER_ROLE_ID)->when(
                 $authUser->isAdmin() && ! $authUser->isSuperAdmin(),
                 fn ($q) => $authUser->branch_id
                     ? $q->where('branch_id', $authUser->branch_id)
                     : $q->whereRaw('1 = 0')
             )->where('is_active', true)->count(),
-            'locked' => User::where('role_id', 5)->when(
+            'locked' => User::where('role_id', User::SHIPPER_ROLE_ID)->when(
                 $authUser->isAdmin() && ! $authUser->isSuperAdmin(),
                 fn ($q) => $authUser->branch_id
                     ? $q->where('branch_id', $authUser->branch_id)
@@ -219,7 +220,7 @@ class StaffManagementController extends Controller
             'name'      => ['required', 'string', 'max:150'],
             'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment()],
         ], [
             'name.required'      => 'Vui lòng nhập tên nhân viên.',
             'email.required'     => 'Vui lòng nhập email.',
@@ -250,11 +251,17 @@ class StaffManagementController extends Controller
             $branchId = $authUser->branch_id;
         }
 
+        if (! Branch::active()->whereKey($branchId)->exists()) {
+            return redirect()->back()->withInput()->withErrors([
+                'branch_id' => 'Không thể tạo Shipper tại chi nhánh đã ngừng hoạt động.',
+            ], 'createStaff');
+        }
+
         $staff = User::create([
             'name'      => $validated['name'],
             'email'     => $validated['email'], // đã lowercase từ bước merge trước validate
             'password'  => Hash::make($validated['password']),
-            'role_id'   => 5,
+            'role_id'   => User::SHIPPER_ROLE_ID,
             'branch_id' => $branchId,
             'is_active' => true,
         ]);
@@ -298,7 +305,7 @@ class StaffManagementController extends Controller
         $validated = $request->validateWithBag($bag, [
             'name'      => ['required', 'string', 'max:150'],
             'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment($user->branch_id ? (int) $user->branch_id : null)],
             'password'  => ['nullable', 'string', 'min:8', 'confirmed'],
         ], [
             'name.required'      => 'Vui lòng nhập tên nhân viên.',
@@ -377,7 +384,7 @@ class StaffManagementController extends Controller
         abort_unless($request->user()->isSuperAdmin(), 403, 'Chỉ Super Admin được điều chuyển home branch của shipper.');
 
         $validated = $request->validate([
-            'branch_id' => ['required', 'integer', 'exists:branches,id'],
+            'branch_id' => ['required', 'integer', new ActiveBranchAssignment($user->branch_id ? (int) $user->branch_id : null)],
         ]);
 
         try {
@@ -402,7 +409,7 @@ class StaffManagementController extends Controller
 
     private function ensureCanManage(User $user): void
     {
-        if (! $user->isStaffOnly()) {
+        if (! $user->isShipper()) {
             abort(403, 'Chỉ được quản lý tài khoản nhân viên.');
         }
 

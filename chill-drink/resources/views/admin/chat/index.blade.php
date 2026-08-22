@@ -1,7 +1,7 @@
 @extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Chat khách hàng')
-@section('hide-topbar-search')
+@section('hide-topbar-search', true)
 
 @section('content')
 @php $viewer = auth()->user(); @endphp
