@@ -179,12 +179,15 @@
         border-bottom: 1px solid var(--a-border);
         transform: translateZ(0);
         backface-visibility: hidden;
-        contain: paint;
+        overflow: visible;
+        isolation: isolate;
     }
 
     .admin-topbar-actions {
         display: flex; align-items: center;
         gap: 10px; flex: 0 0 auto; white-space: nowrap;
+        position: relative;
+        z-index: 2;
     }
 
     .admin-topbar-actions .btn {

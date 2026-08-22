@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Shipper;
 use App\Models\ShipperCodReceivable;
 use App\Models\ShipperCodSettlement;
+use App\Services\CodSettlementPinSetupService;
 use App\Services\ShipperCodService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -94,29 +96,94 @@ class ShipperCodSettlementController extends Controller
         ]);
     }
 
-    public function confirm(Request $request, Shipper $shipper, ShipperCodService $service): RedirectResponse
-    {
-        $shipper->loadMissing('user.branch');
-        $scopeBranchId = $this->scopeBranchId($request);
-        $rootMode = $request->user()->isSuperAdmin() && ! $request->user()->isViewingAdminWorkspace();
-        $homeBranchId = $shipper->homeBranchId();
-
-        if (! $homeBranchId) {
-            return back()->with('error', 'Shipper chưa có home branch nên chưa thể đối soát COD.');
+    public function sendPin(
+        Request $request,
+        CodSettlementPinSetupService $pinSetupService
+    ): JsonResponse {
+        if (blank($request->user()->email)) {
+            return response()->json([
+                'message' => 'Tài khoản admin chưa có email nên không thể gửi mã xác minh Gmail.',
+            ], 422);
         }
 
-        if (! $rootMode && (int) $scopeBranchId !== $homeBranchId) {
-            abort(403, 'COD của shipper chỉ được đối soát tại home branch của shipper.');
+        $pinSetupService->send($request->user());
+
+        return response()->json([
+            'message' => 'Đã gửi mã xác minh Gmail 6 số tới '.$this->maskEmail((string) $request->user()->email).'.',
+            'ttl_minutes' => $pinSetupService->ttlMinutes(),
+        ]);
+    }
+
+    public function savePin(
+        Request $request,
+        CodSettlementPinSetupService $pinSetupService
+    ): RedirectResponse {
+        if (blank($request->user()->email)) {
+            return back()->with('error', 'Tài khoản admin chưa có email nên không thể tạo PIN đối soát COD.');
+        }
+
+        $validated = $request->validate([
+            'verification_code' => ['required', 'digits:6'],
+            'new_pin' => ['required', 'digits:4', 'confirmed'],
+        ], [
+            'verification_code.required' => 'Bạn cần nhập mã xác minh Gmail.',
+            'verification_code.digits' => 'Mã xác minh Gmail phải gồm đúng 6 chữ số.',
+            'new_pin.required' => 'Bạn cần nhập PIN đối soát mới.',
+            'new_pin.digits' => 'PIN đối soát phải gồm đúng 4 chữ số.',
+            'new_pin.confirmed' => 'PIN nhập lại chưa khớp.',
+        ]);
+
+        if (! $pinSetupService->verify($request->user(), (string) $validated['verification_code'])) {
+            return back()
+                ->withInput($request->except(['new_pin', 'new_pin_confirmation']))
+                ->with('error', 'Mã xác minh Gmail không hợp lệ hoặc đã hết hạn. Hãy gửi lại mã mới.');
+        }
+
+        $request->user()->setCodSettlementPin((string) $validated['new_pin']);
+
+        return back()->with('success', 'Đã lưu PIN đối soát COD mới. Từ giờ xác nhận nhận tiền chỉ cần nhập PIN này.');
+    }
+
+    public function confirm(
+        Request $request,
+        Shipper $shipper,
+        ShipperCodService $service
+    ): RedirectResponse
+    {
+        try {
+            $context = $this->buildSettlementContext($request, $shipper, $service);
+        } catch (RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
         }
 
         $validated = $request->validate([
             'note' => ['nullable', 'string', 'max:500'],
+            'pin' => ['required', 'digits:4'],
+        ], [
+            'pin.required' => 'Bạn cần nhập PIN đối soát COD.',
+            'pin.digits' => 'PIN đối soát phải gồm đúng 4 chữ số.',
         ]);
+
+        if ($context['pending_order_count'] < 1 || $context['pending_amount'] < 1) {
+            return back()->with('error', 'Không còn đơn COD chờ đối soát cho shipper này.');
+        }
+
+        if (! $request->user()->hasCodSettlementPin()) {
+            return back()
+                ->withInput($request->except('pin'))
+                ->with('error', 'Bạn chưa tạo PIN đối soát COD. Hãy tạo PIN trước khi xác nhận nhận tiền.');
+        }
+
+        if (! $request->user()->verifyCodSettlementPin((string) $validated['pin'])) {
+            return back()
+                ->withInput($request->except('pin'))
+                ->with('error', 'PIN đối soát COD không đúng.');
+        }
 
         try {
             $settlement = $service->settleAll(
-                $shipper,
-                $homeBranchId,
+                $context['shipper'],
+                $context['home_branch_id'],
                 $request->user(),
                 $validated['note'] ?? null,
             );
@@ -127,8 +194,71 @@ class ShipperCodSettlementController extends Controller
         return back()->with(
             'success',
             'Đã xác nhận nhận '.number_format((int) $settlement->amount, 0, ',', '.').'đ COD từ '
-            .$shipper->user?->name.' tại home branch '.$shipper->user?->branch?->name.'.'
+            .$context['shipper']->user?->name.' tại home branch '.$context['shipper']->user?->branch?->name.'.'
         );
+    }
+
+    /**
+     * @return array{shipper: Shipper, home_branch_id: int, pending_amount: int, pending_order_count: int}
+     */
+    private function buildSettlementContext(Request $request, Shipper $shipper, ShipperCodService $service): array
+    {
+        $shipper->loadMissing('user.branch');
+        $scopeBranchId = $this->scopeBranchId($request);
+        $rootMode = $request->user()->isSuperAdmin() && ! $request->user()->isViewingAdminWorkspace();
+        $homeBranchId = $shipper->homeBranchId();
+
+        if (! $homeBranchId) {
+            throw new RuntimeException('Shipper chưa có home branch nên chưa thể đối soát COD.');
+        }
+
+        if (! $rootMode && (int) $scopeBranchId !== $homeBranchId) {
+            abort(403, 'COD của shipper chỉ được đối soát tại home branch của shipper.');
+        }
+
+        $service->syncHistoricalReceivables([$shipper->id]);
+
+        return [
+            'shipper' => $shipper,
+            'home_branch_id' => $homeBranchId,
+            ...$this->pendingSnapshot($shipper),
+        ];
+    }
+
+    /**
+     * @return array{pending_amount: int, pending_order_count: int}
+     */
+    private function pendingSnapshot(Shipper $shipper): array
+    {
+        $summary = ShipperCodReceivable::query()
+            ->selectRaw('COALESCE(SUM(amount), 0) as pending_amount, COUNT(*) as pending_order_count')
+            ->where('shipper_id', $shipper->id)
+            ->whereNull('settlement_id')
+            ->first();
+
+        return [
+            'pending_amount' => (int) round((float) ($summary?->pending_amount ?? 0)),
+            'pending_order_count' => (int) ($summary?->pending_order_count ?? 0),
+        ];
+    }
+
+    private function maskEmail(string $email): string
+    {
+        [$local, $domain] = array_pad(explode('@', $email, 2), 2, '');
+
+        if ($domain === '') {
+            return $email;
+        }
+
+        if (mb_strlen($local) <= 2) {
+            $maskedLocal = mb_substr($local, 0, 1).'*';
+        } else {
+            $visibleStart = mb_substr($local, 0, 2);
+            $visibleEnd = mb_substr($local, -1);
+            $maskedLocal = $visibleStart.str_repeat('*', max(mb_strlen($local) - 3, 1)).$visibleEnd;
+        }
+
+        return $maskedLocal.'@'.$domain;
     }
 
     /** null = Super Admin root xem toàn hệ thống; -1 = admin không có chi nhánh. */

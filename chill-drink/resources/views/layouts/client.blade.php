@@ -1955,6 +1955,11 @@
             @auth
             // Chỉ chạy khi user đã đăng nhập
             if (!navigator.geolocation) return;
+            const preservePageStateDuringGeoUpdate = @json(request()->routeIs('checkout.*', 'cart.index'));
+
+            if (preservePageStateDuringGeoUpdate) {
+                return;
+            }
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {

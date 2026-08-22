@@ -259,10 +259,94 @@ Route::middleware(['auth', 'shipper'])
                 auth()->id()
             )->firstOrFail();
 
-            $orders = \App\Models\Order::where(
-                'shipper_id',
-                $shipper->id
-            )
+            $completedStatuses = [
+                \App\Support\OrderStatus::DELIVERED,
+                \App\Support\OrderStatus::COMPLETED,
+            ];
+            $completedQuery = \App\Models\Order::where('shipper_id', $shipper->id)
+                ->whereIn('status', $completedStatuses);
+
+            $periods = [
+                'day' => [
+                    'label' => 'Hôm nay',
+                    'from' => now()->startOfDay(),
+                    'to' => now()->endOfDay(),
+                ],
+                'week' => [
+                    'label' => 'Tuần này',
+                    'from' => now()->startOfWeek(),
+                    'to' => now()->endOfWeek(),
+                ],
+                'month' => [
+                    'label' => 'Tháng này',
+                    'from' => now()->startOfMonth(),
+                    'to' => now()->endOfMonth(),
+                ],
+                'year' => [
+                    'label' => 'Năm nay',
+                    'from' => now()->startOfYear(),
+                    'to' => now()->endOfYear(),
+                ],
+            ];
+            $incomeSummary = collect($periods)
+                ->map(function (array $period) use ($completedQuery) {
+                    $query = (clone $completedQuery)
+                        ->whereBetween('updated_at', [$period['from'], $period['to']]);
+
+                    return [
+                        'label' => $period['label'],
+                        'orders' => (int) $query->count(),
+                        'amount' => (int) (clone $query)->sum('shipping_fee'),
+                    ];
+                })
+                ->all();
+
+            $incomePeriod = request('income_period', 'day');
+            if (! array_key_exists($incomePeriod, $periods)) {
+                $incomePeriod = 'day';
+            }
+
+            $incomeDetailOrders = (clone $completedQuery)
+                ->whereBetween('updated_at', [$periods[$incomePeriod]['from'], $periods[$incomePeriod]['to']])
+                ->latest('updated_at')
+                ->get(['id', 'order_code', 'shipping_fee', 'status', 'updated_at']);
+
+            $incomeDetail = match ($incomePeriod) {
+                'week' => $incomeDetailOrders
+                    ->groupBy(fn ($order) => $order->updated_at?->format('Y-m-d') ?? '')
+                    ->map(fn ($items, $key) => [
+                        'label' => \Illuminate\Support\Carbon::parse($key)->format('d/m/Y'),
+                        'orders' => $items->count(),
+                        'amount' => (int) $items->sum('shipping_fee'),
+                    ])
+                    ->values(),
+                'month' => $incomeDetailOrders
+                    ->groupBy(fn ($order) => 'Tuần '.$order->updated_at?->weekOfMonth)
+                    ->map(fn ($items, $key) => [
+                        'label' => $key,
+                        'orders' => $items->count(),
+                        'amount' => (int) $items->sum('shipping_fee'),
+                    ])
+                    ->values(),
+                'year' => $incomeDetailOrders
+                    ->groupBy(fn ($order) => $order->updated_at?->format('m/Y') ?? '')
+                    ->map(fn ($items, $key) => [
+                        'label' => \Illuminate\Support\Carbon::createFromFormat('m/Y', $key)->format('m/Y'),
+                        'orders' => $items->count(),
+                        'amount' => (int) $items->sum('shipping_fee'),
+                    ])
+                    ->values(),
+                default => $incomeDetailOrders
+                    ->groupBy(fn ($order) => $order->updated_at?->format('H:00') ?? '')
+                    ->map(fn ($items, $key) => [
+                        'label' => $key,
+                        'orders' => $items->count(),
+                        'amount' => (int) $items->sum('shipping_fee'),
+                    ])
+                    ->values(),
+            };
+
+            $orders = \App\Models\Order::where('shipper_id', $shipper->id)
                 ->whereIn('status', [
                     'delivered',
                     'completed'
@@ -272,7 +356,7 @@ Route::middleware(['auth', 'shipper'])
 
             return view(
                 'shipper.history',
-                compact('orders', 'shipper')
+                compact('orders', 'shipper', 'incomeSummary', 'incomeDetail', 'incomePeriod')
             );
         })->name('history');
 
@@ -479,6 +563,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSu
         Route::patch('/order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
         Route::get('/order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
         Route::get('/cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
+        Route::post('/cod-settlements/pin/send-code', [ShipperCodSettlementController::class, 'sendPin'])->name('cod-settlements.pin.send');
+        Route::post('/cod-settlements/pin/save', [ShipperCodSettlementController::class, 'savePin'])->name('cod-settlements.pin.save');
         Route::post('/cod-settlements/shipper/{shipper}/confirm', [ShipperCodSettlementController::class, 'confirm'])->name('cod-settlements.confirm');
 
         Route::get('/group-orders', [AdminGroupOrderController::class, 'index'])->name('group-orders.index');
@@ -546,6 +632,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
     Route::patch('order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
     Route::get('order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
     Route::get('cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
+    Route::post('cod-settlements/pin/send-code', [ShipperCodSettlementController::class, 'sendPin'])->name('cod-settlements.pin.send');
+    Route::post('cod-settlements/pin/save', [ShipperCodSettlementController::class, 'savePin'])->name('cod-settlements.pin.save');
     Route::post('cod-settlements/shipper/{shipper}/confirm', [ShipperCodSettlementController::class, 'confirm'])->name('cod-settlements.confirm');
     Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
     Route::put('group-orders/{groupOrder}/status', [AdminGroupOrderController::class, 'updateStatus'])->name('group-orders.updateStatus');
