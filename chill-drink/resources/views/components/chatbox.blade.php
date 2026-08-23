@@ -609,15 +609,15 @@
     <button
         @click="toggleUnifiedChat()"
         class="flex items-center justify-center w-16 h-16 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
-        style="position:relative; width:60px; height:60px; min-width:60px; min-height:60px; padding:0; border:0; border-radius:50%; background:#00a870; color:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 18px 38px rgba(0, 168, 112, 0.28); cursor:pointer; overflow:hidden;">
+        style="position:relative; width:60px; height:60px; min-width:60px; min-height:60px; padding:0; border:0; border-radius:50%; background:#00a870; color:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 18px 38px rgba(0, 168, 112, 0.28); cursor:pointer; overflow:visible;">
         <svg x-show="!isOpen && !groupChatOpen" x-cloak xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" style="width:28px; height:28px; color:#ffffff; flex:0 0 auto;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
         <svg x-show="isOpen || groupChatOpen" x-cloak xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" style="width:28px; height:28px; color:#ffffff; flex:0 0 auto;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
-        <span x-show="groupUnread > 0 && supportUnread === 0" x-cloak x-text="groupUnread > 99 ? '99+' : groupUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
-        <span x-show="supportUnread > 0" x-cloak x-text="supportUnread > 99 ? '99+' : supportUnread" style="position:absolute;top:-4px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;"></span>
+        <span x-show="groupUnread > 0 && supportUnread === 0" x-cloak x-text="groupUnread > 99 ? '99+' : groupUnread" style="position:absolute;top:-7px;right:-7px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 8px 18px rgba(220,53,69,.28);"></span>
+        <span x-show="supportUnread > 0" x-cloak x-text="supportUnread > 99 ? '99+' : supportUnread" style="position:absolute;top:-7px;right:-7px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc3545;color:#fff;border:2px solid #fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:2;box-shadow:0 8px 18px rgba(220,53,69,.28);"></span>
     </button>
 
     <!-- Unified Menu -->

@@ -6,6 +6,8 @@ use App\Events\ProductAvailabilityUpdated;
 use App\Models\Branch;
 use App\Models\BranchProductStatus;
 use App\Models\Product;
+use App\Models\ProductSize;
+use App\Models\Size;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -93,6 +95,69 @@ class ProductAvailabilityTest extends TestCase
             ->postJson(route('cart.add', $product->id), $this->cartOptions())
             ->assertUnprocessable()
             ->assertJsonPath('message', fn (string $message) => str_contains($message, $product->name));
+    }
+
+    public function test_cart_normalizes_size_prices_without_double_counting_base_price(): void
+    {
+        $branch = $this->branch('PRICING');
+
+        $finalPriceProduct = Product::factory()->create(['price' => 34000]);
+        BranchProductStatus::query()
+            ->where('branch_id', $branch->id)
+            ->where('product_id', $finalPriceProduct->id)
+            ->update(['is_available' => true]);
+
+        $finalSize = Size::create(['name' => 'S', 'multiplier' => 1]);
+        ProductSize::create([
+            'product_id' => $finalPriceProduct->id,
+            'size_id' => $finalSize->id,
+            'price' => 34000,
+        ]);
+
+        $finalResponse = $this->withSession(['nearest_branch_id' => $branch->id])
+            ->postJson(route('cart.add', $finalPriceProduct->id), [
+                'size' => 'S',
+                'sugar_level' => 100,
+                'ice_level' => 100,
+                'quantity' => 1,
+            ])
+            ->assertOk();
+
+        $finalCart = session('cart');
+        $finalItem = array_values($finalCart)[0];
+
+        $finalResponse->assertJsonPath('total', 34000);
+        $this->assertSame(34000, (int) $finalItem['price']);
+        $this->assertSame(0, (int) $finalItem['size_extra']);
+
+        $extraPriceProduct = Product::factory()->create(['price' => 34000]);
+        BranchProductStatus::query()
+            ->where('branch_id', $branch->id)
+            ->where('product_id', $extraPriceProduct->id)
+            ->update(['is_available' => true]);
+
+        $extraSize = Size::create(['name' => 'M', 'multiplier' => 1.1]);
+        ProductSize::create([
+            'product_id' => $extraPriceProduct->id,
+            'size_id' => $extraSize->id,
+            'price' => 5000,
+        ]);
+
+        $extraResponse = $this->withSession(['nearest_branch_id' => $branch->id, 'cart' => []])
+            ->postJson(route('cart.add', $extraPriceProduct->id), [
+                'size' => 'M',
+                'sugar_level' => 100,
+                'ice_level' => 100,
+                'quantity' => 1,
+            ])
+            ->assertOk();
+
+        $extraCart = session('cart');
+        $extraItem = array_values($extraCart)[0];
+
+        $extraResponse->assertJsonPath('total', 39000);
+        $this->assertSame(39000, (int) $extraItem['price']);
+        $this->assertSame(5000, (int) $extraItem['size_extra']);
     }
 
     public function test_checkout_rechecks_availability_before_creating_order(): void

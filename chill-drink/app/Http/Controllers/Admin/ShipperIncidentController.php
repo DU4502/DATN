@@ -74,6 +74,7 @@ class ShipperIncidentController extends Controller
                 'order_id' => $row['order_id'],
                 'order_code' => $row['order_code'],
                 'branch_name' => $row['branch_name'],
+                'incident_type' => $row['incident_type'] ?? 'driver_issue',
                 'shipper_name' => $row['shipper_name'],
                 'description' => $row['description'],
                 'reported_at_label' => $row['reported_at_label'],

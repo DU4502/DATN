@@ -155,11 +155,11 @@
     }
 
     .register-card__body {
-        padding: 2rem 2.35rem;
+        padding: 1.85rem 2.1rem;
     }
 
     .register-card h2 {
-        margin: 0 0 1.35rem;
+        margin: 0 0 1rem;
         color: #1f2937;
         font-size: 1.35rem;
         line-height: 1.2;
@@ -168,7 +168,7 @@
 
     .register-form-stack {
         display: grid;
-        gap: 0.78rem;
+        gap: 0.72rem;
     }
 
     .register-input {
@@ -185,20 +185,19 @@
         box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.12);
     }
 
-    .email-row {
+    .contact-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 72px;
+        grid-template-columns: minmax(0, 1fr) 116px;
         gap: 0.65rem;
     }
 
     .code-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 110px;
-        gap: 0.78rem;
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
     }
 
-    .btn-code,
-    .btn-verify-code {
+    .btn-code {
         height: 42px;
         border-radius: 4px;
         border: 1px solid #0d9373;
@@ -207,31 +206,44 @@
         font-size: 0.88rem;
         font-weight: 800;
         white-space: nowrap;
-        padding: 0 0.55rem;
+        padding: 0 0.65rem;
         transition: background 0.16s ease, color 0.16s ease, opacity 0.16s ease;
-    }
-
-    .btn-verify-code {
-        background: #0d9373;
-        color: #ffffff;
     }
 
     .btn-code:hover,
     .btn-code:focus,
-    .btn-verify-code:hover,
-    .btn-verify-code:focus {
+    .btn-code.is-active {
         background: #0d9373;
         color: #ffffff;
     }
 
-    .btn-verify-code:hover,
-    .btn-verify-code:focus {
+    .btn-code.is-phone {
         background: #087560;
     }
 
     .btn-code:disabled,
-    .btn-verify-code:disabled {
+    .btn-code:disabled {
         opacity: 0.65;
+    }
+
+    .contact-hint {
+        color: #0f9488;
+        font-size: 0.76rem;
+        font-weight: 700;
+        line-height: 1.35;
+    }
+
+    .contact-mode-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.28rem 0.55rem;
+        border-radius: 999px;
+        background: #ecfeff;
+        color: #0f766e;
+        font-size: 0.72rem;
+        font-weight: 800;
+        white-space: nowrap;
     }
 
     .code-status {
@@ -378,7 +390,7 @@
             padding: 1.35rem;
         }
 
-        .email-row,
+        .contact-row,
         .code-row {
             grid-template-columns: 1fr;
         }
@@ -395,10 +407,10 @@
         <aside class="register-hero" aria-label="Giới thiệu Chill Drink">
             <div>
                 <h1>Đăng ký tài khoản Chill Drink thật nhanh</h1>
-                <p>Xác minh bằng Gmail để đặt đồ uống, lưu ưu đãi và theo dõi đơn hàng của bạn.</p>
+                <p>Nhập một ô duy nhất cho Gmail hoặc số điện thoại, hệ thống sẽ tự nhận diện và gửi mã xác minh phù hợp.</p>
                 <div class="register-hero__badge">
-                    Mã xác minh gửi qua Gmail<br>
-                    Không dùng xác minh số điện thoại
+                    1 ô duy nhất cho Gmail hoặc SĐT<br>
+                    Mã tự kiểm tra khi nhập đủ 6 số
                 </div>
             </div>
 
@@ -430,30 +442,29 @@
                     <input id="name" type="text" name="name" value="{{ old('name') }}" class="form-control register-input @error('name') is-invalid @enderror" placeholder="Vui lòng nhập họ và tên" required autofocus autocomplete="name">
                     @error('name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
 
-                    <input id="phone" type="tel" name="phone" value="{{ old('phone') }}" class="form-control register-input @error('phone') is-invalid @enderror" placeholder="Vui lòng nhập số điện thoại" required autocomplete="tel">
-                    @error('phone') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                    <input type="hidden" name="contact_type" value="{{ old('contact_type') }}" data-contact-type>
+                    <input type="hidden" name="firebase_id_token" value="{{ old('firebase_id_token') }}" data-firebase-token>
+                    <input type="hidden" name="firebase_uid" value="{{ old('firebase_uid') }}" data-firebase-uid>
 
-                    <div class="email-row">
+                    <div class="contact-row">
                         <div>
-                            <input id="email" type="email" name="email" value="{{ old('email') }}" class="form-control register-input @error('email') is-invalid @enderror" placeholder="Vui lòng nhập Gmail" required autocomplete="username">
-                            @error('email') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                            <input id="contact" type="text" name="contact" value="{{ old('contact', old('email', old('phone'))) }}" class="form-control register-input @error('contact') is-invalid @enderror" placeholder="Vui lòng nhập Gmail hoặc số điện thoại" required autocomplete="username" inputmode="email" data-contact-input>
+                            @error('contact') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                         </div>
-                        <button type="button" class="btn btn-code" data-send-code-url="{{ route('register.email-code.send') }}">
+                        <button type="button" class="btn btn-code" data-send-code-url="{{ route('register.email-code.send') }}" data-contact-send>
                             Lấy mã
                         </button>
                     </div>
 
                     <div class="code-row">
                         <div>
-                            <input id="email_verification_code" type="text" name="email_verification_code" value="{{ old('email_verification_code') }}" class="form-control register-input @error('email_verification_code') is-invalid @enderror" placeholder="Vui lòng nhập mã xác minh Gmail" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code">
+                            <input id="email_verification_code" type="text" name="email_verification_code" value="{{ old('email_verification_code') }}" class="form-control register-input @error('email_verification_code') is-invalid @enderror" placeholder="Vui lòng nhập mã xác minh" inputmode="numeric" pattern="[0-9]*" maxlength="6" required autocomplete="one-time-code" data-verification-code>
                             @error('email_verification_code') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                         </div>
-                        <button type="button" class="btn btn-verify-code" data-verify-code-url="{{ route('register.email-code.verify') }}">
-                            Xác minh
-                        </button>
                     </div>
 
                     <div class="code-status" data-code-status></div>
+                    <div id="register-phone-recaptcha" class="d-none"></div>
 
                     <input id="password" type="password" name="password" class="form-control register-input @error('password') is-invalid @enderror" placeholder="Vui lòng nhập mật khẩu" required autocomplete="new-password">
                     @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
@@ -491,14 +502,31 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.querySelector('[data-register-form]');
-        const emailInput = form?.querySelector('input[name="email"]');
-        const sendButton = form?.querySelector('[data-send-code-url]');
-        const verifyButton = form?.querySelector('[data-verify-code-url]');
-        const codeInput = form?.querySelector('input[name="email_verification_code"]');
+        const contactInput = form?.querySelector('[data-contact-input]');
+        const contactTypeInput = form?.querySelector('[data-contact-type]');
+        const sendButton = form?.querySelector('[data-contact-send]');
+        const codeInput = form?.querySelector('[data-verification-code]');
+        const contactHint = form?.querySelector('[data-contact-hint]');
+        const contactModePill = form?.querySelector('[data-contact-mode-pill]');
         const status = form?.querySelector('[data-code-status]');
+        const firebaseTokenInput = form?.querySelector('[data-firebase-token]');
+        const firebaseUidInput = form?.querySelector('[data-firebase-uid]');
+        const phoneRecaptcha = document.getElementById('register-phone-recaptcha');
+        const emailVerifyUrl = sendButton?.dataset.sendCodeUrl;
+        const firebaseConfig = @json(config('services.firebase.phone_auth.web_config'));
         let countdownTimer = null;
+        let currentMode = null;
+        let lastContactValue = '';
+        let verified = false;
+        let verifying = false;
+        let confirmationResult = null;
+        let recaptchaVerifier = null;
+        let firebaseApp = null;
+        let firebaseAuth = null;
+        let firebaseLoaded = false;
+        let autoVerifiedCode = '';
 
-        if (!form || !emailInput || !sendButton || !verifyButton || !codeInput || !status) {
+        if (!form || !contactInput || !contactTypeInput || !sendButton || !codeInput || !status) {
             return;
         }
 
@@ -509,6 +537,133 @@
             status.classList.toggle('is-error', type === 'error');
         };
 
+        const normalizeVietnamPhone = (value) => {
+            const compact = String(value || '').trim().replace(/[\s().-]/g, '');
+
+            if (compact.startsWith('+')) {
+                return compact;
+            }
+
+            if (compact.startsWith('0')) {
+                return '+84' + compact.slice(1);
+            }
+
+            if (compact.startsWith('84')) {
+                return '+' + compact;
+            }
+
+            return '+84' + compact;
+        };
+
+        const detectContactMode = (value) => {
+            const text = String(value || '').trim();
+
+            if (!text) {
+                return null;
+            }
+
+            if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+                return 'email';
+            }
+
+            const phone = normalizeVietnamPhone(text);
+            if (/^\+\d{9,15}$/.test(phone)) {
+                return 'phone';
+            }
+
+            return null;
+        };
+
+        const loadFirebase = async () => {
+            if (firebaseLoaded) {
+                return true;
+            }
+
+            if (!firebaseConfig || Object.keys(firebaseConfig || {}).length === 0) {
+                return false;
+            }
+
+            const [{ initializeApp }, { getAuth, RecaptchaVerifier, signInWithPhoneNumber }] = await Promise.all([
+                import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
+                import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'),
+            ]);
+
+            if (!firebaseApp) {
+                firebaseApp = initializeApp(firebaseConfig);
+            }
+
+            firebaseAuth = getAuth(firebaseApp);
+            firebaseAuth.languageCode = 'vi';
+            window.__registerPhoneFirebase = { RecaptchaVerifier, signInWithPhoneNumber };
+            firebaseLoaded = true;
+            return true;
+        };
+
+        const ensureRecaptcha = async () => {
+            const loaded = await loadFirebase();
+            if (!loaded) {
+                return null;
+            }
+
+            const { RecaptchaVerifier } = window.__registerPhoneFirebase || {};
+            if (!recaptchaVerifier && RecaptchaVerifier && phoneRecaptcha) {
+                recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, phoneRecaptcha, {
+                    size: 'invisible',
+                });
+            }
+
+            return recaptchaVerifier;
+        };
+
+        const setModeUI = (mode) => {
+            currentMode = mode;
+            contactTypeInput.value = mode || '';
+
+            if (contactModePill) {
+                contactModePill.textContent = mode === 'phone' ? 'Nhận diện: SĐT' : mode === 'email' ? 'Nhận diện: Gmail' : '';
+                contactModePill.classList.toggle('d-none', !mode);
+            }
+
+            if (contactHint) {
+                contactHint.textContent = mode === 'phone'
+                    ? 'Hệ thống sẽ gửi mã SMS tới số điện thoại này.'
+                    : mode === 'email'
+                        ? 'Hệ thống sẽ gửi mã xác minh tới Gmail này.'
+                        : 'Nhập Gmail hoặc số điện thoại. Hệ thống sẽ tự nhận diện ngay khi bạn gõ.';
+            }
+
+            if (sendButton) {
+                sendButton.textContent = mode === 'phone' ? 'Gửi mã SMS' : 'Lấy mã';
+                sendButton.classList.toggle('is-phone', mode === 'phone');
+            }
+
+            if (contactInput) {
+                contactInput.setAttribute('inputmode', mode === 'phone' ? 'tel' : 'email');
+                contactInput.setAttribute('autocomplete', mode === 'phone' ? 'tel' : 'username');
+            }
+        };
+
+        const resetVerification = (keepContact = true) => {
+            verified = false;
+            verifying = false;
+            confirmationResult = null;
+            autoVerifiedCode = '';
+
+            if (firebaseTokenInput) firebaseTokenInput.value = '';
+            if (firebaseUidInput) firebaseUidInput.value = '';
+            if (!keepContact && contactInput) contactInput.value = '';
+            codeInput.value = '';
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            if (sendButton) {
+                sendButton.disabled = false;
+                sendButton.textContent = currentMode === 'phone' ? 'Gửi mã SMS' : 'Lấy mã';
+            }
+            if (codeInput) {
+                codeInput.removeAttribute('readonly');
+            }
+        };
+
         const startCountdown = (seconds = 60) => {
             clearInterval(countdownTimer);
             let remaining = seconds;
@@ -517,7 +672,7 @@
 
             countdownTimer = setInterval(() => {
                 remaining -= 1;
-                sendButton.textContent = remaining > 0 ? `${remaining}s` : 'Lấy mã';
+                sendButton.textContent = remaining > 0 ? `${remaining}s` : (currentMode === 'phone' ? 'Gửi mã SMS' : 'Lấy mã');
 
                 if (remaining <= 0) {
                     clearInterval(countdownTimer);
@@ -537,90 +692,205 @@
             }
         };
 
-        sendButton.addEventListener('click', async () => {
-            if (!emailInput.value.trim()) {
-                emailInput.focus();
-                setStatus('Vui lòng nhập Gmail trước khi lấy mã.', 'error');
+        const syncMode = () => {
+            const nextMode = detectContactMode(contactInput.value);
+
+            if (contactInput.value.trim() !== lastContactValue) {
+                resetVerification(true);
+                lastContactValue = contactInput.value.trim();
+            }
+
+            setModeUI(nextMode);
+            return nextMode;
+        };
+
+        contactInput.addEventListener('input', () => {
+            syncMode();
+        });
+
+        codeInput.addEventListener('input', () => {
+            const digits = codeInput.value.replace(/\D/g, '').slice(0, 6);
+            if (codeInput.value !== digits) {
+                codeInput.value = digits;
+            }
+
+            if (digits.length < 6) {
+                autoVerifiedCode = '';
                 return;
             }
 
-            sendButton.disabled = true;
-            sendButton.textContent = 'Đang gửi...';
-            setStatus('Đang gửi mã xác minh...');
+            if (verifying || verified || autoVerifiedCode === digits) {
+                return;
+            }
+
+            autoVerifiedCode = digits;
+            verifyCode(digits);
+        });
+
+        async function verifyCode(code) {
+            const mode = syncMode();
+            if (!mode) {
+                setStatus('Vui lòng nhập Gmail hoặc số điện thoại hợp lệ.', 'error');
+                return;
+            }
+
+            verifying = true;
 
             try {
-                const response = await fetch(sendButton.dataset.sendCodeUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
-                    },
-                    body: JSON.stringify({ email: emailInput.value.trim() }),
-                });
+                if (mode === 'email') {
+                    const response = await fetch('{{ route('register.email-code.verify') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
+                        },
+                        body: JSON.stringify({
+                            email: contactInput.value.trim().toLowerCase(),
+                            email_verification_code: code,
+                        }),
+                    });
 
-                if (!response.ok) {
-                    setStatus(await getErrorMessage(response), 'error');
+                    if (!response.ok) {
+                        autoVerifiedCode = '';
+                        setStatus(await getErrorMessage(response), 'error');
+                        return;
+                    }
+
+                    const data = await response.json();
+                    verified = true;
+                    setStatus(data.message || 'Gmail đã được xác minh.', 'success');
+                    return;
+                }
+
+                if (mode === 'phone') {
+                    if (!confirmationResult) {
+                        autoVerifiedCode = '';
+                        setStatus('Vui lòng lấy mã SMS trước khi xác minh.', 'error');
+                        return;
+                    }
+
+                    const result = await confirmationResult.confirm(code);
+                    const token = await result.user.getIdToken(true);
+
+                    if (firebaseTokenInput) firebaseTokenInput.value = token;
+                    if (firebaseUidInput) firebaseUidInput.value = result.user.uid || '';
+                    verified = true;
+                    setStatus('Số điện thoại đã được xác minh.', 'success');
+                    return;
+                }
+            } catch (error) {
+                autoVerifiedCode = '';
+                setStatus(error?.message || 'Không thể xác minh mã. Vui lòng thử lại.', 'error');
+            } finally {
+                verifying = false;
+            }
+        }
+
+        sendButton.addEventListener('click', async () => {
+            const mode = syncMode();
+            const contactValue = contactInput.value.trim();
+
+            if (!mode) {
+                setStatus('Vui lòng nhập Gmail hoặc số điện thoại hợp lệ trước khi lấy mã.', 'error');
+                contactInput.focus();
+                return;
+            }
+
+            if (mode === 'email') {
+                sendButton.disabled = true;
+                sendButton.textContent = 'Đang gửi...';
+                setStatus('Đang gửi mã xác minh Gmail...');
+
+                try {
+                    const response = await fetch(emailVerifyUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
+                        },
+                        body: JSON.stringify({ email: contactValue.toLowerCase() }),
+                    });
+
+                    if (!response.ok) {
+                        setStatus(await getErrorMessage(response), 'error');
+                        sendButton.textContent = 'Lấy mã';
+                        sendButton.disabled = false;
+                        return;
+                    }
+
+                    const data = await response.json();
+                    setStatus(data.message || 'Mã xác minh đã được gửi. Vui lòng kiểm tra Gmail.', 'success');
+                    startCountdown(60);
+                    codeInput.focus();
+                    return;
+                } catch (error) {
+                    setStatus('Không thể gửi mã. Kiểm tra kết nối hoặc cấu hình mail.', 'error');
+                    clearInterval(countdownTimer);
                     sendButton.textContent = 'Lấy mã';
                     sendButton.disabled = false;
                     return;
                 }
+            }
 
-                const data = await response.json();
-                setStatus(data.message || 'Mã xác minh đã được gửi. Vui lòng kiểm tra Gmail.', 'success');
+            const normalizedPhone = normalizeVietnamPhone(contactValue);
+            if (!/^\+\d{9,15}$/.test(normalizedPhone)) {
+                setStatus('Số điện thoại không hợp lệ. Vui lòng nhập dạng 0988832678 hoặc +84988832678.', 'error');
+                contactInput.focus();
+                return;
+            }
+
+            setStatus('Đang gửi mã SMS...');
+
+            try {
+                const recaptcha = await ensureRecaptcha();
+                if (!recaptcha || !firebaseAuth) {
+                    setStatus('Chức năng SMS chưa được cấu hình đầy đủ. Vui lòng dùng Gmail.', 'error');
+                    return;
+                }
+
+                const { signInWithPhoneNumber } = window.__registerPhoneFirebase || {};
+                if (!signInWithPhoneNumber) {
+                    setStatus('Không tải được Firebase SMS. Vui lòng thử lại sau.', 'error');
+                    return;
+                }
+
+                const confirmation = await signInWithPhoneNumber(firebaseAuth, normalizedPhone, recaptcha);
+                confirmationResult = confirmation;
+                contactInput.value = normalizedPhone;
+                lastContactValue = normalizedPhone;
+                setModeUI('phone');
+                setStatus(`Đã gửi mã SMS tới ${normalizedPhone}. Nhập đủ 6 số để xác minh tự động.`, 'success');
                 startCountdown(60);
                 codeInput.focus();
             } catch (error) {
-                setStatus('Không thể gửi mã. Kiểm tra kết nối hoặc cấu hình mail.', 'error');
+                console.error('Phone verification send failed:', error);
+                setStatus(error.message || 'Không thể gửi mã SMS. Vui lòng thử lại.', 'error');
                 clearInterval(countdownTimer);
-                sendButton.textContent = 'Lấy mã';
+                sendButton.textContent = 'Gửi mã SMS';
                 sendButton.disabled = false;
             }
         });
 
-        verifyButton.addEventListener('click', async () => {
-            if (!emailInput.value.trim()) {
-                emailInput.focus();
-                setStatus('Vui lòng nhập Gmail trước khi xác minh.', 'error');
+        form.addEventListener('submit', (event) => {
+            const mode = syncMode();
+            if (!mode) {
+                event.preventDefault();
+                setStatus('Vui lòng nhập Gmail hoặc số điện thoại hợp lệ.', 'error');
+                contactInput.focus();
                 return;
             }
 
-            if (!codeInput.value.trim()) {
+            if (!verified) {
+                event.preventDefault();
+                setStatus('Vui lòng xác minh mã trước khi đăng ký.', 'error');
                 codeInput.focus();
-                setStatus('Vui lòng nhập mã xác minh.', 'error');
                 return;
-            }
-
-            verifyButton.disabled = true;
-            setStatus('Đang xác minh Gmail...');
-
-            try {
-                const response = await fetch(verifyButton.dataset.verifyCodeUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
-                    },
-                    body: JSON.stringify({
-                        email: emailInput.value.trim(),
-                        email_verification_code: codeInput.value.trim(),
-                    }),
-                });
-
-                if (!response.ok) {
-                    setStatus(await getErrorMessage(response), 'error');
-                    return;
-                }
-
-                const data = await response.json();
-                setStatus(data.message || 'Gmail đã được xác minh.', 'success');
-            } catch (error) {
-                setStatus('Không thể xác minh mã. Vui lòng thử lại.', 'error');
-            } finally {
-                verifyButton.disabled = false;
             }
         });
+
+        syncMode();
     });
 </script>
 @endsection

@@ -1614,11 +1614,21 @@
                     const sz = sizeBtn.dataset.value;
                     if (sz === 'S') {
                         sizeBtn.dataset.extraPrice = '0';
-                    } else if (sizesMap[sz] !== undefined) {
-                        const extraPrice = Number(sizesMap[sz]);
-                        sizeBtn.dataset.extraPrice = extraPrice;
                         const small = sizeBtn.querySelector('small');
-                        if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
+                        if (small) small.textContent = 'Giá gốc';
+                        return;
+                    }
+
+                    const fallbackExtra = sz === 'M' ? 5000 : 10000;
+                    const rawPrice = sizesMap[sz] !== undefined ? Number(sizesMap[sz]) : null;
+                    const extraPrice = Number.isFinite(rawPrice)
+                        ? (rawPrice >= currentBasePrice ? Math.max(0, rawPrice - currentBasePrice) : Math.max(0, rawPrice))
+                        : fallbackExtra;
+
+                    sizeBtn.dataset.extraPrice = String(extraPrice);
+                    const small = sizeBtn.querySelector('small');
+                    if (small) {
+                        small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
                     }
                 });
 

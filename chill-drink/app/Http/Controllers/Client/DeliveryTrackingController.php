@@ -113,6 +113,10 @@ class DeliveryTrackingController extends Controller
         $handoverPending = $shipper
             ? app(ShipperIncidentService::class)->pendingHandoverForOrder($order, $shipper)
             : null;
+        $pendingIncident = $shipper
+            ? app(ShipperIncidentService::class)->pendingIncident($order)
+            : null;
+        $driverIncidentPending = ($pendingIncident['incident_type'] ?? null) === 'driver_issue';
         $bundleNotice = app(ShipperBundleService::class)->customerNotice($order);
 
         $tracking = $shipper ? $this->trackingSnapshot($order, $shipper) : null;
@@ -271,6 +275,10 @@ class DeliveryTrackingController extends Controller
 
         if ($hasLiveGps && $shipperAccepted && ! $gpsFresh) {
             $message = 'GPS tài xế đang cập nhật chậm. Bản đồ giữ vị trí ổn định gần nhất của chính chuyến này để tránh nhảy sai.';
+        }
+
+        if ($driverIncidentPending) {
+            $message = 'Xin lỗi bạn, chuyến giao đang gặp trở ngại nên có thể chậm hơn dự kiến. Chill Drink đang hỗ trợ tài xế để tiếp tục giao hàng sớm nhất.';
         }
 
         if ($bundleNotice && ! in_array($status, [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true)) {

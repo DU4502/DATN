@@ -15,9 +15,10 @@
     $showSearch = $showSearch ?? false;
     $searchValue = $searchValue ?? '';
     $searchPlaceholder = $searchPlaceholder ?? 'Tìm số nhà, tên đường, phường/xã...';
+    $showTerritoryLabels = $showTerritoryLabels ?? false;
 @endphp
 
-<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}" data-address-target="{{ $addressTarget ?? '' }}" @if($autoFillHouseTarget) data-auto-fill-house-target="{{ $autoFillHouseTarget }}" @endif @if($autoFillAreaTarget) data-auto-fill-area-target="{{ $autoFillAreaTarget }}" @endif @if($autoFillStreetTarget) data-auto-fill-street-target="{{ $autoFillStreetTarget }}" @endif @if($showSearch) data-location-search-enabled="1" @endif>
+<div class="location-picker" data-location-picker="{{ $pickerId }}" data-default-lat="{{ $defaultLat }}" data-default-lng="{{ $defaultLng }}" data-default-zoom="{{ $defaultZoom }}" data-initial-lat="{{ $latValue }}" data-initial-lng="{{ $lngValue }}" data-address-target="{{ $addressTarget ?? '' }}" @if($autoFillHouseTarget) data-auto-fill-house-target="{{ $autoFillHouseTarget }}" @endif @if($autoFillAreaTarget) data-auto-fill-area-target="{{ $autoFillAreaTarget }}" @endif @if($autoFillStreetTarget) data-auto-fill-street-target="{{ $autoFillStreetTarget }}" @endif @if($showSearch) data-location-search-enabled="1" @endif @if($showTerritoryLabels) data-show-territory-labels="1" @endif>
     <div class="location-picker-head d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
         <div>
             <div class="location-picker-label">{{ $label }}</div>

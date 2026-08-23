@@ -37,10 +37,12 @@ class ShipController extends Controller
 
     private const ISSUE_REASONS = [
         'vehicle_problem' => 'Xe gặp sự cố',
+        'accident' => 'Tai nạn / va chạm',
         'emergency' => 'Có việc khẩn cấp / không thể tiếp tục',
         'health_problem' => 'Sức khỏe không đảm bảo',
         'phone_problem' => 'Điện thoại / GPS gặp sự cố',
         'store_problem' => 'Có vấn đề khi nhận hàng tại cửa hàng',
+        'customer_cancel_request' => 'Khách muốn hủy đơn',
         'customer_unreachable' => 'Không liên hệ được khách',
         'address_problem' => 'Không tìm thấy điểm giao',
         'customer_changed_location' => 'Khách đổi điểm nhận',
@@ -49,8 +51,27 @@ class ShipController extends Controller
         'other' => 'Sự cố khác',
     ];
 
+    private const ISSUE_REASON_FLOWS = [
+        'driver_issue' => [
+            'label' => 'Sự cố tài xế / chuyến giao',
+            'notice' => 'Đơn không bị hủy. Admin hoặc Super Admin sẽ quyết định giữ tài xế hay điều phối người thay thế.',
+            'reasons' => [
+                'vehicle_problem', 'accident', 'emergency', 'health_problem',
+                'phone_problem', 'store_problem', 'damaged_order', 'other',
+            ],
+        ],
+        'customer_cancel' => [
+            'label' => 'Khách muốn hủy đơn',
+            'notice' => 'Yêu cầu chỉ được ghi nhận nội bộ. Admin hoặc Super Admin sẽ quyết định tiếp tục giao hay duyệt hủy đơn.',
+            'reasons' => [
+                'customer_cancel_request', 'customer_unreachable',
+                'customer_changed_location', 'customer_refused',
+            ],
+        ],
+    ];
+
     private const ARRIVAL_ACCURACY_MAX_M = 120.0;
-    private const ARRIVAL_RADIUS_M = 50.0;
+    private const ARRIVAL_RADIUS_M = 250.0;
     private const ARRIVAL_SINGLE_POINT_ACCURACY_M = 50.0;
     private const ARRIVAL_FUZZY_REQUIRED_POINTS = 2;
     private const ARRIVAL_FUZZY_WINDOW_SECONDS = 15;
@@ -275,6 +296,7 @@ class ShipController extends Controller
             'shipperInfo' => $shipperInfo,
             'isAccepted' => $isAccepted,
             'issueReasons' => self::ISSUE_REASONS,
+            'issueFlows' => self::issueFlowsForView(),
             'pendingIssue' => $pendingIssue,
             'handoverContext' => $handoverContext,
             'bundleTrip' => $bundleTrip,
@@ -727,6 +749,7 @@ class ShipController extends Controller
             'order' => $order,
             'shipper' => $shipper,
             'issueReasons' => self::ISSUE_REASONS,
+            'issueFlows' => self::issueFlowsForView(),
             'isAccepted' => $isAccepted,
             'customerArrivalConfirmed' => $customerArrivalConfirmed,
             'arrivalEvidence' => $arrivalEvidence,
@@ -797,8 +820,7 @@ class ShipController extends Controller
                 (float) $validated['latitude'],
                 (float) $validated['longitude'],
                 (float) $target['latitude'],
-                (float) $target['longitude'],
-                ['prefer_local_roads' => true]
+                (float) $target['longitude']
             );
 
         return response()->json([
@@ -1193,9 +1215,14 @@ class ShipController extends Controller
     public function reportIssue(Request $request, $id)
     {
         $validated = $request->validate([
+            'incident_type' => ['required', Rule::in(array_keys(self::ISSUE_REASON_FLOWS))],
             'reason' => ['required', Rule::in(array_keys(self::ISSUE_REASONS))],
             'reason_detail' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        if (! in_array($validated['reason'], self::ISSUE_REASON_FLOWS[$validated['incident_type']]['reasons'], true)) {
+            return back()->withErrors(['reason' => 'Lý do không phù hợp với luồng sự cố đã chọn.'])->withInput();
+        }
 
         $shipper = $this->getShipper();
         $order = Order::whereKey($id)
@@ -1229,7 +1256,7 @@ class ShipController extends Controller
             ''
         );
 
-        $this->addShipmentHistory($shipmentId, 'issue_reported', $description);
+        $this->addShipmentHistory($shipmentId, 'issue_reported', $description, $validated['incident_type']);
         $this->updateShipment($shipmentId, [
             'status' => 'issue_pending',
             // Nếu là chuyến đang chờ bàn giao thì giữ nguyên JSON note để không mất điểm bàn giao.
@@ -1239,7 +1266,6 @@ class ShipController extends Controller
         ]);
         $order->touch();
         $freshOrder = $order->fresh(['branch']);
-        RealtimeOrderNotifier::orderStatusUpdated($freshOrder);
 
         // Sự cố thuộc trách nhiệm vận hành của Admin chi nhánh; Super Admin nhận
         // đồng thời để giám sát toàn hệ thống. Database notification + websocket
@@ -1249,7 +1275,13 @@ class ShipController extends Controller
             \App\Support\RealtimeShipperIncidentNotifier::reported($freshOrder, $incident);
         }
 
-        return back()->with('success', 'Đã báo sự cố. Admin chi nhánh và Super Admin đã được cảnh báo; đơn vẫn giữ nguyên cho tới khi quản lý quyết định giữ shipper hoặc điều phối người thay thế.');
+        if ($validated['incident_type'] === 'driver_issue' && $incident) {
+            RealtimeOrderNotifier::deliveryDelayReported($freshOrder, $description, (int) ($incident['incident_id'] ?? 0));
+        }
+
+        return back()->with('success', $validated['incident_type'] === 'customer_cancel'
+            ? 'Đã ghi nhận yêu cầu hủy nội bộ. Chỉ Admin hoặc Super Admin quyết định; chưa có thay đổi nào được thông báo cho khách.'
+            : 'Đã báo sự cố. Admin chi nhánh và Super Admin đã được cảnh báo; khách hàng đã nhận thông báo xin lỗi về việc giao chậm.');
     }
 
     public function profile()
@@ -1666,7 +1698,7 @@ class ShipController extends Controller
         } elseif (! $accuracyOk) {
             $message = 'GPS hiện chưa đủ chính xác (±'.(int) round($accuracy).' m). Hãy chờ tín hiệu tốt hơn.';
         } elseif ($inside) {
-            $message = 'Bạn đã ở rất gần điểm đến. Hệ thống đang kiểm tra vị trí.';
+            $message = 'Bạn đã ở trong bán kính '.(int) round($radius).' m quanh điểm đến. Hệ thống đang kiểm tra vị trí.';
         } else {
             $message = 'Bạn còn cách điểm đến khoảng '.(int) round($distance).' m.';
         }
@@ -2148,8 +2180,7 @@ class ShipController extends Controller
                 (float) $startPoint['latitude'],
                 (float) $startPoint['longitude'],
                 (float) $stage['point']['latitude'],
-                (float) $stage['point']['longitude'],
-                ['prefer_local_roads' => true]
+                (float) $stage['point']['longitude']
             );
 
             if (! is_array($stageRoute) || empty($stageRoute['geometry'])) {
@@ -2197,8 +2228,8 @@ class ShipController extends Controller
             'longitude' => (float) ($mainRouteGroup['point']['longitude'] ?? 0),
         ]]);
 
-        $altRoute = $this->routeThroughWithOptions($routing, $mainPoints);
-        if ($altRoute && (! isset($altRoute['geometry']) || $altRoute['geometry'] === $mainRoute['geometry'])) {
+        $altRoute = $this->routeThroughWithOptions($routing, $mainPoints, ['prefer_local_roads' => true]);
+        if (! $this->shouldShowBundleAlternateRoute($mainRoute, $altRoute)) {
             $altRoute = null;
         }
 
@@ -2292,6 +2323,32 @@ class ShipController extends Controller
         ];
     }
 
+    /**
+     * Chỉ giữ tuyến phụ khi nó thật sự đáng so sánh với tuyến chính.
+     * Tuyến phải khác geometry và ngắn hơn đủ rõ ràng để tránh làm rối map.
+     */
+    private function shouldShowBundleAlternateRoute(array $mainRoute, ?array $altRoute): bool
+    {
+        if (! is_array($altRoute) || empty($altRoute['geometry']) || (bool) ($altRoute['fallback'] ?? false)) {
+            return false;
+        }
+
+        if (($altRoute['geometry'] ?? []) === ($mainRoute['geometry'] ?? [])) {
+            return false;
+        }
+
+        $mainDistance = (float) ($mainRoute['distance_m'] ?? 0);
+        $altDistance = (float) ($altRoute['distance_m'] ?? 0);
+        if ($mainDistance <= 0 || $altDistance <= 0 || $altDistance >= $mainDistance) {
+            return false;
+        }
+
+        $distanceGain = $mainDistance - $altDistance;
+        $minGain = max(150.0, $mainDistance * 0.08);
+
+        return $distanceGain >= $minGain;
+    }
+
     private function createShipment(int $orderId, int $shipperId): ?int
     {
         if (! Schema::hasTable('shipments')) {
@@ -2345,18 +2402,37 @@ class ShipController extends Controller
             ->exists();
     }
 
-    private function addShipmentHistory(?int $shipmentId, string $status, ?string $description = null): void
+    private function addShipmentHistory(?int $shipmentId, string $status, ?string $description = null, ?string $incidentType = null): void
     {
         if (! $shipmentId || ! Schema::hasTable('shipment_history')) {
             return;
         }
 
-        DB::table('shipment_history')->insert([
+        $values = [
             'shipment_id' => $shipmentId,
             'status' => $status,
             'description' => $description,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+
+        if ($incidentType !== null && Schema::hasColumn('shipment_history', 'incident_type')) {
+            $values['incident_type'] = $incidentType;
+        }
+
+        DB::table('shipment_history')->insert($values);
+    }
+
+    private static function issueFlowsForView(): array
+    {
+        return collect(self::ISSUE_REASON_FLOWS)
+            ->map(fn (array $flow) => [
+                'label' => $flow['label'],
+                'notice' => $flow['notice'],
+                'reasons' => collect($flow['reasons'])
+                    ->mapWithKeys(fn (string $reason) => [$reason => self::ISSUE_REASONS[$reason]])
+                    ->all(),
+            ])
+            ->all();
     }
 }

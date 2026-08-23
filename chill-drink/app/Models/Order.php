@@ -119,6 +119,11 @@ class Order extends Model
         return $this->hasMany(OrderIssueReport::class, 'order_id');
     }
 
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'order_id');
+    }
+
     public function codReceivable()
     {
         return $this->hasOne(ShipperCodReceivable::class);

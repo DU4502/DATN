@@ -58,6 +58,8 @@
 </section>
 @endif
 
+@include('partials.vietnam-territory-labels')
+
 @once
 <style>
 .delivery-live-card{border:1px solid #dcebe7;border-radius:18px;overflow:hidden;background:#fff;--delivery-bearing:0deg}
@@ -68,6 +70,20 @@
 .delivery-live-dot{width:9px;height:9px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 5px rgba(22,163,74,.12);animation:deliveryPulse 1.6s infinite}
 .delivery-live-map-wrap{padding:12px;background:#fbfdfc}
 .delivery-live-map{height:360px;background:#eaf1ef;position:relative;border-radius:16px;overflow:hidden;border:1px solid #e5efec;isolation:isolate}
+.delivery-live-map.is-loading::after{
+    content:'Đang tải bản đồ...';
+    position:absolute;
+    inset:0;
+    z-index:1100;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#0d9373;
+    font-size:.82rem;
+    font-weight:800;
+    background:linear-gradient(135deg, rgba(247,253,250,.95), rgba(237,245,242,.92));
+    pointer-events:none;
+}
 .delivery-live-map-hint{font-size:.8rem;color:#68807a;margin-top:9px;line-height:1.45}
 .delivery-live-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:18px;background:radial-gradient(circle at top,#f7fdfa 0%,#edf5f2 68%,#e7efec 100%);z-index:1000}
 .delivery-live-placeholder.is-hidden{display:none}
@@ -317,15 +333,66 @@
             map.scrollWheelZoom.enable();
             map.dragging.enable();
             map.touchZoom.enable();
+            mapEl.classList.add('is-loading');
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            const clearMapLoading = () => {
+                mapEl.classList.remove('is-loading');
+            };
+
+            const primaryTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 keepBuffer: 6,
-                detectRetina: true,
+                detectRetina: false,
                 updateWhenIdle: false,
-                updateWhenZooming: false,
+                updateWhenZooming: true,
+                subdomains: 'abc',
                 attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
+            });
+            const fallbackTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+                keepBuffer: 6,
+                detectRetina: false,
+                updateWhenIdle: false,
+                updateWhenZooming: true,
+                subdomains: 'abcd',
+                r: window.devicePixelRatio > 1 ? '@2x' : '',
+                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+            });
+            let tileFallbackSwapped = false;
+            let tilesSettled = false;
+            let fallbackSwapTimer = null;
+
+            const finishTileLoading = () => {
+                if (tilesSettled) return;
+                tilesSettled = true;
+                if (fallbackSwapTimer) {
+                    window.clearTimeout(fallbackSwapTimer);
+                    fallbackSwapTimer = null;
+                }
+                clearMapLoading();
+            };
+
+            const swapToFallbackTiles = () => {
+                if (tileFallbackSwapped) return;
+                tileFallbackSwapped = true;
+                if (fallbackSwapTimer) {
+                    window.clearTimeout(fallbackSwapTimer);
+                    fallbackSwapTimer = null;
+                }
+                if (map.hasLayer(primaryTiles)) {
+                    map.removeLayer(primaryTiles);
+                }
+                fallbackTiles.addTo(map);
+            };
+
+            fallbackSwapTimer = window.setTimeout(swapToFallbackTiles, 1800);
+            primaryTiles.once('load', finishTileLoading);
+            primaryTiles.once('tileerror', swapToFallbackTiles);
+            fallbackTiles.once('load', finishTileLoading);
+            fallbackTiles.once('tileerror', finishTileLoading);
+            primaryTiles.addTo(map);
+            window.ChillDrinkVietnamTerritoryLabels?.addToLeaflet(map);
+            window.setTimeout(() => map.invalidateSize({pan:false}), 120);
 
             const prepIcon = L.divIcon({
                 className: '',
@@ -349,6 +416,8 @@
             let routeShadow = null;
             let routeLine = null;
             let lastGeometry = null;
+            let lastBranchPoint = null;
+            let lastCustomerPoint = null;
             let lastData = null;
             let lastMode = null;
             let pollBusy = false;
@@ -384,6 +453,14 @@
                 const target = Number.isFinite(bearing) ? normalizeBearing(bearing) : 0;
                 currentBearing = immediate ? target : smoothBearing(currentBearing, target, .38);
                 root.style.setProperty('--delivery-bearing', `${currentBearing.toFixed(2)}deg`);
+            };
+
+            const fitPreview = (a, b) => {
+                if (!validPoint(a) || !validPoint(b)) return;
+                headingMode = false;
+                setBearingVisual(0, true);
+                applyHeadingMap();
+                map.fitBounds(L.latLngBounds([a,b]), {padding:[55,55], maxZoom:16, animate:false});
             };
 
             const refreshMapSize = () => {
@@ -451,7 +528,7 @@
             mapEl.addEventListener('touchstart', disableHeadingForManualUse, {capture:true, passive:true});
             map.on('moveend zoomend', () => { if (headingMode) applyHeadingMap(); });
 
-            const drawRoute = geometry => {
+            const drawRoute = (geometry, isPreview = false) => {
                 if (!Array.isArray(geometry) || geometry.length < 2) return;
                 clearRoute();
                 routeShadow = L.polyline(geometry, {
@@ -459,8 +536,11 @@
                     lineJoin: 'round', className: 'delivery-live-route-shadow'
                 }).addTo(map);
                 routeLine = L.polyline(geometry, {
-                    color: '#0d9373', weight: 6, opacity: .95,
-                    lineJoin: 'round'
+                    color: '#0d9373',
+                    weight: 6,
+                    opacity: isPreview ? .82 : .95,
+                    lineJoin: 'round',
+                    dashArray: isPreview ? '12 10' : null
                 }).addTo(map);
             };
 
@@ -550,30 +630,24 @@
                 }
             };
 
-            const fitPreview = (a, b) => {
-                if (!validPoint(a) || !validPoint(b)) return;
-                headingMode = false;
-                setBearingVisual(0, true);
-                applyHeadingMap();
-                map.fitBounds(L.latLngBounds([a,b]), {padding:[55,55], maxZoom:16, animate:false});
-            };
-
             const renderData = (data, forceFit = false) => {
                 lastData = data;
                 const branch = toPoint(data.branch);
                 const customer = toPoint(data.customer);
                 const currentRaw = toPoint(data.current) || branch;
                 const shipperMode = typeof data.mode === 'string' && data.mode.startsWith('shipper');
+                lastBranchPoint = branch;
+                lastCustomerPoint = customer;
                 const apiGeometry = Array.isArray(data.route?.geometry)
                     ? data.route.geometry.map(toPoint).filter(validPoint)
                     : null;
 
                 if (apiGeometry && apiGeometry.length >= 2) {
                     lastGeometry = apiGeometry;
-                    drawRoute(lastGeometry);
+                    drawRoute(lastGeometry, !shipperMode);
                 } else if (!lastGeometry || lastMode !== data.mode) {
                     lastGeometry = validPoint(currentRaw) && validPoint(customer) ? [currentRaw, customer] : null;
-                    if (lastGeometry) drawRoute(lastGeometry);
+                    if (lastGeometry) drawRoute(lastGeometry, !shipperMode);
                 }
                 lastMode = data.mode;
                 routeRefreshAfterMs = Number.isFinite(Number(data.route_refresh_after_ms))
@@ -611,6 +685,11 @@
                 }
                 if (shipperEl) shipperEl.textContent = data.shipper?.name || (shipperMode ? 'Tài xế Chill Drink' : 'Quán đang chuẩn bị');
                 if (vehicleEl) vehicleEl.textContent = [data.shipper?.vehicle_type, data.shipper?.license_plate].filter(Boolean).join(' · ');
+                if (followBtn) {
+                    followBtn.innerHTML = shipperMode
+                        ? '<i class="bi bi-crosshair me-1"></i>Bám theo tài xế'
+                        : '<i class="bi bi-map me-1"></i>Bám theo lộ trình';
+                }
 
                 placeCustomer(customer, data);
                 if (shipperMode) placeShipper(current, data, !forceFit);
@@ -710,6 +789,14 @@
             };
 
             followBtn?.addEventListener('click', () => {
+                const shipperMode = !!(lastData && typeof lastData.mode === 'string' && lastData.mode.startsWith('shipper'));
+                if (!shipperMode && validPoint(lastBranchPoint) && validPoint(lastCustomerPoint)) {
+                    headingMode = false;
+                    following = true;
+                    fitPreview(lastBranchPoint, lastCustomerPoint);
+                    return;
+                }
+
                 following = true;
                 headingMode = true;
                 if (lastData) renderData(lastData, false);

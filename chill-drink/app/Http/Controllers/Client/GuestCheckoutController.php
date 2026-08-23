@@ -7,6 +7,7 @@ use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Services\OrderCodeGenerator;
+use App\Services\EmailRecipientVerificationService;
 use App\Services\ProductAvailabilityService;
 use App\Support\GuestOrderAccess;
 use App\Support\OrderDistancePolicy;
@@ -87,7 +88,7 @@ class GuestCheckoutController extends CheckoutController
         ));
     }
 
-    public function storeInfo(Request $request)
+    public function storeInfo(Request $request, EmailRecipientVerificationService $emailRecipientVerificationService)
     {
         if (auth()->check()) {
             return redirect()->route('checkout.index');
@@ -144,6 +145,14 @@ class GuestCheckoutController extends CheckoutController
         ]);
 
         $validated['guest_phone'] = $this->normalizeVietnamesePhoneNumber($validated['guest_phone']);
+
+        try {
+            $emailRecipientVerificationService->assertDeliverable($validated['guest_email']);
+        } catch (Throwable $e) {
+            throw ValidationException::withMessages([
+                'guest_email' => $e->getMessage(),
+            ]);
+        }
 
         if (
             ($validated['fulfillment_type'] ?? null) === 'delivery'
@@ -243,6 +252,8 @@ class GuestCheckoutController extends CheckoutController
             return redirect()->route('checkout.index');
         }
 
+        $emailRecipientVerificationService = app(EmailRecipientVerificationService::class);
+
         $guestInfo = session('guest_checkout');
 
         if (empty($guestInfo)) {
@@ -281,6 +292,15 @@ class GuestCheckoutController extends CheckoutController
                 'error',
                 'Giỏ hàng có sản phẩm demo chưa thể thanh toán. Vui lòng xóa sản phẩm đó và chọn lại từ danh sách sản phẩm thật.'
             );
+        }
+
+        try {
+            $emailRecipientVerificationService->assertDeliverable((string) ($guestInfo['guest_email'] ?? ''));
+        } catch (Throwable $e) {
+            return redirect()
+                ->route('checkout.guest.index')
+                ->withInput()
+                ->with('error', $e->getMessage());
         }
 
         try {
@@ -423,17 +443,17 @@ class GuestCheckoutController extends CheckoutController
 
             $this->removeCheckedOutItems($fullCart, $selectedKeys);
 
-            DB::commit();
-
-            session()->forget('guest_checkout');
-            GuestOrderAccess::remember($order);
-            GuestOrderAccess::storeConvertPayload($order);
-
             // Chỉ gửi email xác nhận cho COD orders
             // VNPay orders sẽ gửi email sau khi thanh toán thành công
             if ($order->payment_method !== 'vnpay') {
                 $this->sendEmailConfirmationRequest($order);
             }
+
+            DB::commit();
+
+            session()->forget('guest_checkout');
+            GuestOrderAccess::remember($order);
+            GuestOrderAccess::storeConvertPayload($order);
 
             // Chưa notify admin — đơn chỉ được chuyển lên admin sau khi guest xác nhận email
             // RealtimeOrderNotifier chỉ chạy sau khi confirmEmail()
@@ -592,7 +612,7 @@ class GuestCheckoutController extends CheckoutController
     {
         if (blank($order->guest_email)) {
             Log::warning('Guest order email skipped: no email address.', ['order_id' => $order->id]);
-            return;
+            throw new \RuntimeException('Không gửi được email xác nhận vì khách chưa cung cấp email hợp lệ. Đơn hàng chưa được tạo.');
         }
 
         try {
@@ -618,6 +638,8 @@ class GuestCheckoutController extends CheckoutController
                 'error_class'  => get_class($e),
                 'message'      => $e->getMessage(),
             ]);
+
+            throw new \RuntimeException('Không gửi được email xác nhận đến địa chỉ email của bạn. Đơn hàng chưa được tạo. Vui lòng kiểm tra lại email hoặc thử lại sau.');
         }
     }
 

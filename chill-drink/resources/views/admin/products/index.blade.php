@@ -2,8 +2,13 @@
 
 @section('page-title', 'Sản phẩm')
 
-@section('search-placeholder', 'Tìm đồ uống, mã sản phẩm...')
-@section('topbar-search-action', route('admin.products.index'))
+@section('search-placeholder', 'Tìm tên, mã hoặc giá...')
+@php
+    $productIndexRoute = request()->routeIs('admin.super-admin.manage.products.*')
+        ? 'admin.super-admin.manage.products.index'
+        : 'admin.products.index';
+@endphp
+@section('topbar-search-action', route($productIndexRoute))
 
 
 @section('content')
@@ -40,7 +45,7 @@
     <div class="d-flex flex-column gap-2 flex-grow-1">
 
         <div class="d-flex flex-wrap gap-2 align-items-center">
-            <a href="{{ route('admin.products.index') }}" class="btn {{ empty($filterParams) ? 'btn-primary' : 'btn-outline-primary' }}">Tất cả sản phẩm</a>
+            <a href="{{ route($productIndexRoute) }}" class="btn {{ empty($filterParams) ? 'btn-primary' : 'btn-outline-primary' }}">Tất cả sản phẩm</a>
             <button
                 class="btn {{ $hasAdvancedFilters ? 'btn-primary' : 'btn-outline-primary' }}"
                 type="button"
@@ -53,9 +58,9 @@
                     <span class="badge text-bg-light text-primary ms-1">{{ $activeFiltersCount }}</span>
                 @endif
             </button>
-            <a href="{{ route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
-            <a href="{{ route('admin.products.trash') }}" class="btn btn-outline-secondary"><i class="bi bi-trash me-1"></i>Thùng rác</a>
-            <form method="GET" action="{{ route('admin.products.index') }}" class="product-category-quick-filter">
+            <a href="{{ request()->routeIs('admin.super-admin.manage.products.*') ? route('admin.super-admin.manage.products.create') : route('admin.products.create') }}" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>Thêm mới</a>
+            <a href="{{ request()->routeIs('admin.super-admin.manage.products.*') ? route('admin.super-admin.manage.products.trash') : route('admin.products.trash') }}" class="btn btn-outline-secondary"><i class="bi bi-trash me-1"></i>Thùng rác</a>
+            <form method="GET" action="{{ route($productIndexRoute) }}" class="product-category-quick-filter">
                 @foreach(request()->except(['page', 'category']) as $key => $value)
                     @if(!is_array($value))
                         <input type="hidden" name="{{ $key }}" value="{{ $value }}">
@@ -71,12 +76,16 @@
             </form>
         </div>
     </div>
-    <div class="text-lg-end">
+    <div
+        class="text-lg-end"
+        data-product-summary
+        data-current-branch-id="{{ $managedBranch?->id ?? request('branch_id') }}"
+    >
         <p class="admin-kicker mb-1">Tình trạng bán</p>
         <div class="d-flex align-items-center gap-3">
-            <div><span class="admin-value text-primary">{{ $totalProducts }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
+            <div><span class="admin-value text-primary" data-product-total>{{ $totalProducts }}</span><small class="d-block text-secondary fw-bold">Tổng</small></div>
             <div style="width:1px;height:38px;background:var(--admin-border);"></div>
-            <div><span class="admin-value" style="color:var(--admin-danger);">{{ $unavailableProducts }}</span><small class="d-block text-secondary fw-bold">Hết hàng</small></div>
+            <div><span class="admin-value" style="color:var(--admin-danger);" data-product-unavailable>{{ $unavailableProducts }}</span><small class="d-block text-secondary fw-bold">Hết hàng</small></div>
         </div>
     </div>
 </section>
@@ -84,7 +93,7 @@
 
 
 <section class="admin-filter-panel {{ $hasAdvancedFilters ? '' : 'd-none' }}" id="productFilterPanel" data-admin-filter-panel>
-    <form method="GET" action="{{ route('admin.products.index') }}" class="admin-card p-4 mb-4">
+    <form method="GET" action="{{ route($productIndexRoute) }}" class="admin-card p-4 mb-4">
         <input type="hidden" name="q" value="{{ $filters['q'] ?? '' }}">
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
@@ -135,13 +144,16 @@
             </div>
             <div class="col-md-2 d-flex gap-2">
                 <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search me-1"></i>Lọc</button>
-                <a href="{{ route('admin.products.index') }}" class="btn btn-outline-primary" aria-label="Xóa bộ lọc"><i class="bi bi-x-lg"></i></a>
+                <a href="{{ route($productIndexRoute) }}" class="btn btn-outline-primary" aria-label="Xóa bộ lọc"><i class="bi bi-x-lg"></i></a>
             </div>
         </div>
     </form>
 </section>
 
-<section class="admin-card">
+<section
+    class="admin-card"
+    data-current-branch-id="{{ $managedBranch?->id ?? request('branch_id') }}"
+>
     <div class="table-responsive">
         <table class="table admin-table align-middle">
             <thead>
@@ -284,6 +296,66 @@
 
 @push('scripts')
 <script>
+function showProductToast(message, type = 'success') {
+    if (typeof window.showRealtimeToast === 'function') {
+        window.showRealtimeToast(message, type);
+        return;
+    }
+
+    let container = document.getElementById('productToastFallback');
+    if (! container) {
+        container = document.createElement('div');
+        container.id = 'productToastFallback';
+        container.style.cssText = 'position:fixed;top:84px;right:20px;z-index:10001;display:flex;flex-direction:column;gap:10px;max-width:calc(100vw - 40px);';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    const palette = {
+        success: { bg: '#ecfdf5', border: '#a7f3d0', color: '#065f46' },
+        warning: { bg: '#fffbeb', border: '#fde68a', color: '#92400e' },
+        info: { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
+        error: { bg: '#fef2f2', border: '#fecaca', color: '#b91c1c' },
+    }[type] || { bg: '#ecfdf5', border: '#a7f3d0', color: '#065f46' };
+
+    toast.textContent = message;
+    toast.style.cssText = `padding:12px 14px;border:1px solid ${palette.border};background:${palette.bg};color:${palette.color};border-radius:12px;box-shadow:0 14px 30px rgba(15,23,42,.12);font-weight:600;font-size:.85rem;`;
+    container.appendChild(toast);
+    window.setTimeout(() => toast.remove(), 2400);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const searchForm = document.querySelector('form.admin-search');
+    const searchInput = searchForm?.querySelector('input[name="q"]');
+
+    if (!searchForm || !searchInput) {
+        return;
+    }
+
+    let searchTimer = null;
+    let lastSubmittedValue = searchInput.value.trim();
+
+    searchInput.addEventListener('input', function () {
+        const currentValue = searchInput.value.trim();
+
+        if (currentValue === lastSubmittedValue) {
+            return;
+        }
+
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(function () {
+            lastSubmittedValue = searchInput.value.trim();
+
+            if (typeof searchForm.requestSubmit === 'function') {
+                searchForm.requestSubmit();
+                return;
+            }
+
+            searchForm.submit();
+        }, 300);
+    });
+});
+
 function updateProductAvailabilitySummary(productId) {
     const details = document.querySelector(`[data-availability-details="${productId}"]`);
     const summary = document.querySelector(`[data-availability-summary="${productId}"]`);
@@ -300,6 +372,25 @@ function updateProductAvailabilitySummary(productId) {
     if (unavailable > 0) parts.push(`${unavailable} chi nhánh hết hàng`);
     if (unassigned > 0) parts.push(`${unassigned} chưa áp dụng`);
     summaryText.textContent = parts.join(' • ');
+}
+
+function updateProductAvailabilityCounter(delta) {
+    if (! delta) return;
+
+    const unavailableCounter = document.querySelector('[data-product-unavailable]');
+    if (! unavailableCounter) return;
+
+    const current = Number.parseInt(unavailableCounter.textContent || '0', 10) || 0;
+    unavailableCounter.textContent = String(Math.max(0, current + delta));
+}
+
+function updateAvailabilityButtonState(button, isAvailable) {
+    const input = button?.closest('form')?.querySelector('[data-availability-input]');
+    if (input) {
+        input.value = isAvailable ? '0' : '1';
+    }
+
+    button.textContent = isAvailable ? 'Chuyển hết hàng' : 'Chuyển còn hàng';
 }
 
 document.addEventListener('click', function (event) {
@@ -333,8 +424,10 @@ document.addEventListener('submit', async function (event) {
     if (! form) return;
     event.preventDefault();
 
+    const row = form.closest('[data-availability-state]');
     const button = form.querySelector('[data-availability-button]');
     const previousLabel = button?.textContent;
+    const previousState = row?.dataset.availabilityState || null;
     if (button) {
         button.disabled = true;
         button.textContent = 'Đang cập nhật...';
@@ -348,9 +441,35 @@ document.addEventListener('submit', async function (event) {
         });
 
         if (! response.ok) throw new Error('Không thể cập nhật trạng thái sản phẩm.');
-        document.dispatchEvent(new CustomEvent('product:availability-updated', {detail: await response.json()}));
+        const payload = await response.json();
+        document.dispatchEvent(new CustomEvent('product:availability-updated', {detail: payload}));
+
+        if (row) {
+            const wasAvailable = previousState === 'available';
+            row.dataset.availabilityState = payload.is_available ? 'available' : 'unavailable';
+
+            const badge = row.querySelector('[data-availability-badge]');
+            if (badge) {
+                badge.className = `badge ${payload.is_available ? 'text-bg-success' : 'text-bg-danger'}`;
+                badge.textContent = payload.is_available ? 'Còn hàng' : 'Hết hàng';
+            }
+
+            updateAvailabilityButtonState(button, payload.is_available);
+            updateProductAvailabilitySummary(payload.product_id);
+
+            if (row.dataset.branchId && button?.closest('[data-current-branch-id]')) {
+                const currentBranchId = button.closest('[data-current-branch-id]').dataset.currentBranchId;
+                if (String(row.dataset.branchId) === String(currentBranchId) && previousState && previousState !== 'unassigned') {
+                    const delta = payload.is_available ? -1 : 1;
+                    updateProductAvailabilityCounter(delta);
+                }
+            }
+        }
+
+        showProductToast(payload.message || 'Cập nhật trạng thái thành công.', 'success');
     } catch (error) {
         if (button) button.textContent = previousLabel;
+        showProductToast(error.message || 'Không thể cập nhật trạng thái sản phẩm.', 'error');
     } finally {
         if (button) button.disabled = false;
     }

@@ -119,6 +119,39 @@ class CheckoutVoucherTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_checkout_requires_a_real_phone_instead_of_using_a_placeholder(): void
+    {
+        $user = $this->customer();
+        $user->update(['phone' => null]);
+        [$product, $productSize] = $this->sellableProduct();
+        $branch = $this->activeBranch();
+
+        $this->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    'cart-1' => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                    ],
+                ],
+            ])
+            ->from(route('checkout.index'))
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'fulfillment_type' => 'pickup',
+                'branch_id' => $branch->id,
+            ])
+            ->assertRedirect(route('checkout.index'))
+            ->assertSessionHasErrors('shipping_phone_ui');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
     public function test_checkout_redirects_vnpay_order_to_payment_gateway_route(): void
     {
         $user = $this->customer();

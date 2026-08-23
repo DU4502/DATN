@@ -51,7 +51,7 @@ class OrderCancellationService
      * đúng lúc scheduler chạy thì đơn sẽ được bỏ qua, không bị hủy nhầm.
      *
      * $clock:
-     * - created_at: dùng cho luật Chờ xác nhận quá 2 giờ.
+     * - created_at: dùng cho luật Chờ xác nhận quá 30 phút.
      * - status_changed_at: dùng mốc đổi trạng thái, fallback created_at.
      * - status_or_schedule: như trên nhưng với đơn hẹn giờ sẽ không bắt đầu đếm
      *   trước scheduled_at/scheduled_delivery_time.

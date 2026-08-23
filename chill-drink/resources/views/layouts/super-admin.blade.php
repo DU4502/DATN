@@ -58,6 +58,16 @@
             body {
                 zoom: 0.9;
             }
+
+            /* Bootstrap appends the modal backdrop directly under <body>.
+               Because the Super Admin workspace is zoomed to 90%, a normal
+               100vw/100vh backdrop only covers 90% of the physical viewport.
+               Compensate the backdrop dimensions so the dim layer always
+               reaches every browser edge without changing the modal scale. */
+            .modal-backdrop {
+                width: 111.111111vw !important;
+                height: 111.111111vh !important;
+            }
         }
 
         .root-shell { min-height: 100vh; }
@@ -265,6 +275,17 @@
             gap: 0.85rem;
         }
 
+        .root-topbar-left {
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .root-topbar-search {
+            position: relative;
+            width: min(380px, 32vw);
+            margin-left: 0.4rem;
+        }
+
         .root-mobile-toggle {
             width: 42px;
             height: 42px;
@@ -407,6 +428,7 @@
             .root-sidebar.open { transform: translateX(0); }
             .root-content { margin-left: 0; }
             .root-mobile-toggle { display: inline-flex; }
+            .root-topbar-search { width: min(100%, 360px); }
             .root-sidebar-backdrop {
                 position: fixed;
                 inset: 0;
@@ -419,6 +441,7 @@
 
         @media (max-width: 575.98px) {
             .root-topbar { padding: 0 1rem; }
+            .root-topbar-search { width: 100%; margin-left: 0; }
             .root-page { padding: 1.05rem 0.9rem 1.6rem; }
             .root-live, .root-breadcrumb span { display: none; }
             .root-footer { align-items: flex-start; flex-direction: column; padding: 0.85rem 0.9rem; }
@@ -452,9 +475,7 @@
                 <a href="{{ route('admin.super-admin.manage.toppings.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.toppings.*', 'admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
                 <a href="{{ route('admin.super-admin.manage.products.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.products.*', 'admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.super-admin.manage.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.categories.*', 'admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.super-admin.manage.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.slides.*', 'admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
                 <a href="{{ route('admin.super-admin.manage.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.orders.*', 'admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
-                <a href="{{ route('admin.super-admin.manage.order-issues.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.order-issues.*', 'admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-life-preserver"></i> Khiếu nại đơn hàng</a>
                 <a href="{{ route('admin.super-admin.manage.shipper-incidents.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.shipper-incidents.*', 'admin.shipper-incidents.*') ? 'active' : '' }}"><i class="bi bi-exclamation-triangle"></i> Sự cố giao vận</a>
                 <a href="{{ route('admin.super-admin.manage.cod-settlements.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.cod-settlements.*', 'admin.cod-settlements.*') ? 'active' : '' }}"><i class="bi bi-cash-coin"></i> Đối soát COD</a>
                 <a href="{{ route('admin.super-admin.manage.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.group-orders.*', 'admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
@@ -478,6 +499,21 @@
                 <div class="root-topbar-left">
                     <button type="button" class="root-mobile-toggle" data-root-toggle aria-label="Mở menu"><i class="bi bi-list"></i></button>
                     <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Quản trị cấp cao')</strong></div>
+                    @unless(View::hasSection('hide-topbar-search'))
+                        <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search root-topbar-search" role="search">
+                            @foreach(request()->except(['q', 'page']) as $key => $value)
+                                @if(is_array($value))
+                                    @foreach($value as $item)
+                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                @endif
+                            @endforeach
+                            <span class="admin-search-icon"><i class="bi bi-search"></i></span>
+                            <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
+                        </form>
+                    @endunless
                 </div>
                 <div class="root-topbar-right">
                     @include('partials.shipper-incident-center')

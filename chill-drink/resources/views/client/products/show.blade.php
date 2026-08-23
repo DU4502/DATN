@@ -318,6 +318,29 @@
         box-shadow: 0 8px 22px rgba(17, 62, 52, .06);
     }
 
+    .qty-control [data-qty-value] {
+        width: 3.5rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--c-ink, #111827);
+        text-align: center;
+        font-size: 1.05rem;
+        font-weight: 800;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        outline: none;
+        box-shadow: none;
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    .qty-control [data-qty-value]::-webkit-outer-spin-button,
+    .qty-control [data-qty-value]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
     .detail-action-row {
         display: grid;
         grid-template-columns: 142px minmax(0, 1fr);
@@ -506,6 +529,9 @@
         background: var(--c-primary-light, #e6f7f2);
         color: var(--c-primary-dark, #067a5f);
         font-weight: 800;
+        cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
     }
 
     .topping-choice {
@@ -1101,6 +1127,7 @@
                             <label class="option-label d-block mb-3">Chọn kích cỡ</label>
                             <div class="d-flex flex-wrap gap-2" data-size-group>
                                 @php
+                                    $basePrice = (int) ($product->price ?? 0);
                                     $productSizesMap = isset($product) && $product->relationLoaded('sizes')
                                         ? $product->sizes->keyBy(fn($s) => strtoupper(trim($s->name)))
                                         : collect();
@@ -1115,7 +1142,8 @@
                                     @php
                                         $sizeObj = $productSizesMap->get($szName);
                                         $defaultExtra = $szName === 'M' ? 5000 : 10000;
-                                        $extraPrice = $sizeObj ? (int) $sizeObj->pivot->price : $defaultExtra;
+                                        $rawSizePrice = $sizeObj ? (int) $sizeObj->pivot->price : null;
+                                        $extraPrice = \App\Support\ProductSizePrice::sizeExtra($basePrice, $rawSizePrice, $defaultExtra);
                                     @endphp
                                     <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
                                         {{ $szName }}
@@ -1127,9 +1155,19 @@
                     </div>
 
                     <div class="product-detail-actions detail-action-row">
-                        <div class="qty-control d-flex align-items-center justify-content-between">
+                        <div class="qty-control d-flex align-items-center justify-content-between" data-qty-control>
                             <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
-                            <span class="h5 fw-bold mb-0" data-qty-value>1</span>
+                            <input
+                                type="text"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                autocomplete="off"
+                                spellcheck="false"
+                                class="h5 fw-bold mb-0"
+                                value="1"
+                                data-qty-value
+                                aria-label="Số lượng"
+                            >
                             <button type="button" data-qty-plus aria-label="Tăng số lượng">+</button>
                         </div>
 
@@ -1512,7 +1550,7 @@
             const sizeExtra = Number(activeSize?.dataset.sizeExtra || 0);
             const activeToppings = Array.from(document.querySelectorAll('[data-topping-group] .topping-choice.active'));
             const toppingTotal = activeToppings.reduce((sum, btn) => sum + Number(btn.dataset.toppingPrice || 0), 0);
-            const qtyVal = Number(document.querySelector('[data-qty-value]')?.textContent || 1);
+            const qtyVal = Number(document.querySelector('[data-qty-value]')?.value || 1);
 
             const totalUnit = basePrice + sizeExtra + toppingTotal;
             const totalPrice = totalUnit * qtyVal;
@@ -1523,26 +1561,130 @@
         const plus = document.querySelector('[data-qty-plus]');
         const value = document.querySelector('[data-qty-value]');
         const qtyInput = document.querySelector('[data-qty-input]');
+        const qtyControl = document.querySelector('[data-qty-control]');
 
         if (minus && plus && value) {
             let qty = 1;
+            let repeatTimer = null;
+            let repeatInterval = null;
+
+            const clampQty = function(nextQty) {
+                const normalized = Number.parseInt(String(nextQty), 10);
+                return Number.isFinite(normalized) && normalized > 0 ? normalized : 1;
+            };
+
             const render = function() {
-                value.textContent = qty;
+                value.value = String(qty);
                 if (qtyInput) {
-                    qtyInput.value = qty;
+                    qtyInput.value = String(qty);
                 }
                 updateDetailTotal();
             };
 
-            minus.addEventListener('click', function() {
-                qty = Math.max(1, qty - 1);
+            const setQty = function(nextQty) {
+                qty = clampQty(nextQty);
                 render();
+            };
+
+            const stepQty = function(delta) {
+                setQty(qty + delta);
+            };
+
+            const stopRepeat = function() {
+                if (repeatTimer) {
+                    window.clearTimeout(repeatTimer);
+                    repeatTimer = null;
+                }
+                if (repeatInterval) {
+                    window.clearInterval(repeatInterval);
+                    repeatInterval = null;
+                }
+            };
+
+            const startRepeat = function(delta) {
+                stopRepeat();
+                stepQty(delta);
+                repeatTimer = window.setTimeout(function() {
+                    repeatInterval = window.setInterval(function() {
+                        stepQty(delta);
+                    }, 75);
+                }, 260);
+            };
+
+            minus.addEventListener('pointerdown', function(event) {
+                event.preventDefault();
+                startRepeat(-1);
             });
 
-            plus.addEventListener('click', function() {
-                qty += 1;
-                render();
+            plus.addEventListener('pointerdown', function(event) {
+                event.preventDefault();
+                startRepeat(1);
             });
+
+            [minus, plus].forEach(function(button) {
+                button.addEventListener('pointerup', stopRepeat);
+                button.addEventListener('pointercancel', stopRepeat);
+                button.addEventListener('lostpointercapture', stopRepeat);
+            });
+
+            if (qtyControl && value) {
+                qtyControl.addEventListener('click', function(event) {
+                    if (event.target.closest('button')) {
+                        return;
+                    }
+
+                    value.focus();
+                    value.select();
+                });
+            }
+
+            value.addEventListener('input', function() {
+                const digitsOnly = String(value.value || '').replace(/[^\d]/g, '');
+                if (value.value !== digitsOnly) {
+                    value.value = digitsOnly;
+                }
+
+                if (digitsOnly === '') {
+                    return;
+                }
+
+                setQty(digitsOnly);
+            });
+
+            value.addEventListener('blur', function() {
+                if (String(value.value || '').trim() === '') {
+                    setQty(1);
+                    return;
+                }
+
+                setQty(value.value);
+            });
+
+            value.addEventListener('keydown', function(event) {
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    stepQty(1);
+                } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    stepQty(-1);
+                }
+            });
+
+            plus.addEventListener('click', function(event) {
+                if (event.detail !== 0) {
+                    return;
+                }
+                stepQty(1);
+            });
+
+            minus.addEventListener('click', function(event) {
+                if (event.detail !== 0) {
+                    return;
+                }
+                stepQty(-1);
+            });
+
+            render();
         }
 
         const optionPanel = document.querySelector('[data-product-option-panel]');

@@ -5,8 +5,13 @@ namespace Tests\Feature\Admin;
 use App\Models\Category;
 use App\Models\Branch;
 use App\Models\BranchProductStatus;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductSize;
+use App\Models\Size;
 use App\Models\User;
+use App\Support\OrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -388,6 +393,31 @@ class ProductManagementTest extends TestCase
         $response->assertRedirect(route('admin.products.index'));
     }
 
+    public function test_admin_cannot_delete_product_with_unfinished_orders(): void
+    {
+        $admin = $this->admin();
+        [$product] = $this->productWithOrder(OrderStatus::PENDING);
+
+        $response = $this->actingAs($admin)->delete(route('admin.products.destroy', $product));
+
+        $response->assertRedirect(route('admin.products.index'));
+        $response->assertSessionHas('error', 'Không thể xóa sản phẩm vì vẫn còn đơn hàng chưa hoàn thành.');
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'deleted_at' => null]);
+    }
+
+    public function test_admin_cannot_force_delete_product_with_unfinished_orders(): void
+    {
+        $admin = $this->admin();
+        [$product] = $this->productWithOrder(OrderStatus::CONFIRMED);
+        $product->delete();
+
+        $response = $this->actingAs($admin)->delete(route('admin.products.force-delete', $product->id));
+
+        $response->assertRedirect(route('admin.products.trash'));
+        $response->assertSessionHas('error', 'Không thể xóa vĩnh viễn vì sản phẩm vẫn còn đơn hàng chưa hoàn thành.');
+        $this->assertSoftDeleted('products', ['id' => $product->id]);
+    }
+
     public function test_product_validation_rejects_invalid_image_and_negative_values(): void
     {
         Storage::fake('public');
@@ -446,5 +476,52 @@ class ProductManagementTest extends TestCase
         ));
 
         return new UploadedFile($path, $name, 'image/png', null, true);
+    }
+
+    private function productWithOrder(string $orderStatus): array
+    {
+        $category = Category::create([
+            'name' => 'Order Guard '.uniqid(),
+            'slug' => 'order-guard-'.uniqid(),
+            'status' => true,
+        ]);
+
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Guard Product '.uniqid(),
+            'slug' => 'guard-product-'.uniqid(),
+            'price' => 45000,
+            'status' => true,
+        ]);
+
+        $size = Size::create(['name' => 'M', 'multiplier' => 1]);
+        $productSize = ProductSize::create([
+            'product_id' => $product->id,
+            'size_id' => $size->id,
+            'price' => 45000,
+        ]);
+
+        $customer = User::factory()->create(['role_id' => 1]);
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'subtotal' => 45000,
+            'shipping_fee' => 0,
+            'discount' => 0,
+            'total' => 45000,
+            'payment_method' => 'cod',
+            'payment_status' => 'pending',
+            'status' => $orderStatus,
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_size_id' => $productSize->id,
+            'quantity' => 1,
+            'unit_price' => 45000,
+            'total_price' => 45000,
+        ]);
+
+        return [$product, $order];
     }
 }

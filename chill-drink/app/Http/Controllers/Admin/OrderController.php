@@ -53,7 +53,7 @@ class OrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {
@@ -148,7 +148,7 @@ class OrderController extends Controller
         $updatedAfter = $request->query('updated_after');
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
 
         if ($afterId > 0 || $updatedAfter) {
@@ -185,7 +185,7 @@ class OrderController extends Controller
     public function pendingAlerts(Request $request): JsonResponse
     {
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             ->where('status', OrderStatus::PENDING)
             ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
 
@@ -228,9 +228,12 @@ class OrderController extends Controller
         $statusOptionsForActor = $isSuperAdmin
             ? OrderStatus::superAdminOptions($currentStatus, $fulfillmentType)
             : OrderStatus::storeStepwiseOptions($currentStatus, $fulfillmentType);
+        if ($currentStatus !== OrderStatus::PENDING) {
+            unset($statusOptionsForActor[OrderStatus::CANCELLED]);
+        }
         $canCancelForActor = $isSuperAdmin
             ? OrderStatus::canSuperAdminCancelFrom($currentStatus)
-            : in_array($currentStatus, [OrderStatus::PENDING, OrderStatus::CONFIRMED, OrderStatus::PREPARING], true);
+            : $currentStatus === OrderStatus::PENDING;
         $orderCode = $order->displayCode();
         $canConfirm = $currentStatus === OrderStatus::PENDING
             && ! ($order->payment_method === 'vnpay' && $order->payment_status !== 'paid');
@@ -306,6 +309,7 @@ class OrderController extends Controller
             'shipment_incident' => $shipmentIncident ? [
                 'shipper_name' => $shipmentIncident['shipper_name'] ?? 'Shipper',
                 'description' => $shipmentIncident['description'] ?? 'Shipper báo sự cố.',
+                'incident_type' => $shipmentIncident['incident_type'] ?? 'driver_issue',
                 'reported_at_label' => $shipmentIncident['reported_at_label'] ?? null,
             ] : null,
             'incident_resolve_url' => $isSuperAdminWorkspace
@@ -321,6 +325,15 @@ class OrderController extends Controller
                 'unit_price' => (int) $item->unit_price,
                 'unit_price_formatted' => number_format((int) $item->unit_price, 0, ',', '.') . 'đ',
                 'total_formatted' => number_format((int) $item->getSubtotal(), 0, ',', '.') . 'đ',
+            ])->toArray(),
+            'reviews' => $order->reviews->map(fn ($review) => [
+                'product_name' => $review->product?->name ?? 'Sản phẩm đã xóa',
+                'product_image' => $review->product?->image_url,
+                'user_name' => $review->user?->name ?? 'Khách hàng',
+                'user_email' => $review->user?->email ?? '',
+                'rating' => (int) $review->rating,
+                'comment' => $review->comment ?? '',
+                'created_at' => $review->created_at?->format('d/m/Y H:i'),
             ])->toArray(),
         ];
     }
@@ -426,9 +439,11 @@ class OrderController extends Controller
             : OrderStatus::canStoreAdvanceTo((string) $order->status, $newStatus, $fulfillmentType);
 
         if (! $transitionAllowed) {
-            $message = $isSuperAdmin
-                ? 'Super Admin có quyền thực hiện bước của mọi vai trò, nhưng chỉ được chuyển đúng sang bước kế tiếp của đơn; không được nhảy cóc hoặc quay lùi.'
-                : 'Quán chỉ được xử lý đơn giao hàng tới bước Sẵn sàng giao. Các bước lấy hàng/đang giao/đã giao thuộc tài xế.';
+            $message = $newStatus === OrderStatus::CANCELLED
+                ? 'Không thể hủy đơn sau khi đã xác nhận. Vui lòng xử lý tại mục Sự cố giao vận.'
+                : ($isSuperAdmin
+                    ? 'Super Admin có quyền thực hiện bước của mọi vai trò, nhưng chỉ được chuyển đúng sang bước kế tiếp của đơn; không được nhảy cóc hoặc quay lùi.'
+                    : 'Quán chỉ được xử lý đơn giao hàng tới bước Sẵn sàng giao. Các bước lấy hàng/đang giao/đã giao thuộc tài xế.');
 
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => $message], 422);
@@ -570,6 +585,12 @@ class OrderController extends Controller
 
         if ($request->expectsJson() || $request->ajax()) {
             $data = $this->statusUpdateData($order->fresh());
+            $responseStatusOptions = $isSuperAdmin
+                ? OrderStatus::superAdminOptions($newStatus, $fulfillmentType)
+                : OrderStatus::storeStepwiseOptions($newStatus, $fulfillmentType);
+            if ($newStatus !== OrderStatus::PENDING) {
+                unset($responseStatusOptions[OrderStatus::CANCELLED]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -578,9 +599,7 @@ class OrderController extends Controller
                 'status' => $newStatus,
                 'status_label' => $statusLabel,
                 'super_admin_override' => $isSuperAdmin,
-                'status_options' => $isSuperAdmin
-                    ? OrderStatus::superAdminOptions($newStatus, $fulfillmentType)
-                    : OrderStatus::storeStepwiseOptions($newStatus, $fulfillmentType),
+                'status_options' => $responseStatusOptions,
                 'data' => $data,
             ]);
         }
@@ -595,6 +614,9 @@ class OrderController extends Controller
         $statusOptions = $isSuperAdmin
             ? OrderStatus::superAdminOptions($status, $order->fulfillment_type ?? 'delivery')
             : OrderStatus::storeStepwiseOptions($status, $order->fulfillment_type ?? 'delivery');
+        if ($status !== OrderStatus::PENDING) {
+            unset($statusOptions[OrderStatus::CANCELLED]);
+        }
         $nextStatus = collect(array_keys($statusOptions))->first(fn (string $option) => $option !== $status);
 
         return [

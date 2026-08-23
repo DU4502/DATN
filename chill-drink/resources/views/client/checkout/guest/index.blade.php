@@ -157,6 +157,23 @@
         margin-top: 0.1rem;
     }
 
+    .guest-branch-section {
+        padding-top: 0.25rem;
+    }
+
+    .guest-branch-section-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 46px;
+        color: #fff;
+        background: linear-gradient(135deg, #0d9373, #11b98d);
+        box-shadow: 0 14px 28px rgba(13, 147, 115, 0.18);
+    }
+
     @media (max-width: 991.98px) {
         .guest-summary {
             position: static;
@@ -396,7 +413,17 @@
 
                         </div>
 
-                        <div class="mb-4">
+                        <div class="mb-4 guest-branch-section">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <span class="guest-branch-section-icon" aria-hidden="true">
+                                    <i class="bi bi-shop"></i>
+                                </span>
+                                <div>
+                                    <h2 class="h4 fw-bold mb-1">Chi nhánh phục vụ gần bạn</h2>
+                                    <p class="text-secondary mb-0">Chọn chi nhánh xử lý đơn hàng của bạn hoặc để hệ thống gợi ý chi nhánh gần nhất.</p>
+                                </div>
+                            </div>
+
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                                 <label for="branch_id" class="form-label fw-semibold mb-0">Chọn chi nhánh *</label>
                                 <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" data-find-nearest-branch>
@@ -536,6 +563,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+@include('partials.vietnam-territory-labels')
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -787,6 +815,7 @@
                 updateWhenIdle: true,
                 keepBuffer: 2,
             }).addTo(addressMap);
+            window.ChillDrinkVietnamTerritoryLabels?.addToLeaflet(addressMap);
             tileLayer.once('load', () => addressMapElement.classList.remove('is-loading'));
             window.setTimeout(() => addressMapElement.classList.remove('is-loading'), 5000);
             addressMarker = L.marker(center, { draggable: true }).addTo(addressMap);

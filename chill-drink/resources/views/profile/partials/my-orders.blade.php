@@ -117,6 +117,149 @@ $paymentLabels = $paymentLabels ?? [
         border-bottom: 0;
     }
 
+    .order-detail-toggle {
+        border: 1px solid rgba(13, 147, 115, 0.22);
+        background: #ffffff;
+        color: var(--drink-primary-dark);
+        border-radius: 999px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.82rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .order-detail-toggle:hover {
+        background: var(--drink-primary-soft);
+        border-color: rgba(13, 147, 115, 0.34);
+        transform: translateY(-1px);
+    }
+
+    .order-detail-toggle i {
+        transition: transform 0.2s ease;
+    }
+
+    .order-detail-toggle[aria-expanded="true"] i {
+        transform: rotate(180deg);
+    }
+
+    .order-detail-panel {
+        border-top: 1px solid rgba(213, 238, 232, 0.9);
+        background: linear-gradient(180deg, #fcfffe 0%, #f7fffc 100%);
+    }
+
+    .order-detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
+    .order-detail-item {
+        padding: 1rem;
+        border: 1px solid rgba(213, 238, 232, 0.92);
+        border-radius: 18px;
+        background: #ffffff;
+    }
+
+    .order-detail-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+    }
+
+    .order-detail-thumb {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        overflow: hidden;
+        flex: 0 0 auto;
+        background: var(--drink-primary-soft);
+    }
+
+    .order-detail-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .order-detail-main {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .order-detail-title {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: start;
+    }
+
+    .order-detail-name {
+        font-weight: 800;
+        color: var(--drink-ink);
+        line-height: 1.35;
+    }
+
+    .order-detail-meta {
+        color: var(--drink-muted);
+        font-size: 0.82rem;
+        margin-top: 0.2rem;
+    }
+
+    .order-detail-total {
+        color: var(--drink-primary-dark);
+        font-weight: 800;
+    }
+
+    .order-detail-body {
+        margin-top: 0.9rem;
+        padding-left: calc(52px + 0.85rem);
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    .order-detail-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: start;
+        font-size: 0.9rem;
+    }
+
+    .order-detail-row strong {
+        font-weight: 700;
+    }
+
+    .order-detail-label {
+        color: var(--drink-muted);
+        font-size: 0.74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .order-detail-note {
+        color: var(--drink-muted);
+        font-size: 0.84rem;
+        line-height: 1.55;
+    }
+
+    .order-detail-line-total {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: center;
+        margin-top: 0.2rem;
+        padding: 0.65rem 0.8rem;
+        border-radius: 10px;
+        background: linear-gradient(180deg, #effcf8 0%, #e7faf4 100%);
+        color: var(--drink-primary-dark);
+        font-weight: 800;
+    }
+
     .order-review-collapse {
         border-top: 1px solid rgba(213, 238, 232, 0.9);
         background: #fbfffe;
@@ -221,6 +364,19 @@ $paymentLabels = $paymentLabels ?? [
         border-radius: 20px;
         background: var(--drink-primary-soft);
     }
+
+    @media (max-width: 575.98px) {
+        .order-detail-body {
+            padding-left: 0;
+        }
+
+        .order-detail-title,
+        .order-detail-row,
+        .order-detail-line-total {
+            grid-template-columns: 1fr;
+            gap: 0.3rem;
+        }
+    }
 </style>
 
 <div id="profile-orders" class="mt-4">
@@ -256,12 +412,11 @@ $paymentLabels = $paymentLabels ?? [
 
         @php
         $reviewedProducts = $order->reviewed_products ?? [];
-        $groupedItems = $order->orderItems->groupBy(function ($item) {
-        return $item->product?->id ? 'product-' . $item->product->id : 'item-' . $item->id;
-        });
         @endphp
 
-        @foreach($groupedItems as $group)
+        @foreach(collect($order->orderItems ?? [])->groupBy(function ($item) {
+        return $item->product?->id ? 'product-' . $item->product->id : 'item-' . $item->id;
+        }) as $group)
         @php
         $item = $group->first();
         $product = $item->product;
@@ -377,7 +532,9 @@ $paymentLabels = $paymentLabels ?? [
         <div class="order-card-footer">
             <div class="text-secondary small">
                 <div class="mb-2">
-                    <strong class="text-dark">Thông tin giao hàng:</strong>
+                    <strong class="text-dark">
+                        {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'Thông tin nhận hàng:' : 'Thông tin giao hàng:' }}
+                    </strong>
                 </div>
                 <div class="d-flex align-items-start gap-2 mb-1">
                     <i class="bi bi-person text-primary"></i>
@@ -387,12 +544,32 @@ $paymentLabels = $paymentLabels ?? [
                     <i class="bi bi-telephone text-primary"></i>
                     <span>{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</span>
                 </div>
-                <div class="d-flex align-items-start gap-2 mb-2">
-                    <i class="bi bi-geo-alt text-primary"></i>
-                    <span>{{ $order->getShippingAddress() }}</span>
-                </div>
+                @if(($order->fulfillment_type ?? 'delivery') === 'pickup')
+                    <div class="d-flex align-items-start gap-2 mb-1">
+                        <i class="bi bi-shop text-primary"></i>
+                        <span>
+                            Nhận tại
+                            <strong class="text-dark">{{ $order->branch?->name ?? 'chi nhánh đã chọn' }}</strong>
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <i class="bi bi-geo-alt text-primary"></i>
+                        <span>{{ $order->branch?->address ?? 'Chưa cập nhật địa chỉ chi nhánh' }}</span>
+                    </div>
+                @else
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <i class="bi bi-geo-alt text-primary"></i>
+                        <span>{{ $order->getShippingAddress() }}</span>
+                    </div>
+                @endif
                 
                 <div class="border-top pt-2 mt-2">
+                    <div class="mb-1">
+                        Hình thức nhận:
+                        <strong class="text-dark">
+                            {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'Nhận tại chi nhánh' : 'Giao đến địa chỉ' }}
+                        </strong>
+                    </div>
                     <div class="mb-1">Thanh toán: <strong class="text-dark">{{ $paymentLabels[$order->payment_method] ?? strtoupper($order->payment_method) }}</strong></div>
                     @if($order->note)
                     <div class="mt-1">
@@ -436,6 +613,17 @@ $paymentLabels = $paymentLabels ?? [
                 <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
                 
                 <div class="d-flex flex-column gap-2 mt-2">
+                    <button
+                        type="button"
+                        class="order-detail-toggle w-100 justify-content-center"
+                        data-order-detail-toggle
+                        data-order-detail-target="order-detail-{{ $order->id }}"
+                        aria-expanded="false"
+                        aria-controls="order-detail-{{ $order->id }}"
+                    >
+                        <span>Xem chi tiết đơn hàng</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
                     @if(($order->fulfillment_type ?? 'delivery') === 'delivery' && !in_array($statusKey, ['cancelled', 'completed'], true))
                         <a href="{{ route('orders.track', $order) }}" class="btn btn-sm btn-primary w-100 fw-semibold">
                             <i class="bi bi-geo-alt-fill me-1"></i>Theo dõi đơn hàng
@@ -507,6 +695,119 @@ $paymentLabels = $paymentLabels ?? [
                         Đã thanh toán
                     </div>
                 @endif
+            </div>
+        </div>
+
+        <div class="order-detail-panel d-none" id="order-detail-{{ $order->id }}" data-order-detail-panel>
+            <div class="p-3 p-md-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h3 class="h6 fw-bold mb-1">Chi tiết đơn hàng</h3>
+                        <p class="text-secondary small mb-0">Hiển thị đầy đủ size, topping, đường, đá và ghi chú của từng món.</p>
+                    </div>
+                    <span class="badge text-bg-light border">{{ $order->orderItems->count() }} món cấu hình</span>
+                </div>
+
+                <div class="order-detail-list">
+                    @foreach($order->orderItems as $detailItem)
+                        @php
+                            $detailProduct = $detailItem->product;
+                            $detailToppings = $detailItem->toppingLines ?? collect();
+                            $detailSizeName = trim((string) ($detailItem->productSize?->size?->name ?? ''));
+                            $detailSizeLabel = $detailSizeName !== '' ? 'Size '.$detailSizeName : null;
+                            $detailQuantity = max(1, (int) ($detailItem->quantity ?? 1));
+                            $detailBaseUnitPrice = max(0, (int) ($detailProduct->price ?? 0));
+                            $detailLineTotal = (int) $detailItem->getSubtotal();
+                            $detailUnitPrice = max(0, (int) ($detailItem->unit_price ?? 0));
+                            $detailToppingUnitTotal = (int) $detailToppings->sum(fn ($line) => (int) ($line->price ?? 0));
+                            $detailSizeExtraUnit = max(0, $detailUnitPrice - $detailBaseUnitPrice - $detailToppingUnitTotal);
+                        @endphp
+                        <div class="order-detail-item">
+                            <div class="order-detail-head">
+                                <div class="order-detail-thumb">
+                                    @if($detailProduct)
+                                        <x-product-image
+                                            :src="$detailProduct->image_url"
+                                            :sku="$detailProduct->sku"
+                                            :name="$detailProduct->name"
+                                            :alt="$detailProduct->name"
+                                            :category="$detailProduct->category?->name"
+                                            :width="180" />
+                                    @else
+                                        <img src="{{ view()->shared('uiDefaultImage', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=200&q=85') }}" alt="Sản phẩm">
+                                    @endif
+                                </div>
+                                <div class="order-detail-main">
+                                    <div class="order-detail-title">
+                                        <div>
+                                            <div class="order-detail-name">{{ $detailProduct?->name ?? 'Sản phẩm đã xóa' }}</div>
+                                            <div class="order-detail-meta">
+                                                {{ collect([$detailSizeLabel, 'x'.$detailQuantity])->filter()->implode(' · ') }}
+                                            </div>
+                                        </div>
+                                        <strong class="order-detail-total">{{ number_format($detailLineTotal, 0, ',', '.') }}đ</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="order-detail-body">
+                                <div>
+                                    <div class="order-detail-label">Giá gốc</div>
+                                    <div class="order-detail-row">
+                                        <span>{{ number_format($detailBaseUnitPrice, 0, ',', '.') }}đ × {{ $detailQuantity }}</span>
+                                        <strong>{{ number_format($detailBaseUnitPrice * $detailQuantity, 0, ',', '.') }}đ</strong>
+                                    </div>
+                                </div>
+
+                                @if($detailSizeExtraUnit > 0)
+                                    <div>
+                                        <div class="order-detail-label">Phụ thu size</div>
+                                        <div class="order-detail-row">
+                                            <span>+{{ number_format($detailSizeExtraUnit, 0, ',', '.') }}đ × {{ $detailQuantity }}</span>
+                                            <strong>+{{ number_format($detailSizeExtraUnit * $detailQuantity, 0, ',', '.') }}đ</strong>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if($detailToppings->isNotEmpty())
+                                    <div>
+                                        <div class="order-detail-label">Topping</div>
+                                        @foreach($detailToppings as $toppingLine)
+                                            @php($detailToppingLineTotal = max(0, (int) ($toppingLine->price ?? 0)) * $detailQuantity)
+                                            <div class="order-detail-row">
+                                                <span>
+                                                    + {{ $toppingLine->topping?->name ?? 'Topping' }}
+                                                    @if($detailQuantity > 1)
+                                                        <span class="d-block text-secondary small">{{ number_format((int) ($toppingLine->price ?? 0), 0, ',', '.') }}đ × {{ $detailQuantity }}</span>
+                                                    @endif
+                                                </span>
+                                                <strong>+{{ number_format($detailToppingLineTotal, 0, ',', '.') }}đ</strong>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                <div class="order-detail-row">
+                                    <span>Đường</span>
+                                    <strong>{{ (int) ($detailItem->sugar_level ?? 100) }}%</strong>
+                                </div>
+                                <div class="order-detail-row">
+                                    <span>Đá</span>
+                                    <strong>{{ (int) ($detailItem->ice_level ?? 100) }}%</strong>
+                                </div>
+
+                                @if(filled($detailItem->item_note))
+                                    <div class="order-detail-note">Ghi chú: {{ $detailItem->item_note }}</div>
+                                @endif
+
+                                <div class="order-detail-line-total">
+                                    <span>Tạm tính món</span>
+                                    <strong>{{ number_format($detailLineTotal, 0, ',', '.') }}đ</strong>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         </div>
     </article>
@@ -619,6 +920,22 @@ $paymentLabels = $paymentLabels ?? [
                 const isHidden = panel.classList.contains('d-none');
                 panel.classList.toggle('d-none', !isHidden);
                 button.setAttribute('aria-expanded', String(isHidden));
+            });
+        });
+
+        document.querySelectorAll('[data-order-detail-toggle]').forEach(function (button) {
+            const targetId = button.dataset.orderDetailTarget;
+            const panel = targetId ? document.getElementById(targetId) : null;
+
+            if (!panel) {
+                return;
+            }
+
+            button.addEventListener('click', function () {
+                const isHidden = panel.classList.contains('d-none');
+                panel.classList.toggle('d-none', !isHidden);
+                button.setAttribute('aria-expanded', String(isHidden));
+                button.querySelector('span').textContent = isHidden ? 'Thu gọn chi tiết' : 'Xem chi tiết đơn hàng';
             });
         });
     });

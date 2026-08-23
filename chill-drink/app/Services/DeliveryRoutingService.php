@@ -306,6 +306,41 @@ class DeliveryRoutingService
                     'duration_s' => (float) ($step['duration'] ?? 0),
                     'type' => (string) ($maneuver['type'] ?? ''),
                     'modifier' => (string) ($maneuver['modifier'] ?? ''),
+                    'exit' => isset($maneuver['exit']) && is_numeric($maneuver['exit'])
+                        ? (int) $maneuver['exit']
+                        : null,
+                    'rotary_name' => trim((string) ($step['rotary_name'] ?? '')),
+                    'rotary_pronunciation' => trim((string) ($step['rotary_pronunciation'] ?? '')),
+                    'exits' => is_string($step['exits'] ?? null) ? trim((string) $step['exits']) : null,
+                    'intersections' => collect($step['intersections'] ?? [])
+                        ->filter(fn ($intersection) => is_array($intersection))
+                        ->map(function (array $intersection) {
+                            $location = $intersection['location'] ?? null;
+
+                            return [
+                                'bearings' => array_values(array_map(
+                                    fn ($bearing) => is_numeric($bearing) ? (int) $bearing : $bearing,
+                                    is_array($intersection['bearings'] ?? null) ? $intersection['bearings'] : []
+                                )),
+                                'entry' => array_values($intersection['entry'] ?? []),
+                                'in' => isset($intersection['in']) && is_numeric($intersection['in'])
+                                    ? (int) $intersection['in']
+                                    : null,
+                                'out' => isset($intersection['out']) && is_numeric($intersection['out'])
+                                    ? (int) $intersection['out']
+                                    : null,
+                                'classes' => array_values(array_filter(
+                                    is_array($intersection['classes'] ?? null) ? $intersection['classes'] : [],
+                                    fn ($class) => is_string($class) && trim($class) !== ''
+                                )),
+                                'lanes' => is_array($intersection['lanes'] ?? null) ? array_values($intersection['lanes']) : [],
+                                'location' => is_array($location) && count($location) >= 2
+                                    ? [(float) $location[1], (float) $location[0]]
+                                    : null,
+                            ];
+                        })
+                        ->values()
+                        ->all(),
                     'location' => is_array($location) && count($location) >= 2
                         ? [(float) $location[1], (float) $location[0]]
                         : null,

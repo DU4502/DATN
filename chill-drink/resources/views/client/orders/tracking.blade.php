@@ -69,7 +69,6 @@
     .tracking-pay-label{font-size:.76rem;text-transform:uppercase;color:#74837f;font-weight:800}
     .tracking-pay-amount{font-size:1.45rem;font-weight:900;color:#0d9373;margin-top:2px}
     .tracking-pay.cod .tracking-pay-amount{color:#a06400}
-    .tracking-help{font-size:.82rem;color:#75827f;line-height:1.5}
     .tracking-driver{background:linear-gradient(145deg,#ffffff,#f2fbf8);border-color:#d6ebe4}
     .tracking-driver-profile{display:flex;align-items:center;gap:11px;margin-bottom:13px}
     .tracking-driver-avatar{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:#0d9373;color:#fff;font-size:1.15rem;font-weight:900;box-shadow:0 8px 18px rgba(13,147,115,.2)}
@@ -176,10 +175,6 @@
                     </div>
                 </section>
 
-                <section class="tracking-side-card">
-                    <div class="tracking-side-title"><i class="bi bi-info-circle text-primary"></i>Theo dõi trực tiếp</div>
-                    <div class="tracking-help">Ngay khi quán xác nhận, hệ thống <strong>điều phối shipper song song với pha chế</strong>. Khi tài xế được gán chuyến, thông tin gọi/chat sẽ mở và vị trí GPS của đúng chuyến sẽ được cập nhật trên bản đồ.</div>
-                </section>
             </aside>
         </div>
     </div>

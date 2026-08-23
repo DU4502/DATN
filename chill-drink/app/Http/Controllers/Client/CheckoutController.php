@@ -9,6 +9,7 @@ use App\Support\RealtimeOrderNotifier;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Category;
+use App\Models\GroupOrder;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -20,6 +21,7 @@ use App\Services\ProductAvailabilityService;
 use App\Support\ShippingFee;
 use App\Support\AddressLearning;
 use App\Support\OrderDistancePolicy;
+use App\Support\ProductSizePrice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -73,14 +75,15 @@ class CheckoutController extends Controller
         $paymentOptions = $this->paymentOptions();
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
+        $groupCheckout = $this->groupCheckoutContext();
+        $isGroupCheckout = (bool) $groupCheckout;
+        $groupCheckoutBranch = $groupCheckout['branch'] ?? null;
         $branches = Branch::where('status', true)
             ->orderBy('name')
             ->get();
         
         $user = auth()->user();
         [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user);
-        $latestDeliveryReference = $this->latestDeliveryReference($user);
-        
         // Get user coordinates for distance calculation
         $userLatitude = $user->latitude;
         $userLongitude = $user->longitude;
@@ -198,11 +201,12 @@ class CheckoutController extends Controller
             'subtotal',
             'addressBook',
             'selectedAddressId',
-            'latestDeliveryReference',
             'branches',
             'branchesJson',
             'userLatitude',
-            'userLongitude'
+            'userLongitude',
+            'isGroupCheckout',
+            'groupCheckoutBranch'
         ));
     }
 
@@ -211,6 +215,13 @@ class CheckoutController extends Controller
      */
     public function process(Request $request)
     {
+        // Đơn nhóm đã chốt chi nhánh từ lúc tạo phòng. Không nhận lại branch_id
+        // từ UI để người dùng không thể đổi sang chi nhánh khác ở checkout.
+        $groupCheckout = $this->groupCheckoutContext();
+        if ($groupCheckout) {
+            $request->merge(['branch_id' => $groupCheckout['branch']->id]);
+        }
+
         if ($request->filled('scheduled_at') && ! $request->filled('delivery_type')) {
             $request->merge([
                 'delivery_type' => 'scheduled',
@@ -228,14 +239,6 @@ class CheckoutController extends Controller
 
         if (! $request->filled('delivery_type')) {
             $request->merge(['delivery_type' => 'now']);
-        }
-
-        if (auth()->check() && ! $request->filled('shipping_phone_ui')) {
-            $userPhone = auth()->user()->phone;
-            if (empty($userPhone) || $userPhone === 'Chưa cập nhật') {
-                $userPhone = '0987654321';
-            }
-            $request->merge(['shipping_phone_ui' => $userPhone]);
         }
 
         if (! $request->filled('shipping_method_ui')) {
@@ -341,15 +344,6 @@ class CheckoutController extends Controller
             $fulfillmentType = $request->input('fulfillment_type', 'delivery');
 
             $branchId = $request->input('branch_id');
-            if (! $branchId && $fulfillmentType === 'delivery') {
-                $branchId = Branch::query()
-                    ->where('status', true)
-                    ->when($request->filled(['latitude', 'longitude']), function ($query) {
-                        $query->whereNotNull('latitude')->whereNotNull('longitude');
-                    })
-                    ->orderBy('id')
-                    ->value('id');
-            }
 
             $branch = Branch::query()->whereKey($branchId)->where('status', true)->first();
             if (! $branch) {
@@ -579,6 +573,34 @@ class CheckoutController extends Controller
         return view('client.checkout.success', $payload);
     }
 
+    protected function groupCheckoutContext(): ?array
+    {
+        $groupOrderId = (int) session('checkout_group_order_id', 0);
+        if ($groupOrderId <= 0) {
+            return null;
+        }
+
+        $groupOrder = GroupOrder::query()
+            ->with('branch')
+            ->whereKey($groupOrderId)
+            ->where('owner_id', auth()->id())
+            ->where('status', 'closed')
+            ->whereNull('order_id')
+            ->first();
+
+        $branch = $groupOrder?->branch;
+        if (! $groupOrder || ! $branch || ! $branch->status) {
+            return null;
+        }
+
+        session()->put('group_branch_id', (int) $branch->id);
+
+        return [
+            'group' => $groupOrder,
+            'branch' => $branch,
+        ];
+    }
+
     protected function checkoutAddressBook($user): array
     {
         $savedAddresses = Schema::hasTable('addresses')
@@ -613,42 +635,6 @@ class CheckoutController extends Controller
             'type' => 'Nhà Riêng',
             'isDefault' => $isDefault,
             'source' => 'primary',
-        ];
-    }
-
-    protected function latestDeliveryReference($user): ?array
-    {
-        if (! $user?->id) {
-            return null;
-        }
-
-        $order = Order::query()
-            ->where('user_id', $user->id)
-            ->where('fulfillment_type', 'delivery')
-            ->whereNotNull('shipping_latitude')
-            ->whereNotNull('shipping_longitude')
-            ->latest('created_at')
-            ->first([
-                'id',
-                'order_code',
-                'shipping_address_text',
-                'shipping_latitude',
-                'shipping_longitude',
-                'created_at',
-            ]);
-
-        if (! $order) {
-            return null;
-        }
-
-        return [
-            'id' => $order->id,
-            'order_code' => $order->order_code ?: ('#' . $order->id),
-            'shipping_address_text' => (string) ($order->shipping_address_text ?? ''),
-            'latitude' => $order->shipping_latitude,
-            'longitude' => $order->shipping_longitude,
-            'placed_at' => $order->created_at?->toIso8601String(),
-            'placed_at_label' => $order->created_at?->format('d/m/Y H:i'),
         ];
     }
 
@@ -1253,6 +1239,7 @@ class CheckoutController extends Controller
         $fallbackPrice = max(0, (int) ($item['price'] ?? $product?->price ?? 0));
         $toppingTotal = max(0, (int) ($item['topping_total'] ?? collect($item['toppings'] ?? [])->sum('price')));
         $sizeExtra = max(0, (int) ($item['size_extra'] ?? 0));
+        $basePrice = max(0, (int) ($product?->price ?? 0));
 
         if (
             $productId <= 0
@@ -1269,7 +1256,7 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice + $toppingTotal);
+                return ProductSizePrice::unitPrice($basePrice, (int) $productSizePrice, $sizeExtra) + $toppingTotal;
             }
         }
 
@@ -1282,12 +1269,12 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice + $toppingTotal);
+                return ProductSizePrice::unitPrice($basePrice, (int) $productSizePrice, $sizeExtra) + $toppingTotal;
             }
         }
 
         if ($product && is_numeric($product->price ?? null)) {
-            return max(0, (int) $product->price + $sizeExtra + $toppingTotal);
+            return ProductSizePrice::unitPrice($basePrice, (int) ($item['size_extra'] ?? null), $sizeExtra) + $toppingTotal;
         }
 
         return $fallbackPrice;

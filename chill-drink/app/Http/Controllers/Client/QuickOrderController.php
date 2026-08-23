@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\TasteProfile;
+use App\Support\ProductSizePrice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -72,14 +73,16 @@ class QuickOrderController extends Controller
         if (! in_array($size, ['S', 'M', 'L'], true)) $size = 'M';
         $toppings = DB::table('order_item_toppings')->join('toppings', 'toppings.id', '=', 'order_item_toppings.topping_id')
             ->where('order_item_id', $item->id)->get(['toppings.name', 'order_item_toppings.price'])->map(fn ($t) => ['name' => $t->name, 'price' => (int) $t->price])->all();
-        $sizeExtra = isset($item->productSize?->price)
-            ? (int) $item->productSize->price
-            : (['S' => 0, 'M' => 5000, 'L' => 10000][$size] ?? 0);
+        $basePrice = max(0, (int) $item->product->price);
+        $storedSizePrice = isset($item->productSize?->price) ? (int) $item->productSize->price : null;
+        $fallbackExtra = (['S' => 0, 'M' => 5000, 'L' => 10000][$size] ?? 0);
+        $sizeExtra = ProductSizePrice::sizeExtra($basePrice, $storedSizePrice, $fallbackExtra);
+        $unitPrice = ProductSizePrice::unitPrice($basePrice, $storedSizePrice, $fallbackExtra);
         $toppingTotal = collect($toppings)->sum('price');
         $key = 'reorder-'.$item->id.'-'.uniqid();
         $cart = session()->get('cart', []);
-        $cart[$key] = ['product_id' => $item->product_id, 'name' => $item->product->name, 'base_price' => (int) $item->product->price,
-            'price' => (int) $item->product->price + $sizeExtra + $toppingTotal, 'size' => $size, 'size_label' => 'Size '.$size,
+        $cart[$key] = ['product_id' => $item->product_id, 'name' => $item->product->name, 'base_price' => $basePrice,
+            'price' => $unitPrice + $toppingTotal, 'size' => $size, 'size_label' => 'Size '.$size,
             'size_extra' => $sizeExtra, 'sugar_level' => $item->sugar_level, 'ice_level' => $item->ice_level, 'toppings' => $toppings,
             'topping_total' => $toppingTotal, 'image' => $item->product->image_url, 'sku' => $item->product->sku,
             'category' => $item->product->category?->name, 'quantity' => max(1, (int) $item->quantity)];

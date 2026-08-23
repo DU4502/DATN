@@ -334,6 +334,14 @@ class ShipperDispatchService
                 return ['status' => 'waiting', 'shipper' => null, 'message' => 'Shipper không còn đủ chỗ để ghép thêm đơn.'];
             }
 
+            if (! $this->bundles->canAcceptAdditionalBundle($shipper, $currentOrders)) {
+                return [
+                    'status' => 'waiting',
+                    'shipper' => null,
+                    'message' => 'Shipper đã rời quán quá 200m sau khi lấy hàng; cần giao/thu tiền đơn hiện tại trước khi ghép thêm.',
+                ];
+            }
+
             // Candidate được tính từ snapshot trước transaction; khóa lại và xác nhận
             // đúng tập đơn hoạt động để tránh gắn nhầm khi hai dispatch chạy đồng thời.
             $expectedIds = collect($evaluation['current_orders'] ?? [])

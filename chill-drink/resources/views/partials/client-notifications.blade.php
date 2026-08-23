@@ -84,7 +84,8 @@
             'order_arrived': '{{ \App\Support\OrderStatus::notificationIconByType('order_arrived') }}',
             'order_completed': '{{ \App\Support\OrderStatus::notificationIconByType('order_completed') }}',
             'order_delivered': '{{ \App\Support\OrderStatus::notificationIconByType('order_delivered') }}',
-            'order_cancelled': '{{ \App\Support\OrderStatus::notificationIconByType('order_cancelled') }}'
+            'order_cancelled': '{{ \App\Support\OrderStatus::notificationIconByType('order_cancelled') }}',
+            'delivery_delay_reported': '{{ \App\Support\OrderStatus::notificationIconByType('delivery_delay_reported') }}'
         };
 
         function notificationIcon(type) {

@@ -23,9 +23,65 @@
 
     .order-detail-card {
         border: 1px solid rgba(17, 24, 39, 0.08);
-        border-radius: 24px;
+        border-radius: 20px;
         background: #fff;
         overflow: hidden;
+    }
+
+    .order-detail-card-inner {
+        padding: 1rem;
+    }
+
+    .order-detail-section {
+        padding: 0.9rem 1rem;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        border-radius: 16px;
+        background: #fff;
+    }
+
+    .order-detail-section-title {
+        margin-bottom: 0.7rem;
+        color: #6b7280;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+    }
+
+    .order-detail-item {
+        padding: 0.85rem;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 14px;
+        background: #fff;
+    }
+
+    .order-detail-item-thumb {
+        width: 64px;
+        height: 64px;
+        object-fit: cover;
+        border-radius: 12px;
+        background: #f8f9fa;
+        flex-shrink: 0;
+    }
+
+    .order-review-list {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .order-review-item {
+        padding: 0.75rem 0.85rem;
+        border: 1px solid rgba(17, 24, 39, 0.08);
+        border-radius: 14px;
+        background: linear-gradient(180deg, #fafffd 0%, #ffffff 100%);
+    }
+
+    .order-review-stars {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        color: #f59e0b;
+        font-size: 0.78rem;
+        white-space: nowrap;
     }
 
     .order-detail-summary {
@@ -34,7 +90,7 @@
 
     @media (max-width: 991.98px) {
         .order-detail-card {
-            padding: 1rem !important;
+            padding: 0.85rem !important;
         }
 
         .order-detail-summary {
@@ -46,6 +102,10 @@
         .order-detail-row > td {
             padding-left: 0.5rem;
             padding-right: 0.5rem;
+        }
+
+        .order-detail-card-inner {
+            padding: 0.85rem;
         }
     }
     
@@ -194,6 +254,9 @@
                     $statusStepOptions = $isSuperAdmin
                         ? \App\Support\OrderStatus::superAdminOptions((string) $order->status, $fulfillmentType)
                         : \App\Support\OrderStatus::storeStepwiseOptions((string) $order->status, $fulfillmentType);
+                    if (\App\Support\OrderStatus::normalize((string) $order->status) !== \App\Support\OrderStatus::PENDING) {
+                        unset($statusStepOptions[\App\Support\OrderStatus::CANCELLED]);
+                    }
                     $nextStatus = $isSuperAdmin
                         ? \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType)
                         : \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
@@ -281,8 +344,15 @@
                 </tr>
                 <tr id="{{ $detailId }}" class="d-none order-detail-row">
                     <td colspan="9" class="border-0 pt-0">
-                        <div class="order-detail-card p-4 shadow-sm">
-                            <div class="row g-4">
+                        @php
+                            $orderReviews = collect($order->reviews ?? []);
+                            $shipmentIncident = $shipmentIncidents[(int) $order->id] ?? null;
+                            $incidentResolveUrl = auth()->user()->isSuperAdmin() && !auth()->user()->isViewingAdminWorkspace()
+                                ? route('admin.super-admin.manage.orders.shipper-incident.resolve', $order)
+                                : route('admin.orders.shipper-incident.resolve', $order);
+                        @endphp
+                        <div class="order-detail-card p-3 p-lg-4 shadow-sm">
+                            <div class="row g-3">
                                 <!-- Cột Trái: Sản phẩm -->
                                 <div class="col-lg-7">
                                     <div class="mb-3">
@@ -290,20 +360,20 @@
                                     </div>
                                     <div class="d-grid gap-3">
                                         @foreach($order->orderItems as $item)
-                                            <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
+                                            <div class="order-detail-item">
                                                 <div class="d-flex align-items-center gap-3">
                                                     <div class="flex-shrink-0">
-                                                        <img src="{{ $item->product?->image_url }}" alt="{{ $item->product?->name ?? 'Sản phẩm' }}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;background:#f8f9fa;">
+                                                        <img src="{{ $item->product?->image_url }}" alt="{{ $item->product?->name ?? 'Sản phẩm' }}" class="order-detail-item-thumb">
                                                     </div>
-                                                    <div class="flex-grow-1">
-                                                        <h4 class="fw-bold mb-1" style="font-size: 0.95rem; color: var(--a-ink);">{{ $item->product?->name ?? 'Sản phẩm đã xóa' }}</h4>
-                                                        <div class="text-muted small mb-1">Kích cỡ: {{ $item->productSize?->size?->name ?? 'Chưa chọn' }}</div>
-                                                        <div class="text-muted small">Đá: {{ (int) $item->ice_level }}% • Đường: {{ (int) $item->sugar_level }}%</div>
+                                                    <div class="flex-grow-1 min-w-0">
+                                                        <h4 class="fw-bold mb-1 text-truncate" style="font-size: 0.92rem; color: var(--a-ink);">{{ $item->product?->name ?? 'Sản phẩm đã xóa' }}</h4>
+                                                        <div class="text-muted small mb-1 text-truncate">Kích cỡ: {{ $item->productSize?->size?->name ?? 'Chưa chọn' }}</div>
+                                                        <div class="text-muted small text-truncate">Đá: {{ (int) $item->ice_level }}% • Đường: {{ (int) $item->sugar_level }}%</div>
                                                     </div>
                                                     <div class="text-end d-flex flex-column align-items-end gap-1">
-                                                        <div class="fw-bold" style="font-size: 0.95rem; color: var(--a-ink);">{{ number_format((int) $item->getSubtotal(), 0, ',', '.') }}đ</div>
+                                                        <div class="fw-bold" style="font-size: 0.92rem; color: var(--a-ink);">{{ number_format((int) $item->getSubtotal(), 0, ',', '.') }}đ</div>
                                                         <div class="text-muted small">{{ number_format((int) $item->unit_price, 0, ',', '.') }}đ/sp</div>
-                                                        <span class="badge px-2 py-1 text-dark" style="background-color: #f1f3f5; font-size: 0.75rem; border-radius: 6px; font-weight: 500;">Số lượng: {{ (int) $item->quantity }}</span>
+                                                        <span class="badge px-2 py-1 text-dark" style="background-color: #f1f3f5; font-size: 0.72rem; border-radius: 6px; font-weight: 500;">SL {{ (int) $item->quantity }}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -317,23 +387,23 @@
                                         <div class="admin-kicker mb-3 text-secondary fw-bold" style="letter-spacing: 0.05em;">THÔNG TIN KHÁCH HÀNG</div>
                                     </div>
                                     
-                                    <div class="mb-4 d-flex flex-column gap-2 text-secondary" style="font-size: 0.9rem;">
+                                    <div class="mb-3 d-flex flex-column gap-2 text-secondary" style="font-size: 0.88rem;">
                                         <div class="d-flex align-items-center gap-2">
-                                            <i class="bi bi-telephone text-muted" style="font-size: 1.1rem;"></i>
+                                            <i class="bi bi-telephone text-muted" style="font-size: 1rem;"></i>
                                             <span class="fw-semibold">{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</span>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
-                                            <i class="bi bi-envelope text-muted" style="font-size: 1.1rem;"></i>
+                                            <i class="bi bi-envelope text-muted" style="font-size: 1rem;"></i>
                                             <span>{{ $order->customerEmail() ?: 'Chưa cập nhật' }}</span>
                                         </div>
                                         <div class="d-flex align-items-start gap-2">
-                                            <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1.1rem;"></i>
+                                            <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1rem;"></i>
                                             <span>{{ $order->getShippingAddress() }}</span>
                                         </div>
                                     </div>
 
                                     @if(($order->fulfillment_type ?? 'delivery') === 'delivery')
-                                        <div class="mb-4">
+                                        <div class="mb-3">
                                             <div class="admin-kicker mb-2 text-secondary fw-bold" style="letter-spacing:.05em;">NGƯỜI GIAO HÀNG</div>
                                             @if($order->shipper)
                                                 <div class="p-3 bg-light border rounded-4 d-flex align-items-start gap-3">
@@ -361,49 +431,86 @@
                                         </div>
                                     @endif
 
-                                    @if($order->status === \App\Support\OrderStatus::CANCELLED && $order->cancellation_reason)
-                                        <!-- Lý do hủy đơn -->
-                                        <div class="alert alert-danger d-flex align-items-start gap-2 mb-4" style="border-radius: 12px; border-left: 4px solid #dc2626;">
-                                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.2rem;"></i>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold mb-1">Lý do hủy đơn:</div>
-                                                <div>{{ $order->cancellation_reason }}</div>
+                                    @if($orderReviews->isNotEmpty())
+                                        <div class="mb-3">
+                                            <div class="admin-kicker mb-2 text-secondary fw-bold" style="letter-spacing:.05em;">ĐÁNH GIÁ</div>
+                                            <div class="order-review-list">
+                                                @foreach($orderReviews as $review)
+                                                    <div class="order-review-item">
+                                                        <div class="d-flex align-items-start justify-content-between gap-2">
+                                                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                                                @if($review->product?->image_url)
+                                                                    <img src="{{ $review->product?->image_url }}" alt="{{ $review->product?->name ?? 'Sản phẩm' }}" style="width:34px;height:34px;object-fit:cover;border-radius:10px;background:#f3f4f6;flex-shrink:0;">
+                                                                @else
+                                                                    <span class="admin-avatar" style="width:34px;height:34px;font-size:.72rem;flex-shrink:0;">{{ mb_substr($review->product?->name ?? 'R', 0, 1) }}</span>
+                                                                @endif
+                                                                <div class="min-w-0">
+                                                                    <div class="fw-semibold text-dark text-truncate" style="font-size: 0.88rem;">{{ $review->product?->name ?? 'Sản phẩm đã xóa' }}</div>
+                                                                    <div class="text-secondary small text-truncate">{{ $review->user?->name ?? 'Khách hàng' }} · {{ $review->created_at?->format('d/m/Y H:i') }}</div>
+                                                                </div>
+                                                            </div>
+                                                            <span class="admin-rating">
+                                                                <i class="bi bi-star-fill"></i>
+                                                                {{ (int) $review->rating }}/5
+                                                            </span>
+                                                        </div>
+                                                        @if($review->comment)
+                                                            <div class="text-secondary small mt-2">{{ $review->comment }}</div>
+                                                        @else
+                                                            <div class="text-secondary small fst-italic mt-2">Không có nhận xét.</div>
+                                                        @endif
+                                                    </div>
+                                                @endforeach
                                             </div>
                                         </div>
                                     @endif
 
-                                    @php
-                                        $shipmentIncident = $shipmentIncidents[(int) $order->id] ?? null;
-                                        $incidentResolveUrl = auth()->user()->isSuperAdmin() && !auth()->user()->isViewingAdminWorkspace()
-                                            ? route('admin.super-admin.manage.orders.shipper-incident.resolve', $order)
-                                            : route('admin.orders.shipper-incident.resolve', $order);
-                                    @endphp
+                                    @if($order->status === \App\Support\OrderStatus::CANCELLED && $order->cancellation_reason)
+                                        <!-- Lý do hủy đơn -->
+                                        <div class="alert alert-danger d-flex align-items-start gap-2 mb-3" style="border-radius: 12px; border-left: 4px solid #dc2626;">
+                                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem;"></i>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold mb-1">Lý do hủy đơn</div>
+                                                <div class="small">{{ $order->cancellation_reason }}</div>
+                                            </div>
+                                        </div>
+                                    @endif
+
                                     @if($shipmentIncident)
-                                        <div class="alert alert-warning border-0 mb-4" style="border-radius:14px;box-shadow:0 8px 22px rgba(245,158,11,.12);">
+                                        <div class="alert alert-warning border-0 mb-3" style="border-radius:14px;box-shadow:0 8px 22px rgba(245,158,11,.12);">
                                             <div class="d-flex align-items-start gap-2">
-                                                <i class="bi bi-exclamation-triangle-fill mt-1" style="font-size:1.15rem;"></i>
+                                                <i class="bi bi-exclamation-triangle-fill mt-1" style="font-size:1rem;"></i>
                                                 <div class="flex-grow-1 min-w-0">
-                                                    <div class="fw-bold">Sự cố shipper cần xử lý</div>
+                                                    <div class="fw-bold">{{ ($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'Khách xin hủy đơn cần duyệt' : 'Sự cố tài xế cần xử lý' }}</div>
                                                     <div class="small mt-1"><strong>{{ $shipmentIncident['shipper_name'] }}</strong> · {{ $shipmentIncident['description'] }}</div>
                                                     @if(!empty($shipmentIncident['reported_at_label']))
                                                         <div class="small text-secondary mt-1">Báo lúc {{ $shipmentIncident['reported_at_label'] }}</div>
                                                     @endif
-                                                    <div class="small mt-2">Đơn <strong>không bị hủy</strong>. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản trong tối đa {{ \App\Services\ShipperIncidentService::REASSIGN_MAX_RADIUS_KM }} km.</div>
+                                                    <div class="small mt-2">{{ ($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'Yêu cầu hủy chỉ xử lý nội bộ; khách không nhận thông báo về thao tác quản lý này.' : 'Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.' }}</div>
                                                     <div class="d-flex flex-wrap gap-2 mt-3">
-                                                        <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0">
-                                                            @csrf
-                                                            <input type="hidden" name="action" value="keep">
-                                                            <button class="btn btn-sm btn-outline-success" type="submit">
-                                                                <i class="bi bi-check-circle me-1"></i>Giữ shipper hiện tại
-                                                            </button>
-                                                        </form>
-                                                        <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0" onsubmit="return confirm('Xác nhận shipper hiện tại không thể tiếp tục và để hệ thống tự tìm người thay thế gần nhất?');">
-                                                            @csrf
-                                                            <input type="hidden" name="action" value="reassign">
-                                                            <button class="btn btn-sm btn-warning" type="submit">
-                                                                <i class="bi bi-arrow-repeat me-1"></i>Điều phối shipper khác
-                                                            </button>
-                                                        </form>
+                                                        @if(($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel')
+                                                            <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0">
+                                                                @csrf
+                                                                <input type="hidden" name="action" value="keep">
+                                                                <button class="btn btn-sm btn-outline-success" type="submit">Tiếp tục giao</button>
+                                                            </form>
+                                                            <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0" onsubmit="return confirm('Duyệt hủy đơn theo yêu cầu nội bộ này?');">
+                                                                @csrf
+                                                                <input type="hidden" name="action" value="cancel">
+                                                                <button class="btn btn-sm btn-danger" type="submit">Duyệt hủy đơn</button>
+                                                            </form>
+                                                        @else
+                                                            <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0">
+                                                                @csrf
+                                                                <input type="hidden" name="action" value="keep">
+                                                                <button class="btn btn-sm btn-outline-success" type="submit">Giữ shipper</button>
+                                                            </form>
+                                                            <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0" onsubmit="return confirm('Xác nhận shipper hiện tại không thể tiếp tục và để hệ thống tự tìm người thay thế gần nhất?');">
+                                                                @csrf
+                                                                <input type="hidden" name="action" value="reassign">
+                                                                <button class="btn btn-sm btn-warning" type="submit">Đổi shipper</button>
+                                                            </form>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </div>
@@ -411,8 +518,8 @@
                                     @endif
 
                                     <!-- Thẻ tóm tắt thanh toán -->
-                                    <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
-                                        <div class="d-flex flex-column gap-2" style="font-size: 0.875rem;">
+                                    <div class="order-detail-section order-detail-summary">
+                                        <div class="d-flex flex-column gap-2" style="font-size: 0.84rem;">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <span class="text-muted">Tạm tính</span>
                                                 <span class="fw-semibold text-dark">{{ number_format((int) ($order->subtotal ?? 0), 0, ',', '.') }}đ</span>
@@ -426,14 +533,14 @@
                                                 <span class="fw-semibold text-danger">-{{ number_format((int) ($order->discount ?? 0), 0, ',', '.') }}đ</span>
                                             </div>
                                             
-                                            <div style="border-top: 1px dashed #e9ecef; margin: 0.75rem 0;"></div>
+                                            <div style="border-top: 1px dashed #e9ecef; margin: 0.5rem 0;"></div>
                                             
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div>
-                                                    <div class="text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em; font-weight: 600;">TỔNG CỘNG</div>
-                                                    <div class="fw-bold mt-1 text-primary" style="font-size: 1.5rem; line-height: 1;">{{ number_format((int) ($order->total_price ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
+                                                    <div class="text-muted" style="font-size: 0.68rem; letter-spacing: 0.05em; font-weight: 700;">TỔNG CỘNG</div>
+                                                    <div class="fw-bold mt-1 text-primary" style="font-size: 1.35rem; line-height: 1;">{{ number_format((int) ($order->total_price ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
                                                 </div>
-                                                <div class="text-end" style="font-size: 0.85rem;">
+                                                <div class="text-end" style="font-size: 0.8rem;">
                                                     <div class="text-dark">Phương thức: <strong class="text-uppercase">{{ $order->payment_method }}</strong></div>
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">{{ strtoupper(\App\Support\OrderStatus::label((string) $order->status)) }}</strong>
@@ -451,35 +558,34 @@
                                                         @php
                                                             $changedByUser = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
                                                         @endphp
-                                                        <div class="mt-1 text-muted" style="font-size:0.75rem;">
-                                                            <i class="bi bi-clock-history me-1"></i>Cập nhật: <strong>{{ $order->status_changed_at->format('H:i · d/m/Y') }}</strong>
-                                                            @if($changedByUser)
-                                                                bởi <strong>{{ $changedByUser->name }}</strong> <span class="badge {{ $changedByUser->isStaffOnly() ? 'bg-warning text-dark' : ($changedByUser->isAdmin() ? 'bg-primary' : 'bg-secondary') }}" style="font-size:0.62rem;">{{ $changedByUser->isStaffOnly() ? 'Nhân viên' : ($changedByUser->isAdmin() ? 'Admin' : 'Hệ thống') }}</span>
-                                                            @endif
-                                                        </div>
+                                                                <div class="mt-1 text-muted" style="font-size:0.72rem;">
+                                                                    <i class="bi bi-clock-history me-1"></i>{{ $order->status_changed_at->format('H:i · d/m/Y') }}
+                                                                    @if($changedByUser)
+                                                                        bởi <strong>{{ $changedByUser->name }}</strong>
+                                                                    @endif
+                                                                </div>
                                                     @endif
+
+                                                    <div class="d-flex gap-2 align-items-stretch mt-3">
+                                                        @if($nextStatus !== null)
+                                                            <form action="{{ route($orderUpdateRouteName, $order->id) }}" method="POST" class="flex-grow-1 m-0">
+                                                                @csrf
+                                                                @method('PUT')
+                                                                <input type="hidden" name="status" value="{{ $nextStatus }}">
+                                                                <button type="submit" class="btn btn-primary w-100 px-3 py-2 text-center" style="background-color: #0b6b5f; border-color: #0b6b5f; border-radius: 12px; font-size: 0.85rem;">
+                                                                    Chuyển bước tiếp theo
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                        @if(\App\Support\OrderStatus::normalize((string) $order->status) === \App\Support\OrderStatus::PENDING)
+                                                            <button type="button" class="btn btn-outline-danger px-3 py-2" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.85rem; white-space: nowrap;" data-bs-toggle="modal" data-bs-target="#cancelOrderModal" data-order-id="{{ $order->id }}">
+                                                                Hủy đơn
+                                                            </button>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <!-- Các nút hành động -->
-                                            <div class="d-flex gap-2 align-items-stretch mt-3 w-100">
-                                                @if($nextStatus !== null)
-                                                    <form action="{{ route($orderUpdateRouteName, $order->id) }}" method="POST" class="flex-grow-1 m-0">
-                                                        @csrf
-                                                        @method('PUT')
-                                                        <input type="hidden" name="status" value="{{ $nextStatus }}">
-                                                        <button type="submit" class="btn btn-primary w-100 h-100 d-flex align-items-center justify-content-center gap-2 px-3 py-2 text-center" style="background-color: #0b6b5f; border-color: #0b6b5f; border-radius: 12px; font-size: 0.875rem;">
-                                                            <span>Chuyển bước tiếp theo</span>
-                                                            <i class="bi bi-arrow-right"></i>
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                                @if(!in_array($order->status, [\App\Support\OrderStatus::COMPLETED, \App\Support\OrderStatus::CANCELLED], true))
-                                                    <button type="button" class="btn btn-outline-danger h-100 px-3 py-2" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.875rem; white-space: nowrap;" data-bs-toggle="modal" data-bs-target="#cancelOrderModal" data-order-id="{{ $order->id }}">
-                                                        Hủy đơn
-                                                    </button>
-                                                @endif
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -599,6 +705,18 @@
                 return;
             }
 
+            // Hủy đơn luôn cần lý do. Mở cùng modal với nút "Hủy đơn" trong
+            // phần chi tiết thay vì gửi request thiếu cancellation_reason.
+            if (requestedStatus === 'cancelled') {
+                select.value = previousStatus || requestedStatus;
+                if (typeof window.openCancelOrderModal === 'function') {
+                    window.openCancelOrderModal(orderId);
+                } else {
+                    showOrderStatusToast('Vui lòng mở chi tiết đơn để nhập lý do hủy.', 'error');
+                }
+                return;
+            }
+
             const loading = form.querySelector('[data-order-status-loading]');
             const formData = new FormData(form);
             pendingStatusUpdates.add(orderId);
@@ -655,26 +773,40 @@
             if (!incident) return '';
 
             const resolveUrl = payload.incident_resolve_url || '#';
+            const isCustomerCancel = incident.incident_type === 'customer_cancel';
             return `
                 <div class="alert alert-warning border-0 mb-4" style="border-radius:14px;box-shadow:0 8px 22px rgba(245,158,11,.12);">
                     <div class="d-flex align-items-start gap-2">
                         <i class="bi bi-exclamation-triangle-fill mt-1"></i>
                         <div class="flex-grow-1">
-                            <div class="fw-bold">Sự cố shipper cần xử lý</div>
+                            <div class="fw-bold">${isCustomerCancel ? 'Khách xin hủy đơn cần duyệt' : 'Sự cố tài xế cần xử lý'}</div>
                             <div class="small mt-1"><strong>${escapeHtml(incident.shipper_name || 'Shipper')}</strong> · ${escapeHtml(incident.description || 'Shipper báo sự cố.')}</div>
                             ${incident.reported_at_label ? `<div class="small text-secondary mt-1">Báo lúc ${escapeHtml(incident.reported_at_label)}</div>` : ''}
-                            <div class="small mt-2">Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.</div>
+                            <div class="small mt-2">${isCustomerCancel ? 'Yêu cầu hủy chỉ xử lý nội bộ; khách không nhận thông báo về thao tác quản lý này.' : 'Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.'}</div>
                             <div class="d-flex flex-wrap gap-2 mt-3">
-                                <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0">
-                                    <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
-                                    <input type="hidden" name="action" value="keep">
-                                    <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Giữ shipper hiện tại</button>
-                                </form>
-                                <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0" onsubmit="return confirm('Xác nhận để hệ thống tự tìm shipper thay thế gần nhất?');">
-                                    <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
-                                    <input type="hidden" name="action" value="reassign">
-                                    <button class="btn btn-sm btn-warning" type="submit"><i class="bi bi-arrow-repeat me-1"></i>Điều phối shipper khác</button>
-                                </form>
+                                ${isCustomerCancel ? `
+                                    <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0">
+                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                        <input type="hidden" name="action" value="keep">
+                                        <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-play-circle me-1"></i>Tiếp tục giao</button>
+                                    </form>
+                                    <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0" onsubmit="return confirm('Duyệt hủy đơn theo yêu cầu nội bộ này?');">
+                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                        <input type="hidden" name="action" value="cancel">
+                                        <button class="btn btn-sm btn-danger" type="submit"><i class="bi bi-x-circle me-1"></i>Duyệt hủy đơn</button>
+                                    </form>
+                                ` : `
+                                    <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0">
+                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                        <input type="hidden" name="action" value="keep">
+                                        <button class="btn btn-sm btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Giữ shipper hiện tại</button>
+                                    </form>
+                                    <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0" onsubmit="return confirm('Xác nhận để hệ thống tự tìm shipper thay thế gần nhất?');">
+                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
+                                        <input type="hidden" name="action" value="reassign">
+                                        <button class="btn btn-sm btn-warning" type="submit"><i class="bi bi-arrow-repeat me-1"></i>Điều phối shipper khác</button>
+                                    </form>
+                                `}
                             </div>
                         </div>
                     </div>
@@ -707,11 +839,17 @@
                 ? payload.status_options
                 : null;
             const statusOptions = providedOptions && Object.keys(providedOptions).length > 0
-                ? providedOptions
+                ? { ...providedOptions }
                 : {
                     [status]: currentLabel,
                     ...(payload.next_status ? { [payload.next_status]: nextStatusLabel(payload) } : {}),
                 };
+
+            // Không để dữ liệu realtime cũ làm xuất hiện lại lựa chọn hủy sau khi
+            // đơn đã được xác nhận. Hủy sau đó chỉ xử lý ở Sự cố giao vận.
+            if (status !== 'pending') {
+                delete statusOptions.cancelled;
+            }
 
             const optionsHtml = Object.entries(statusOptions).map(([value, label]) => `
                 <option value="${escapeHtml(value)}" ${String(value) === String(status) ? 'selected' : ''}>${escapeHtml(label)}</option>
@@ -761,25 +899,49 @@
 
         function detailRowHtml(payload) {
             const items = Array.isArray(payload.items) ? payload.items : [];
+            const reviews = Array.isArray(payload.reviews) ? payload.reviews : [];
             const lines = items.map((item) => `
-                <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
+                <div class="order-detail-item">
                     <div class="d-flex align-items-center gap-3">
                         <div class="flex-shrink-0">
-                            <img src="${escapeHtml(item.image_url || '')}" alt="${escapeHtml(item.product_name || 'Sản phẩm')}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;background:#f8f9fa;">
+                            <img src="${escapeHtml(item.image_url || '')}" alt="${escapeHtml(item.product_name || 'Sản phẩm')}" class="order-detail-item-thumb">
                         </div>
-                        <div class="flex-grow-1">
-                            <h4 class="fw-bold mb-1" style="font-size: 0.95rem; color: var(--a-ink);">${escapeHtml(item.product_name || 'Sản phẩm')}</h4>
-                            <div class="text-muted small mb-1">Kích cỡ: ${escapeHtml(item.size_name || 'Chưa chọn')}</div>
-                            <div class="text-muted small">Đá: ${parseInt(item.ice_level || 0)}% • Đường: ${parseInt(item.sugar_level || 0)}%</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <h4 class="fw-bold mb-1 text-truncate" style="font-size: 0.92rem; color: var(--a-ink);">${escapeHtml(item.product_name || 'Sản phẩm')}</h4>
+                            <div class="text-muted small mb-1 text-truncate">Kích cỡ: ${escapeHtml(item.size_name || 'Chưa chọn')}</div>
+                            <div class="text-muted small text-truncate">Đá: ${parseInt(item.ice_level || 0)}% • Đường: ${parseInt(item.sugar_level || 0)}%</div>
                         </div>
                         <div class="text-end d-flex flex-column align-items-end gap-1">
-                            <div class="fw-bold" style="font-size: 0.95rem; color: var(--a-ink);">${escapeHtml(item.total_formatted || '')}</div>
+                            <div class="fw-bold" style="font-size: 0.92rem; color: var(--a-ink);">${escapeHtml(item.total_formatted || '')}</div>
                             <div class="text-muted small">${escapeHtml(item.unit_price_formatted || '')}/sp</div>
-                            <span class="badge px-2 py-1 text-dark" style="background-color: #f1f3f5; font-size: 0.75rem; border-radius: 6px; font-weight: 500;">Số lượng: ${parseInt(item.quantity || 1)}</span>
+                            <span class="badge px-2 py-1 text-dark" style="background-color: #f1f3f5; font-size: 0.72rem; border-radius: 6px; font-weight: 500;">SL ${parseInt(item.quantity || 1)}</span>
                         </div>
                     </div>
                 </div>
             `).join('');
+
+            const reviewLines = reviews.map((review) => {
+                const stars = Array.from({ length: 5 }, (_, index) => {
+                    const starNumber = index + 1;
+                    return `<i class="bi ${Number(review.rating || 0) >= starNumber ? 'bi-star-fill' : 'bi-star'}"></i>`;
+                }).join('');
+
+                return `
+                    <div class="order-review-item">
+                        <div class="d-flex align-items-start justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                ${review.product_image ? `<img src="${escapeHtml(review.product_image)}" alt="${escapeHtml(review.product_name || 'Sản phẩm')}" style="width:34px;height:34px;object-fit:cover;border-radius:10px;background:#f3f4f6;flex-shrink:0;">` : `<span class="admin-avatar" style="width:34px;height:34px;font-size:.72rem;flex-shrink:0;">${escapeHtml((review.product_name || 'R').charAt(0))}</span>`}
+                                <div class="min-w-0">
+                                    <div class="fw-semibold text-dark text-truncate" style="font-size: 0.88rem;">${escapeHtml(review.product_name || 'Sản phẩm đã xóa')}</div>
+                                    <div class="text-secondary small text-truncate">${escapeHtml(review.user_name || 'Khách hàng')} · ${escapeHtml(review.created_at || '')}</div>
+                                </div>
+                            </div>
+                            <span class="admin-rating">${stars}${Number(review.rating || 0)}/5</span>
+                        </div>
+                        <div class="text-secondary small mt-2">${escapeHtml(review.comment || 'Không có nhận xét.')}</div>
+                    </div>
+                `;
+            }).join('');
 
             const statusKey = payload.status || 'pending';
             const statusLabel = (payload.status_label || 'Chờ xử lý').toUpperCase();
@@ -787,43 +949,49 @@
             return `
                 <tr id="order-detail-${escapeHtml(payload.order_id)}" class="d-none order-detail-row">
                     <td colspan="9" class="border-0 pt-0">
-                        <div class="order-detail-card p-4 shadow-sm">
-                            <div class="row g-4">
+                        <div class="order-detail-card p-3 p-lg-4 shadow-sm">
+                            <div class="row g-3">
                                 <!-- Cột Trái: Sản phẩm -->
                                 <div class="col-lg-7">
                                     <div class="mb-3">
-                                        <div class="admin-kicker mb-3 text-secondary fw-bold" style="letter-spacing: 0.05em;">SẢN PHẨM TRONG ĐƠN HÀNG</div>
+                                        <div class="admin-kicker mb-2 text-secondary fw-bold" style="letter-spacing: 0.05em;">SẢN PHẨM TRONG ĐƠN HÀNG</div>
                                     </div>
-                                    <div class="d-grid gap-3">
+                                    <div class="d-grid gap-2">
                                         ${lines || '<div class="text-secondary p-3 border rounded-4 text-center">Chưa có dữ liệu sản phẩm.</div>'}
                                     </div>
                                 </div>
                                 <!-- Cột Phải: Thông tin khách hàng & Tổng hợp đơn hàng -->
                                 <div class="col-lg-5">
                                     <div class="mb-3">
-                                        <div class="admin-kicker mb-3 text-secondary fw-bold" style="letter-spacing: 0.05em;">THÔNG TIN KHÁCH HÀNG</div>
+                                        <div class="admin-kicker mb-2 text-secondary fw-bold" style="letter-spacing: 0.05em;">THÔNG TIN KHÁCH HÀNG</div>
                                     </div>
-                                    <div class="mb-4 d-flex flex-column gap-2 text-secondary" style="font-size: 0.9rem;">
+                                    <div class="mb-3 d-flex flex-column gap-2 text-secondary" style="font-size: 0.88rem;">
                                         <div class="d-flex align-items-center gap-2">
-                                            <i class="bi bi-telephone text-muted" style="font-size: 1.1rem;"></i>
+                                            <i class="bi bi-telephone text-muted" style="font-size: 1rem;"></i>
                                             <span class="fw-semibold">${escapeHtml(payload.customer_phone || 'Chưa cập nhật')}</span>
                                         </div>
                                         <div class="d-flex align-items-center gap-2">
-                                            <i class="bi bi-envelope text-muted" style="font-size: 1.1rem;"></i>
+                                            <i class="bi bi-envelope text-muted" style="font-size: 1rem;"></i>
                                             <span>${escapeHtml(payload.customer_email || 'Chưa cập nhật')}</span>
                                         </div>
                                         <div class="d-flex align-items-start gap-2">
-                                            <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1.1rem;"></i>
+                                            <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1rem;"></i>
                                             <span>${escapeHtml(payload.shipping_address || 'Chưa cập nhật địa chỉ')}</span>
                                         </div>
                                     </div>
 
                                     ${shipperInfoHtml(payload)}
+                                    ${reviewLines ? `
+                                        <div class="mb-3">
+                                            <div class="order-detail-section-title">ĐÁNH GIÁ</div>
+                                            <div class="order-review-list">${reviewLines}</div>
+                                        </div>
+                                    ` : ''}
                                     ${incidentAlertHtml(payload)}
 
                                     <!-- Thẻ tóm tắt thanh toán -->
-                                    <div class="p-3 bg-white" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 16px;">
-                                        <div class="d-flex flex-column gap-2" style="font-size: 0.875rem;">
+                                    <div class="order-detail-section order-detail-summary">
+                                        <div class="d-flex flex-column gap-2" style="font-size: 0.84rem;">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <span class="text-muted">Tạm tính</span>
                                                 <span class="fw-semibold text-dark">${escapeHtml(payload.subtotal_formatted || '')}</span>
@@ -837,51 +1005,45 @@
                                                 <span class="fw-semibold text-danger">-${escapeHtml(payload.discount_formatted || '')}</span>
                                             </div>
                                             
-                                            <div style="border-top: 1px dashed #e9ecef; margin: 0.75rem 0;"></div>
+                                            <div style="border-top: 1px dashed #e9ecef; margin: 0.5rem 0;"></div>
                                             
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div>
-                                                    <div class="text-muted" style="font-size: 0.75rem; letter-spacing: 0.05em; font-weight: 600;">TỔNG CỘNG</div>
-                                                    <div class="fw-bold mt-1 text-primary" style="font-size: 1.5rem; line-height: 1;">${escapeHtml(payload.total_formatted || '')}</div>
+                                                    <div class="text-muted" style="font-size: 0.68rem; letter-spacing: 0.05em; font-weight: 700;">TỔNG CỘNG</div>
+                                                    <div class="fw-bold mt-1 text-primary" style="font-size: 1.35rem; line-height: 1;">${escapeHtml(payload.total_formatted || '')}</div>
                                                 </div>
-                                                <div class="text-end" style="font-size: 0.85rem;">
+                                                <div class="text-end" style="font-size: 0.8rem;">
                                                     <div class="text-dark">Phương thức: <strong class="text-uppercase">${escapeHtml(payload.payment_method || 'cod')}</strong></div>
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-${escapeHtml(statusKey)}">${escapeHtml(statusLabel)}</strong>
                                                     </div>
                                                     ${payload.status_changed_at ? `
-                                                        <div class="mt-1 text-muted" style="font-size:0.75rem;">
-                                                            <i class="bi bi-clock-history me-1"></i>Cập nhật: <strong>${escapeHtml(payload.status_changed_at)}</strong>
+                                                        <div class="mt-1 text-muted" style="font-size:0.72rem;">
+                                                            <i class="bi bi-clock-history me-1"></i>${escapeHtml(payload.status_changed_at)}
                                                             ${payload.status_changed_by_name ? `bởi <strong>${escapeHtml(payload.status_changed_by_name)}</strong>` : ''}
                                                         </div>
                                                     ` : ''}
                                                 </div>
                                             </div>
 
-                                            <!-- Các nút hành động -->
                                             <div class="d-flex gap-2 align-items-stretch mt-3 w-100">
                                                 ${payload.next_status ? `
                                                     <form action="${escapeHtml(payload.status_update_url || '#')}" method="POST" class="flex-grow-1 m-0">
                                                         <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
                                                         <input type="hidden" name="_method" value="PUT">
                                                         <input type="hidden" name="status" value="${escapeHtml(payload.next_status)}">
-                                                        <button type="submit" class="btn btn-primary w-100 h-100 d-flex align-items-center justify-content-center gap-2 px-3 py-2 text-center" style="background-color: #0b6b5f; border-color: #0b6b5f; border-radius: 12px; font-size: 0.875rem;">
-                                                            <span>Chuyển bước tiếp theo</span>
-                                                            <i class="bi bi-arrow-right"></i>
+                                                        <button type="submit" class="btn btn-primary w-100 px-3 py-2 text-center" style="background-color: #0b6b5f; border-color: #0b6b5f; border-radius: 12px; font-size: 0.85rem;">
+                                                            Chuyển bước tiếp theo
                                                         </button>
                                                     </form>
                                                 ` : ''}
                                                 ${payload.can_cancel ? `
-                                                    <form action="${escapeHtml(payload.status_update_url || '#')}" method="POST" class="m-0" onsubmit="return confirm('Hủy đơn hàng #${escapeHtml(payload.order_id)}?');">
-                                                        <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
-                                                        <input type="hidden" name="_method" value="PUT">
-                                                        <input type="hidden" name="status" value="cancelled">
-                                                        <button type="submit" class="btn btn-outline-danger h-100 px-3 py-2" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.875rem; white-space: nowrap;">
-                                                            Hủy đơn
-                                                        </button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-outline-danger px-3 py-2" data-bs-toggle="modal" data-bs-target="#cancelOrderModal" data-order-id="${escapeHtml(payload.order_id)}" style="border-radius: 12px; border: 1.5px solid var(--a-danger); color: var(--a-danger); background: transparent; font-size: 0.85rem; white-space: nowrap;">
+                                                        Hủy đơn
+                                                    </button>
                                                 ` : ''}
                                             </div>
+
                                         </div>
                                     </div>
                                 </div>
@@ -967,7 +1129,7 @@
                 discount_formatted: payload.discount_formatted || '',
                 next_status: payload.next_status || '',
                 status_update_url: payload.status_update_url || '#',
-                can_cancel: payload.can_cancel ?? true,
+                can_cancel: payload.can_cancel ?? (payload.status === 'pending'),
                 shipping_address: payload.shipping_address || '',
                 shipper: payload.shipper || null,
                 delivered_at: payload.delivered_at || null,
@@ -1178,14 +1340,34 @@
         const cancelModal = document.getElementById('cancelOrderModal');
         const cancelForm = document.getElementById('cancelOrderForm');
         const cancelReasonTextarea = document.getElementById('cancellationReason');
+        const updateUrlTemplate = @json(route($orderUpdateRouteName, ['id' => '__ORDER_ID__']));
+
+        // Dùng chung cho dropdown trạng thái và các nút hủy trong phần chi tiết.
+        window.openCancelOrderModal = function(orderId) {
+            if (!cancelModal || !cancelForm || !cancelReasonTextarea || !orderId) {
+                return;
+            }
+
+            cancelForm.setAttribute('action', updateUrlTemplate.replace('__ORDER_ID__', orderId));
+            cancelForm.dataset.orderId = orderId;
+            cancelReasonTextarea.value = '';
+
+            if (window.bootstrap?.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(cancelModal).show();
+            }
+        };
         
         if (cancelModal) {
             cancelModal.addEventListener('show.bs.modal', function(event) {
                 const button = event.relatedTarget;
-                const orderId = button.getAttribute('data-order-id');
-                const updateUrl = @json(route($orderUpdateRouteName, ['id' => '__ORDER_ID__'])).replace('__ORDER_ID__', orderId);
+                const orderId = button?.getAttribute('data-order-id') || cancelForm.dataset.orderId;
+
+                if (!orderId) {
+                    return;
+                }
                 
-                cancelForm.setAttribute('action', updateUrl);
+                cancelForm.setAttribute('action', updateUrlTemplate.replace('__ORDER_ID__', orderId));
+                cancelForm.dataset.orderId = orderId;
                 cancelReasonTextarea.value = '';
             });
         }

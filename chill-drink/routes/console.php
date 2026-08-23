@@ -26,7 +26,7 @@ Schedule::command(CleanupOldChats::class)
     ->withoutOverlapping()
     ->runInBackground();
 
-// Tự động hủy đơn chờ quán xác nhận quá 2 giờ hoặc đứng trạng thái quá 24 giờ.
+// Tự động hủy đơn chờ quán xác nhận quá 30 phút hoặc đứng trạng thái quá 24 giờ.
 Schedule::command(AutoCancelStaleOrders::class)
     ->everyMinute()
     ->withoutOverlapping()

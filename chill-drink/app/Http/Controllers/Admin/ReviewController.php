@@ -16,6 +16,8 @@ class ReviewController extends Controller
     public function index(Request $request)
     {
         $hasReviewTable = Schema::hasTable('reviews');
+        $hasReviewStatusColumn = $hasReviewTable && Schema::hasColumn('reviews', 'status');
+        $statusFilter = $request->string('status')->trim()->toString();
         $reviews = new LengthAwarePaginator([], 0, 12, 1, [
             'path' => request()->url(),
             'pageName' => 'page',
@@ -26,9 +28,11 @@ class ReviewController extends Controller
         $monthReviews = 0;
 
         if ($hasReviewTable) {
-            $reviewQuery = Review::with(['user', 'product.category'])
+            $reviewQuery = Review::with(['user', 'product.category', 'order'])
                 ->when($request->filled('rating'), fn ($q) => $q->where('rating', (int) $request->rating))
                 ->when($request->filled('product_id'), fn ($q) => $q->where('product_id', (int) $request->product_id))
+                ->when($hasReviewStatusColumn && $statusFilter === 'visible', fn ($q) => $q->where('status', true))
+                ->when($hasReviewStatusColumn && $statusFilter === 'hidden', fn ($q) => $q->where('status', false))
                 ->when($request->filled('q'), function ($q) use ($request) {
                     $search = $request->q;
                     $q->where(function ($inner) use ($search) {
@@ -61,6 +65,7 @@ class ReviewController extends Controller
 
         return view('admin.reviews.index', compact(
             'hasReviewTable',
+            'hasReviewStatusColumn',
             'reviews',
             'totalReviews',
             'averageRating',

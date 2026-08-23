@@ -9,7 +9,7 @@ class AutoCancelStaleOrders extends Command
 {
     protected $signature = 'orders:auto-cancel-stale {--limit= : Số đơn tối đa xử lý trong một lượt}';
 
-    protected $description = 'Tự hủy đơn chờ quán xác nhận quá 2 giờ hoặc đứng nguyên trạng thái quá 24 giờ';
+    protected $description = 'Tự hủy đơn chờ quán xác nhận quá 30 phút hoặc đứng nguyên trạng thái quá 24 giờ';
 
     public function handle(OrderTimeoutService $service): int
     {

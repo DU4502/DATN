@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\ProductAvailabilityService;
+use App\Support\OrderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -47,20 +48,8 @@ class ProductController extends Controller
                     ->where('branch_id', $managedBranch?->id));
             })
             ->when($filters['q'] !== '', function ($query) use ($filters) {
-                $keyword = $filters['q'];
-
-                $query->where(function ($builder) use ($keyword) {
-                    $builder
-                        ->where('name', 'like', '%' . $keyword . '%')
-                        ->orWhere('slug', 'like', '%' . $keyword . '%')
-                        ->orWhere('description', 'like', '%' . $keyword . '%')
-                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                            $categoryQuery->where('name', 'like', '%' . $keyword . '%');
-                        });
-
-                    if (Schema::hasColumn('products', 'sku')) {
-                        $builder->orWhere('sku', 'like', '%' . $keyword . '%');
-                    }
+                $query->where(function ($builder) use ($filters) {
+                    $this->applyProductSearchKeyword($builder, $filters['q']);
                 });
             })
             ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
@@ -383,6 +372,12 @@ class ProductController extends Controller
     {
         $product = $this->findProduct($id);
 
+        if ($this->productHasUnfinishedOrders($product)) {
+            return redirect()
+                ->route('admin.products.index', $this->returnPageParameters(request()))
+                ->with('error', 'Không thể xóa sản phẩm vì vẫn còn đơn hàng chưa hoàn thành.');
+        }
+
         // Soft delete instead of permanent delete
         $product->delete();
 
@@ -407,20 +402,8 @@ class ProductController extends Controller
         $productsQuery = Product::onlyTrashed()
             ->with('category')
             ->when($filters['q'] !== '', function ($query) use ($filters) {
-                $keyword = $filters['q'];
-
-                $query->where(function ($builder) use ($keyword) {
-                    $builder
-                        ->where('name', 'like', '%' . $keyword . '%')
-                        ->orWhere('slug', 'like', '%' . $keyword . '%')
-                        ->orWhere('description', 'like', '%' . $keyword . '%')
-                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                            $categoryQuery->where('name', 'like', '%' . $keyword . '%');
-                        });
-
-                    if (Schema::hasColumn('products', 'sku')) {
-                        $builder->orWhere('sku', 'like', '%' . $keyword . '%');
-                    }
+                $query->where(function ($builder) use ($filters) {
+                    $this->applyProductSearchKeyword($builder, $filters['q']);
                 });
             })
             ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
@@ -463,13 +446,9 @@ class ProductController extends Controller
     {
         $product = Product::withTrashed()->whereKey($id)->orWhere('slug', $id)->firstOrFail();
 
-        $hasOrders = \Illuminate\Support\Facades\DB::table('order_items')
-            ->where('product_id', $product->id)
-            ->exists();
-
-        if ($hasOrders) {
+        if ($this->productHasUnfinishedOrders($product)) {
             return redirect()->route('admin.products.trash')
-                ->with('error', 'Không thể xóa vĩnh viễn! Sản phẩm này đã tồn tại trong lịch sử đơn hàng của khách hàng. Vui lòng duy trì lưu trữ trong thùng rác.');
+                ->with('error', 'Không thể xóa vĩnh viễn vì sản phẩm vẫn còn đơn hàng chưa hoàn thành.');
         }
 
         if ($product->image) {
@@ -522,6 +501,38 @@ class ProductController extends Controller
         ), fn($value) => $value !== null && $value !== '');
     }
 
+    private function applyProductSearchKeyword($query, string $keyword): void
+    {
+        $keyword = trim($keyword);
+
+        if ($keyword === '') {
+            return;
+        }
+
+        $priceKeyword = preg_replace('/[^\d]/', '', $keyword) ?: '';
+
+        $query->where(function ($builder) use ($keyword, $priceKeyword) {
+            $builder
+                ->where('name', 'like', '%' . $keyword . '%')
+                ->orWhere('slug', 'like', '%' . $keyword . '%')
+                ->orWhere('description', 'like', '%' . $keyword . '%')
+                ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
+                    $categoryQuery->where('name', 'like', '%' . $keyword . '%');
+                });
+
+            if (Schema::hasColumn('products', 'sku')) {
+                $builder->orWhere('sku', 'like', '%' . $keyword . '%');
+            }
+
+            if ($priceKeyword !== '') {
+                $builder->orWhereRaw(
+                    "REPLACE(REPLACE(CAST(price AS CHAR), '.', ''), ',', '') LIKE ?",
+                    ['%' . $priceKeyword . '%']
+                );
+            }
+        });
+    }
+
     private function authorizedBranchStatuses(Request $request): array
     {
         $statuses = (array) $request->input('branch_statuses', []);
@@ -569,6 +580,26 @@ class ProductController extends Controller
         }
 
         return null;
+    }
+
+    private function productHasUnfinishedOrders(Product $product): bool
+    {
+        if (! Schema::hasTable('order_items') || ! Schema::hasTable('orders')) {
+            return false;
+        }
+
+        $query = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('order_items.product_id', $product->id);
+
+        if (Schema::hasColumn('orders', 'status')) {
+            $query->whereRaw(
+                'LOWER(COALESCE(orders.status, "")) NOT IN (?, ?)',
+                [OrderStatus::COMPLETED, OrderStatus::CANCELLED]
+            );
+        }
+
+        return $query->exists();
     }
 
     private function syncProductSizes(Product $product, Request $request): void

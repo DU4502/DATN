@@ -160,7 +160,7 @@ class DeliveryBundleDispatchTest extends TestCase
         ]);
     }
 
-    public function test_delivery_arrival_swipe_unlocks_only_within_fifty_meters(): void
+    public function test_delivery_arrival_swipe_unlocks_only_within_two_hundred_and_fifty_meters(): void
     {
         $branch = $this->createBranch('ARRIVAL-20M', 10.7769, 106.7009);
         $shipper = $this->createShipper($branch, 'ARRIVAL-SHIPPER', 'busy');
@@ -178,13 +178,13 @@ class DeliveryBundleDispatchTest extends TestCase
         $this->actingAs($shipper->user)
             ->postJson(route('shipper.location.update'), [
                 'order_id' => $order->id,
-                'latitude' => $targetLatitude + (55 / 111320),
+                'latitude' => $targetLatitude + (255 / 111320),
                 'longitude' => $targetLongitude,
                 'accuracy' => 5,
                 'test_mode' => true,
             ])
             ->assertOk()
-            ->assertJsonPath('arrival.radius_m', 50)
+            ->assertJsonPath('arrival.radius_m', 250)
             ->assertJsonPath('arrival.eligible', false)
             ->assertJsonPath('arrival.verified', false);
 
@@ -202,7 +202,7 @@ class DeliveryBundleDispatchTest extends TestCase
                 'test_mode' => true,
             ])
             ->assertOk()
-            ->assertJsonPath('arrival.radius_m', 50)
+            ->assertJsonPath('arrival.radius_m', 250)
             ->assertJsonPath('arrival.eligible', true)
             ->assertJsonPath('arrival.verified', true);
 
@@ -297,6 +297,43 @@ class DeliveryBundleDispatchTest extends TestCase
             'shipper_id' => $shipper->id,
             'mode' => 'bundle',
             'selected' => true,
+        ]);
+    }
+
+    public function test_bundle_dispatch_stops_after_shipper_leaves_store_200m_after_pickup(): void
+    {
+        Notification::fake();
+
+        $branch = $this->createBranch('BND-LOCK', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'BUNDLE-LOCK', 'busy');
+        $primary = $this->createOrder($branch, 'BUNDLE-LOCK-PRIMARY', $shipper);
+        $primary->forceFill(['status' => 'delivering'])->save();
+        $newOrder = $this->createOrder($branch, 'BUNDLE-LOCK-NEW');
+
+        $shipper->forceFill([
+            'current_latitude' => (float) $branch->latitude + (250 / 111320),
+            'current_longitude' => (float) $branch->longitude,
+        ])->save();
+
+        $shipment = Shipment::create([
+            'order_id' => $primary->id,
+            'shipper_id' => $shipper->id,
+            'status' => 'delivering',
+            'assigned_at' => now(),
+        ]);
+        ShipmentHistory::create([
+            'shipment_id' => $shipment->id,
+            'status' => 'accepted',
+        ]);
+
+        $this->mockBundleRouting();
+
+        $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($newOrder);
+
+        $this->assertSame('waiting', $result['status']);
+        $this->assertNull($newOrder->fresh()->shipper_id);
+        $this->assertDatabaseMissing('delivery_bundle_trip_orders', [
+            'order_id' => $newOrder->id,
         ]);
     }
 

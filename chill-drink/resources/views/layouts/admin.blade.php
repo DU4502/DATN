@@ -41,9 +41,7 @@
                 <a href="{{ route('admin.toppings.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
                 <a href="{{ route('admin.products.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.categories.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.slides.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
                 <a href="{{ route('admin.orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
-                <a href="{{ route('admin.order-issues.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-life-preserver"></i> Khiếu nại đơn hàng</a>
                 <a href="{{ route('admin.shipper-incidents.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.shipper-incidents.*') ? 'active' : '' }}"><i class="bi bi-exclamation-triangle"></i> Sự cố giao vận</a>
                 <a href="{{ route('admin.cod-settlements.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.cod-settlements.*') ? 'active' : '' }}"><i class="bi bi-cash-coin"></i> Đối soát COD</a>
                 <a href="{{ route('admin.group-orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
@@ -197,10 +195,12 @@
             const remindDelayMs = 5 * 60 * 1000;
             const pollIntervalMs = 10000;
             const bellLoopMs = 8000;
+            const bellLoopMaxPlays = 3;
             let audioContext = null;
             let alertPollBusy = false;
             let alertPollTimer = null;
             let bellLoopTimer = null;
+            let bellLoopPlayCount = 0;
             let lastAudioNoticeAt = 0;
             let activeAlertOrderId = null;
             let activeOrderSignature = '';
@@ -692,9 +692,10 @@
 
             function stopBellLoop() {
                 if (bellLoopTimer) {
-                    window.clearInterval(bellLoopTimer);
+                    window.clearTimeout(bellLoopTimer);
                     bellLoopTimer = null;
                 }
+                bellLoopPlayCount = 0;
             }
 
             function startBellLoop(orderId) {
@@ -703,15 +704,29 @@
                     return;
                 }
 
-                playPendingAlertSound(orderId);
-                bellLoopTimer = window.setInterval(() => {
+                const scheduleNextBell = () => {
                     if (!getComboEnabled() || String(activeAlertOrderId || '') !== String(orderId)) {
                         stopBellLoop();
                         return;
                     }
 
-                    playPendingAlertSound(orderId);
-                }, bellLoopMs);
+                    if (bellLoopPlayCount >= bellLoopMaxPlays) {
+                        stopBellLoop();
+                        return;
+                    }
+
+                    bellLoopPlayCount += 1;
+                    void playPendingAlertSound(orderId);
+
+                    if (bellLoopPlayCount >= bellLoopMaxPlays) {
+                        stopBellLoop();
+                        return;
+                    }
+
+                    bellLoopTimer = window.setTimeout(scheduleNextBell, bellLoopMs);
+                };
+
+                scheduleNextBell();
             }
 
             function hideAlertModal() {

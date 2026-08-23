@@ -192,11 +192,6 @@ final class OrderStatus
         $from = self::normalize($from);
         $to = self::normalize($to);
 
-        // Không thể thay đổi nếu đã ở trạng thái cuối
-        if ($from === self::COMPLETED && $to === self::CANCELLED) {
-            return true;
-        }
-
         if (in_array($from, [self::COMPLETED, self::CANCELLED], true)) {
             return false;
         }
@@ -206,13 +201,10 @@ final class OrderStatus
             return true;
         }
 
-        // Có thể HỦY từ các trạng thái cho phép
+        // Chỉ được hủy trước khi quán xác nhận đơn. Các trạng thái sau đó
+        // chỉ được hủy qua luồng xử lý sự cố giao vận (có force riêng).
         if ($to === self::CANCELLED) {
-            return in_array($from, [
-                self::PENDING,
-                self::CONFIRMED,
-                self::PREPARING
-            ], true);
+            return $from === self::PENDING;
         }
 
         // Lấy sequence phù hợp
@@ -241,13 +233,6 @@ final class OrderStatus
             return [$current => $labels[$current]];
         }
 
-        if ($current === self::COMPLETED) {
-            return [
-                $current => $labels[$current],
-                self::CANCELLED => $labels[self::CANCELLED],
-            ];
-        }
-
         $sequence = self::getSequence($fulfillmentType);
         $options = [];
         $currentIndex = array_search($current, $sequence, true);
@@ -263,8 +248,8 @@ final class OrderStatus
             }
         }
 
-        // Thêm tùy chọn hủy nếu được phép
-        if (in_array($current, [self::PENDING, self::CONFIRMED, self::PREPARING, self::COMPLETED], true)) {
+        // Chỉ hiện hủy khi quán chưa xác nhận đơn.
+        if ($current === self::PENDING) {
             $options[self::CANCELLED] = $labels[self::CANCELLED];
         }
 
@@ -296,7 +281,6 @@ final class OrderStatus
         
         // Nếu đã completed hoặc cancelled, không cho phép thay đổi
         if ($current === self::COMPLETED) {
-            $options[self::CANCELLED] = $labels[self::CANCELLED];
             return $options;
         }
 
@@ -316,8 +300,8 @@ final class OrderStatus
             $options[$next] = $labels[$next];
         }
 
-        // Thêm tùy chọn hủy nếu được phép
-        if (in_array($current, [self::PENDING, self::CONFIRMED, self::PREPARING], true)) {
+        // Chỉ hiện hủy khi quán chưa xác nhận đơn.
+        if ($current === self::PENDING) {
             $options[self::CANCELLED] = $labels[self::CANCELLED];
         }
 
@@ -329,11 +313,6 @@ final class OrderStatus
         $from = self::normalize($from);
         $to = self::normalize($to);
 
-        // Không cho phép thay đổi nếu đã hoàn thành hoặc đã hủy
-        if ($from === self::COMPLETED && $to === self::CANCELLED) {
-            return true;
-        }
-
         if (in_array($from, [self::COMPLETED, self::CANCELLED], true)) {
             return $to === $from;
         }
@@ -343,9 +322,9 @@ final class OrderStatus
             return true;
         }
 
-        // Cho phép hủy từ các trạng thái đầu
+        // Chỉ cho phép hủy trước khi quán xác nhận đơn.
         if ($to === self::CANCELLED) {
-            return in_array($from, [self::PENDING, self::CONFIRMED, self::PREPARING], true);
+            return $from === self::PENDING;
         }
 
         // Chỉ cho phép tiến đến bước tiếp theo
@@ -401,7 +380,9 @@ final class OrderStatus
             $options[$next] = $labels[$next];
         }
 
-        if (in_array($current, [self::PENDING, self::CONFIRMED, self::PREPARING], true)) {
+        // Chỉ cho phép hủy trực tiếp khi đơn vẫn đang chờ quán xác nhận.
+        // Sau bước này, việc hủy phải đi qua mục Sự cố giao vận.
+        if ($current === self::PENDING) {
             $options[self::CANCELLED] = $labels[self::CANCELLED];
         }
 
@@ -461,16 +442,8 @@ final class OrderStatus
     {
         $from = self::normalize($from);
 
-        // Đã giao/hoàn thành là kết quả thực tế đã xảy ra, không cho biến thành hủy.
-        return in_array($from, [
-            self::PENDING,
-            self::CONFIRMED,
-            self::PREPARING,
-            self::READY_FOR_DELIVERY,
-            self::SHIPPER_PICKED_UP,
-            self::DELIVERING,
-            self::READY_FOR_PICKUP,
-        ], true);
+        // Sau khi quán xác nhận, chỉ luồng Sự cố giao vận mới được phép hủy.
+        return $from === self::PENDING;
     }
 
     /**
@@ -491,7 +464,7 @@ final class OrderStatus
         }
 
         if ($to === self::CANCELLED) {
-            return in_array($from, [self::PENDING, self::CONFIRMED, self::PREPARING], true);
+            return $from === self::PENDING;
         }
 
         return $to === self::storeNextStatus($from, $fulfillmentType);
@@ -549,6 +522,10 @@ final class OrderStatus
 
     public static function notificationIconByType(?string $type): string
     {
+        if ($type === 'delivery_delay_reported') {
+            return 'bi-exclamation-triangle';
+        }
+
         $status = match ($type) {
             'order_pending' => self::PENDING,
             'order_confirmed' => self::CONFIRMED,

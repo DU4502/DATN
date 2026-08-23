@@ -12,7 +12,7 @@ class OrderShipmentIncidentController extends Controller
     public function resolve(Request $request, Order $order, ShipperIncidentService $incidents)
     {
         $validated = $request->validate([
-            'action' => ['required', Rule::in(['keep', 'reassign'])],
+            'action' => ['required', Rule::in(['keep', 'reassign', 'cancel'])],
         ]);
 
         $user = $request->user();
@@ -27,11 +27,24 @@ class OrderShipmentIncidentController extends Controller
             );
         }
 
-        $result = $validated['action'] === 'keep'
-            ? $incidents->keepCurrentShipper($order, $user)
-            : $incidents->reassign($order, $user);
+        $incident = $incidents->pendingIncident($order);
+        if (! $incident) {
+            return back()->with('error', 'Sự cố này đã được xử lý hoặc không còn tồn tại.');
+        }
 
-        $successStatuses = ['kept', 'assigned'];
+        $incidentType = $incident['incident_type'] ?? 'driver_issue';
+        $result = match ([$incidentType, $validated['action']]) {
+            ['customer_cancel', 'keep'] => $incidents->keepCustomerCancelRequest($order, $user),
+            ['customer_cancel', 'cancel'] => $incidents->cancelCustomerRequest($order, $user),
+            ['driver_issue', 'keep'] => $incidents->keepCurrentShipper($order, $user),
+            ['driver_issue', 'reassign'] => $incidents->reassign($order, $user),
+            default => [
+                'status' => 'invalid_action',
+                'message' => 'Thao tác không phù hợp với luồng sự cố này.',
+            ],
+        };
+
+        $successStatuses = ['kept', 'assigned', 'cancelled'];
         if (in_array($result['status'] ?? '', $successStatuses, true)) {
             $user->unreadNotifications
                 ->filter(fn ($notification) => data_get($notification->data, 'type') === 'shipper_incident_reported'
@@ -44,6 +57,12 @@ class OrderShipmentIncidentController extends Controller
                 $distanceKm = ((float) $result['distance_m']) / 1000;
                 $minutes = max(1, (int) round(((float) $result['duration_s']) / 60));
                 $message .= ' Tài xế thay thế cách điểm tiếp quản khoảng '.number_format($distanceKm, 1, ',', '.').' km · '.$minutes.' phút.';
+            }
+
+            // Nhánh khách xin hủy không phát thông báo trạng thái cho khách;
+            // đây là quyết định vận hành nội bộ theo yêu cầu nghiệp vụ.
+            if (($result['status'] ?? null) === 'cancelled') {
+                return back()->with('success', $message);
             }
 
             return back()->with('success', $message);

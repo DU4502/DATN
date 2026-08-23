@@ -64,11 +64,11 @@
                     <div class="navigation-turn-icon" id="nextTurnIcon"><i class="fa-solid fa-location-arrow"></i></div>
                     <div class="min-w-0 flex-grow-1">
                         <div class="small opacity-75" id="navigationStage">Đi thẳng</div>
-                        <div class="fw-bold text-truncate" id="nextInstruction">Còn -- m nữa</div>
+                        <div class="navigation-instruction fw-bold" id="nextInstruction">Còn -- m nữa</div>
                     </div>
                     <div class="navigation-metrics text-end">
-                        <strong id="routeDistance">-- km</strong>
-                        <small id="routeEta">-- phút</small>
+                        <strong id="routeDistance">Còn --</strong>
+                        <small id="routeEta">-- phút · tới điểm</small>
                     </div>
                 </div>
 
@@ -101,8 +101,8 @@
                                 <strong><span id="testSpeedValue">50</span> km/h</strong>
                             </label>
                             <div class="test-speed-inputs">
-                                <input type="range" id="testSpeedRange" min="5" max="80" step="1" value="50" aria-label="Tốc độ test GPS">
-                                <input type="number" id="testSpeedNumber" min="5" max="80" step="1" value="50" aria-label="Nhập tốc độ test GPS">
+                                <input type="range" id="testSpeedRange" min="5" max="100" step="1" value="50" aria-label="Tốc độ test GPS">
+                                <input type="number" id="testSpeedNumber" min="5" max="100" step="1" value="50" aria-label="Nhập tốc độ test GPS">
                             </div>
                         </div>
                         <div class="map-tools-source" id="routeSourcePill">Đang tính tuyến...</div>
@@ -368,12 +368,20 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-warning small"><strong>Shipper Chill Drink không có hủy/từ chối chuyến.</strong> Báo sự cố chỉ gửi yêu cầu hỗ trợ; đơn vẫn giữ nguyên người giao cho tới khi cửa hàng/admin xử lý.</div>
+                <div class="alert alert-warning small" id="issueFlowNotice"><strong>Shipper Chill Drink không tự hủy/từ chối chuyến.</strong> Admin hoặc Super Admin sẽ quyết định cách xử lý.</div>
+                <label class="form-label fw-semibold">Luồng sự cố <span class="text-danger">*</span></label>
+                <select class="form-select mb-3" name="incident_type" id="issueIncidentType" required>
+                    @foreach(($issueFlows ?? []) as $flowKey => $flow)
+                        <option value="{{ $flowKey }}">{{ $flow['label'] }}</option>
+                    @endforeach
+                </select>
                 <label class="form-label fw-semibold">Sự cố <span class="text-danger">*</span></label>
-                <select class="form-select mb-3" name="reason" required>
+                <select class="form-select mb-3" name="reason" id="issueReason" required>
                     <option value="">Chọn sự cố</option>
-                    @foreach($issueReasons as $value => $label)
-                        <option value="{{ $value }}">{{ $label }}</option>
+                    @foreach(($issueFlows ?? []) as $flowKey => $flow)
+                        @foreach(($flow['reasons'] ?? []) as $value => $label)
+                            <option value="{{ $value }}" data-incident-flow="{{ $flowKey }}">{{ $label }}</option>
+                        @endforeach
                     @endforeach
                 </select>
                 <label class="form-label fw-semibold">Mô tả thêm</label>
@@ -386,6 +394,27 @@
         </form>
     </div>
 </div>
+<script>
+    (function () {
+        const flowSelect = document.getElementById('issueIncidentType');
+        const reasonSelect = document.getElementById('issueReason');
+        const notice = document.getElementById('issueFlowNotice');
+        const flows = @json($issueFlows ?? []);
+        if (!flowSelect || !reasonSelect) return;
+        const syncIssueFlow = () => {
+            const flow = flowSelect.value;
+            Array.from(reasonSelect.options).forEach((option) => {
+                const visible = !option.value || option.dataset.incidentFlow === flow;
+                option.hidden = !visible;
+                option.disabled = !visible;
+            });
+            if (reasonSelect.value && reasonSelect.selectedOptions[0]?.disabled) reasonSelect.value = '';
+            if (notice && flows[flow]?.notice) notice.textContent = flows[flow].notice;
+        };
+        flowSelect.addEventListener('change', syncIssueFlow);
+        syncIssueFlow();
+    })();
+</script>
 @endif
 @endsection
 
@@ -412,6 +441,14 @@
     .navigation-turn-icon { width:46px; height:46px; border-radius:14px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; font-size:21px; flex:none; }
     .navigation-metrics strong, .navigation-metrics small { display:block; white-space:nowrap; }
     .navigation-metrics strong { font-size:18px; }
+    .navigation-summary .navigation-instruction {
+        display:block;
+        font-size:0.66em;
+        line-height:1.14;
+        white-space:normal;
+        overflow-wrap:anywhere;
+        word-break:break-word;
+    }
     .map-bottom-controls { position:absolute; z-index:500; bottom:16px; left:16px; right:16px; display:flex; justify-content:space-between; align-items:flex-end; gap:10px; pointer-events:none; }
     .map-bottom-controls > * { pointer-events:auto; }
     .route-source-pill { background:rgba(255,255,255,.95); border:1px solid #e5e7eb; border-radius:999px; padding:7px 12px; font-size:12px; box-shadow:0 4px 18px rgba(0,0,0,.1); }
@@ -525,7 +562,34 @@
         background:#dbe5e2;
         position:relative;
     }
-    .gl-navigation-map{position:absolute;inset:0;z-index:2;background:#dbe5e2}
+    .shipper-map-canvas.is-loading::after {
+        content:'Đang tải bản đồ...';
+        position:absolute;
+        inset:0;
+        z-index:600;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:#0d9373;
+        font-size:.82rem;
+        font-weight:700;
+        background:linear-gradient(135deg, rgba(239,253,250,.94), rgba(255,255,255,.9));
+        pointer-events:none;
+    }
+    .gl-navigation-map{
+        position:absolute;
+        inset:0;
+        z-index:2;
+        background:transparent;
+        opacity:0;
+        pointer-events:none;
+        transition:opacity .18s ease;
+    }
+    .shipper-map-canvas.has-gl-nav .gl-navigation-map{
+        background:#dbe5e2;
+        opacity:1;
+        pointer-events:auto;
+    }
     .shipper-map-canvas.has-gl-nav .leaflet-pane,
     .shipper-map-canvas.has-gl-nav .leaflet-control-container{display:none!important}
     .shipper-map-canvas.has-gl-nav .maplibregl-canvas{outline:0}
@@ -535,7 +599,6 @@
     .shipper-map-canvas .leaflet-marker-icon,
     .shipper-map-canvas .leaflet-overlay-pane svg{
         will-change:transform;
-        backface-visibility:hidden;
     }
     .shipper-map-canvas.is-test-gps::after {
         top:76px;
@@ -559,6 +622,12 @@
         border:1px solid rgba(255,255,255,.12);
         box-shadow:0 10px 22px rgba(0,0,0,.18);
     }
+    .navigation-summary.is-off-route {
+        background:linear-gradient(135deg, rgba(153, 73, 19, .98), rgba(126, 54, 13, .96)) !important;
+    }
+    .navigation-summary.is-off-route .navigation-turn-icon {
+        background:rgba(255,255,255,.2) !important;
+    }
     .navigation-turn-icon {
         width:38px !important;
         height:38px !important;
@@ -579,6 +648,13 @@
         white-space:nowrap;
         overflow:hidden;
         text-overflow:ellipsis;
+    }
+    .navigation-summary .navigation-instruction {
+        font-size:0.68em !important;
+        line-height:1.12 !important;
+        white-space:normal !important;
+        overflow-wrap:anywhere !important;
+        word-break:break-word !important;
     }
     .navigation-metrics strong {
         font-size:15px !important;
@@ -1048,6 +1124,10 @@
         .navigation-metrics strong {
             font-size:13px !important;
         }
+        .navigation-summary .navigation-instruction {
+            font-size:0.69em !important;
+            line-height:1.1 !important;
+        }
         .navigation-metrics small {
             font-size:9px !important;
         }
@@ -1110,6 +1190,10 @@
         .navigation-summary .fw-bold,
         .navigation-metrics strong {
             font-size:12px !important;
+        }
+        .navigation-summary .navigation-instruction {
+            font-size:0.69em !important;
+            line-height:1.1 !important;
         }
         .navigation-summary .small,
         .navigation-metrics small {
@@ -1252,6 +1336,8 @@
 </style>
 @endpush
 
+@include('partials.vietnam-territory-labels')
+
 @push('scripts')
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -1267,6 +1353,8 @@
     const locationUrl = mapEl.dataset.locationUrl;
     const ttsUrl = mapEl.dataset.ttsUrl;
     const orderStatus = mapEl.dataset.status;
+    const navigationSummary = document.getElementById('navigationSummary');
+    const nextTurnIcon = document.getElementById('nextTurnIcon');
     const customerArrivalConfirmed = {{ $customerArrivalConfirmed ? 'true' : 'false' }};
     const assignmentAccepted = {{ !empty($isAccepted) ? 'true' : 'false' }};
     const summaryInstruction = document.getElementById('nextInstruction');
@@ -1304,6 +1392,8 @@
     const handoverButtonText = document.getElementById('handoverButtonText');
     const handoverButtonIcon = document.getElementById('handoverButtonIcon');
 
+    mapEl.classList.add('is-loading');
+
     const map = L.map(mapEl, {
         scrollWheelZoom:true,
         dragging:true,
@@ -1312,7 +1402,9 @@
         zoomControl:false,
         boxZoom:false,
         keyboard:true,
-        preferCanvas:true,
+        // Giống map chuẩn SHIP00001: Leaflet SVG renderer ổn định hơn
+        // Canvas trong khu vực map bị transform/responsive.
+        preferCanvas:false,
         fadeAnimation:false,
         markerZoomAnimation:false,
         zoomAnimation:true,
@@ -1325,26 +1417,80 @@
     map.scrollWheelZoom.enable();
     map.dragging.enable();
     map.touchZoom.enable();
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const clearMapLoading = () => {
+        mapEl.classList.remove('is-loading');
+    };
+    const primaryTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom:19,
         updateWhenIdle:false,
         updateWhenZooming:true,
         keepBuffer:6,
+        detectRetina:false,
+        subdomains:'abc',
         attribution:'&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    });
+    const fallbackTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        maxZoom:19,
+        updateWhenIdle:false,
+        updateWhenZooming:true,
+        keepBuffer:6,
+        detectRetina:false,
+        subdomains:'abcd',
+        r:window.devicePixelRatio > 1 ? '@2x' : '',
+        attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+    });
+    let tileFallbackSwapped = false;
+    let tilesSettled = false;
+    let fallbackSwapTimer = null;
+    const finishTileLoading = () => {
+        if (tilesSettled) return;
+        tilesSettled = true;
+        if (fallbackSwapTimer) {
+            window.clearTimeout(fallbackSwapTimer);
+            fallbackSwapTimer = null;
+        }
+        clearMapLoading();
+    };
+    const swapToFallbackTiles = () => {
+        if (tileFallbackSwapped) return;
+        tileFallbackSwapped = true;
+        if (fallbackSwapTimer) {
+            window.clearTimeout(fallbackSwapTimer);
+            fallbackSwapTimer = null;
+        }
+        if (map.hasLayer(primaryTiles)) {
+            map.removeLayer(primaryTiles);
+        }
+        fallbackTiles.addTo(map);
+    };
+    fallbackSwapTimer = window.setTimeout(swapToFallbackTiles, 1800);
+    primaryTiles.once('load', finishTileLoading);
+    primaryTiles.once('tileerror', swapToFallbackTiles);
+    fallbackTiles.once('load', finishTileLoading);
+    fallbackTiles.once('tileerror', finishTileLoading);
+    primaryTiles.addTo(map);
+    window.ChillDrinkVietnamTerritoryLabels?.addToLeaflet(map);
+    window.setTimeout(() => map.invalidateSize({pan:false}), 120);
 
     let glMap = null;
     let glReady = false;
+    let glVisible = false;
+    // Luồng shipper dùng camera dẫn đường MapLibre: đường đi xoay theo
+    // hướng di chuyển để mũi tên/đường tuyến luôn hướng lên màn hình.
+    const USE_REFERENCE_LEAFLET_MAP = false;
     let glCurrentMarker = null;
     let glCurrentMarkerPoint = null;
     let glCurrentMarkerFrameId = null;
     let glTargetMarker = null;
+    let glRouteRetryTimer = null;
     let glCameraBearing = 0;
     let glLastCameraAt = 0;
     let glLastCameraCenter = null;
     const glRouteSourceId = 'active-route';
     const glRouteCasingLayerId = 'active-route-casing';
     const glRouteLayerId = 'active-route-line';
+    const glAltRouteSourceId = 'active-route-alt';
+    const glAltRouteLayerId = 'active-route-alt-line';
 
     function createGlMarkerElement(className, html) {
         const element = document.createElement('div');
@@ -1368,10 +1514,24 @@
         };
     }
 
+    function scheduleGlRouteRetry(geometry, altGeometry = []) {
+        if (!glReady || !glMap || glRouteRetryTimer) return;
+        glRouteRetryTimer = window.setTimeout(() => {
+            glRouteRetryTimer = null;
+            if (glReady) renderGlRoute(geometry, altGeometry);
+        }, 220);
+    }
+
     function ensureGlRouteLayer() {
         if (!glMap || !glReady) return false;
         if (!glMap.getSource(glRouteSourceId)) {
             glMap.addSource(glRouteSourceId, {
+                type:'geojson',
+                data:geometryToGeoJson([]),
+            });
+        }
+        if (!glMap.getSource(glAltRouteSourceId)) {
+            glMap.addSource(glAltRouteSourceId, {
                 type:'geojson',
                 data:geometryToGeoJson([]),
             });
@@ -1389,6 +1549,20 @@
                 },
             });
         }
+        if (!glMap.getLayer(glAltRouteLayerId)) {
+            glMap.addLayer({
+                id:glAltRouteLayerId,
+                type:'line',
+                source:glAltRouteSourceId,
+                layout:{'line-cap':'round','line-join':'round'},
+                paint:{
+                    'line-color':'rgba(120, 130, 145, .55)',
+                    'line-width':5.4,
+                    'line-opacity':.28,
+                    'line-dasharray':[1.4, 2.4],
+                },
+            }, glRouteCasingLayerId);
+        }
         if (!glMap.getLayer(glRouteLayerId)) {
             glMap.addLayer({
                 id:glRouteLayerId,
@@ -1405,10 +1579,16 @@
         return true;
     }
 
-    function renderGlRoute(geometry) {
-        if (!ensureGlRouteLayer()) return false;
-        glMap.getSource(glRouteSourceId).setData(geometryToGeoJson(geometry));
-        return true;
+    function renderGlRoute(geometry, altGeometry = []) {
+        try {
+            if (!ensureGlRouteLayer()) return false;
+            glMap.getSource(glRouteSourceId).setData(geometryToGeoJson(geometry));
+            glMap.getSource(glAltRouteSourceId).setData(geometryToGeoJson(altGeometry));
+            return true;
+        } catch (_) {
+            scheduleGlRouteRetry(geometry, altGeometry);
+            return false;
+        }
     }
 
     function firstUsableGeometry(...candidates) {
@@ -1509,8 +1689,10 @@
 
         glLastCameraAt = now;
         glLastCameraCenter = center;
-        const bearingFactor = turnDelta > 120 ? .54 : (turnDelta > 55 ? .38 : .22);
-        glCameraBearing = animate ? smoothBearing(glCameraBearing, targetBearing, bearingFactor) : targetBearing;
+        // Không làm mượt bearing ở chế độ dẫn đường: nếu làm mượt, xe vừa
+        // rẽ thì tuyến bị nghiêng ngang một lúc. Camera phải bám đúng hướng
+        // đoạn đường phía trước để tuyến luôn đi lên.
+        glCameraBearing = targetBearing;
         const zoom = Math.max(glMap.getZoom(), turnDelta > 70 ? 17.35 : 17.75);
         const options = {
             center,
@@ -1530,35 +1712,32 @@
         if (!window.maplibregl || glMap) return;
         const glEl = document.createElement('div');
         glEl.className = 'gl-navigation-map';
+        glEl.setAttribute('aria-hidden', 'true');
         mapEl.appendChild(glEl);
-        mapEl.classList.add('has-gl-nav');
-        map.scrollWheelZoom.disable();
-        map.dragging.disable();
-        map.touchZoom.disable();
 
         glMap = new maplibregl.Map({
             container:glEl,
             style:{
                 version:8,
                 sources:{
-                    osm:{
+                    carto:{
                         type:'raster',
                         tiles:[
-                            'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                            'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
                         ],
                         tileSize:256,
-                        attribution:'&copy; OpenStreetMap contributors',
+                        attribution:'&copy; OpenStreetMap contributors &copy; CARTO',
                     },
                 },
                 layers:[{
-                    id:'osm',
+                    id:'carto',
                     type:'raster',
-                    source:'osm',
+                    source:'carto',
                     paint:{
-                        'raster-contrast':0.18,
-                        'raster-saturation':-0.06,
+                        'raster-fade-duration':0,
                     },
                 }],
             },
@@ -1576,15 +1755,21 @@
         glMap.dragPan.enable();
         glMap.touchZoomRotate.enable();
         glMap.keyboard.enable();
-        setTimeout(() => glMap?.resize(), 80);
-        window.addEventListener('resize', () => glMap?.resize());
 
-        glMap.on('load', () => {
+        const activateGlMap = () => {
+            if (!glMap || glVisible) return;
             glReady = true;
             glMap.resize();
-            if (renderGlRoute(routeGeometry)) {
-                lastRenderedGlRouteKey = geometryRouteKey(routeGeometry);
-            }
+            glVisible = true;
+            mapEl.classList.add('has-gl-nav');
+            map.scrollWheelZoom.disable();
+            map.dragging.disable();
+            map.touchZoom.disable();
+            glEl.style.opacity = '1';
+            glEl.style.pointerEvents = 'auto';
+            window.ChillDrinkVietnamTerritoryLabels?.addToMapLibre(glMap);
+            renderGlRoute(routeGeometry);
+            lastRenderedGlRouteKey = geometryRouteKey(routeGeometry);
             if (targetMarker) {
                 const targetLatLng = targetMarker.getLatLng();
                 renderGlTargetMarker({latitude:targetLatLng.lat, longitude:targetLatLng.lng});
@@ -1594,15 +1779,18 @@
                 renderGlCurrentMarker({latitude:currentLatLng.lat, longitude:currentLatLng.lng}, currentHeading);
                 setGlNavigationCamera(currentLatLng, false);
             }
+            setTimeout(() => glMap?.resize(), 80);
+        };
+
+        window.addEventListener('resize', () => {
+            if (glMap) glMap.resize();
         });
+
+        glMap.on('load', activateGlMap);
         glMap.on('error', () => {
-            if (glReady) return;
-            mapEl.classList.remove('has-gl-nav');
-            glEl.remove();
-            glMap = null;
-            map.scrollWheelZoom.enable();
-            map.dragging.enable();
-            map.touchZoom.enable();
+            // Tile lỗi không được làm rơi về Leaflet; giữ MapLibre để giao diện
+            // của mọi shipper luôn cùng góc nghiêng và thử vẽ tuyến lại.
+            scheduleGlRouteRetry(routeGeometry);
         });
         glMap.on('dragstart', () => {
             following = false;
@@ -1618,7 +1806,7 @@
         });
     }
 
-    initGlNavigationMap();
+    if (!USE_REFERENCE_LEAFLET_MAP) initGlNavigationMap();
 
     const closeMapTools = () => {
         if (!mapToolsToggle || !mapToolsMenu) return;
@@ -1675,7 +1863,7 @@
     let voiceEnabled = true;
     let lastSpeakAt = 0;
     let lastGuideText = '';
-    let guidanceState = { key:null, warned:false, turn:false, intro:false, arrived:false };
+    let guidanceState = { key:null, warned:false, turn:false, intro:false, arrived:false, distanceMeters:null };
     let arrivalVoiceLock = { targetKey:null, event:null, muted:false, announced:false };
     let latestArrivalSnapshot = null;
     let latestArrivalSnapshotTargetKey = '';
@@ -1693,12 +1881,14 @@
     let testDriveGeometry = [];
     let testDriveActive = false;
     let displayedRouteGeometry = [];
+    let navigationProgressState = { key:'', meters:0 };
+    let routeDeviationState = { key:'', active:false, warned:false, since:0 };
     let lastRenderedRouteKey = '';
     let lastRenderedGlRouteKey = '';
     let currentSpeedKmh = 0;
     let lastSpeedSample = null;
     const TEST_DRIVE_SPEED_MIN_KMH = 5;
-    const TEST_DRIVE_SPEED_MAX_KMH = 80;
+    const TEST_DRIVE_SPEED_MAX_KMH = 100;
     const TEST_DRIVE_SPEED_DEFAULT_KMH = 50;
     const TEST_DRIVE_SPEED_KEY = 'shipper_map_test_drive_speed_kmh_v1';
     let testDriveSpeedKmh = TEST_DRIVE_SPEED_DEFAULT_KMH;
@@ -1709,6 +1899,7 @@
     const NAV_VOICE_RATE = 1.00;
     const NAV_VOICE_VOLUME = 0.92;
     const NAV_VOICE_INTRO_GAP_MS = 170;
+    const NAV_DISTANCE_VOICE_MILESTONES = [50, 100, 200, 500, 1000, 2000, 5000];
     const NAV_GUIDE_PREPARE_ALERT_M = 100;
     const NAV_GUIDE_TURN_ALERT_M = 32;
     const NAV_GUIDE_ARRIVE_ALERT_M = 120;
@@ -1772,6 +1963,7 @@
 
         if (voiceEnabled) {
             ttsUnavailable = false;
+            guidanceState.distanceMeters = null;
             speak('Đã bật hướng dẫn bằng giọng nói.', true);
             setTimeout(() => refreshGuidance(true), 450);
         } else {
@@ -1800,12 +1992,40 @@
     const distanceText = meters => {
         const n = Number(meters);
         if (!Number.isFinite(n)) return '--';
-        return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)} km` : `${Math.max(1, Math.round(n))} mét`;
+        if (n >= 1000) {
+            return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)} km`;
+        }
+
+        // Giọng nói chỉ cần nhịp 5m/lần để tránh đọc dày từng mét.
+        const rounded = Math.max(5, Math.round(n / 5) * 5);
+        return `${rounded} mét`;
     };
     const compactDistance = meters => {
         const n = Number(meters);
         if (!Number.isFinite(n)) return '--';
         return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)} km` : `${Math.max(1, Math.round(n))} m`;
+    };
+    const voiceDistanceLabel = meters => {
+        const n = Number(meters);
+        if (!Number.isFinite(n) || n <= 0) return '';
+        if (n >= 1000) {
+            return `${Math.max(1, Math.round(n / 1000))} km`;
+        }
+
+        return `${Math.max(50, Math.round(n / 50) * 50)} mét`;
+    };
+    const nextVoiceDistanceMilestone = (previousMeters, currentMeters) => {
+        const prev = Number(previousMeters);
+        const curr = Number(currentMeters);
+        if (!Number.isFinite(prev) || !Number.isFinite(curr) || curr < 0) return null;
+
+        for (const milestone of NAV_DISTANCE_VOICE_MILESTONES) {
+            if (prev > milestone && curr <= milestone) {
+                return milestone;
+            }
+        }
+
+        return null;
     };
     const minutes = seconds => `${Math.max(1, Math.round(Number(seconds || 0) / 60))} phút`;
     const speedKmhFromDistanceDuration = (meters, seconds) => {
@@ -2110,13 +2330,21 @@
         if (glReady) {
             if (renderGlRoute(path)) {
                 lastRenderedGlRouteKey = geometryRouteKey(path);
+                return;
             }
-            return;
         }
 
-        if (routeLine) {
+        renderLeafletRoute(path);
+    }
+
+    function renderLeafletRoute(geometry) {
+        const path = firstUsableGeometry(geometry);
+        if (path.length < 2) return false;
+
+        if (routeLine && map.hasLayer(routeLine)) {
             routeLine.setLatLngs(path);
         } else {
+            routeLine?.remove();
             routeLine = L.polyline(path, {
                 color:'#1677ff',
                 weight:8,
@@ -2125,7 +2353,27 @@
                 lineCap:'round'
             }).addTo(map);
         }
+        routeLine.bringToFront();
         lastRenderedRouteKey = geometryRouteKey(path);
+        return true;
+    }
+
+    function clearLeafletRoute() {
+        if (!routeLine) return;
+        routeLine.remove();
+        routeLine = null;
+        lastRenderedRouteKey = '';
+    }
+
+    function renderLeafletTargetMarker(latLng, popupHtml) {
+        if (!Array.isArray(latLng) || latLng.length < 2) return;
+        if (targetMarker) {
+            targetMarker.setLatLng(latLng).setPopupContent(popupHtml);
+        } else {
+            targetMarker = L.marker(latLng, { icon:targetIcon })
+                .addTo(map)
+                .bindPopup(popupHtml);
+        }
     }
 
     function routeProgressForPoint(point, geometry) {
@@ -2147,9 +2395,65 @@
             segmentOffsetM: offsetM,
             meters: beforeMeters + offsetM,
             totalMeters: routeLengthMeters(path),
+            distance: Number(projection.distance),
             snapped: projection.point,
             heading: projection.heading,
         };
+    }
+
+    function navigationRouteDistance(route = currentRoute) {
+        const value = Number(route?.navigation_distance_m ?? route?.distance_m ?? route?.display_distance_m);
+        return Number.isFinite(value) && value >= 0 ? value : null;
+    }
+
+    function navigationRouteDuration(route = currentRoute) {
+        const value = Number(route?.navigation_duration_s ?? route?.duration_s ?? route?.display_duration_s);
+        return Number.isFinite(value) && value >= 0 ? value : null;
+    }
+
+    // OSRM tính distance theo mặt đường, còn geometry là chuỗi tọa độ. Quy đổi
+    // tiến trình GPS về cùng đơn vị với distance/steps để khoảng cách tới chỗ rẽ
+    // không bị lệch dần sau mỗi đoạn cong.
+    function navigationRouteProgressForPoint(point, geometry = routeGeometry, route = currentRoute) {
+        const raw = routeProgressForPoint(point, geometry);
+        if (!raw) return raw;
+
+        const routeMeters = navigationRouteDistance(route);
+        const geometryMeters = Number(raw.totalMeters);
+        const scale = Number.isFinite(routeMeters)
+            && routeMeters > 0
+            && Number.isFinite(geometryMeters)
+            && geometryMeters > 0
+            ? routeMeters / geometryMeters
+            : 1;
+
+        return Object.assign({}, raw, {
+            geometryMeters:Number(raw.meters || 0),
+            meters:Math.max(0, Number(raw.meters || 0) * scale),
+            totalMeters:Number.isFinite(routeMeters) ? routeMeters : geometryMeters,
+        });
+    }
+
+    function navigationProgressForCurrentPosition() {
+        if (!currentPosition || routeGeometry.length < 2) return null;
+
+        const raw = navigationRouteProgressForPoint(currentPosition, routeGeometry, currentRoute);
+        if (!raw || !Number.isFinite(Number(raw.meters))) return raw;
+
+        // Giữ tiến trình đơn đi tới, tránh GPS nhiễu làm banner quay lại cue cũ.
+        // Khi server trả một tuyến mới, geometryRouteKey đổi và tiến trình được reset
+        // theo đúng điểm bắt đầu mới của tuyến đó.
+        const key = `${routeTargetKey()}|${geometryRouteKey(routeGeometry)}`;
+        if (navigationProgressState.key !== key) {
+            navigationProgressState = { key, meters:Math.max(0, Number(raw.meters || 0)) };
+        } else {
+            navigationProgressState.meters = Math.max(
+                Number(navigationProgressState.meters || 0),
+                Math.max(0, Number(raw.meters || 0))
+            );
+        }
+
+        return Object.assign({}, raw, { meters:navigationProgressState.meters });
     }
 
     function routeLengthMeters(geometry) {
@@ -2323,7 +2627,14 @@
     function maneuverLabel(step) {
         if (!step) return 'tiếp tục đi thẳng';
         if (step.type === 'arrive') return `đến ${routeTargetNoun()}`;
-        if (step.type === 'roundabout' || step.type === 'rotary') return 'đi vào vòng xuyến';
+        const roadChange = roadNameChangeManeuverLabel(step);
+        if (roadChange) return roadChange;
+        const intersection = intersectionManeuverLabel(step);
+        if (intersection) return intersection;
+        const roundabout = roundaboutManeuverLabel(step);
+        if (roundabout) return roundabout;
+        const gradeSeparated = gradeSeparatedManeuverLabel(step);
+        if (gradeSeparated) return gradeSeparated;
 
         const map = {
             left:'rẽ trái', right:'rẽ phải', 'slight left':'chếch trái', 'slight right':'chếch phải',
@@ -2336,12 +2647,36 @@
         const action = maneuverLabel(step);
         if (!step) return 'Đi theo tuyến đường được tô trên bản đồ';
         if (step.type === 'arrive') return `Bạn sắp đến ${routeTargetNoun()}`;
-        return step.name ? `${capitalize(action)} vào ${spokenRoadName(step.name)}` : capitalize(action);
+        if (roadNameChangeManeuverLabel(step)) return capitalize(action);
+        if (intersectionManeuverLabel(step)) return capitalize(action);
+        if (roundaboutManeuverLabel(step)) return capitalize(action);
+        if (gradeSeparatedManeuverLabel(step)) return capitalize(action);
+        const roadName = String(step?.name || step?.ref || '').trim();
+        return roadName ? `${capitalize(action)} vào ${spokenRoadName(roadName)}` : capitalize(action);
     }
 
     function capitalize(value) {
         const text = String(value || '');
         return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+    }
+
+    function updateNavigationIcon(step, offRoute = false) {
+        const icon = nextTurnIcon?.querySelector('i');
+        if (!icon) return;
+
+        let iconClass = 'fa-location-arrow';
+        if (offRoute) iconClass = 'fa-triangle-exclamation';
+        else if (step?.type === 'arrive') iconClass = 'fa-location-dot';
+        else if (roundaboutManeuverLabel(step)) iconClass = 'fa-rotate-right';
+        else {
+            const modifier = String(step?.modifier || '').trim().toLowerCase();
+            if (modifier.includes('left')) iconClass = 'fa-arrow-left';
+            else if (modifier.includes('right')) iconClass = 'fa-arrow-right';
+            else if (modifier === 'uturn') iconClass = 'fa-rotate-left';
+            else if (isStraightContinuationStep(step)) iconClass = 'fa-arrow-up';
+        }
+
+        icon.className = `fa-solid ${iconClass}`;
     }
 
     function spokenRoadName(name) {
@@ -2355,12 +2690,137 @@
         return [step?.name, step?.ref, step?.pronunciation].filter(Boolean).join(' ').trim();
     }
 
+    function gradeSeparatedRoadKind(step) {
+        const road = stepRoadText(step);
+        if (!road) return '';
+        if (/(hầm chui|ham chui|underpass|tunnel|đường dưới thấp|duong duoi thap)/i.test(road)) return 'under';
+        if (/(cầu vượt|cau vuot|đường trên cao|duong tren cao|overpass|flyover|viaduct)/i.test(road)) return 'over';
+        return '';
+    }
+
+    function gradeSeparatedManeuverLabel(step) {
+        switch (gradeSeparatedRoadKind(step)) {
+            case 'under':
+                return 'đi qua hầm chui';
+            case 'over':
+                return 'đi qua cầu vượt';
+            default:
+                return '';
+        }
+    }
+
+    function roadNameChangeManeuverLabel(step) {
+        const type = String(step?.type || '').trim().toLowerCase();
+        if (type !== 'new name') return '';
+
+        const roadName = String(step?.name || step?.ref || '').trim();
+        const modifier = String(step?.modifier || '').trim().toLowerCase();
+        const direction = {
+            'slight left': 'chếch sang trái',
+            left: 'rẽ trái',
+            'slight right': 'chếch sang phải',
+            right: 'rẽ phải',
+        }[modifier] || '';
+
+        if (roadName) {
+            return direction
+                ? `${direction} vào ${spokenRoadName(roadName)}`
+                : `đi tiếp vào ${spokenRoadName(roadName)}`;
+        }
+
+        return direction ? `${direction} vào đường mới` : 'đi thẳng tiếp';
+    }
+
+    function roundaboutStepType(step) {
+        const type = String(step?.type || '').trim().toLowerCase();
+        return type;
+    }
+
+    function roundaboutExitNumber(step) {
+        const exit = Number(step?.exit ?? step?.exits);
+        if (!Number.isFinite(exit) || exit <= 0) return null;
+        return Math.max(1, Math.round(exit));
+    }
+
+    function roundaboutManeuverLabel(step) {
+        const type = roundaboutStepType(step);
+        const exit = roundaboutExitNumber(step);
+        const exitText = exit ? `lối ra thứ ${exit}` : '';
+
+        if (type === 'roundabout' || type === 'rotary') {
+            return exitText ? `đi vào vòng xuyến, ra ${exitText}` : 'đi vào vòng xuyến';
+        }
+
+        if (type === 'exit roundabout' || type === 'exit rotary') {
+            return exitText ? `ra ${exitText} của vòng xuyến` : 'ra khỏi vòng xuyến';
+        }
+
+        return '';
+    }
+
+    function stepIntersections(step) {
+        return Array.isArray(step?.intersections)
+            ? step.intersections.filter(intersection => intersection && typeof intersection === 'object')
+            : [];
+    }
+
+    function intersectionBearingCount(intersection) {
+        return Array.isArray(intersection?.bearings)
+            ? intersection.bearings.filter(bearing => Number.isFinite(Number(bearing))).length
+            : 0;
+    }
+
+    function intersectionManeuverLabel(step) {
+        if (!stepIntersections(step).length) return '';
+
+        const type = String(step?.type || '').trim().toLowerCase();
+        const modifier = String(step?.modifier || '').trim().toLowerCase();
+        const roadName = String(step?.next_road_name || step?.name || step?.ref || '').trim();
+        const direction = {
+            'slight left': 'chếch sang trái',
+            left: 'rẽ trái',
+            'slight right': 'chếch sang phải',
+            right: 'rẽ phải',
+            'sharp left': 'rẽ gắt sang trái',
+            'sharp right': 'rẽ gắt sang phải',
+            uturn: 'quay đầu',
+        }[modifier] || '';
+
+        if (type === 'turn') {
+            if (!modifier || modifier === 'straight') {
+                return roadName ? `đi tiếp vào ${spokenRoadName(roadName)}` : 'đi thẳng tiếp';
+            }
+            return roadName
+                ? `${direction || 'đi tiếp'} vào ${spokenRoadName(roadName)}`
+                : (direction || 'đi theo tuyến đường');
+        }
+
+        if (['continue', 'depart', 'new name', 'fork', 'merge', 'end of road'].includes(type)) {
+            return roadName ? `đi tiếp vào ${spokenRoadName(roadName)}` : 'đi thẳng tiếp';
+        }
+
+        return '';
+    }
+
+    function isUnnamedIntersectionContinuationStep(step) {
+        if (!step || !stepIntersections(step).length) return false;
+        const type = String(step?.type || '').trim().toLowerCase();
+        const modifier = String(step?.modifier || '').trim().toLowerCase();
+        const roadName = String(step?.next_road_name || step?.name || step?.ref || '').trim();
+
+        return !roadName && (
+            (['continue', 'depart', 'new name', 'fork', 'merge', 'end of road'].includes(type)
+                && (!modifier || modifier === 'straight'))
+            || (type === 'turn' && (!modifier || modifier === 'straight'))
+        );
+    }
+
     function isStraightContinuationStep(step) {
         if (!step) return true;
         const type = String(step.type || '').trim().toLowerCase();
         const modifier = String(step.modifier || '').trim().toLowerCase();
         if (type === 'arrive') return false;
-        if (type === 'new name' || type === 'continue' || type === 'depart') return true;
+        if (type === 'continue' || type === 'depart') return true;
         if (type === 'turn') return !modifier || modifier === 'straight';
         return modifier === 'straight';
     }
@@ -2370,6 +2830,10 @@
         const type = String(step.type || '').trim().toLowerCase();
         const modifier = String(step.modifier || '').trim().toLowerCase();
         if (type === 'arrive') return true;
+        if (roadNameChangeManeuverLabel(step)) return true;
+        if (intersectionManeuverLabel(step)) return true;
+        if (roundaboutManeuverLabel(step)) return true;
+        if (gradeSeparatedRoadKind(step)) return true;
         if (['roundabout', 'rotary', 'fork', 'merge', 'end of road'].includes(type)) return true;
         if (type === 'turn') return Boolean(modifier && modifier !== 'straight');
         if (modifier && modifier !== 'straight') return true;
@@ -2383,19 +2847,53 @@
 
     function guidanceThresholds(step, speedKmh = 0, nextSegmentDistance = Infinity) {
         const speed = Number.isFinite(Number(speedKmh)) ? Number(speedKmh) : 0;
+        const segmentDistance = Number.isFinite(Number(nextSegmentDistance)) ? Number(nextSegmentDistance) : Infinity;
         const tightRoad = isNarrowRoadStep(step)
-            || (Number.isFinite(Number(nextSegmentDistance)) && Number(nextSegmentDistance) <= 40);
+            || (Number.isFinite(segmentDistance) && segmentDistance <= 40);
 
         if (tightRoad) {
-            if (speed >= 28) return { prepare:20, turn:10, arrive:40, arriveNow:16 };
-            if (speed >= 16) return { prepare:12, turn:6, arrive:28, arriveNow:12 };
-            return { prepare:8, turn:5, arrive:20, arriveNow:8 };
+            let thresholds;
+            if (speed >= 42) thresholds = { prepare:78, turn:34, arrive:118, arriveNow:24 };
+            else if (speed >= 28) thresholds = { prepare:56, turn:26, arrive:92, arriveNow:20 };
+            else if (speed >= 16) thresholds = { prepare:38, turn:18, arrive:66, arriveNow:14 };
+            else thresholds = { prepare:24, turn:12, arrive:44, arriveNow:10 };
+
+            if (Number.isFinite(segmentDistance) && segmentDistance > 0) {
+                const capPrepare = Math.max(16, Math.round(segmentDistance * 0.60));
+                const capTurn = Math.max(10, Math.round(segmentDistance * 0.32));
+                const capArrive = Math.max(22, Math.round(segmentDistance * 0.90));
+                const capArriveNow = Math.max(8, Math.round(segmentDistance * 0.18));
+                return {
+                    prepare: Math.min(thresholds.prepare, capPrepare),
+                    turn: Math.min(thresholds.turn, capTurn),
+                    arrive: Math.min(thresholds.arrive, capArrive),
+                    arriveNow: Math.min(thresholds.arriveNow, capArriveNow),
+                };
+            }
+
+            return thresholds;
         }
 
-        if (speed >= 42) return { prepare:100, turn:42, arrive:140, arriveNow:30 };
-        if (speed >= 28) return { prepare:70, turn:28, arrive:110, arriveNow:26 };
-        if (speed >= 16) return { prepare:45, turn:16, arrive:82, arriveNow:22 };
-        return { prepare:24, turn:10, arrive:56, arriveNow:18 };
+        let thresholds;
+        if (speed >= 42) thresholds = { prepare:140, turn:70, arrive:190, arriveNow:38 };
+        else if (speed >= 28) thresholds = { prepare:100, turn:50, arrive:145, arriveNow:30 };
+        else if (speed >= 16) thresholds = { prepare:65, turn:30, arrive:100, arriveNow:22 };
+        else thresholds = { prepare:35, turn:18, arrive:65, arriveNow:15 };
+
+        if (Number.isFinite(segmentDistance) && segmentDistance > 0 && segmentDistance <= 90) {
+            const capPrepare = Math.max(20, Math.round(segmentDistance * 0.62));
+            const capTurn = Math.max(10, Math.round(segmentDistance * 0.34));
+            const capArrive = Math.max(26, Math.round(segmentDistance * 0.95));
+            const capArriveNow = Math.max(8, Math.round(segmentDistance * 0.20));
+            return {
+                prepare: Math.min(thresholds.prepare, capPrepare),
+                turn: Math.min(thresholds.turn, capTurn),
+                arrive: Math.min(thresholds.arrive, capArrive),
+                arriveNow: Math.min(thresholds.arriveNow, capArriveNow),
+            };
+        }
+
+        return thresholds;
     }
 
     function routeTargetKind() {
@@ -2440,6 +2938,45 @@
         const meters = Number(distanceMeters);
         if (!Number.isFinite(meters) || meters <= 0) return 'Ngay phía trước';
         return `Còn ${compactDistance(meters)} nữa`;
+    }
+
+    function shouldSpeakPrepareCue(step, distanceToManeuver, thresholds, nextSegmentDistance) {
+        if (!step || step.type === 'arrive') return false;
+        if (!Number.isFinite(Number(distanceToManeuver))) return false;
+        if (isStraightContinuationStep(step)) return false;
+
+        const segmentDistance = Number(nextSegmentDistance);
+        const tightRoad = isNarrowRoadStep(step)
+            || Boolean(gradeSeparatedRoadKind(step))
+            || (Number.isFinite(segmentDistance) && segmentDistance <= 60);
+
+        if (tightRoad && Number.isFinite(segmentDistance) && segmentDistance <= 60) {
+            return false;
+        }
+
+        return distanceToManeuver <= Number(thresholds?.prepare ?? Infinity);
+    }
+
+    function guidanceSummaryText(step, distanceMeters) {
+        const distance = compactDistance(distanceMeters);
+        if (!step) return `Còn ${distance} nữa`;
+        if (step.type === 'arrive') return `Còn ${distance} nữa tới ${routeTargetShortLabel()}`;
+        const roadChange = roadNameChangeManeuverLabel(step);
+        const intersection = intersectionManeuverLabel(step);
+        if (roadChange) return intersection ? `Còn ${distance} nữa ${intersection}` : `Còn ${distance} nữa`;
+        if (intersection) {
+            return isUnnamedIntersectionContinuationStep(step)
+                ? `Còn ${distance} nữa, đi thẳng tiếp`
+                : `Còn ${distance} nữa ${intersection}`;
+        }
+        const roundabout = roundaboutManeuverLabel(step);
+        if (roundabout) return `Còn ${distance} nữa ${roundabout}`;
+        const gradeSeparated = gradeSeparatedManeuverLabel(step);
+        if (gradeSeparated) return `Còn ${distance} nữa ${capitalize(gradeSeparated)}`;
+
+        const roadName = String(step?.name || step?.ref || '').trim();
+        const road = roadName ? ` vào ${spokenRoadName(roadName)}` : '';
+        return `Còn ${distance} nữa ${maneuverLabel(step)}${road}`;
     }
 
     function compactGuidanceStage(step, isApproaching = false) {
@@ -2584,21 +3121,79 @@
         }
     }
 
-    function maneuverVoiceText(step, action) {
+    function maneuverVoiceText(step, action, distanceMeters = null) {
         const phrase = action || maneuverLabel(step);
-        return step?.name ? `${phrase} vào ${spokenRoadName(step.name)}` : phrase;
+        if (isUnnamedIntersectionContinuationStep(step)) {
+            const distance = Number(distanceMeters);
+            return Number.isFinite(distance) && distance > 0
+                ? `đi thẳng tiếp ${compactDistance(distance)}`
+                : 'đi thẳng tiếp';
+        }
+        if (roadNameChangeManeuverLabel(step)) return capitalize(phrase);
+        if (intersectionManeuverLabel(step)) return capitalize(phrase);
+        if (roundaboutManeuverLabel(step)) return capitalize(phrase);
+        if (gradeSeparatedManeuverLabel(step)) return capitalize(phrase);
+        const roadName = String(step?.name || step?.ref || '').trim();
+        return roadName ? `${phrase} vào ${spokenRoadName(roadName)}` : phrase;
     }
 
-    function guidanceFromRoute(route) {
+    function guidanceFromRoute(route, progressMeters = 0) {
         const steps = Array.isArray(route?.steps) ? route.steps : [];
         if (!steps.length) return null;
 
+        const traveled = Number.isFinite(Number(progressMeters)) ? Math.max(0, Number(progressMeters)) : 0;
         let nextIndex = -1;
+        // Bước đầu tiên là đoạn đường hiện tại (depart), vì vậy mốc của bước
+        // rẽ đầu tiên phải bắt đầu sau distance_m của bước 0.
+        let nextDistance = Number(steps[0]?.distance_m || 0);
         for (let i = 1; i < steps.length; i++) {
             const step = steps[i] || {};
-            if (isMeaningfulGuidanceStep(step)) {
-                nextIndex = i;
-                break;
+            const stepDistance = Number(step.distance_m || 0);
+            const stepLocation = Array.isArray(step?.location) && step.location.length >= 2
+                ? { latitude:Number(step.location[0]), longitude:Number(step.location[1]) }
+                : null;
+            const locationProgress = stepLocation
+                && Number.isFinite(stepLocation.latitude)
+                && Number.isFinite(stepLocation.longitude)
+                ? navigationRouteProgressForPoint(stepLocation, routeGeometry, route)
+                : null;
+            const cueDistance = Number.isFinite(Number(locationProgress?.meters))
+                ? Number(locationProgress.meters)
+                : nextDistance;
+            nextDistance += Number.isFinite(stepDistance) ? Math.max(0, stepDistance) : 0;
+
+            if (!isMeaningfulGuidanceStep(step)) {
+                continue;
+            }
+
+            // Nếu GPS đã đi qua cue này một đoạn đáng kể thì bỏ qua và tìm cue kế tiếp.
+            // Điều này tránh banner/voice bám quá lâu vào "đi vào đường ..." sau khi xe đã
+            // thực sự nằm trên đoạn đường đó.
+            if (step.type !== 'arrive') {
+                const passedBy = traveled - cueDistance;
+                const tolerance = Math.max(
+                    18,
+                    Math.min(
+                        90,
+                        Math.round(Math.max(Number(stepDistance || 0), 0) * 0.18)
+                    )
+                );
+                if (passedBy > tolerance) {
+                    continue;
+                }
+            }
+
+            nextIndex = i;
+            break;
+        }
+
+        if (nextIndex < 0) {
+            for (let i = 1; i < steps.length; i++) {
+                const step = steps[i] || {};
+                if (isMeaningfulGuidanceStep(step)) {
+                    nextIndex = i;
+                    break;
+                }
             }
         }
 
@@ -2606,22 +3201,31 @@
             return {
                 current:steps[0],
                 next:null,
-                distance:Number((route?.display_distance_m ?? route?.distance_m ?? steps[0]?.distance_m) || 0),
+                distance:Number((navigationRouteDistance(route) ?? steps[0]?.distance_m) || 0),
                 key:'continue'
             };
         }
 
         let distance = 0;
         for (let i = 0; i < nextIndex; i++) distance += Number(steps[i]?.distance_m || 0);
+        distance = Math.max(0, distance - traveled);
         const next = steps[nextIndex];
         const loc = Array.isArray(next?.location) && next.location.length >= 2
             ? { latitude:Number(next.location[0]), longitude:Number(next.location[1]) }
             : null;
+        const locationProgress = loc
+            && Number.isFinite(loc.latitude)
+            && Number.isFinite(loc.longitude)
+            ? navigationRouteProgressForPoint(loc, routeGeometry, route)
+            : null;
+        if (Number.isFinite(Number(locationProgress?.meters))) {
+            distance = Math.max(0, Number(locationProgress.meters) - traveled);
+        }
         const key = loc
             ? `${next.type}|${next.modifier}|${loc.latitude.toFixed(5)}|${loc.longitude.toFixed(5)}`
             : `${next.type}|${next.modifier}|${next.name}|${nextIndex}`;
 
-        return {
+        const guide = {
             current:steps[0],
             next,
             distance,
@@ -2629,6 +3233,123 @@
             key,
             nextSegmentDistance:Number.isFinite(Number(next?.distance_m)) ? Number(next.distance_m) : Infinity,
             nextIndex
+        };
+
+        const intersectionGuide = upcomingIntersectionGuidance(route, traveled);
+        return intersectionGuide && intersectionGuide.distance + 10 < guide.distance
+            ? intersectionGuide
+            : guide;
+    }
+
+    function upcomingIntersectionGuidance(route, traveledMeters = 0) {
+        if (!Array.isArray(route?.steps) || routeGeometry.length < 2) return null;
+
+        const traveled = Math.max(0, Number(traveledMeters) || 0);
+        const candidates = [];
+        route.steps.forEach((step, stepIndex) => {
+            stepIntersections(step).forEach(intersection => {
+                const location = Array.isArray(intersection?.location) ? intersection.location : null;
+                if (!location || location.length < 2) return;
+
+                const point = { latitude:Number(location[0]), longitude:Number(location[1]) };
+                if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) return;
+
+                const progress = navigationRouteProgressForPoint(point, routeGeometry, route);
+                if (!progress || !Number.isFinite(Number(progress.meters)) || intersectionBearingCount(intersection) < 3) return;
+
+                const meters = Number(progress.meters);
+                if (meters <= traveled + 35) return;
+
+                candidates.push({
+                    meters,
+                    point,
+                    intersection,
+                    sourceStepIndex: stepIndex,
+                });
+            });
+        });
+
+        candidates.sort((a, b) => a.meters - b.meters);
+        let lastAcceptedMeters = -Infinity;
+        const selected = candidates.find(candidate => {
+            if (candidate.meters - lastAcceptedMeters < 120) return false;
+            lastAcceptedMeters = candidate.meters;
+            return true;
+        });
+        if (!selected) return null;
+
+        const nextRoadStep = route.steps
+            .slice(Math.max(0, Number(selected.sourceStepIndex || 0) + 1))
+            .find(step => {
+                const type = String(step?.type || '').trim().toLowerCase();
+                return type !== 'arrive' && String(step?.name || step?.ref || '').trim() !== '';
+            });
+        const nextRoadName = String(nextRoadStep?.name || nextRoadStep?.ref || '').trim();
+
+        const next = {
+            type:'continue',
+            modifier:'straight',
+            name:'',
+            next_road_name:nextRoadName,
+            distance_m:0,
+            location:[selected.point.latitude, selected.point.longitude],
+            intersections:[selected.intersection],
+        };
+
+        return {
+            current:route.steps[0] || null,
+            next,
+            distance:Math.max(0, selected.meters - traveled),
+            location:selected.point,
+            key:`intersection|${selected.point.latitude.toFixed(5)}|${selected.point.longitude.toFixed(5)}`,
+            nextSegmentDistance:Infinity,
+            nextIndex:-1,
+        };
+    }
+
+    function routeDeviationStatus(progress) {
+        if (!progress || !currentRoute || routeGeometry.length < 2) {
+            navigationSummary?.classList.remove('is-off-route');
+            return null;
+        }
+
+        const deviation = Number(progress.distance);
+        if (!Number.isFinite(deviation)) return null;
+
+        const accuracy = Number(currentPosition?.accuracy);
+        const tolerance = Math.max(
+            45,
+            Math.min(115, Number.isFinite(accuracy) ? accuracy * 1.8 : 65)
+        );
+        const key = `${routeTargetKey()}|${geometryRouteKey(routeGeometry)}`;
+        const now = Date.now();
+
+        if (routeDeviationState.key !== key) {
+            routeDeviationState = { key, active:false, warned:false, since:0 };
+        }
+
+        if (deviation > tolerance) {
+            if (!routeDeviationState.active && !routeDeviationState.since) {
+                routeDeviationState = { key, active:false, warned:false, since:now };
+            }
+
+            if (!routeDeviationState.active && now - routeDeviationState.since >= 1800) {
+                routeDeviationState.active = true;
+            }
+        } else if (
+            routeDeviationState.key === key
+            && deviation <= Math.max(25, tolerance * .62)
+        ) {
+            routeDeviationState = { key, active:false, warned:false, since:0 };
+        }
+
+        navigationSummary?.classList.toggle('is-off-route', routeDeviationState.active);
+
+        return {
+            active:routeDeviationState.active,
+            distance:deviation,
+            tolerance,
+            shouldReroute:routeDeviationState.active && deviation > tolerance * 1.12,
         };
     }
 
@@ -2676,6 +3397,7 @@
         if (!voiceEnabled || ttsUnavailable || !text || !ttsUrl) return;
         const now = Date.now();
         if (!force && now - lastSpeakAt < 3500) return;
+        if (!force && currentAudio && !currentAudio.paused && !currentAudio.ended) return;
         lastSpeakAt = now;
         lastGuideText = text;
         const requestId = ++voiceRequestId;
@@ -2797,9 +3519,14 @@
             } else if (Number.isFinite(accuracy) && accuracy > 120) {
                 arrivalGuardText.textContent = 'GPS đang yếu. Hãy chờ tín hiệu vị trí chính xác hơn.';
             } else if (eligible) {
+                const scanRadius = Number.isFinite(Number(arrival.radius_m))
+                    ? Math.max(1, Math.round(Number(arrival.radius_m)))
+                    : 250;
                 arrivalGuardText.textContent = isStore
-                    ? (isReadyStorePickup ? 'Quán xong. Đang kiểm tra vị trí để mở nút lấy hàng...' : 'Quán đang pha. Đang kiểm tra vị trí...')
-                    : 'Bạn đã ở rất gần điểm đến. Đang kiểm tra vị trí...';
+                    ? (isReadyStorePickup
+                        ? `Quán xong. Đang kiểm tra vị trí trong bán kính ${scanRadius} m để mở nút lấy hàng...`
+                        : `Quán đang pha. Đang kiểm tra vị trí trong bán kính ${scanRadius} m...`)
+                    : `Bạn đã ở rất gần điểm đến. Đang kiểm tra vị trí trong bán kính ${scanRadius} m...`;
             } else if (Number.isFinite(distance)) {
                 arrivalGuardText.textContent = isReadyStorePickup
                     ? `Quán xong. Còn khoảng ${Math.max(1, Math.round(distance))} m tới quán.`
@@ -2852,17 +3579,33 @@
 
     function refreshGuidance(forceIntro = false) {
         if (isGuidanceMutedByArrival()) {
+            updateNavigationIcon({ type:'arrive' });
             stageEl.textContent = `Đã tới ${routeTargetShortLabel()}`;
             summaryInstruction.textContent = 'Chờ xác nhận tiếp theo';
             return;
         }
 
-        const guide = guidanceFromRoute(currentRoute);
+        const progress = navigationProgressForCurrentPosition();
+        const deviation = routeDeviationStatus(progress);
+        if (deviation?.active) {
+            updateNavigationIcon(null, true);
+            stageEl.textContent = 'Đang lệch tuyến';
+            summaryInstruction.textContent = routePending
+                ? 'Đang tính lại đường đi...'
+                : `Đang cách tuyến khoảng ${compactDistance(deviation.distance)} · hệ thống sẽ tính lại`;
+            if (voiceEnabled && !routeDeviationState.warned) {
+                routeDeviationState.warned = true;
+                speak('Bạn đang lệch khỏi tuyến đường. Đang tính lại đường đi.', true);
+            }
+            return;
+        }
+        const guide = guidanceFromRoute(currentRoute, progress?.meters ?? 0);
         const targetNoun = routeTargetNoun();
         if (!guide) {
-            if (currentRoute && Number.isFinite(Number(currentRoute.distance_m))) {
-                const text = compactInstructionDistance(Number(currentRoute.distance_m));
-                stageEl.textContent = 'Đi thẳng';
+            if (currentRoute && Number.isFinite(Number(navigationRouteDistance(currentRoute)))) {
+                updateNavigationIcon({ type:'arrive' });
+                const text = guidanceSummaryText({ type:'arrive' }, Number(navigationRouteDistance(currentRoute)));
+                stageEl.textContent = routeTargetActionLabel();
                 summaryInstruction.textContent = text;
                 if (voiceEnabled && forceIntro) speak(text);
             }
@@ -2870,45 +3613,62 @@
         }
 
         if (guidanceState.key !== guide.key) {
-            guidanceState = { key:guide.key, warned:false, turn:false, intro:false, arrived:false };
+            guidanceState = { key:guide.key, warned:false, turn:false, intro:false, arrived:false, distanceMeters:null };
         }
 
         let distanceToManeuver = guide.distance;
-        const progress = currentPosition ? routeProgressForPoint(currentPosition, routeGeometry) : null;
         const progressedMeters = progress && Number.isFinite(Number(progress.meters)) ? Number(progress.meters || 0) : 0;
-        const routeRemaining = Number(currentRoute?.display_distance_m ?? currentRoute?.distance_m ?? 0);
+        const routeRemaining = Number(navigationRouteDistance(currentRoute) ?? 0);
         const remainingRouteMeters = Number.isFinite(routeRemaining)
             ? Math.max(0, routeRemaining - progressedMeters)
             : Math.max(0, Number(guide.distance || 0));
-        if (progress && Number.isFinite(Number(progress.meters))) {
-            distanceToManeuver = Math.max(0, Number(guide.distance || 0) - Number(progress.meters || 0));
+        // guidanceFromRoute() đã trả khoảng cách tính từ vị trí hiện tại.
+        // Không trừ progress lần nữa và không dùng khoảng cách đường chim bay,
+        // vì hai việc này làm chỉ dẫn lệch khi GPS đang ở gần đường song song.
+        distanceToManeuver = Math.max(0, Number(distanceToManeuver || 0));
+        const previousRemainingMeters = guidanceState.distanceMeters;
+        guidanceState.distanceMeters = remainingRouteMeters;
+        distanceEl.textContent = `Còn ${compactDistance(remainingRouteMeters)}`;
+        const totalDuration = navigationRouteDuration(currentRoute);
+        const totalDistance = navigationRouteDistance(currentRoute);
+        const remainingDuration = Number.isFinite(Number(totalDuration))
+            && Number.isFinite(Number(totalDistance))
+            && totalDistance > 0
+            ? totalDuration * (remainingRouteMeters / totalDistance)
+            : totalDuration;
+        if (Number.isFinite(Number(remainingDuration))) {
+            etaEl.textContent = `${minutes(remainingDuration)} · tới ${routeTargetShortLabel()}`;
         }
-        if (guide.location && currentPosition) {
-            const direct = haversine(currentPosition, guide.location);
-            if (Number.isFinite(direct) && direct < 250) distanceToManeuver = Math.min(distanceToManeuver, direct);
-        }
+        const distanceMilestone = nextVoiceDistanceMilestone(previousRemainingMeters, remainingRouteMeters);
+        const speakDistanceMilestoneCue = () => {
+            if (!voiceEnabled || !distanceMilestone) return false;
+            speak(`Còn ${voiceDistanceLabel(distanceMilestone)} nữa.`);
+            return true;
+        };
         const speedKmh = effectiveTravelSpeedKmh();
         const thresholds = guidanceThresholds(guide.next, speedKmh, guide.nextSegmentDistance);
 
         if (!guide.next) {
-            const text = compactInstructionDistance(remainingRouteMeters);
+            updateNavigationIcon(null);
+            const text = guidanceSummaryText({ type:'arrive' }, remainingRouteMeters);
             stageEl.textContent = 'Đi thẳng';
             summaryInstruction.textContent = text;
+            if (voiceEnabled && forceIntro) speak(text);
             return;
         }
 
         const action = maneuverLabel(guide.next);
-        const voiceAction = maneuverVoiceText(guide.next, action);
+        const voiceAction = maneuverVoiceText(guide.next, action, distanceToManeuver);
+        const summaryText = guidanceSummaryText(guide.next, distanceToManeuver);
+        const speakPrepareCue = shouldSpeakPrepareCue(guide.next, distanceToManeuver, thresholds, guide.nextSegmentDistance);
+        updateNavigationIcon(guide.next);
+        stageEl.textContent = compactGuidanceStage(guide.next, true);
+        summaryInstruction.textContent = summaryText;
+
         if (guide.next.type !== 'arrive' && distanceToManeuver > thresholds.prepare) {
-            stageEl.textContent = 'Đi thẳng';
-            summaryInstruction.textContent = compactInstructionDistance(distanceToManeuver);
+            speakDistanceMilestoneCue();
             return;
         }
-
-        stageEl.textContent = compactGuidanceStage(guide.next, true);
-        let display = compactInstructionDistance(distanceToManeuver);
-        if (guide.next.type === 'arrive') display = compactInstructionDistance(distanceToManeuver);
-        summaryInstruction.textContent = display;
 
         if (!voiceEnabled) return;
 
@@ -2929,11 +3689,13 @@
             return;
         }
 
-        if (distanceToManeuver <= thresholds.prepare && !guidanceState.warned) {
+        if (speakPrepareCue && !guidanceState.warned) {
             guidanceState.warned = true;
             speak(`Còn ${distanceText(distanceToManeuver)}, chuẩn bị ${voiceAction}.`);
             return;
         }
+
+        speakDistanceMilestoneCue();
     }
 
     async function sendLocation(position) {
@@ -2982,7 +3744,9 @@
         routePending = true;
         lastRouteAt = now;
         lastRoutePosition = { ...currentPosition };
-        sourceEl.textContent = 'Đang tính tuyến gần nhất...';
+        sourceEl.textContent = routeDeviationState.active
+            ? 'Đang lệch tuyến · tính lại đường đi...'
+            : 'Đang tính tuyến gần nhất...';
 
         const url = new URL(routeUrl, window.location.origin);
         url.searchParams.set('latitude', currentPosition.latitude);
@@ -3038,60 +3802,49 @@
 
             const targetLatLng = [target.latitude, target.longitude];
             const targetPopup = `<strong>${escapeHtml(target.label)}</strong><br>${escapeHtml(target.address || '')}`;
-            if (glReady) {
-                // MapLibre là renderer chính; Leaflet chỉ giữ fallback khi GL lỗi.
-            } else if (targetMarker) {
-                targetMarker.setLatLng(targetLatLng).setPopupContent(targetPopup);
-            } else {
-                targetMarker = L.marker(targetLatLng, { icon:targetIcon })
-                    .addTo(map)
-                    .bindPopup(targetPopup);
-            }
+            if (!glReady) renderLeafletTargetMarker(targetLatLng, targetPopup);
             renderGlTargetMarker({latitude:target.latitude, longitude:target.longitude});
 
             if (!bundleRendered) {
                 if (geometry.length >= 2) {
                     const nextKey = geometryRouteKey(geometry);
-                    if (glReady) {
-                        if (nextKey !== lastRenderedGlRouteKey && renderGlRoute(geometry)) {
-                            lastRenderedGlRouteKey = nextKey;
-                        }
-                    } else if (routeLine && nextKey !== lastRenderedRouteKey) routeLine.setLatLngs(geometry);
-                    else if (!routeLine) routeLine = L.polyline(geometry, { color:'#1677ff', weight:8, opacity:.96, lineJoin:'round', lineCap:'round' }).addTo(map);
-                    if (!glReady && nextKey !== lastRenderedRouteKey) {
-                        lastRenderedRouteKey = nextKey;
+                    if (glReady && renderGlRoute(geometry)) {
+                        lastRenderedGlRouteKey = nextKey;
+                    } else {
+                        renderLeafletRoute(geometry);
                     }
-                } else if (!glReady && routeLine) {
-                    routeLine.remove();
-                    routeLine = null;
-                    lastRenderedRouteKey = '';
-                } else if (glReady) {
-                    renderGlRoute([]);
+                } else {
+                    if (glReady) {
+                        renderGlRoute([]);
+                        lastRenderedGlRouteKey = '';
+                    }
+                    clearLeafletRoute();
                     lastRenderedGlRouteKey = '';
                 }
             } else {
                 const nextKey = geometryRouteKey(routeGeometry);
-                if (glReady && nextKey !== lastRenderedGlRouteKey) {
-                    if (renderGlRoute(routeGeometry)) {
-                        lastRenderedGlRouteKey = nextKey;
-                    }
-                } else if (!glReady && nextKey !== lastRenderedRouteKey) {
-                    lastRenderedRouteKey = nextKey;
+                if (glReady && renderGlRoute(routeGeometry, bundleRoute?.alt_route?.geometry ?? [])) {
+                    lastRenderedGlRouteKey = nextKey;
+                } else {
+                    renderLeafletRoute(routeGeometry);
                 }
             }
+            if (!glReady) renderLeafletTargetMarker(targetLatLng, targetPopup);
 
             const displayDistance = bundleRoute?.display_distance_m ?? route.distance_m ?? 0;
             const displayDuration = bundleRoute?.display_duration_s ?? route.duration_s ?? 0;
             currentRoute.display_distance_m = Number(displayDistance || 0);
             currentRoute.display_duration_s = Number(displayDuration || 0);
-            distanceEl.textContent = compactDistance(Number(displayDistance || 0));
-            etaEl.textContent = minutes(Number(displayDuration || 0));
+            currentRoute.navigation_distance_m = Number(route.distance_m ?? displayDistance ?? 0);
+            currentRoute.navigation_duration_s = Number(route.duration_s ?? displayDuration ?? 0);
+            distanceEl.textContent = `Còn ${compactDistance(currentRoute.navigation_distance_m)}`;
+            etaEl.textContent = `${minutes(currentRoute.navigation_duration_s)} · tới ${routeTargetShortLabel()}`;
             stageEl.textContent = routeTargetActionLabel();
             const sourceLabel = bundleRoute?.main_route?.preference_label
                 || route.preference_label
                 || 'Tuyến ngắn nhất';
             sourceEl.textContent = bundleRoute
-                ? `Chuyến ghép ${bundleStages(bundleRoute).length || 0} điểm · đang dẫn tới điểm tiếp theo`
+                ? `Chuyến ghép ${bundleStages(bundleRoute).length || 0} điểm · đang dẫn tới điểm tiếp theo${bundleRoute?.alt_route ? ' · có tuyến phụ' : ''}`
                 : route.fallback
                 ? 'Tuyến tạm theo tọa độ · server đường đi chưa phản hồi'
                 : `${sourceLabel} · ${route.alternatives_count || 1} phương án`;
@@ -3186,6 +3939,20 @@
         if (glReady) {
             clearBundleOverlay();
             return true;
+        }
+
+        const altGeometry = Array.isArray(bundleRoute?.alt_route?.geometry) ? bundleRoute.alt_route.geometry : [];
+        const shouldShowAltRoute = altGeometry.length >= 2;
+
+        if (shouldShowAltRoute) {
+            routeAltLine = L.polyline(altGeometry, {
+                color:'rgba(120, 130, 145, .72)',
+                weight:5,
+                opacity:.26,
+                lineJoin:'round',
+                lineCap:'round',
+                dashArray:'10 10'
+            }).addTo(map);
         }
 
         stages.forEach(stage => {
@@ -3318,7 +4085,13 @@
             lastNavigationSideEffectsAt = now;
             sendLocation(currentPosition);
             refreshGuidance(false);
-            if (snapped && Number.isFinite(snapDistance) && snapDistance > Math.max(95, snapLimit * 1.7) && Date.now() - lastRouteAt > 4500) {
+            const navigationProgress = navigationProgressForCurrentPosition();
+            const deviation = routeDeviationStatus(navigationProgress);
+            if (
+                (deviation?.shouldReroute
+                    || (snapped && Number.isFinite(snapDistance) && snapDistance > Math.max(95, snapLimit * 1.7)))
+                && Date.now() - lastRouteAt > 4500
+            ) {
                 updateRoute(true);
                 return;
             }

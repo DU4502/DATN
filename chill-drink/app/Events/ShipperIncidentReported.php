@@ -44,6 +44,7 @@ class ShipperIncidentReported implements ShouldBroadcastNow
             'order_code' => $this->order->displayCode(),
             'branch_id' => is_numeric($this->order->branch_id) ? (int) $this->order->branch_id : null,
             'branch_name' => $this->order->branch?->name ?: 'Chi nhánh',
+            'incident_type' => (string) ($this->incident['incident_type'] ?? 'driver_issue'),
             'shipper_name' => (string) ($this->incident['shipper_name'] ?? 'Shipper'),
             'description' => (string) ($this->incident['description'] ?? 'Shipper báo sự cố.'),
             'reported_at_label' => (string) ($this->incident['reported_at_label'] ?? now()->format('H:i · d/m/Y')),

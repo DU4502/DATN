@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Favorite;
 use App\Models\GroupOrder;
 use App\Services\ProductAvailabilityService;
+use App\Support\ProductSizePrice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -116,17 +117,21 @@ class CartController extends Controller
             $sizeCode = strtoupper((string) ($item['size'] ?? 'M'));
             $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
             $defaultExtra = $sizeCode === 'S' ? 0 : ($sizeCode === 'M' ? 5000 : 10000);
-            $sizeExtra = ($sizeObj && isset($sizeObj->pivot->price))
+            $storedSizePrice = $sizeObj && isset($sizeObj->pivot->price)
                 ? (int) $sizeObj->pivot->price
-                : (int) ($item['size_extra'] ?? $defaultExtra);
+                : (is_numeric($item['size_extra'] ?? null) ? (int) $item['size_extra'] : null);
+            $basePrice = max(0, (int) $product->price);
+            $sizeUnitPrice = ProductSizePrice::unitPrice($basePrice, $storedSizePrice, $defaultExtra);
+            $sizeExtra = ProductSizePrice::sizeExtra($basePrice, $storedSizePrice, $defaultExtra);
+            $toppingTotal = max(0, (int) ($item['topping_total'] ?? 0));
 
             $cart[$key]['name'] = $product->name;
             $cart[$key]['image'] = $product->image_url;
             $cart[$key]['sku'] = $product->sku ?? null;
             $cart[$key]['category'] = $product->category?->name;
-            $cart[$key]['base_price'] = (int) $product->price;
+            $cart[$key]['base_price'] = $basePrice;
             $cart[$key]['size_extra'] = $sizeExtra;
-            $cart[$key]['price'] = (int) $product->price + $sizeExtra + (int) ($item['topping_total'] ?? 0);
+            $cart[$key]['price'] = $sizeUnitPrice + $toppingTotal;
         }
 
         return $cart;
@@ -184,13 +189,15 @@ class CartController extends Controller
         $size = $sizes[$sizeCode] ?? $sizes['M'];
 
         $sizeExtra = (int) $size['extra'];
+        $sizeObj = null;
         if ($product instanceof Product) {
             $product->loadMissing('sizes');
             $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
-            if ($sizeObj && isset($sizeObj->pivot->price)) {
-                $sizeExtra = (int) $sizeObj->pivot->price;
-            }
         }
+        $basePrice = max(0, (int) ($product->price ?? 0));
+        $storedSizePrice = $sizeObj && isset($sizeObj->pivot->price) ? (int) $sizeObj->pivot->price : null;
+        $sizeUnitPrice = ProductSizePrice::unitPrice($basePrice, $storedSizePrice, $sizeExtra);
+        $sizeExtra = ProductSizePrice::sizeExtra($basePrice, $storedSizePrice, $sizeExtra);
 
         $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
         $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
@@ -223,7 +230,7 @@ class CartController extends Controller
                 'product_id' => $productId,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => $basePrice + $sizeExtra + $toppingTotal,
+                'price' => $sizeUnitPrice + $toppingTotal,
                 'size' => $sizeCode,
                 'size_label' => 'Size ' . $sizeCode,
                 'size_extra' => $sizeExtra,

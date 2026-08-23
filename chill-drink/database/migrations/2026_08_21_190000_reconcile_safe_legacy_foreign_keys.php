@@ -33,6 +33,7 @@ return new class extends Migration
 
         $this->changeColumnToSignedInteger('delivery_bundle_trip_orders', 'order_id');
         $this->changeColumnToSignedInteger('delivery_dispatch_decisions', 'order_id');
+        $this->changeColumnToSignedInteger('delivery_fee_settings', 'updated_by', nullable: true);
 
         $this->addForeignKey('delivery_bundle_trips', 'shipper_id', 'shippers', 'delivery_bundle_trips_shipper_id_foreign', 'cascade');
         $this->addForeignKey('delivery_bundle_trip_orders', 'trip_id', 'delivery_bundle_trips', 'delivery_bundle_trip_orders_trip_id_foreign', 'cascade');
@@ -112,14 +113,14 @@ return new class extends Migration
         }
     }
 
-    private function changeColumnToSignedInteger(string $table, string $column): void
+    private function changeColumnToSignedInteger(string $table, string $column, bool $nullable = false): void
     {
         if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
             return;
         }
 
         if ($this->columnType($table, $column) !== 'int(11)') {
-            DB::statement("ALTER TABLE `{$table}` MODIFY `{$column}` INT NOT NULL");
+            DB::statement("ALTER TABLE `{$table}` MODIFY `{$column}` INT ".($nullable ? 'NULL' : 'NOT NULL'));
         }
     }
 

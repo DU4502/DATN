@@ -61,6 +61,11 @@ class OrderItem extends Model
         return $this->belongsTo(ProductSize::class, 'product_size_id');
     }
 
+    public function toppingLines()
+    {
+        return $this->hasMany(OrderItemTopping::class, 'order_item_id');
+    }
+
     /**
      * Get subtotal for the order item
      */

@@ -85,6 +85,9 @@
                                 <span class="badge {{ $incident['is_pending'] ? 'bg-warning text-dark' : 'bg-success' }}">
                                     {{ $incident['is_pending'] ? 'CẦN XỬ LÝ' : 'ĐÃ XỬ LÝ' }}
                                 </span>
+                                <span class="badge {{ ($incident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'bg-danger-subtle text-danger' : 'bg-info-subtle text-info-emphasis' }}">
+                                    {{ ($incident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'KHÁCH XIN HỦY' : 'SỰ CỐ TÀI XẾ' }}
+                                </span>
                                 @if($rootMode)
                                     <span class="badge bg-light text-dark">{{ $incident['branch_name'] }}</span>
                                 @endif
@@ -116,21 +119,39 @@
 
                 @if($incident['is_pending'])
                     <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mt-4 pt-3 border-top">
-                        <div class="small text-secondary">
-                            Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper phù hợp và giữ nguyên trạng thái nghiệp vụ.
-                        </div>
-                        <div class="d-flex gap-2 flex-wrap">
-                            <form action="{{ $resolveUrl }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="action" value="keep">
-                                <button class="btn btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Giữ shipper hiện tại</button>
-                            </form>
-                            <form action="{{ $resolveUrl }}" method="POST" onsubmit="return confirm('Xác nhận shipper hiện tại không thể tiếp tục và để hệ thống tự điều phối người thay thế?');">
-                                @csrf
-                                <input type="hidden" name="action" value="reassign">
-                                <button class="btn btn-warning" type="submit"><i class="bi bi-arrow-repeat me-1"></i>Điều phối shipper khác</button>
-                            </form>
-                        </div>
+                        @if(($incident['incident_type'] ?? 'driver_issue') === 'customer_cancel')
+                            <div class="small text-secondary">
+                                Khách đã yêu cầu hủy sau khi đơn được xác nhận. Chỉ xử lý hủy tại sự cố này.
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <form action="{{ $resolveUrl }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="action" value="keep">
+                                    <button class="btn btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Tiếp tục giao đơn</button>
+                                </form>
+                                <form action="{{ $resolveUrl }}" method="POST" onsubmit="return confirm('Xác nhận hủy đơn theo yêu cầu sự cố của khách?');">
+                                    @csrf
+                                    <input type="hidden" name="action" value="cancel">
+                                    <button class="btn btn-danger" type="submit"><i class="bi bi-x-circle me-1"></i>Hủy đơn do sự cố</button>
+                                </form>
+                            </div>
+                        @else
+                            <div class="small text-secondary">
+                                Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper phù hợp và giữ nguyên trạng thái nghiệp vụ.
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <form action="{{ $resolveUrl }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="action" value="keep">
+                                    <button class="btn btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Giữ shipper hiện tại</button>
+                                </form>
+                                <form action="{{ $resolveUrl }}" method="POST" onsubmit="return confirm('Xác nhận shipper hiện tại không thể tiếp tục và để hệ thống tự điều phối người thay thế?');">
+                                    @csrf
+                                    <input type="hidden" name="action" value="reassign">
+                                    <button class="btn btn-warning" type="submit"><i class="bi bi-arrow-repeat me-1"></i>Điều phối shipper khác</button>
+                                </form>
+                            </div>
+                        @endif
                     </div>
                 @else
                     <div class="alert alert-success mb-0 mt-4 py-2 px-3 small">

@@ -41,6 +41,7 @@ class ShipperIncidentService
     private const INCIDENT_RESOLUTION_STATUSES = [
         'incident_resolved_keep',
         'incident_resolved_reassign',
+        'incident_resolved_cancel',
         'reassigned_out',
     ];
 
@@ -98,6 +99,7 @@ class ShipperIncidentService
             'shipper_name' => $shipper?->user?->name ?: $shipper?->code ?: 'Shipper',
             'shipper_phone' => $shipper?->phone ?: $shipper?->user?->phone,
             'description' => (string) ($issue->description ?? 'Shipper báo sự cố.'),
+            'incident_type' => (string) ($issue->incident_type ?? 'driver_issue'),
             'reported_at' => $reportedAt,
             'reported_at_label' => $reportedAt?->format('H:i · d/m/Y'),
             'shipment_status' => (string) ($shipment->status ?? ''),
@@ -165,7 +167,7 @@ class ShipperIncidentService
     /**
      * Quản lý xác nhận sự cố đã được hỗ trợ nhưng shipper hiện tại vẫn tiếp tục chuyến.
      */
-    public function keepCurrentShipper(Order $order, ?User $actor = null): array
+    public function keepCurrentShipper(Order $order, ?User $actor = null, bool $notifyCustomer = true): array
     {
         $result = DB::transaction(function () use ($order, $actor) {
             $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
@@ -220,11 +222,74 @@ class ShipperIncidentService
             ];
         }, 3);
 
-        if (($result['order'] ?? null) instanceof Order) {
+        if ($notifyCustomer && ($result['order'] ?? null) instanceof Order) {
             RealtimeOrderNotifier::orderStatusUpdated($result['order']);
         }
 
         return $result;
+    }
+
+    /**
+     * Từ chối yêu cầu hủy của khách và tiếp tục chuyến. Đây vẫn là quyết định
+     * nội bộ của quản lý, nên không gửi thông báo "khách yêu cầu hủy" cho khách.
+     */
+    public function keepCustomerCancelRequest(Order $order, ?User $actor = null): array
+    {
+        $incident = $this->pendingIncident($order);
+        if (! $incident || ($incident['incident_type'] ?? 'driver_issue') !== 'customer_cancel') {
+            return [
+                'status' => 'invalid_incident_type',
+                'message' => 'Đơn này không có yêu cầu hủy đang chờ xử lý.',
+            ];
+        }
+
+        $result = $this->keepCurrentShipper($order, $actor, notifyCustomer: false);
+        if (($result['status'] ?? null) === 'kept') {
+            $result['message'] = 'Đã từ chối yêu cầu hủy nội bộ. Đơn tiếp tục được giao.';
+        }
+
+        return $result;
+    }
+
+    /**
+     * Duyệt yêu cầu khách xin hủy. Chỉ controller đã kiểm tra Admin/Super Admin
+     * mới gọi được method này; force=true là cần thiết vì đơn có thể đã vào chuyến.
+     */
+    public function cancelCustomerRequest(Order $order, ?User $actor = null): array
+    {
+        $incident = $this->pendingIncident($order);
+        if (! $incident || ($incident['incident_type'] ?? 'driver_issue') !== 'customer_cancel') {
+            return [
+                'status' => 'invalid_incident_type',
+                'message' => 'Đơn này không có yêu cầu hủy đang chờ xử lý.',
+            ];
+        }
+
+        try {
+            $cancelled = app(OrderCancellationService::class)->cancel(
+                $order,
+                'Duyệt hủy theo yêu cầu của khách: '.$incident['description'],
+                $actor,
+                force: true,
+            );
+        } catch (\Throwable $exception) {
+            return [
+                'status' => 'cancel_failed',
+                'message' => $exception->getMessage() ?: 'Chưa thể hủy đơn lúc này.',
+            ];
+        }
+
+        $this->addHistory(
+            (int) $incident['shipment_id'],
+            'incident_resolved_cancel',
+            'Quản lý đã duyệt hủy yêu cầu nội bộ của khách'.($actor ? ' · '.$actor->name : '').'.'
+        );
+
+        return [
+            'status' => 'cancelled',
+            'message' => 'Đã duyệt hủy đơn theo yêu cầu nội bộ của khách.',
+            'order' => $cancelled['order']->fresh(),
+        ];
     }
 
     /**

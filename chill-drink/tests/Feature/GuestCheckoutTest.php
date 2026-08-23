@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\User;
+use App\Services\EmailRecipientVerificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -19,6 +20,19 @@ use Tests\TestCase;
 class GuestCheckoutTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->instance(EmailRecipientVerificationService::class, new class extends EmailRecipientVerificationService
+        {
+            public function assertDeliverable(string $email): void
+            {
+                // Default test double: skip live SMTP probing.
+            }
+        });
+    }
 
     public function test_guest_can_complete_cod_checkout(): void
     {
@@ -71,6 +85,96 @@ class GuestCheckoutTest extends TestCase
             ->assertOk()
             ->assertSee('Chúng tôi đã gửi email xác nhận đến:')
             ->assertSee('guest@example.com');
+    }
+
+    public function test_guest_checkout_rolls_back_when_confirmation_email_cannot_be_sent(): void
+    {
+        [$product, $productSize] = $this->sellableProduct();
+        $branchId = Branch::query()->firstOrCreate(
+            ['code' => 'HN'],
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
+        )->id;
+
+        $this->withSession([
+            'cart' => [
+                'cart-1' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ],
+            'checkout_cart_keys' => ['cart-1'],
+        ])
+            ->post(route('checkout.guest.info.store'), [
+                'guest_name' => 'Khách Vãng Lai',
+                'guest_phone' => '0912345678',
+                'guest_email' => 'guest@example.com',
+                'delivery_type' => 'pickup',
+                'branch_id' => $branchId,
+                'note' => 'Ít đá',
+            ]);
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with('guest@example.com')
+            ->andReturnSelf();
+        Mail::shouldReceive('send')
+            ->once()
+            ->andThrow(new \RuntimeException('SMTP failed'));
+
+        $response = $this->post(route('checkout.guest.process'), [
+            'payment_method' => 'cod',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error', fn (string $message) => str_contains($message, 'Không gửi được email xác nhận'));
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_guest_checkout_rejects_nonexistent_email_before_creating_order(): void
+    {
+        [$product, $productSize] = $this->sellableProduct();
+        $branchId = Branch::query()->firstOrCreate(
+            ['code' => 'HN'],
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
+        )->id;
+
+        $this->app->instance(EmailRecipientVerificationService::class, new class extends EmailRecipientVerificationService
+        {
+            public function assertDeliverable(string $email): void
+            {
+                throw new \RuntimeException('Địa chỉ email này không tồn tại hoặc không nhận thư. Vui lòng kiểm tra lại.');
+            }
+        });
+
+        $this->withSession([
+            'cart' => [
+                'cart-1' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ],
+            'checkout_cart_keys' => ['cart-1'],
+        ])
+            ->post(route('checkout.guest.info.store'), [
+                'guest_name' => 'Khách Vãng Lai',
+                'guest_phone' => '0912345678',
+                'guest_email' => 'phuongthao.lhn12bvsgsg@gmail.com',
+                'delivery_type' => 'pickup',
+                'branch_id' => $branchId,
+                'note' => 'Ít đá',
+            ])
+            ->assertSessionHasErrors('guest_email');
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertGuest();
     }
 
     public function test_guest_checkout_rejects_invalid_vietnamese_phone_number(): void

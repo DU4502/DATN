@@ -4,9 +4,22 @@
 @section('search-placeholder', 'Tìm sản phẩm, khách hàng, nội dung...')
 
 @section('content')
+@php
+    $currentRouteName = request()->route()?->getName() ?? 'admin.reviews.index';
+    $baseParams = array_merge(
+        request()->route()?->parameters() ?? [],
+        \Illuminate\Support\Arr::except(request()->query(), ['page', 'status'])
+    );
+    $allReviewsUrl = route($currentRouteName, $baseParams);
+    $visibleReviewsUrl = route($currentRouteName, array_merge($baseParams, ['status' => 'visible']));
+    $hiddenReviewsUrl = route($currentRouteName, array_merge($baseParams, ['status' => 'hidden']));
+    $reviewTableColumns = $hasReviewStatusColumn ? 7 : 6;
+@endphp
+
 <section class="mb-4">
     <h2 class="h2 fw-bold mb-1">Bình luận & đánh giá</h2>
     <p class="text-secondary mb-0">Theo dõi phản hồi của khách hàng theo từng sản phẩm.</p>
+    <p class="text-secondary small mb-0">Đánh giá bị ẩn sẽ không hiển thị trên trang sản phẩm.</p>
 </section>
 
 <section class="row g-4 mb-4">
@@ -55,9 +68,9 @@
             <p class="text-secondary mb-0">Ảnh sản phẩm được thu nhỏ để bảng dễ đọc và cân đối.</p>
         </div>
         <div class="admin-review-filters">
-            <span class="admin-filter-pill active">Tất cả</span>
-            <span class="admin-filter-pill">5 sao</span>
-            <span class="admin-filter-pill">Cần xem lại</span>
+            <a href="{{ $allReviewsUrl }}" class="admin-filter-pill {{ request('status') ? '' : 'active' }}">Tất cả</a>
+            <a href="{{ $visibleReviewsUrl }}" class="admin-filter-pill {{ request('status') === 'visible' ? 'active' : '' }}">Hiển thị</a>
+            <a href="{{ $hiddenReviewsUrl }}" class="admin-filter-pill {{ request('status') === 'hidden' ? 'active' : '' }}">Đã ẩn</a>
         </div>
     </div>
 
@@ -66,9 +79,13 @@
             <thead>
                 <tr>
                     <th>Sản phẩm</th>
+                    <th>Mã đơn</th>
                     <th>Khách hàng</th>
                     <th class="text-center">Đánh giá</th>
                     <th>Bình luận</th>
+                    @if($hasReviewStatusColumn)
+                        <th class="text-center">Trạng thái</th>
+                    @endif
                     <th class="text-end">Ngày gửi</th>
                 </tr>
             </thead>
@@ -94,14 +111,17 @@
                                     @endif
                                 </div>
                                 <div class="min-w-0">
-                                    <div class="fw-bold text-truncate">{{ $review->product->name ?? 'Sản phẩm đã xóa' }}</div>
-                                    <small class="text-secondary">{{ $review->product->category->name ?? 'Chưa phân loại' }}</small>
+                                    <div class="fw-bold text-truncate">{{ $review->product?->name ?? 'Sản phẩm đã xóa' }}</div>
+                                    <small class="text-secondary">{{ $review->product?->category?->name ?? 'Chưa phân loại' }}</small>
                                 </div>
                             </div>
                         </td>
+                        <td class="fw-bold text-primary">
+                            {{ $review->order?->displayCode() ?? ($review->order_id ? '#'.$review->order_id : '-') }}
+                        </td>
                         <td>
-                            <span class="fw-bold d-block">{{ $review->user->name ?? 'Khách hàng' }}</span>
-                            <small class="text-secondary">{{ $review->user->email ?? '' }}</small>
+                            <span class="fw-bold d-block">{{ $review->user?->name ?? 'Khách hàng' }}</span>
+                            <small class="text-secondary">{{ $review->user?->email ?? '' }}</small>
                         </td>
                         <td class="text-center">
                             <span class="admin-rating">
@@ -110,11 +130,28 @@
                             </span>
                         </td>
                         <td class="text-secondary" style="max-width: 360px;">{{ $review->comment ?: 'Không có nội dung.' }}</td>
+                        @if($hasReviewStatusColumn)
+                            <td class="text-center">
+                                <div class="d-inline-flex flex-column align-items-center gap-2">
+                                    <span class="badge rounded-pill {{ $review->status ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' }}">
+                                        {{ $review->status ? 'Đang hiển thị' : 'Đã ẩn' }}
+                                    </span>
+                                    <form action="{{ route('admin.reviews.toggle-status', $review) }}" method="POST" class="m-0">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn btn-sm {{ $review->status ? 'btn-outline-warning' : 'btn-outline-success' }}">
+                                            <i class="bi {{ $review->status ? 'bi-eye-slash' : 'bi-eye' }} me-1"></i>
+                                            {{ $review->status ? 'Ẩn' : 'Hiện' }}
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        @endif
                         <td class="text-end text-secondary">{{ optional($review->created_at)->format('d/m/Y H:i') ?: '-' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="text-center text-secondary py-5">
+                        <td colspan="{{ $reviewTableColumns }}" class="text-center text-secondary py-5">
                             <span class="admin-icon-dot mx-auto mb-3" style="width: 58px; height: 58px;"><i class="bi bi-chat-square-heart"></i></span>
                             <div class="fw-bold text-dark mb-1">
                                 {{ $hasReviewTable ? 'Chưa có bình luận/đánh giá' : 'Chưa có bảng dữ liệu đánh giá' }}

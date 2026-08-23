@@ -5,12 +5,14 @@
 @section('content')
 <style>
     .auth-page {
-        min-height: calc(100vh - 80px);
+        min-height: calc(100dvh - 80px);
         display: flex;
         align-items: center;
+        padding: 1rem 0;
+        overflow: hidden;
         background:
             linear-gradient(90deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.34) 46%, rgba(255, 255, 255, 0.08) 100%),
-            url('https://png.pngtree.com/background/20250106/original/pngtree-bubble-tea-cup-with-splashing-milk-summer-drinks-background-picture-image_15464755.jpg') center/cover no-repeat;
+            url('{{ asset("images/auth-login-matcha.png") }}') center/cover no-repeat;
         position: relative;
     }
     .auth-page::before {
@@ -18,7 +20,7 @@
         background: linear-gradient(135deg, rgba(0, 139, 122, 0.10) 0%, rgba(255, 246, 225, 0.22) 100%);
     }
     
-    .auth-container { position: relative; z-index: 1; padding: 4rem 0; width: 100%; }
+    .auth-container { position: relative; z-index: 1; padding: 0; width: 100%; }
 
     .auth-card {
         background: rgba(255, 255, 255, 0.88);
@@ -31,14 +33,14 @@
     }
 
     .auth-header {
-        text-align: center; margin-bottom: 2rem;
+        text-align: center; margin-bottom: 1rem;
     }
     .auth-logo {
-        width: 64px; height: 64px; border-radius: var(--radius-lg);
+        width: 56px; height: 56px; border-radius: var(--radius-lg);
         background: #fff; display: inline-flex; align-items: center; justify-content: center;
-        box-shadow: var(--shadow-md); margin-bottom: 1.5rem; border: 1px solid var(--c-border);
+        box-shadow: var(--shadow-md); margin-bottom: .85rem; border: 1px solid var(--c-border);
     }
-    .auth-logo img { width: 44px; height: 44px; object-fit: contain; }
+    .auth-logo img { width: 38px; height: 38px; object-fit: contain; }
 
     .form-floating > .form-control {
         border-radius: var(--radius-md); border-color: var(--c-border);
@@ -48,20 +50,38 @@
     }
 
     .btn-auth-submit {
-        height: 54px; border-radius: var(--radius-md); font-size: 1rem; font-weight: 700;
+        height: 48px; border-radius: var(--radius-md); font-size: 0.98rem; font-weight: 700;
         background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-primary-dark) 100%);
         border: none; color: #fff; box-shadow: 0 8px 16px rgba(13,147,115,0.3); transition: all 0.3s ease;
     }
     .btn-auth-submit:hover { transform: translateY(-3px); box-shadow: 0 12px 20px rgba(13,147,115,0.4); color: #fff; }
 
-    .auth-divider { color: var(--c-subtle); margin: 2rem 0; font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; }
+    .auth-divider { color: var(--c-subtle); margin: 1rem 0; font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; }
     
     .social-btn {
-        height: 48px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.95rem;
+        height: 44px; border-radius: var(--radius-md); font-weight: 600; font-size: 0.92rem;
         background: var(--c-bg); border: 1.5px solid var(--c-border); color: var(--c-ink-secondary);
         display: flex; align-items: center; justify-content: center; gap: 0.75rem; transition: all 0.2s;
     }
     .social-btn:hover { background: var(--c-surface); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+
+    .auth-form-stack .form-floating.mb-3 { margin-bottom: 0.75rem !important; }
+    .auth-form-stack .form-floating.mb-4 { margin-bottom: 0.9rem !important; }
+    .auth-form-stack .d-flex.justify-content-between.align-items-center.mb-4 {
+        margin-bottom: 0.9rem !important;
+    }
+    .auth-social-stack { gap: 0.75rem !important; margin-bottom: 0.85rem !important; }
+
+    @media (min-width: 992px) {
+        .auth-page { padding: 0.75rem 0; }
+        .auth-card .p-4.p-md-5 { padding: 1.35rem 1.5rem !important; }
+    }
+
+    @media (max-width: 991.98px) {
+        .auth-page { padding: 1rem 0; overflow-y: auto; }
+        .auth-container { padding: 1rem 0; }
+        .auth-card .p-4.p-md-5 { padding: 1.5rem !important; }
+    }
 </style>
 
 <section class="auth-page">
@@ -88,7 +108,7 @@
                                 <div class="alert alert-danger d-flex align-items-center mb-4"><i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('oauth_error') }}</div>
                             @endif
 
-                            <form method="POST" action="{{ route('login') }}">
+                            <form method="POST" action="{{ route('login') }}" class="auth-form-stack">
                                 @csrf
 
                                 <div class="form-floating mb-3">
@@ -120,9 +140,8 @@
                                 <hr class="flex-grow-1 m-0"><span>Hoặc</span><hr class="flex-grow-1 m-0">
                             </div>
 
-                            <div class="d-flex flex-column gap-3 mb-4">
+                            <div class="d-flex flex-column auth-social-stack mb-4">
                                 <a href="{{ route('auth.google.redirect') }}" class="btn social-btn"><i class="bi bi-google text-danger fs-5"></i> Tiếp tục với Google</a>
-                                <a href="{{ route('auth.facebook.redirect') }}" class="btn social-btn"><i class="bi bi-facebook text-primary fs-5"></i> Tiếp tục với Facebook</a>
                                 <button type="button" class="btn social-btn" data-bs-toggle="modal" data-bs-target="#phoneAuthModal">
                                     <i class="bi bi-phone-vibrate-fill text-success fs-5"></i> Đăng nhập bằng SMS OTP
                                 </button>

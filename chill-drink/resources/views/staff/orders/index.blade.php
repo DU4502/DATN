@@ -212,19 +212,7 @@
                                         @if(!empty($shipmentIncident['reported_at_label']))
                                             <div class="text-secondary mt-1">Báo lúc {{ $shipmentIncident['reported_at_label'] }}</div>
                                         @endif
-                                        <div class="mt-2">Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản trong tối đa {{ \App\Services\ShipperIncidentService::REASSIGN_MAX_RADIUS_KM }} km.</div>
-                                        <div class="d-flex flex-wrap gap-2 mt-3">
-                                            <form action="{{ route('staff.orders.shipper-incident.resolve', $order) }}" method="POST" class="m-0">
-                                                @csrf
-                                                <input type="hidden" name="action" value="keep">
-                                                <button class="btn btn-sm btn-outline-success" type="submit">Giữ shipper hiện tại</button>
-                                            </form>
-                                            <form action="{{ route('staff.orders.shipper-incident.resolve', $order) }}" method="POST" class="m-0" onsubmit="return confirm('Để hệ thống tự tìm shipper thay thế gần nhất?');">
-                                                @csrf
-                                                <input type="hidden" name="action" value="reassign">
-                                                <button class="btn btn-sm btn-warning" type="submit">Điều phối shipper khác</button>
-                                            </form>
-                                        </div>
+                                        <div class="mt-2">Quyết định xử lý thuộc Admin chi nhánh hoặc Super Admin.</div>
                                     </div>
                                     @endif
 

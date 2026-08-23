@@ -27,6 +27,11 @@ class AddressLookupController extends Controller
         $longitude = isset($validated['longitude']) ? (float) $validated['longitude'] : null;
         $limit = (int) ($validated['limit'] ?? 10);
         $parsedQuery = $this->parseQuery($query);
+        $hasCoordinateAnchor = $latitude !== null && $longitude !== null;
+        $latitudeDelta = 120 / 111000;
+        $longitudeDelta = $hasCoordinateAnchor
+            ? 120 / max(111000 * abs(cos(deg2rad($latitude))), 0.2)
+            : null;
 
         $verified = Schema::hasTable('verified_address_points')
             ? VerifiedAddressPoint::query()
@@ -40,6 +45,9 @@ class AddressLookupController extends Controller
                             ->orWhere('road_name', 'like', "%{$term}%");
                     }
                 }))
+                ->when($query === '' && $hasCoordinateAnchor, fn ($builder) => $builder
+                    ->whereBetween('latitude', [$latitude - $latitudeDelta, $latitude + $latitudeDelta])
+                    ->whereBetween('longitude', [$longitude - $longitudeDelta, $longitude + $longitudeDelta]))
                 ->limit(50)
                 ->get()
                 ->map(fn (VerifiedAddressPoint $point) => $this->rankResult([
@@ -74,6 +82,9 @@ class AddressLookupController extends Controller
                             ->orWhere('normalized_key', 'like', "%{$term}%");
                     }
                 }))
+                ->when($query === '' && $hasCoordinateAnchor, fn ($builder) => $builder
+                    ->whereBetween('latitude', [$latitude - $latitudeDelta, $latitude + $latitudeDelta])
+                    ->whereBetween('longitude', [$longitude - $longitudeDelta, $longitude + $longitudeDelta]))
                 ->latest('id')
                 ->limit(50)
                 ->get()
@@ -128,10 +139,16 @@ class AddressLookupController extends Controller
             ->concat($observations)
             ->concat($landmarks)
             ->filter(fn (array $item) => $this->passesQueryThreshold($item, $query, $parsedQuery))
-            ->map(function (array $item) use ($latitude, $longitude) {
+            ->map(function (array $item) use ($query, $latitude, $longitude) {
                 $item['distance_m'] = ($latitude !== null && $longitude !== null)
                     ? round($this->distanceMeters($latitude, $longitude, (float) $item['latitude'], (float) $item['longitude']))
                     : null;
+                if ($query === ''
+                    && $item['distance_m'] !== null
+                    && $item['distance_m'] <= 120
+                    && in_array($item['source'] ?? '', ['verified_address', 'address_observation'], true)) {
+                    $item['can_autofill_coordinates'] = true;
+                }
                 $item['source_rank'] = match ($item['source']) {
                     'verified_address' => 0,
                     'address_observation' => 1,

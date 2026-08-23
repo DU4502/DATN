@@ -11,7 +11,7 @@ class OrderTimeoutService
 {
     /**
      * Các trạng thái đã vào luồng xử lý nhưng chưa kết thúc.
-     * PENDING dùng luật riêng 2 giờ; DELIVERED dùng cơ chế auto-complete 30 phút.
+     * PENDING dùng luật riêng 30 phút; DELIVERED dùng cơ chế auto-complete 30 phút.
      */
     private const INACTIVE_STATUSES = [
         OrderStatus::CONFIRMED,
@@ -39,18 +39,18 @@ class OrderTimeoutService
      */
     public function cancelExpired(?int $limit = null): array
     {
-        $pendingHours = max(1, (int) config('order_timeouts.pending_hours', 2));
+        $pendingMinutes = max(1, (int) config('order_timeouts.pending_minutes', 30));
         $inactiveHours = max(1, (int) config('order_timeouts.inactive_hours', 24));
         $limit = max(1, $limit ?? (int) config('order_timeouts.batch_limit', 200));
 
-        $pendingThreshold = now()->subHours($pendingHours);
+        $pendingThreshold = now()->subMinutes($pendingMinutes);
         $inactiveThreshold = now()->subHours($inactiveHours);
 
         $pendingCancelled = 0;
         $inactiveCancelled = 0;
 
-        // Luật 1: khách đã đặt nhưng quán không xác nhận trong 2 giờ.
-        // Đơn giao sau vẫn phải được quán xác nhận trong 2 giờ kể từ lúc đặt;
+        // Luật 1: khách đã đặt nhưng quán không xác nhận trong 30 phút.
+        // Đơn giao sau vẫn phải được quán xác nhận trong 30 phút kể từ lúc đặt;
         // xác nhận chỉ là nhận đơn, không có nghĩa bắt đầu pha chế ngay.
         $pendingIds = Order::query()
             ->where('status', OrderStatus::PENDING)
@@ -66,8 +66,8 @@ class OrderTimeoutService
             }
 
             $reason = sprintf(
-                'Tự động hủy: quán không xác nhận đơn trong %d giờ kể từ khi khách đặt hàng.',
-                $pendingHours
+                'Tự động hủy: quán không xác nhận đơn trong %d phút kể từ khi khách đặt hàng.',
+                $pendingMinutes
             );
 
             try {
@@ -89,7 +89,7 @@ class OrderTimeoutService
 
                 Log::info('Auto-cancelled order because store did not confirm in time.', [
                     'order_id' => $cancelled->id,
-                    'timeout_hours' => $pendingHours,
+                    'timeout_minutes' => $pendingMinutes,
                     'created_at' => $cancelled->created_at?->toDateTimeString(),
                 ]);
             } catch (\Throwable $exception) {

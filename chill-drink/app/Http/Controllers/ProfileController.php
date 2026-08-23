@@ -222,7 +222,12 @@ class ProfileController extends Controller
     {
         $profileOrders = $request->user()
             ->orders()
-            ->with(['orderItems.product.category'])
+            ->with([
+                'branch',
+                'orderItems.product.category',
+                'orderItems.productSize.size',
+                'orderItems.toppingLines.topping',
+            ])
             ->latest()
             ->take(15)
             ->get()

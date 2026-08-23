@@ -60,6 +60,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+@include('partials.vietnam-territory-labels')
 <style>
 .ship-return-page{display:flex;flex-direction:column;gap:12px;width:100%;min-width:0;overflow-x:hidden;padding-bottom:6px}
 .return-map-card{position:relative;width:100%;overflow:hidden;border:1px solid var(--ship-line);border-radius:26px;background:#eaf1ee;box-shadow:var(--ship-shadow)}
@@ -124,6 +125,7 @@
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+    window.ChillDrinkVietnamTerritoryLabels?.addToLeaflet(map);
 
     const branchIcon = L.divIcon({className:'', html:'<div class="return-branch-marker"><i class="fa-solid fa-shop"></i></div>', iconSize:[40,40], iconAnchor:[20,20]});
     const shipperIcon = L.divIcon({className:'', html:'<div class="return-shipper-marker"></div>', iconSize:[25,25], iconAnchor:[13,13]});

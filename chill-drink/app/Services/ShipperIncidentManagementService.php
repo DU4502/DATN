@@ -14,6 +14,7 @@ class ShipperIncidentManagementService
     private const RESOLUTION_STATUSES = [
         'incident_resolved_keep',
         'incident_resolved_reassign',
+        'incident_resolved_cancel',
         'reassigned_out',
     ];
 
@@ -93,6 +94,7 @@ class ShipperIncidentManagementService
                 'issue.id as incident_id',
                 'issue.shipment_id',
                 'issue.description',
+                'issue.incident_type',
                 'issue.created_at as reported_at',
                 'orders.id as order_id',
                 'orders.order_code',
@@ -179,6 +181,7 @@ class ShipperIncidentManagementService
                 'license_plate' => $row->license_plate,
                 'customer_name' => $row->guest_name ?: ($customerNames[$row->customer_user_id] ?? 'Khách hàng'),
                 'description' => (string) ($row->description ?: 'Shipper báo sự cố.'),
+                'incident_type' => (string) ($row->incident_type ?: 'driver_issue'),
                 'reported_at' => $reportedAt,
                 'reported_at_label' => $reportedAt?->format('H:i · d/m/Y'),
                 'is_pending' => $pending,
