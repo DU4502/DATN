@@ -622,6 +622,7 @@
     (function () {
         const csrfToken = @json(csrf_token());
         const recentOrdersUrl = @json(route($orderRecentRouteName));
+        const statusUpdateUrlTemplate = @json(route($orderUpdateRouteName, ['id' => '__ORDER_ID__']));
         const hasActiveFilters = @json($hasActiveOrderFilters);
         const initialLatestId = @json($latestOrderId ?? 0);
         const initialLatestUpdatedAt = @json($latestOrderUpdatedAt ?? null);
@@ -639,6 +640,10 @@
         }
 
         const pendingStatusUpdates = new Set();
+
+        function statusUpdateUrl(orderId) {
+            return statusUpdateUrlTemplate.replace('__ORDER_ID__', encodeURIComponent(String(orderId)));
+        }
 
         function showOrderStatusToast(message, type) {
             if (typeof window.showRealtimeToast === 'function') {
@@ -707,6 +712,7 @@
                 status_label: payload.status_label || payload.status || '',
                 status_class: payload.status_class || (payload.status ? `status-text-${payload.status}` : ''),
                 status_options: payload.status_options || null,
+                status_update_url: payload.status_update_url || statusUpdateUrl(orderId),
                 updated_at: payload.updated_at || payload.generated_at || new Date().toISOString(),
             };
         }
@@ -915,7 +921,7 @@
 
         function statusStepHtml(payload) {
             const status = payload.status || 'pending';
-            const updateUrl = payload.status_update_url || '#';
+            const updateUrl = payload.status_update_url || statusUpdateUrl(payload.order_id);
             const currentLabel = payload.status_label || 'Chờ xử lý';
             const providedOptions = payload.status_options && typeof payload.status_options === 'object'
                 ? payload.status_options
@@ -1114,7 +1120,7 @@
 
                                             <div class="d-flex gap-2 align-items-stretch mt-3 w-100">
                                                 ${payload.next_status ? `
-                                                    <form action="${escapeHtml(payload.status_update_url || '#')}" method="POST" class="flex-grow-1 m-0">
+                                                    <form action="${escapeHtml(payload.status_update_url || statusUpdateUrl(payload.order_id))}" method="POST" class="flex-grow-1 m-0">
                                                         <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
                                                         <input type="hidden" name="_method" value="PUT">
                                                         <input type="hidden" name="status" value="${escapeHtml(payload.next_status)}">
@@ -1214,7 +1220,7 @@
                 shipping_fee_formatted: payload.shipping_fee_formatted || '',
                 discount_formatted: payload.discount_formatted || '',
                 next_status: payload.next_status || '',
-                status_update_url: payload.status_update_url || '#',
+                status_update_url: payload.status_update_url || statusUpdateUrl(payload.order_id),
                 can_cancel: payload.can_cancel ?? (payload.status === 'pending'),
                 shipping_address: payload.shipping_address || '',
                 shipper: payload.shipper || null,

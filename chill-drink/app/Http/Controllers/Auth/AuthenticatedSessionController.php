@@ -200,6 +200,17 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        $shipper = $user?->isShipper() ? $user->shipper : null;
+
+        if ($shipper?->hasIncompleteOrders()) {
+            return back()->with('error', 'Bạn phải hoàn thành đơn hàng đang giao trước khi đăng xuất.');
+        }
+
+        if ($shipper) {
+            $shipper->forceFill(['status' => 'offline'])->save();
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
