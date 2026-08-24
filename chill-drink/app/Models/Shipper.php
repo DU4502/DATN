@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\OrderStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -50,6 +51,13 @@ class Shipper extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'shipper_id');
+    }
+
+    public function hasIncompleteOrders(): bool
+    {
+        return $this->orders()
+            ->whereNotIn('status', [OrderStatus::COMPLETED, OrderStatus::CANCELLED])
+            ->exists();
     }
 
     public function shipments(): HasMany

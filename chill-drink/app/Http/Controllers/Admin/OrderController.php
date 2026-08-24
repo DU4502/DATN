@@ -476,7 +476,7 @@ class OrderController extends Controller
             return redirect()->back()->with('error', $message);
         }
 
-        // Hủy đơn là nghiệp vụ có hậu quả tồn kho/voucher/shipper nên mọi vai trò,
+        // Hủy đơn là nghiệp vụ có hậu quả voucher/shipper nên mọi vai trò,
         // kể cả Super Admin, vẫn phải ghi lý do để audit rõ ràng.
         if ($newStatus === OrderStatus::CANCELLED && empty($request->cancellation_reason)) {
             if ($request->expectsJson() || $request->ajax()) {

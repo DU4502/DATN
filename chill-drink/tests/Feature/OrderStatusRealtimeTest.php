@@ -213,6 +213,53 @@ class OrderStatusRealtimeTest extends TestCase
             ->assertDontSee('window.location.reload()', false);
     }
 
+    public function test_super_admin_realtime_rows_use_status_route_with_order_id(): void
+    {
+        $branch = $this->branch();
+        $superAdmin = User::factory()->create([
+            'role_id' => 3,
+            'is_active' => true,
+        ]);
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $branch);
+
+        $this->actingAs($superAdmin)
+            ->get(route('admin.super-admin.manage.orders.index'))
+            ->assertOk()
+            ->assertSee(route('admin.super-admin.manage.orders.updateStatus', $order->id), false)
+            ->assertSee("const statusUpdateUrlTemplate =", false)
+            ->assertSee("payload.status_update_url || statusUpdateUrl(orderId)", false)
+            ->assertDontSee("payload.status_update_url || '#'", false);
+    }
+
+    public function test_super_admin_ajax_status_route_updates_the_target_order(): void
+    {
+        $this->enableRealtime();
+        Event::fake([OrderStatusUpdated::class]);
+        $branch = $this->branch();
+        $superAdmin = User::factory()->create([
+            'role_id' => 3,
+            'is_active' => true,
+        ]);
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $branch);
+
+        $this->actingAs($superAdmin)
+            ->putJson(route('admin.super-admin.manage.orders.updateStatus', $order->id), [
+                'status' => OrderStatus::CONFIRMED,
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.id', $order->id)
+            ->assertJsonPath('data.status', OrderStatus::CONFIRMED);
+
+        $this->assertSame(OrderStatus::CONFIRMED, $order->fresh()->status);
+        Event::assertDispatched(OrderStatusUpdated::class, fn (OrderStatusUpdated $event) =>
+            $event->order->id === $order->id
+            && $event->order->status === OrderStatus::CONFIRMED
+        );
+    }
+
     private function enableRealtime(): void
     {
         config([

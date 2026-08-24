@@ -6,9 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Shipper') - Chill Drink</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
-    @vite(['resources/css/app.css','resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/css/bootstrap-local.css', 'resources/js/app.js'])
 
     <style>
         :root{
@@ -64,10 +63,13 @@
         .shipper-mobile-brand strong{display:block;font-size:13px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
         .shipper-mobile-brand small{display:block;color:var(--ship-muted);font-size:10px;margin-top:3px}
         .shipper-mobile-actions{display:flex;align-items:center;gap:7px}
+        .shipper-mobile-actions form{margin:0}
         .shipper-mobile-icon{
             width:40px;height:40px;border-radius:14px;border:1px solid var(--ship-line);background:#fff;color:var(--ship-ink);
-            display:inline-flex;align-items:center;justify-content:center;text-decoration:none;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.03)
+            display:inline-flex;align-items:center;justify-content:center;text-decoration:none;position:relative;box-shadow:0 4px 12px rgba(0,0,0,.03);cursor:pointer
         }
+        .shipper-mobile-logout{color:var(--ship-red)}
+        .shipper-mobile-logout.is-blocked{color:#b56a13;background:var(--ship-orange-soft);border-color:#ffd6b3}
         .shipper-mobile-icon:active{transform:scale(.97)}
         .shipper-mobile-badge{
             position:absolute;right:-4px;top:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#ef4444;color:#fff;
@@ -217,7 +219,9 @@
 @php
     $shipperLayoutUser = Auth::user();
     $shipperUnreadNotifications = $shipperLayoutUser->unreadNotifications()->count();
-    $shipperLayoutId = $shipperLayoutUser->shipper?->id;
+    $shipperLayoutProfile = $shipperLayoutUser->shipper;
+    $shipperLayoutId = $shipperLayoutProfile?->id;
+    $shipperHasIncompleteOrders = $shipperLayoutProfile?->hasIncompleteOrders() ?? false;
     $shipperUnreadChats = 0;
     if ($shipperLayoutId && \Illuminate\Support\Facades\Schema::hasTable('delivery_order_messages')) {
         $shipperUnreadChats = \Illuminate\Support\Facades\DB::table('delivery_order_messages as messages')
@@ -246,10 +250,26 @@
                         <span class="shipper-mobile-badge">{{ $shipperUnreadNotifications > 99 ? '99+' : $shipperUnreadNotifications }}</span>
                     @endif
                 </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit"
+                            class="shipper-mobile-icon shipper-mobile-logout {{ $shipperHasIncompleteOrders ? 'is-blocked' : '' }}"
+                            aria-label="Đăng xuất và ngưng nhận đơn"
+                            title="{{ $shipperHasIncompleteOrders ? 'Phải hoàn thành đơn hàng trước khi đăng xuất' : 'Đăng xuất và ngưng nhận đơn' }}"
+                            data-shipper-logout
+                            @if($shipperHasIncompleteOrders) data-shipper-logout-blocked @endif>
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </form>
             </div>
         </header>
 
         <main class="shipper-mobile-content">
+            @if(session('error'))
+                <div class="alert alert-danger mb-3" role="alert">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>{{ session('error') }}
+                </div>
+            @endif
             @yield('content')
         </main>
 
@@ -275,7 +295,6 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 (() => {
     const pulseUrl = @json(route('shipper.assignments.pulse'));
