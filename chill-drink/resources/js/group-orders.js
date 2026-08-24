@@ -376,11 +376,13 @@ const groupOrderRoom = {
                 }
 
                 const isJoining = form.hasAttribute('data-group-join');
-                this.replaceLiveSections(page, isJoining);
                 if (isJoining) {
-                    this.setupProductPicker(this.abortController.signal);
-                    mountGroupChats(this.root);
+                    // Nạp lại layout để người vừa nhận link có cùng host chat
+                    // nhóm + chi nhánh như chủ phòng ngay sau khi tham gia.
+                    window.location.reload();
+                    return;
                 }
+                this.replaceLiveSections(page, isJoining);
                 this.showMessage(page.querySelector('.alert-success')?.textContent.trim() || 'Đã cập nhật đơn nhóm.');
             } catch {
                 this.showMessage('Kết nối bị gián đoạn. Vui lòng thử lại.', true);
@@ -575,6 +577,9 @@ const groupOrderChat = {
         },
     },
     mounted() {
+        // Báo cho chat hỗ trợ biết chat nhóm vừa xuất hiện (kể cả trường hợp
+        // người dùng tham gia phòng bằng AJAX sau khi trang đã khởi tạo).
+        window.dispatchEvent(new CustomEvent('group-chat-available'));
         this.unifiedHostReady = Boolean(window.__groupChatHostReady);
         this.unifiedToggleHandler = () => {
             this.isOpen = !this.isOpen;

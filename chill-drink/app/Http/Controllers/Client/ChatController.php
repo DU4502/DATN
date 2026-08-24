@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MessageResource;
 use App\Models\Branch;
 use App\Models\Conversation;
+use App\Models\GroupOrder;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -174,7 +175,7 @@ class ChatController extends Controller
         }
 
         // Authenticated user
-        $this->ensureCustomer();
+        $this->ensureCustomerOrGroupOrderMember($request);
         $user = auth()->user();
 
         $conversation = $user->conversations()
@@ -427,6 +428,7 @@ class ChatController extends Controller
     {
         // User đã đăng nhập
         if (auth()->check()) {
+            $this->ensureCustomerOrGroupOrderMember($request);
             if ($conversation->user_id !== auth()->id()) {
                 abort(403, 'Bạn không có quyền truy cập cuộc trò chuyện này.');
             }
@@ -440,8 +442,20 @@ class ChatController extends Controller
         }
     }
 
-    protected function ensureCustomer(): void
+    protected function ensureCustomerOrGroupOrderMember(Request $request): void
     {
-        abort_unless(auth()->user()?->isCustomer(), 403);
+        $user = auth()->user();
+        if ($user?->isCustomer()) {
+            return;
+        }
+
+        $groupCode = trim((string) $request->input('group_order_code'));
+        abort_if($groupCode === '', 403);
+
+        $groupOrder = GroupOrder::query()->where('code', $groupCode)->first();
+        abort_unless($groupOrder && (
+            (int) $groupOrder->owner_id === (int) $user->id
+            || $groupOrder->members()->where('user_id', $user->id)->exists()
+        ), 403);
     }
 }

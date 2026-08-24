@@ -404,6 +404,43 @@ class QuickOrderFeaturesTest extends TestCase
             ->assertOk()->assertJsonPath('group_id', $newGroup->id)->assertJsonCount(0, 'messages');
     }
 
+    public function test_link_recipient_gets_group_and_branch_chat_like_the_owner(): void
+    {
+        [$group] = $this->openGroup();
+        $recipient = User::factory()->create([
+            'role_id' => User::SHIPPER_ROLE_ID,
+            'branch_id' => $group->branch_id,
+        ]);
+        GroupOrderMember::create([
+            'group_order_id' => $group->id,
+            'user_id' => $recipient->id,
+            'name' => 'Người nhận link',
+            'member_token' => 'recipient-chat-token',
+        ]);
+
+        $room = $this->actingAs($recipient)->get(route('group-orders.show', $group->code));
+
+        $room->assertOk()
+            ->assertSee('data-vue-group-chat', false)
+            ->assertSee('Trò chuyện trong đơn nhóm')
+            ->assertSee('Hỗ trợ khách hàng')
+            ->assertSee('groupOrderCode: "'.$group->code.'"', false)
+            ->assertSee('groupBranchId: '.$group->branch_id, false);
+
+        $chat = $this->getJson(route('chat.index', ['group_order_code' => $group->code]))
+            ->assertOk()
+            ->assertJsonPath('success', true);
+        $conversationId = $chat->json('conversation_id');
+
+        $this->getJson(route('chat.index'))->assertForbidden();
+        $this->getJson(route('chat.messages', ['conversation_id' => $conversationId]))->assertForbidden();
+        $this->getJson(route('chat.messages', [
+            'conversation_id' => $conversationId,
+            'group_order_code' => $group->code,
+        ]))->assertOk();
+        $this->assertDatabaseHas('conversations', ['user_id' => $recipient->id, 'status' => 'open']);
+    }
+
     private function openGroup(): array
     {
         $owner = User::factory()->create();
