@@ -111,9 +111,23 @@ class StaffShipperRoleTest extends TestCase
         $this->assertSame('offline', $shipperUser->fresh()->shipper->status);
     }
 
+    public function test_shipper_can_logout_after_order_is_delivered(): void
+    {
+        [$shipperUser] = $this->shipperWithOrder(OrderStatus::DELIVERED);
+
+        $this->get(route('shipper.dashboard'))
+            ->assertOk()
+            ->assertDontSee('data-shipper-logout-blocked', false);
+
+        $this->post(route('logout'))->assertRedirect('/');
+
+        $this->assertGuest();
+        $this->assertSame('offline', $shipperUser->fresh()->shipper->status);
+    }
+
     public function test_shipper_logout_button_shows_blocked_state_for_incomplete_order(): void
     {
-        $this->shipperWithOrder(OrderStatus::DELIVERED);
+        $this->shipperWithOrder(OrderStatus::DELIVERING);
 
         $this->get(route('shipper.dashboard'))
             ->assertOk()

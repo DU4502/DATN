@@ -53,10 +53,10 @@ class Shipper extends Model
         return $this->hasMany(Order::class, 'shipper_id');
     }
 
-    public function hasIncompleteOrders(): bool
+    public function hasActiveDeliveryOrders(): bool
     {
         return $this->orders()
-            ->whereNotIn('status', [OrderStatus::COMPLETED, OrderStatus::CANCELLED])
+            ->whereNotIn('status', [OrderStatus::DELIVERED, OrderStatus::COMPLETED, OrderStatus::CANCELLED])
             ->exists();
     }
 

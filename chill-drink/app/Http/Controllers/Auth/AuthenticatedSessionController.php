@@ -203,7 +203,7 @@ class AuthenticatedSessionController extends Controller
         $user = $request->user();
         $shipper = $user?->isShipper() ? $user->shipper : null;
 
-        if ($shipper?->hasIncompleteOrders()) {
+        if ($shipper?->hasActiveDeliveryOrders()) {
             return back()->with('error', 'Bạn phải hoàn thành đơn hàng đang giao trước khi đăng xuất.');
         }
 

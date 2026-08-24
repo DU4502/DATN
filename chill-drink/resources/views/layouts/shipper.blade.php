@@ -221,7 +221,7 @@
     $shipperUnreadNotifications = $shipperLayoutUser->unreadNotifications()->count();
     $shipperLayoutProfile = $shipperLayoutUser->shipper;
     $shipperLayoutId = $shipperLayoutProfile?->id;
-    $shipperHasIncompleteOrders = $shipperLayoutProfile?->hasIncompleteOrders() ?? false;
+    $shipperHasActiveOrders = $shipperLayoutProfile?->hasActiveDeliveryOrders() ?? false;
     $shipperUnreadChats = 0;
     if ($shipperLayoutId && \Illuminate\Support\Facades\Schema::hasTable('delivery_order_messages')) {
         $shipperUnreadChats = \Illuminate\Support\Facades\DB::table('delivery_order_messages as messages')
@@ -253,11 +253,11 @@
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit"
-                            class="shipper-mobile-icon shipper-mobile-logout {{ $shipperHasIncompleteOrders ? 'is-blocked' : '' }}"
+                            class="shipper-mobile-icon shipper-mobile-logout {{ $shipperHasActiveOrders ? 'is-blocked' : '' }}"
                             aria-label="Đăng xuất và ngưng nhận đơn"
-                            title="{{ $shipperHasIncompleteOrders ? 'Phải hoàn thành đơn hàng trước khi đăng xuất' : 'Đăng xuất và ngưng nhận đơn' }}"
+                            title="{{ $shipperHasActiveOrders ? 'Phải hoàn thành đơn hàng trước khi đăng xuất' : 'Đăng xuất và ngưng nhận đơn' }}"
                             data-shipper-logout
-                            @if($shipperHasIncompleteOrders) data-shipper-logout-blocked @endif>
+                            @if($shipperHasActiveOrders) data-shipper-logout-blocked @endif>
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </form>
