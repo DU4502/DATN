@@ -138,14 +138,28 @@ class OrderController extends Controller
         $latestOrderQuery = Order::query();
         $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
         $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
+        $latestUpdatedQuery = Order::query()
+            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+        $latestUpdatedQuery = $this->applyBranchScope($latestUpdatedQuery);
+        $latestOrderUpdatedValue = $latestUpdatedQuery->max('updated_at');
+        $latestOrderUpdatedAt = $latestOrderUpdatedValue
+            ? \Illuminate\Support\Carbon::parse($latestOrderUpdatedValue)->toIso8601String()
+            : null;
 
-        return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId', 'shipmentIncidents'));
+        return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId', 'latestOrderUpdatedAt', 'shipmentIncidents'));
     }
 
     public function recent(Request $request): JsonResponse
     {
         $afterId = max(0, (int) $request->query('after_id', 0));
         $updatedAfter = $request->query('updated_after');
+        if ($updatedAfter) {
+            try {
+                $updatedAfter = \Illuminate\Support\Carbon::parse($updatedAfter)->toDateTimeString();
+            } catch (\Throwable) {
+                $updatedAfter = null;
+            }
+        }
 
         $orders = Order::query()
             ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
@@ -166,7 +180,8 @@ class OrderController extends Controller
         $orders = $this->applyBranchScope($orders);
         
         $orders = $orders
-            ->orderByDesc('id')
+            ->when($updatedAfter, fn ($query) => $query->orderByDesc('updated_at'))
+            ->when(! $updatedAfter, fn ($query) => $query->orderByDesc('id'))
             ->limit(20)
             ->get()
             ->map(fn (Order $order) => $this->orderBroadcastPayload($order))
@@ -175,10 +190,19 @@ class OrderController extends Controller
         $latestOrderQuery = Order::query();
         $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
         $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
+        $latestUpdatedQuery = Order::query()
+            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+        $latestUpdatedQuery = $this->applyBranchScope($latestUpdatedQuery);
+        $latestUpdatedValue = $latestUpdatedQuery->max('updated_at');
+        $latestUpdatedAt = $latestUpdatedValue
+            ? \Illuminate\Support\Carbon::parse($latestUpdatedValue)->toIso8601String()
+            : null;
 
         return response()->json([
             'orders' => $orders,
             'latest_id' => $latestOrderId,
+            'latest_updated_at' => $latestUpdatedAt,
+            'generated_at' => now()->toIso8601String(),
         ]);
     }
 
@@ -279,8 +303,8 @@ class OrderController extends Controller
             ] : null,
             'delivered_at' => $order->delivered_at?->format('d/m/Y H:i:s'),
             'auto_complete_at' => $order->delivered_at?->copy()->addMinutes(\App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES)->format('d/m/Y H:i:s'),
-            'status' => $order->status,
-            'status_label' => OrderStatus::label((string) $order->status),
+            'status' => $currentStatus,
+            'status_label' => OrderStatus::label($currentStatus),
             'status_changed_at' => $order->status_changed_at?->format('d/m/Y H:i'),
             'status_changed_by_name' => $order->status_changed_by
                 ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên')

@@ -628,7 +628,10 @@
         const recentOrdersUrl = @json(route($orderRecentRouteName));
         const hasActiveFilters = @json($hasActiveOrderFilters);
         const initialLatestId = @json($latestOrderId ?? 0);
+        const initialLatestUpdatedAt = @json($latestOrderUpdatedAt ?? null);
+        const adminBranchId = @json(auth()->user()?->branch_id);
         window.isSuperAdmin = @json($isSuperAdmin);
+        window.isSuperAdminWorkspace = @json($isSuperAdminWorkspace);
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -691,6 +694,87 @@
             window.setTimeout(() => {
                 orderRow.style.backgroundColor = '';
             }, 1500);
+        }
+
+        function normalizeRealtimeOrderPayload(payload) {
+            if (!payload || typeof payload !== 'object') return null;
+            const orderId = payload.order_id ?? payload.id;
+            if (!orderId) return null;
+
+            return {
+                ...payload,
+                id: payload.id ?? orderId,
+                order_id: orderId,
+                status: String(payload.status || ''),
+                status_label: payload.status_label || payload.status || '',
+                status_class: payload.status_class || (payload.status ? `status-text-${payload.status}` : ''),
+                status_options: payload.status_options || null,
+                updated_at: payload.updated_at || payload.generated_at || new Date().toISOString(),
+            };
+        }
+
+        function applyRealtimeOrderPayload(rawPayload, options = {}) {
+            const payload = normalizeRealtimeOrderPayload(rawPayload);
+            if (!payload) return false;
+
+            const orderRow = document.querySelector(`tr[data-order-id="${payload.order_id}"]`);
+            if (!orderRow) {
+                if (!hasActiveFilters && typeof window.prependAdminOrderRow === 'function') {
+                    return window.prependAdminOrderRow(payload);
+                }
+                return false;
+            }
+
+            const statusSelect = orderRow.querySelector('[data-order-status-select]');
+            if (statusSelect && payload.status) {
+                if (payload.status_options) {
+                    updateOrderStatusRow(orderRow, statusSelect, {
+                        id: payload.order_id,
+                        status: payload.status,
+                        status_label: payload.status_label,
+                        status_class: payload.status_class,
+                        status_options: payload.status_options,
+                        next_status: payload.next_status,
+                        can_update: payload.can_update ?? Object.keys(payload.status_options).length > 1,
+                        updated_at: payload.updated_at,
+                    });
+                } else {
+                    const existingOption = [...statusSelect.options].find((option) => option.value === payload.status);
+                    if (existingOption) statusSelect.value = payload.status;
+                    statusSelect.dataset.currentStatus = payload.status;
+                    orderRow.dataset.orderStatus = payload.status;
+                    orderRow.style.backgroundColor = 'rgba(13, 147, 115, 0.1)';
+                    window.setTimeout(() => {
+                        orderRow.style.backgroundColor = '';
+                    }, 1200);
+                }
+            }
+
+            const cells = orderRow.children;
+            const branchOffset = window.isSuperAdmin ? 1 : 0;
+            if (payload.payment_status || payload.payment_method) {
+                const paymentCell = cells[4 + branchOffset];
+                if (paymentCell) paymentCell.innerHTML = paymentBadgeHtml(payload);
+            }
+            if (payload.total_formatted) {
+                const totalCell = cells[5 + branchOffset];
+                if (totalCell) totalCell.textContent = payload.total_formatted;
+            }
+
+            const detailRow = document.getElementById(`order-detail-${payload.order_id}`);
+            if (detailRow && Array.isArray(payload.items)) {
+                const wasOpen = !detailRow.classList.contains('d-none');
+                detailRow.outerHTML = detailRowHtml(payload);
+                if (wasOpen) {
+                    document.getElementById(`order-detail-${payload.order_id}`)?.classList.remove('d-none');
+                }
+            }
+
+            if (options.toast && payload.message) {
+                showOrderStatusToast(payload.message, 'success');
+            }
+
+            return true;
         }
 
         async function submitOrderStatus(select) {
@@ -1185,39 +1269,82 @@
             let added = 0;
 
             orders.slice().reverse().forEach((payload) => {
-                if (window.prependAdminOrderRow(payload)) {
+                if (applyRealtimeOrderPayload(payload)) {
                     added += 1;
                 }
             });
         }
 
         let pollRecentOrders = null;
+        let latestOrderId = Number(initialLatestId || 0);
+        let latestUpdatedAt = initialLatestUpdatedAt;
+        let realtimeSyncTimer = null;
+        let realtimeSyncInFlight = false;
+
+        async function syncOrderDelta() {
+            if (realtimeSyncInFlight) return;
+            realtimeSyncInFlight = true;
+
+            try {
+                const url = new URL(recentOrdersUrl, window.location.origin);
+                url.searchParams.set('after_id', String(hasActiveFilters ? 0 : latestOrderId));
+                if (latestUpdatedAt) url.searchParams.set('updated_after', latestUpdatedAt);
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const orders = Array.isArray(data.orders) ? data.orders : [];
+                orders
+                    .slice()
+                    .sort((a, b) => String(a.updated_at || '').localeCompare(String(b.updated_at || '')))
+                    .forEach((payload) => applyRealtimeOrderPayload(payload));
+
+                if (data.latest_updated_at) {
+                    latestUpdatedAt = data.latest_updated_at;
+                } else if (orders.length) {
+                    latestUpdatedAt = orders
+                        .map((order) => order.updated_at)
+                        .filter(Boolean)
+                        .sort()
+                        .pop() || latestUpdatedAt;
+                }
+                if (data.latest_id) {
+                    latestOrderId = Math.max(latestOrderId, Number(data.latest_id || 0));
+                }
+            } catch (error) {
+                console.warn('Không thể đồng bộ trạng thái đơn hàng.', error);
+            } finally {
+                realtimeSyncInFlight = false;
+            }
+        }
+
+        function queueOrderDeltaSync(delay = 120) {
+            if (realtimeSyncTimer) window.clearTimeout(realtimeSyncTimer);
+            realtimeSyncTimer = window.setTimeout(syncOrderDelta, delay);
+        }
 
         document.addEventListener('order:created', function (event) {
-            if (typeof pollRecentOrders === 'function' && !hasActiveFilters) {
-                pollRecentOrders();
+            const payload = event.detail || {};
+            if (!hasActiveFilters && payload.order_id) {
+                applyRealtimeOrderPayload(payload);
             }
+            queueOrderDeltaSync(80);
         });
 
         // Listen for order status updates (including cancellations)
         document.addEventListener('order:status-updated', function (event) {
             const payload = event.detail || {};
             const orderRow = document.querySelector(`tr[data-order-id="${payload.order_id}"]`);
-            
-            if (!orderRow || !payload.status) {
-                return;
-            }
-
-            // Update status dropdown
-            const statusSelect = orderRow.querySelector('select[name="status"]');
-            if (statusSelect) {
-                statusSelect.value = payload.status;
-                
-                // Trạng thái cuối luôn khóa. Super Admin cũng không mở lại/đi lùi bằng dropdown.
-                if (payload.status === 'cancelled' || payload.status === 'completed') {
-                    statusSelect.disabled = true;
-                }
-            }
+            applyRealtimeOrderPayload(payload);
 
             // If order is cancelled and has reason, display it in detail section
             if (payload.status === 'cancelled' && payload.cancellation_reason) {
@@ -1247,10 +1374,12 @@
             }
 
             // Highlight the updated row
-            orderRow.style.backgroundColor = 'rgba(13, 147, 115, 0.1)';
-            setTimeout(() => {
-                orderRow.style.backgroundColor = '';
-            }, 2500);
+            if (orderRow) {
+                orderRow.style.backgroundColor = 'rgba(13, 147, 115, 0.1)';
+                setTimeout(() => {
+                    orderRow.style.backgroundColor = '';
+                }, 2500);
+            }
         });
 
         function escapeHtml(text) {
@@ -1265,39 +1394,48 @@
         }
 
         if (!hasActiveFilters) {
-            let lastOrderId = initialLatestId;
             const liveBadge = document.getElementById('adminOrdersLiveBadge');
             liveBadge?.classList.remove('d-none');
 
             pollRecentOrders = async function () {
-                try {
-                    const response = await fetch(`${recentOrdersUrl}?after_id=${lastOrderId}`, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                        credentials: 'same-origin',
-                    });
-
-                    if (!response.ok) {
-                        return;
-                    }
-
-                    const data = await response.json();
-                    const orders = Array.isArray(data.orders) ? data.orders : [];
-
-                    if (orders.length > 0) {
-                        handleNewOrders(orders);
-                        lastOrderId = Math.max(lastOrderId, ...orders.map((order) => order.order_id));
-                    } else if (data.latest_id) {
-                        lastOrderId = Math.max(lastOrderId, data.latest_id);
-                    }
-                } catch (error) {
-                    console.warn('Không thể tải đơn hàng mới.', error);
-                }
+                await syncOrderDelta();
             };
 
-            window.setInterval(pollRecentOrders, 5000);
+        }
+
+        window.setInterval(() => {
+            if (!document.hidden) queueOrderDeltaSync(0);
+        }, hasActiveFilters ? 1600 : 1200);
+
+        function subscribeAdminOrderRealtime() {
+            if (!window.Echo) return false;
+
+            const channelName = window.isSuperAdmin
+                ? 'admin-notifications'
+                : (adminBranchId ? `admin-notifications.${adminBranchId}` : null);
+            if (!channelName) return false;
+
+            try {
+                window.Echo.private(channelName)
+                    .listen('.order.created', function (payload) {
+                        if (!hasActiveFilters) {
+                            applyRealtimeOrderPayload(payload);
+                        }
+                        queueOrderDeltaSync(60);
+                    })
+                    .listen('.order.status.updated', function (payload) {
+                        applyRealtimeOrderPayload(payload);
+                        queueOrderDeltaSync(60);
+                    });
+                return true;
+            } catch (error) {
+                console.warn('Không thể đăng ký realtime đơn hàng.', error);
+                return false;
+            }
+        }
+
+        if (!subscribeAdminOrderRealtime()) {
+            window.setTimeout(subscribeAdminOrderRealtime, 900);
         }
     })();
 </script>

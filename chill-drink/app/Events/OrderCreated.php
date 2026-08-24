@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Order;
+use App\Support\OrderStatus;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -24,9 +25,13 @@ class OrderCreated implements ShouldBroadcastNow
             ? (int) $this->order->branch_id
             : null;
 
-        return $branchId
-            ? [new PrivateChannel('admin-notifications.'.$branchId)]
-            : [new PrivateChannel('admin-notifications')];
+        $channels = [new PrivateChannel('admin-notifications')];
+
+        if ($branchId) {
+            $channels[] = new PrivateChannel('admin-notifications.'.$branchId);
+        }
+
+        return $channels;
     }
 
     /**
@@ -63,7 +68,8 @@ class OrderCreated implements ShouldBroadcastNow
             'total_formatted' => number_format($total, 0, ',', '.').'đ',
             'payment_method' => $this->order->payment_method,
             'payment_status' => $this->order->payment_status,
-            'status' => $this->order->status,
+            'status' => OrderStatus::normalize((string) $this->order->status),
+            'status_label' => OrderStatus::label((string) $this->order->status),
             'created_at' => $this->order->created_at?->toDateTimeString(),
             'url' => route('admin.orders.index', ['q' => $orderCode]),
             'message' => "Đơn hàng mới {$orderCode} từ {$customerName}",
