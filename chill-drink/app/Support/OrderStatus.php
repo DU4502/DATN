@@ -438,6 +438,77 @@ final class OrderStatus
         return $to === self::nextStatus($from, $fulfillmentType);
     }
 
+    /**
+     * Trạng thái được phép thao tác trực tiếp tại trang Đơn hàng của Admin/Super Admin.
+     * Với đơn giao hàng, trang Đơn hàng chỉ xử lý tới Sẵn sàng giao.
+     * Các bước thuộc shipper hoặc sau đó phải đi qua luồng giao vận/sự cố.
+     */
+    public static function orderManagementNextStatus(string $current, ?string $fulfillmentType = 'delivery'): ?string
+    {
+        $current = self::normalize($current);
+
+        if ($fulfillmentType === 'pickup') {
+            return self::nextStatus($current, $fulfillmentType);
+        }
+
+        return match ($current) {
+            self::PENDING => self::CONFIRMED,
+            self::CONFIRMED => self::PREPARING,
+            self::PREPARING => self::READY_FOR_DELIVERY,
+            default => null,
+        };
+    }
+
+    /**
+     * Dropdown cho trang quản lý đơn hàng: chỉ hiện trạng thái hiện tại + bước kế tiếp
+     * tới tối đa ready_for_delivery. Từ shipper_picked_up trở đi chỉ giao vận/sự cố xử lý.
+     *
+     * @return array<string,string>
+     */
+    public static function orderManagementOptions(string $current, ?string $fulfillmentType = 'delivery'): array
+    {
+        $current = self::normalize($current);
+        $labels = self::actionLabels();
+        $options = [
+            $current => $labels[$current] ?? self::label($current),
+        ];
+
+        if (in_array($current, [self::READY_FOR_DELIVERY, self::SHIPPER_PICKED_UP, self::DELIVERING, self::DELIVERED, self::COMPLETED, self::CANCELLED], true)) {
+            return $options;
+        }
+
+        $next = self::orderManagementNextStatus($current, $fulfillmentType);
+        if ($next !== null) {
+            $options[$next] = $labels[$next] ?? self::label($next);
+        }
+
+        if ($current === self::PENDING) {
+            $options[self::CANCELLED] = $labels[self::CANCELLED];
+        }
+
+        return $options;
+    }
+
+    public static function canOrderManagementAdvanceTo(string $from, string $to, ?string $fulfillmentType = 'delivery'): bool
+    {
+        $from = self::normalize($from);
+        $to = self::normalize($to);
+
+        if ($to === $from) {
+            return true;
+        }
+
+        if ($to === self::CANCELLED) {
+            return $from === self::PENDING;
+        }
+
+        if (in_array($from, [self::READY_FOR_DELIVERY, self::SHIPPER_PICKED_UP, self::DELIVERING, self::DELIVERED, self::COMPLETED, self::CANCELLED], true)) {
+            return false;
+        }
+
+        return $to === self::orderManagementNextStatus($from, $fulfillmentType);
+    }
+
     public static function canSuperAdminCancelFrom(string $from): bool
     {
         $from = self::normalize($from);

@@ -1475,7 +1475,12 @@
     </footer>
     @endunless
 
-    @if(!auth()->check() || auth()->user()?->isCustomer())
+    @php
+        $isGroupOrderMember = request()->routeIs('group-orders.show')
+            && isset($currentMember)
+            && $currentMember;
+    @endphp
+    @if(!auth()->check() || auth()->user()?->isCustomer() || $isGroupOrderMember)
         @include('components.chatbox')
     @endif
 

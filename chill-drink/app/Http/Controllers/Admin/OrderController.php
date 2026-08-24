@@ -249,12 +249,7 @@ class OrderController extends Controller
         $isSuperAdmin = (bool) $user?->isSuperAdmin();
         $isSuperAdminWorkspace = $isSuperAdmin && ! $user->isViewingAdminWorkspace();
         $currentStatus = OrderStatus::normalize((string) $order->status);
-        $statusOptionsForActor = $isSuperAdmin
-            ? OrderStatus::superAdminOptions($currentStatus, $fulfillmentType)
-            : OrderStatus::storeStepwiseOptions($currentStatus, $fulfillmentType);
-        if ($currentStatus !== OrderStatus::PENDING) {
-            unset($statusOptionsForActor[OrderStatus::CANCELLED]);
-        }
+        $statusOptionsForActor = $this->orderManagementOptionsForOrder($order);
         $canCancelForActor = $isSuperAdmin
             ? OrderStatus::canSuperAdminCancelFrom($currentStatus)
             : $currentStatus === OrderStatus::PENDING;
@@ -309,9 +304,7 @@ class OrderController extends Controller
             'status_changed_by_name' => $order->status_changed_by
                 ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên')
                 : null,
-            'next_status' => $isSuperAdmin
-                ? OrderStatus::nextStatus((string) $order->status, $fulfillmentType)
-                : OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType),
+            'next_status' => $this->orderManagementNextStatusForOrder($order),
             'can_cancel' => $canCancelForActor,
             'status_options' => $statusOptionsForActor,
             'super_admin_override' => $isSuperAdmin,
@@ -453,21 +446,14 @@ class OrderController extends Controller
             return redirect()->back()->with('success', $message);
         }
 
-        // Super Admin có quyền thao tác mọi bước của đơn, kể cả bước vốn thuộc shipper,
-        // nhưng vẫn phải đi ĐÚNG TRÌNH TỰ của state machine. Admin/Staff thường chỉ
-        // được thao tác phần trạng thái thuộc cửa hàng.
-        $transitionAllowed = $isSuperAdmin
-            ? ($newStatus === OrderStatus::CANCELLED
-                ? OrderStatus::canSuperAdminCancelFrom($oldStatus)
-                : OrderStatus::canSuperAdminAdvanceTo($oldStatus, $newStatus, $fulfillmentType))
-            : OrderStatus::canStoreAdvanceTo((string) $order->status, $newStatus, $fulfillmentType);
+        // Trang Đơn hàng chỉ được xử lý tới bước shipper đã lấy hàng.
+        // Các bước sau đó chỉ xử lý qua trang Sự cố giao vận khi thật sự có sự cố.
+        $transitionAllowed = OrderStatus::canOrderManagementAdvanceTo($oldStatus, $newStatus, $fulfillmentType);
 
         if (! $transitionAllowed) {
             $message = $newStatus === OrderStatus::CANCELLED
                 ? 'Không thể hủy đơn sau khi đã xác nhận. Vui lòng xử lý tại mục Sự cố giao vận.'
-                : ($isSuperAdmin
-                    ? 'Super Admin có quyền thực hiện bước của mọi vai trò, nhưng chỉ được chuyển đúng sang bước kế tiếp của đơn; không được nhảy cóc hoặc quay lùi.'
-                    : 'Quán chỉ được xử lý đơn giao hàng tới bước Sẵn sàng giao. Các bước lấy hàng/đang giao/đã giao thuộc tài xế.');
+                : 'Trang Đơn hàng chỉ được chuyển trạng thái tới bước Sẵn sàng giao. Các bước shipper đã lấy hàng/đang giao/đã giao/hoàn thành chỉ xử lý qua luồng giao vận hoặc trang Sự cố giao vận khi có sự cố.';
 
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['success' => false, 'message' => $message], 422);
@@ -501,18 +487,6 @@ class OrderController extends Controller
                 ], 422);
             }
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
-        }
-
-        // Super Admin có thể thao tác thay shipper ở đúng bước, nhưng các bước vật lý
-        // của giao hàng vẫn cần một shipper thực sự đang được gán cho đơn.
-        if ($isSuperAdmin
-            && in_array($newStatus, [OrderStatus::SHIPPER_PICKED_UP, OrderStatus::DELIVERING, OrderStatus::DELIVERED], true)
-            && ! $order->shipper_id) {
-            $message = 'Đơn chưa được gán shipper nên chưa thể thực hiện bước '.OrderStatus::label($newStatus).'.';
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json(['success' => false, 'message' => $message], 422);
-            }
-            return redirect()->back()->with('error', $message);
         }
 
         $dispatchResult = null;
@@ -609,12 +583,7 @@ class OrderController extends Controller
 
         if ($request->expectsJson() || $request->ajax()) {
             $data = $this->statusUpdateData($order->fresh());
-            $responseStatusOptions = $isSuperAdmin
-                ? OrderStatus::superAdminOptions($newStatus, $fulfillmentType)
-                : OrderStatus::storeStepwiseOptions($newStatus, $fulfillmentType);
-            if ($newStatus !== OrderStatus::PENDING) {
-                unset($responseStatusOptions[OrderStatus::CANCELLED]);
-            }
+            $responseStatusOptions = $this->orderManagementOptionsForOrder($order->fresh());
 
             return response()->json([
                 'success' => true,
@@ -634,14 +603,8 @@ class OrderController extends Controller
     private function statusUpdateData(Order $order): array
     {
         $status = OrderStatus::normalize((string) $order->status);
-        $isSuperAdmin = (bool) auth()->user()?->isSuperAdmin();
-        $statusOptions = $isSuperAdmin
-            ? OrderStatus::superAdminOptions($status, $order->fulfillment_type ?? 'delivery')
-            : OrderStatus::storeStepwiseOptions($status, $order->fulfillment_type ?? 'delivery');
-        if ($status !== OrderStatus::PENDING) {
-            unset($statusOptions[OrderStatus::CANCELLED]);
-        }
-        $nextStatus = collect(array_keys($statusOptions))->first(fn (string $option) => $option !== $status);
+        $statusOptions = $this->orderManagementOptionsForOrder($order);
+        $nextStatus = $this->orderManagementNextStatusForOrder($order);
 
         return [
             'id' => (int) $order->id,
@@ -655,6 +618,21 @@ class OrderController extends Controller
             'can_update' => count($statusOptions) > 1,
             'updated_at' => $order->updated_at?->toIso8601String(),
         ];
+    }
+
+    private function orderManagementOptionsForOrder(Order $order): array
+    {
+        $status = OrderStatus::normalize((string) $order->status);
+        $options = OrderStatus::orderManagementOptions($status, $order->fulfillment_type ?? 'delivery');
+
+        return $options;
+    }
+
+    private function orderManagementNextStatusForOrder(Order $order): ?string
+    {
+        $nextStatus = OrderStatus::orderManagementNextStatus((string) $order->status, $order->fulfillment_type ?? 'delivery');
+
+        return $nextStatus;
     }
 
     /**

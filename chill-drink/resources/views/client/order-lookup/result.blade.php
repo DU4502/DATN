@@ -116,6 +116,23 @@
         50%       { opacity: 0.5; transform: scale(0.8); }
     }
 
+    .tracking-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: #0d9373;
+        border-color: #0d9373;
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(13, 147, 115, 0.18);
+    }
+
+    .tracking-action:hover,
+    .tracking-action:focus {
+        background: #08785e;
+        border-color: #08785e;
+        color: #fff;
+    }
+
     @media (max-width: 576px) {
         .result-card { padding: 24px 16px; border-radius: 18px; }
         .info-grid { grid-template-columns: 1fr; }
@@ -228,6 +245,11 @@
 
             {{-- Actions --}}
             <div class="d-flex gap-2 mt-4 flex-wrap">
+                @if($trackingUrl)
+                    <a href="{{ $trackingUrl }}" class="btn tracking-action rounded-pill px-4">
+                        <i class="bi bi-geo-alt-fill"></i>Theo dõi đơn hàng
+                    </a>
+                @endif
                 <a href="{{ route('order-lookup.index') }}" class="btn btn-outline-secondary rounded-pill px-4">
                     <i class="bi bi-arrow-left me-1"></i>Tra cứu đơn khác
                 </a>

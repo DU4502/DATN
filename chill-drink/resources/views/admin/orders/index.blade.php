@@ -251,15 +251,11 @@
                 @php
                     $detailId = 'order-detail-'.$order->id;
                     $fulfillmentType = $order->fulfillment_type ?? 'delivery';
-                    $statusStepOptions = $isSuperAdmin
-                        ? \App\Support\OrderStatus::superAdminOptions((string) $order->status, $fulfillmentType)
-                        : \App\Support\OrderStatus::storeStepwiseOptions((string) $order->status, $fulfillmentType);
-                    if (\App\Support\OrderStatus::normalize((string) $order->status) !== \App\Support\OrderStatus::PENDING) {
+                    $statusStepOptions = \App\Support\OrderStatus::orderManagementOptions((string) $order->status, $fulfillmentType);
+                    if (! in_array(\App\Support\OrderStatus::normalize((string) $order->status), [\App\Support\OrderStatus::PENDING, \App\Support\OrderStatus::CANCELLED], true)) {
                         unset($statusStepOptions[\App\Support\OrderStatus::CANCELLED]);
                     }
-                    $nextStatus = $isSuperAdmin
-                        ? \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType)
-                        : \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
+                    $nextStatus = \App\Support\OrderStatus::orderManagementNextStatus((string) $order->status, $fulfillmentType);
                 @endphp
                 <tr data-order-id="{{ $order->id }}">
                     <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
@@ -668,7 +664,9 @@
 
         function updateOrderStatusRow(orderRow, select, payload) {
             const status = String(payload.status || '');
-            const statusOptions = payload.status_options || { [status]: payload.status_label || status };
+            const statusOptions = payload.status_options && Object.keys(payload.status_options).length
+                ? payload.status_options
+                : { [status]: payload.status_label || status };
 
             select.replaceChildren(...Object.entries(statusOptions).map(([value, label]) => {
                 const option = document.createElement('option');
@@ -931,8 +929,12 @@
 
             // Không để dữ liệu realtime cũ làm xuất hiện lại lựa chọn hủy sau khi
             // đơn đã được xác nhận. Hủy sau đó chỉ xử lý ở Sự cố giao vận.
-            if (status !== 'pending') {
+            if (status !== 'pending' && status !== 'cancelled') {
                 delete statusOptions.cancelled;
+            }
+
+            if (!Object.keys(statusOptions).length) {
+                statusOptions[status] = currentLabel || nextStatusLabel({ next_status: status });
             }
 
             const optionsHtml = Object.entries(statusOptions).map(([value, label]) => `
