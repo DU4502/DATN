@@ -255,7 +255,7 @@ class CheckoutVoucherTest extends TestCase
             'is_redeemable' => false,
         ]);
 
-        $shippingAddress = '123 Test Street';
+        $shippingAddress = 'ngõ 910 Quang Trung';
         $shippingArea = 'Test Area';
         $shippingFee = ShippingFee::calculate(0, 'standard')['total_fee'];
 

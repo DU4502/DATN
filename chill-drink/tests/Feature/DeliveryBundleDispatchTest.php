@@ -263,6 +263,73 @@ class DeliveryBundleDispatchTest extends TestCase
         }
     }
 
+    public function test_bundle_handover_route_prioritizes_the_handover_point_over_the_next_bundle_stop(): void
+    {
+        $branch = $this->createBranch('BND-HANDOVER-ROUTE', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'BND-HANDOVER-ROUTE-SHIPPER', 'busy');
+        $primary = $this->createOrder($branch, 'BND-HANDOVER-ROUTE-PRIMARY', $shipper);
+        $primary->forceFill(['status' => 'delivering'])->save();
+        $merged = $this->createOrder($branch, 'BND-HANDOVER-ROUTE-MERGED', $shipper);
+        $merged->forceFill(['status' => 'delivering'])->save();
+
+        app(ShipperBundleService::class)->createTrip(
+            $shipper,
+            $primary,
+            $merged,
+            $this->bundleEvaluation([$primary, $merged])
+        );
+
+        $handoverLatitude = 10.8000;
+        $handoverLongitude = 106.7300;
+        $shipment = Shipment::create([
+            'order_id' => $primary->id,
+            'shipper_id' => $shipper->id,
+            'status' => 'handover_required',
+            'assigned_at' => now(),
+            'note' => json_encode([
+                'type' => 'incident_handover',
+                'handover' => [
+                    'latitude' => $handoverLatitude,
+                    'longitude' => $handoverLongitude,
+                    'label' => 'Điểm bàn giao kiểm thử',
+                    'address' => 'Vị trí bàn giao kiểm thử',
+                ],
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+
+        $this->mock(DeliveryRoutingService::class, function ($mock) use ($handoverLatitude, $handoverLongitude) {
+            $mock->shouldReceive('route')->once()->andReturn([
+                'source' => 'test',
+                'fallback' => false,
+                'distance_m' => 777.0,
+                'duration_s' => 222.0,
+                'legs' => [],
+                'geometry' => [
+                    [10.7769, 106.7009],
+                    [$handoverLatitude, $handoverLongitude],
+                ],
+                'steps' => [],
+                'alternatives_count' => 1,
+            ]);
+        });
+
+        $this->actingAs($shipper->user)
+            ->getJson(route('shipper.map.route', [
+                'id' => $primary->id,
+                'latitude' => 10.7769,
+                'longitude' => 106.7009,
+                'accuracy' => 5,
+            ]))
+            ->assertOk()
+            ->assertJsonPath('target.type', 'handover')
+            ->assertJsonPath('target.latitude', $handoverLatitude)
+            ->assertJsonPath('target.longitude', $handoverLongitude)
+            ->assertJsonPath('route.distance_m', 777)
+            ->assertJsonPath('bundle_route', null);
+
+        $this->assertDatabaseHas('shipments', ['id' => $shipment->id, 'status' => 'handover_required']);
+    }
+
     public function test_dispatch_bundles_a_compatible_order_into_the_busy_shippers_trip(): void
     {
         Notification::fake();

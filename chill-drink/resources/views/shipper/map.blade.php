@@ -174,18 +174,20 @@
                             <div class="min-w-0">
                                 <div class="small text-muted">Liên hệ trong chuyến</div>
                                 <div class="fw-bold text-truncate">{{ $order->customerName() ?: 'Khách hàng' }}</div>
+                                @if($customerPhone !== '')
+                                    <div class="small text-muted mt-1"><i class="fa-solid fa-phone me-1"></i>{{ $customerPhone }}</div>
+                                @endif
                             </div>
                             <div class="trip-contact-actions">
                                 <a href="{{ route('shipper.chats.index', ['order' => $order->id]) }}" class="trip-mini-action" title="Chat với khách" aria-label="Chat với khách">
                                     <i class="fa-solid fa-comment-dots"></i>
                                 </a>
                                 @if($customerTel !== '')
-                                    <a href="{{ $customerArrivalConfirmed ? 'tel:'.$customerTel : 'javascript:void(0)' }}"
-                                       class="trip-mini-action is-call {{ $customerArrivalConfirmed ? '' : 'is-disabled' }}"
-                                       title="{{ $customerArrivalConfirmed ? 'Gọi khách' : 'Tới nơi để mở gọi khách' }}"
-                                       aria-label="{{ $customerArrivalConfirmed ? 'Gọi khách' : 'Tới nơi để mở gọi khách' }}"
-                                       @unless($customerArrivalConfirmed) aria-disabled="true" @endunless>
-                                        <i class="fa-solid {{ $customerArrivalConfirmed ? 'fa-phone' : 'fa-phone-slash' }}"></i>
+                                    <a href="tel:{{ $customerTel }}"
+                                       class="trip-mini-action is-call"
+                                       title="Gọi khách"
+                                       aria-label="Gọi khách">
+                                        <i class="fa-solid fa-phone"></i>
                                     </a>
                                 @else
                                     <button type="button" class="trip-mini-action is-disabled" disabled title="Chưa có số điện thoại" aria-label="Chưa có số điện thoại">
@@ -338,7 +340,7 @@
                                 <div class="status-action-copy min-w-0">
                                     <div class="status-action-pill tone-green">Đã giao hàng</div>
                                     <div class="status-action-title">Đơn đang chờ khách xác nhận</div>
-                                    <div class="status-action-desc">Bạn đã giao xong. Hệ thống sẽ tự hoàn tất khi khách xác nhận.</div>
+                                    <div class="status-action-desc">Bạn đã giao xong. Khách có 30 phút để xác nhận; sau đó hệ thống sẽ tự hoàn tất.</div>
                                 </div>
                             </div>
                         </div>
@@ -1770,6 +1772,7 @@
             window.ChillDrinkVietnamTerritoryLabels?.addToMapLibre(glMap);
             renderGlRoute(routeGeometry);
             lastRenderedGlRouteKey = geometryRouteKey(routeGeometry);
+            renderGlBundleMarkers(activeBundleRouteStages);
             if (targetMarker) {
                 const targetLatLng = targetMarker.getLatLng();
                 renderGlTargetMarker({latitude:targetLatLng.lat, longitude:targetLatLng.lng});
@@ -1845,6 +1848,8 @@
     let routeAltLine = null;
     let bundleGroupLines = [];
     let bundleStopMarkers = [];
+    let glBundleMarkers = [];
+    let activeBundleRouteStages = [];
     let routeGeometry = [];
     let currentPosition = null;
     let currentRoute = null;
@@ -1879,9 +1884,12 @@
     let testDriveSegmentIndex = 0;
     let testDriveSegmentOffsetM = 0;
     let testDriveGeometry = [];
+    let testDriveGeometryPerRouteMeter = 1;
     let testDriveActive = false;
     let displayedRouteGeometry = [];
-    let navigationProgressState = { key:'', meters:0 };
+    let navigationProgressState = { key:'', meters:0, updatedAt:0 };
+    let voiceDistanceRouteKey = '';
+    let voiceDistanceMeters = null;
     let routeDeviationState = { key:'', active:false, warned:false, since:0 };
     let lastRenderedRouteKey = '';
     let lastRenderedGlRouteKey = '';
@@ -1899,7 +1907,11 @@
     const NAV_VOICE_RATE = 1.00;
     const NAV_VOICE_VOLUME = 0.92;
     const NAV_VOICE_INTRO_GAP_MS = 170;
-    const NAV_DISTANCE_VOICE_MILESTONES = [50, 100, 200, 500, 1000, 2000, 5000];
+    // Chỉ đọc các mốc xa có ích; các mốc 50/100/200m làm câu thoại dồn với
+    // cảnh báo chuẩn bị rẽ và cảnh báo rẽ thật.
+    const NAV_DISTANCE_VOICE_MILESTONES = [500, 1000];
+    const NAV_VOICE_COOLDOWN_MS = 7000;
+    const NAV_PRIORITY_VOICE_COOLDOWN_MS = 4500;
     const NAV_GUIDE_PREPARE_ALERT_M = 100;
     const NAV_GUIDE_TURN_ALERT_M = 32;
     const NAV_GUIDE_ARRIVE_ALERT_M = 120;
@@ -1964,7 +1976,7 @@
         if (voiceEnabled) {
             ttsUnavailable = false;
             guidanceState.distanceMeters = null;
-            speak('Đã bật hướng dẫn bằng giọng nói.', true);
+            speak('Đã bật hướng dẫn bằng giọng nói.', true, { bypassCooldown:true });
             setTimeout(() => refreshGuidance(true), 450);
         } else {
             voiceRequestController?.abort();
@@ -1979,7 +1991,7 @@
 
     repeatButton?.addEventListener('click', () => {
         if (!voiceEnabled) return;
-        speak(lastGuideText || summaryInstruction.textContent || 'Tiếp tục đi theo tuyến đường trên bản đồ.', true);
+        speak(lastGuideText || summaryInstruction.textContent || 'Tiếp tục đi theo tuyến đường trên bản đồ.', true, { bypassCooldown:true });
         closeMapTools();
     });
 
@@ -2376,25 +2388,59 @@
         }
     }
 
-    function routeProgressForPoint(point, geometry) {
+    function routeProgressForPoint(point, geometry, preferredGeometryMeters = null) {
         const path = Array.isArray(geometry) ? geometry : [];
         if (!point || path.length < 2) return null;
-        const projection = projectPointToRoute(point, path);
-        if (!projection || !Number.isFinite(Number(projection.index))) return null;
 
         let beforeMeters = 0;
-        for (let i = 0; i < projection.index; i++) {
-            beforeMeters += haversine(testPointObject(path[i]), testPointObject(path[i + 1]));
+        let nearest = null;
+        let continuous = null;
+        const continuityWindow = 220;
+
+        for (let i = 0; i < path.length - 1; i++) {
+            const start = testPointObject(path[i]);
+            const end = testPointObject(path[i + 1]);
+            const segmentMeters = haversine(start, end);
+            if (!Number.isFinite(segmentMeters) || segmentMeters <= 0) {
+                continue;
+            }
+
+            const projection = projectPointToSegment(point, start, end);
+            const progressMeters = beforeMeters + (segmentMeters * Number(projection.t || 0));
+            const candidate = {
+                index:i,
+                projection,
+                progressMeters,
+                segmentMeters,
+            };
+
+            if (!nearest || projection.distance < nearest.projection.distance) {
+                nearest = candidate;
+            }
+
+            if (
+                Number.isFinite(Number(preferredGeometryMeters))
+                && Math.abs(progressMeters - Number(preferredGeometryMeters)) <= continuityWindow
+                && (!continuous || projection.distance < continuous.projection.distance)
+            ) {
+                continuous = candidate;
+            }
+
+            beforeMeters += segmentMeters;
         }
 
-        const segmentMeters = haversine(testPointObject(path[projection.index]), testPointObject(path[projection.index + 1]));
-        const offsetM = Math.max(0, Math.min(segmentMeters, segmentMeters * Number(projection.t || 0)));
+        const selected = continuous || nearest;
+        if (!selected) return null;
+
+        const projection = selected.projection;
+        const totalMeters = beforeMeters;
+        const offsetM = Math.max(0, Math.min(selected.segmentMeters, selected.segmentMeters * Number(projection.t || 0)));
 
         return {
-            segmentIndex: Math.min(projection.index, path.length - 2),
+            segmentIndex: Math.min(selected.index, path.length - 2),
             segmentOffsetM: offsetM,
-            meters: beforeMeters + offsetM,
-            totalMeters: routeLengthMeters(path),
+            meters:selected.progressMeters,
+            totalMeters,
             distance: Number(projection.distance),
             snapped: projection.point,
             heading: projection.heading,
@@ -2414,11 +2460,19 @@
     // OSRM tính distance theo mặt đường, còn geometry là chuỗi tọa độ. Quy đổi
     // tiến trình GPS về cùng đơn vị với distance/steps để khoảng cách tới chỗ rẽ
     // không bị lệch dần sau mỗi đoạn cong.
-    function navigationRouteProgressForPoint(point, geometry = routeGeometry, route = currentRoute) {
-        const raw = routeProgressForPoint(point, geometry);
+    function navigationRouteProgressForPoint(point, geometry = routeGeometry, route = currentRoute, preferredMeters = null) {
+        const routeMeters = navigationRouteDistance(route);
+        const geometryPathMeters = routeLengthMeters(geometry);
+        const preferredGeometryMeters = Number.isFinite(Number(preferredMeters))
+            && Number.isFinite(routeMeters)
+            && routeMeters > 0
+            && Number.isFinite(geometryPathMeters)
+            && geometryPathMeters > 0
+            ? Number(preferredMeters) * (geometryPathMeters / routeMeters)
+            : null;
+        const raw = routeProgressForPoint(point, geometry, preferredGeometryMeters);
         if (!raw) return raw;
 
-        const routeMeters = navigationRouteDistance(route);
         const geometryMeters = Number(raw.totalMeters);
         const scale = Number.isFinite(routeMeters)
             && routeMeters > 0
@@ -2437,20 +2491,40 @@
     function navigationProgressForCurrentPosition() {
         if (!currentPosition || routeGeometry.length < 2) return null;
 
-        const raw = navigationRouteProgressForPoint(currentPosition, routeGeometry, currentRoute);
+        const key = `${routeTargetKey()}|${geometryRouteKey(routeGeometry)}`;
+        const previousProgress = navigationProgressState.key === key
+            ? Number(navigationProgressState.meters)
+            : null;
+        const raw = navigationRouteProgressForPoint(currentPosition, routeGeometry, currentRoute, previousProgress);
         if (!raw || !Number.isFinite(Number(raw.meters))) return raw;
 
         // Giữ tiến trình đơn đi tới, tránh GPS nhiễu làm banner quay lại cue cũ.
         // Khi server trả một tuyến mới, geometryRouteKey đổi và tiến trình được reset
         // theo đúng điểm bắt đầu mới của tuyến đó.
-        const key = `${routeTargetKey()}|${geometryRouteKey(routeGeometry)}`;
+        const now = Date.now();
         if (navigationProgressState.key !== key) {
-            navigationProgressState = { key, meters:Math.max(0, Number(raw.meters || 0)) };
+            navigationProgressState = {
+                key,
+                meters:Math.max(0, Number(raw.meters || 0)),
+                updatedAt:now,
+            };
         } else {
+            const previousMeters = Number(navigationProgressState.meters || 0);
+            const elapsedSeconds = Math.max(0, (now - Number(navigationProgressState.updatedAt || now)) / 1000);
+            const speedMetersPerSecond = Math.max(0, Number(currentSpeedKmh || 0)) / 3.6;
+            // Một phép chiếu GPS có thể nhảy sang đoạn đường song song hoặc
+            // sang phía bên kia nút giao. Giới hạn bước tiến theo thời gian
+            // để khoảng cách tới maneuver kế tiếp không tụt giả về 0–1m.
+            // Khi đang chạy giả lập, điểm phát ra đã nằm trên chính geometry
+            // của tuyến nên dùng tiến trình thực, không áp trần 120m mỗi nhịp.
+            const maxProgressAdvance = testDriveActive
+                ? Infinity
+                : Math.max(45, speedMetersPerSecond * elapsedSeconds + 35);
             navigationProgressState.meters = Math.max(
-                Number(navigationProgressState.meters || 0),
-                Math.max(0, Number(raw.meters || 0))
+                previousMeters,
+                Math.min(Math.max(0, Number(raw.meters || 0)), previousMeters + maxProgressAdvance)
             );
+            navigationProgressState.updatedAt = now;
         }
 
         return Object.assign({}, raw, { meters:navigationProgressState.meters });
@@ -2831,7 +2905,10 @@
         const modifier = String(step.modifier || '').trim().toLowerCase();
         if (type === 'arrive') return true;
         if (roadNameChangeManeuverLabel(step)) return true;
-        if (intersectionManeuverLabel(step)) return true;
+        // Có intersection data không đồng nghĩa với một thao tác cần đọc:
+        // bước "continue" tại ngã 3/4 chỉ là đi thẳng qua nhánh phụ.
+        // Chỉ giữ giao lộ khi maneuver thực sự đổi hướng.
+        if (intersectionManeuverLabel(step) && !isStraightContinuationStep(step)) return true;
         if (roundaboutManeuverLabel(step)) return true;
         if (gradeSeparatedRoadKind(step)) return true;
         if (['roundabout', 'rotary', 'fork', 'merge', 'end of road'].includes(type)) return true;
@@ -3056,17 +3133,11 @@
             arrivalVoiceLock.event = arrival.event || arrivalVoiceLock.event;
         }
 
-        const alreadyAnnounced = guidanceState.arrived === true;
-        guidanceState.arrived = true;
-
-        if (!arrivalVoiceLock.announced) {
-            arrivalVoiceLock.announced = true;
-            if (!alreadyAnnounced && voiceEnabled) {
-                speak(`Bạn đã đến ${arrivalEventNoun(arrival.event)}.`, true);
-            }
-        }
-
-        arrivalVoiceLock.muted = true;
+        // arrival.verified chỉ là bằng chứng GPS để mở nút thao tác trong
+        // bán kính 250m. Không dùng nó để đọc "đã đến" hoặc tắt dẫn đường;
+        // câu thoại đến nơi phải theo khoảng cách maneuver thật của tuyến.
+        arrivalVoiceLock.announced = false;
+        arrivalVoiceLock.muted = false;
     }
 
     function bundleStages(bundleRoute) {
@@ -3121,6 +3192,38 @@
         }
     }
 
+    function clearGlBundleMarkers() {
+        glBundleMarkers.forEach(marker => marker.remove());
+        glBundleMarkers = [];
+    }
+
+    function renderGlBundleMarkers(stages) {
+        clearGlBundleMarkers();
+        if (!glMap || !glReady) return;
+
+        (Array.isArray(stages) ? stages : []).forEach((stage, stageIndex) => {
+            const stop = bundleStagePrimaryStop(stage);
+            const point = stage?.point;
+            if (!stop || !point) return;
+
+            const latitude = Number(point.latitude);
+            const longitude = Number(point.longitude);
+            if (![latitude, longitude].every(Number.isFinite)) return;
+
+            const toneClass = stop.type === 'pickup' ? 'is-pickup' : 'is-delivery';
+            const stateClass = stage?.state === 'current' ? 'is-current' : 'is-future';
+            const number = bundleStageNumber(stage, stageIndex);
+            const element = createGlMarkerElement(
+                'gl-bundle-stop-marker',
+                `<div class="bundle-stop-marker ${toneClass} ${stateClass}">${number}</div>`
+            );
+            const marker = new maplibregl.Marker({ element, anchor:'center' })
+                .setLngLat([longitude, latitude])
+                .addTo(glMap);
+            glBundleMarkers.push(marker);
+        });
+    }
+
     function maneuverVoiceText(step, action, distanceMeters = null) {
         const phrase = action || maneuverLabel(step);
         if (isUnnamedIntersectionContinuationStep(step)) {
@@ -3135,6 +3238,20 @@
         if (gradeSeparatedManeuverLabel(step)) return capitalize(phrase);
         const roadName = String(step?.name || step?.ref || '').trim();
         return roadName ? `${phrase} vào ${spokenRoadName(roadName)}` : phrase;
+    }
+
+    // Một maneuver có thể nằm đúng tại giao lộ mà tuyến đi qua nhiều lần.
+    // Chiếu riêng tọa độ maneuver lên đoạn gần nhất sẽ chọn nhầm lần đi qua
+    // trước đó (ví dụ 1 km thành 1 m). Khoảng cách theo thứ tự step của OSRM
+    // là mốc chuẩn; chỉ thay bằng phép chiếu khi hai nguồn gần nhau.
+    function credibleCueDistance(expectedMeters, projectedMeters) {
+        const expected = Number(expectedMeters);
+        const projected = Number(projectedMeters);
+        if (!Number.isFinite(expected) || expected < 0) return null;
+        if (!Number.isFinite(projected) || projected < 0) return expected;
+
+        const tolerance = Math.max(90, Math.min(220, expected * 0.18));
+        return Math.abs(projected - expected) <= tolerance ? projected : expected;
     }
 
     function guidanceFromRoute(route, progressMeters = 0) {
@@ -3157,9 +3274,7 @@
                 && Number.isFinite(stepLocation.longitude)
                 ? navigationRouteProgressForPoint(stepLocation, routeGeometry, route)
                 : null;
-            const cueDistance = Number.isFinite(Number(locationProgress?.meters))
-                ? Number(locationProgress.meters)
-                : nextDistance;
+            const cueDistance = credibleCueDistance(nextDistance, locationProgress?.meters);
             nextDistance += Number.isFinite(stepDistance) ? Math.max(0, stepDistance) : 0;
 
             if (!isMeaningfulGuidanceStep(step)) {
@@ -3218,8 +3333,9 @@
             && Number.isFinite(loc.longitude)
             ? navigationRouteProgressForPoint(loc, routeGeometry, route)
             : null;
-        if (Number.isFinite(Number(locationProgress?.meters))) {
-            distance = Math.max(0, Number(locationProgress.meters) - traveled);
+        const projectedDistance = credibleCueDistance(distance + traveled, locationProgress?.meters);
+        if (Number.isFinite(Number(projectedDistance))) {
+            distance = Math.max(0, Number(projectedDistance) - traveled);
         }
         const key = loc
             ? `${next.type}|${next.modifier}|${loc.latitude.toFixed(5)}|${loc.longitude.toFixed(5)}`
@@ -3235,10 +3351,10 @@
             nextIndex
         };
 
-        const intersectionGuide = upcomingIntersectionGuidance(route, traveled);
-        return intersectionGuide && intersectionGuide.distance + 10 < guide.distance
-            ? intersectionGuide
-            : guide;
+        // Không tự tạo bước "đi qua ngã 3/4" từ dữ liệu giao lộ. Dữ liệu này
+        // có cả các nhánh phụ và làm shipper bị đọc nhắc liên tục; chỉ dùng
+        // các maneuver thật do bộ định tuyến trả về.
+        return guide;
     }
 
     function upcomingIntersectionGuidance(route, traveledMeters = 0) {
@@ -3393,11 +3509,17 @@
         }
     }
 
-    async function speak(text, force = false) {
+    async function speak(text, force = false, options = {}) {
         if (!voiceEnabled || ttsUnavailable || !text || !ttsUrl) return;
         const now = Date.now();
-        if (!force && now - lastSpeakAt < 3500) return;
-        if (!force && currentAudio && !currentAudio.paused && !currentAudio.ended) return;
+        const bypassCooldown = options?.bypassCooldown === true;
+        if (!bypassCooldown) {
+            const cooldown = force ? NAV_PRIORITY_VOICE_COOLDOWN_MS : NAV_VOICE_COOLDOWN_MS;
+            if (now - lastSpeakAt < cooldown) return;
+            // Không cắt ngang câu vừa đọc để thay bằng một nhắc khác, trừ khi
+            // người dùng chủ động bấm đọc lại hoặc bật giọng nói.
+            if (currentAudio && !currentAudio.paused && !currentAudio.ended) return;
+        }
         lastSpeakAt = now;
         lastGuideText = text;
         const requestId = ++voiceRequestId;
@@ -3599,6 +3721,15 @@
             }
             return;
         }
+        // GPS reroute làm geometry thay đổi liên tục nhưng chưa chắc đã đổi
+        // điểm đến. Mốc đọc 500/1000m phải giữ nguyên qua các lần reroute;
+        // chỉ reset khi chuyển sang điểm vật lý khác (đặc biệt quan trọng với
+        // chuyến ghép).
+        const currentVoiceRouteKey = routeTargetKey();
+        if (voiceDistanceRouteKey !== currentVoiceRouteKey) {
+            voiceDistanceRouteKey = currentVoiceRouteKey;
+            voiceDistanceMeters = null;
+        }
         const guide = guidanceFromRoute(currentRoute, progress?.meters ?? 0);
         const targetNoun = routeTargetNoun();
         if (!guide) {
@@ -3626,7 +3757,10 @@
         // Không trừ progress lần nữa và không dùng khoảng cách đường chim bay,
         // vì hai việc này làm chỉ dẫn lệch khi GPS đang ở gần đường song song.
         distanceToManeuver = Math.max(0, Number(distanceToManeuver || 0));
-        const previousRemainingMeters = guidanceState.distanceMeters;
+        // Giữ mốc khoảng cách theo toàn bộ tuyến, không reset mỗi khi chuyển
+        // sang maneuver tiếp theo; nếu không các mốc 500/100m sẽ bị đọc lại.
+        const previousRemainingMeters = voiceDistanceMeters;
+        voiceDistanceMeters = remainingRouteMeters;
         guidanceState.distanceMeters = remainingRouteMeters;
         distanceEl.textContent = `Còn ${compactDistance(remainingRouteMeters)}`;
         const totalDuration = navigationRouteDuration(currentRoute);
@@ -3895,6 +4029,7 @@
         bundleGroupLines = [];
         bundleStopMarkers.forEach(marker => marker.remove());
         bundleStopMarkers = [];
+        clearGlBundleMarkers();
     }
 
     function bundleStageIcon(stage, stageIndex = 0) {
@@ -3911,14 +4046,8 @@
 
     function drawBundleRoute(bundleRoute, fallbackGeometry = []) {
         if (!bundleRoute) {
-            if (routeAltLine) {
-                routeAltLine.remove();
-                routeAltLine = null;
-            }
-            bundleGroupLines.forEach(line => line.remove());
-            bundleGroupLines = [];
-            bundleStopMarkers.forEach(marker => marker.remove());
-            bundleStopMarkers = [];
+            activeBundleRouteStages = [];
+            clearBundleOverlay();
             return false;
         }
 
@@ -3927,6 +4056,7 @@
         const stages = Array.isArray(bundleRoute.stages)
             ? bundleRoute.stages
             : (Array.isArray(bundleRoute.groups) ? bundleRoute.groups : []);
+        activeBundleRouteStages = stages;
         const currentStage = stages.find(stage => stage?.state === 'current') || stages[0] || null;
         const currentGeometry = firstUsableGeometry(
             currentStage?.route?.geometry,
@@ -3937,7 +4067,7 @@
 
         routeGeometry = currentGeometry;
         if (glReady) {
-            clearBundleOverlay();
+            renderGlBundleMarkers(stages);
             return true;
         }
 
@@ -4195,6 +4325,7 @@
         }
         testDriveActive = false;
         testDriveLastFrameAt = 0;
+        testDriveGeometryPerRouteMeter = 1;
         testStopButton?.classList.add('d-none');
         if (testMode) {
             testDriveButton?.classList.remove('d-none');
@@ -4226,6 +4357,7 @@
             } catch (_) {}
         } else {
             sourceEl.textContent = 'Đã tắt Test GPS · quay lại GPS thật';
+            navigationProgressState = { key:'', meters:0, updatedAt:0 };
             try {
                 sessionStorage.removeItem(TEST_GPS_SESSION_KEY);
                 sessionStorage.removeItem(TEST_GPS_POINT_KEY);
@@ -4302,7 +4434,10 @@
     testDriveButton?.addEventListener('click', () => {
         unlockAudio();
         closeMapTools();
-        const geometry = currentVisibleGeometry();
+        // Bộ giả lập phải chạy trên toàn bộ geometry gốc. displayedRouteGeometry
+        // là tuyến đã cắt từ vị trí hiện tại để vẽ, nên dùng nó ở đây sẽ làm
+        // tiến trình của giả lập và tiến trình maneuver dùng hai mốc khác nhau.
+        const geometry = firstUsableGeometry(routeGeometry, currentVisibleGeometry());
         if (geometry.length < 2) {
             sourceEl.textContent = 'TEST GPS: bấm vào bản đồ trước để tạo tuyến rồi thử lại';
             return;
@@ -4311,10 +4446,24 @@
         stopTestDrive();
         testDriveActive = true;
         testDriveGeometry = geometry;
+        const geometryMeters = routeLengthMeters(testDriveGeometry);
+        const routeMeters = navigationRouteDistance(currentRoute);
+        testDriveGeometryPerRouteMeter = Number.isFinite(routeMeters)
+            && routeMeters > 0
+            && Number.isFinite(geometryMeters)
+            && geometryMeters > 0
+            ? geometryMeters / routeMeters
+            : 1;
 
         const progress = routeProgressForPoint(currentPosition, testDriveGeometry);
         testDriveSegmentIndex = Math.min(progress?.segmentIndex ?? 0, testDriveGeometry.length - 2);
         testDriveSegmentOffsetM = Math.max(0, Number(progress?.segmentOffsetM || 0));
+        const routeProgress = navigationRouteProgressForPoint(currentPosition, testDriveGeometry, currentRoute);
+        navigationProgressState = {
+            key:`${routeTargetKey()}|${geometryRouteKey(routeGeometry)}`,
+            meters:Math.max(0, Number(routeProgress?.meters || 0)),
+            updatedAt:Date.now(),
+        };
         testDriveButton.classList.add('d-none');
         testStopButton?.classList.remove('d-none');
 
@@ -4332,7 +4481,7 @@
             const elapsedMs = testDriveLastFrameAt ? Math.min(220, frameAt - testDriveLastFrameAt) : 0;
             testDriveLastFrameAt = frameAt;
             const metersThisTick = metersPerSecond * (elapsedMs / 1000);
-            const point = advanceTestDrive(metersThisTick);
+            const point = advanceTestDrive(metersThisTick * testDriveGeometryPerRouteMeter);
 
             if (!point) {
                 stopTestDrive();
@@ -4340,8 +4489,18 @@
             }
 
             applyPosition(fakeGeoPosition(point[0], point[1], 6), true);
-            const progress = routeProgressForPoint({latitude:point[0], longitude:point[1]}, testDriveGeometry);
-            const remaining = Math.max(0, Number(progress?.totalMeters || 0) - Number(progress?.meters || 0));
+            let passedGeometryMeters = 0;
+            for (let i = 0; i < testDriveSegmentIndex; i++) {
+                passedGeometryMeters += haversine(
+                    testPointObject(testDriveGeometry[i]),
+                    testPointObject(testDriveGeometry[i + 1])
+                );
+            }
+            passedGeometryMeters += Math.max(0, Number(testDriveSegmentOffsetM || 0));
+            const remainingGeometryMeters = Math.max(0, geometryMeters - passedGeometryMeters);
+            const remaining = Number.isFinite(routeMeters) && routeMeters >= 0 && geometryMeters > 0
+                ? remainingGeometryMeters * (routeMeters / geometryMeters)
+                : remainingGeometryMeters;
             sourceEl.textContent = `TEST GPS: ${Math.round(speedKmh)} km/h · còn ${compactDistance(remaining)} trên tuyến`;
             testDriveFrameId = requestAnimationFrame(step);
         };

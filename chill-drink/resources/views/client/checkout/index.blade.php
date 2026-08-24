@@ -1893,7 +1893,7 @@
         function hasHouseNumber(value) {
             const text = String(value || '').trim();
 
-            return /(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b)/iu.test(text);
+            return /(?:\b(?:số|so|nhà|nha|ngõ|ngo|hẻm|hem|ngách|ngach|kiệt|kiet)\s*[:#.-]?\s*\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b|\b\d+[a-z]?(?:[/-]\d+[a-z]?)*(?![.,]\d)\b)/iu.test(text);
         }
 
         function renderAddressPanelWarning(message, shouldScroll = false) {
@@ -2593,36 +2593,25 @@
             checkoutEditPickerHydratedAddressId = addressId;
             checkoutEditPickerAutoPrimed = true;
 
-            const currentLocationMessage = options.triggeredByDeviceDrift
-                ? 'Vị trí hiện tại đang khác địa chỉ cũ. Hãy xác nhận pin hiện tại hoặc chỉnh lại trước khi lưu.'
-                : 'Đây là vị trí hiện tại của thiết bị. Hãy xác nhận hoặc chỉnh lại pin trước khi lưu.';
-
-            // Khi mở popup, pin phải ưu tiên vị trí hiện tại. Đây chỉ là preview;
-            // người dùng vẫn phải bấm GPS, chọn trên map hoặc lấy địa chỉ để xác nhận.
-            window.ChillDrinkLocationPicker?.clear(
-                picker,
-                'Đang chuẩn bị vị trí hiện tại...'
-            );
-            picker.dataset.checkoutDevicePreviewMessage = currentLocationMessage;
-
-            if (hasCheckoutDeviceLocation()) {
-                previewCheckoutDeviceLocationOnPicker(picker, currentLocationMessage);
-                return;
-            }
-
-            // Nếu GPS chưa trả về, chỉ hiển thị tọa độ cũ làm tham chiếu tạm thời;
-            // không ghi tọa độ cũ vào input chính thức.
+            // Địa chỉ đã lưu thì dùng luôn tọa độ cũ. GPS hiện tại chỉ để
+            // tham khảo, không được ghi đè và không bắt người dùng ghim lại.
             if (Number.isFinite(coordinates.latitude) && Number.isFinite(coordinates.longitude)) {
-                window.ChillDrinkLocationPicker?.preview(
+                picker.dataset.checkoutDevicePreviewMessage = '';
+                window.ChillDrinkLocationPicker?.set(
                     picker,
                     coordinates.latitude,
                     coordinates.longitude,
-                    'Chưa lấy được GPS hiện tại. Tọa độ này chỉ là tham chiếu của địa chỉ đã lưu.'
+                    'Đã tải vị trí đã lưu. Chỉ cần ghim lại nếu bạn muốn đổi địa chỉ.'
                 );
+                markAddressLocationConfirmed(coordinates.latitude, coordinates.longitude);
+                return;
             }
 
-            setCheckoutPickerStatus(picker, 'Đang lấy vị trí hiện tại. Hãy chờ GPS hoặc bấm Lấy vị trí hiện tại.');
-            requestCheckoutDeviceLocation();
+            picker.dataset.checkoutDevicePreviewMessage = '';
+            window.ChillDrinkLocationPicker?.clear(
+                picker,
+                'Địa chỉ này chưa có vị trí đã lưu. Hãy chọn pin một lần để lưu lại.'
+            );
         }
 
         function hydrateNewPickerDraft() {
@@ -3407,7 +3396,13 @@
 
             fillEditModal(address);
             selectedAddressId = address.id;
-            clearAddressLocationConfirmation();
+            const savedCoordinates = getAddressCoordinates(address);
+            if (Number.isFinite(savedCoordinates.latitude) && Number.isFinite(savedCoordinates.longitude)) {
+                // Mở rồi đóng popup cũng không được làm mất tọa độ đã lưu.
+                markAddressLocationConfirmed(savedCoordinates.latitude, savedCoordinates.longitude);
+            } else {
+                clearAddressLocationConfirmation();
+            }
             checkoutEditPickerHydratedAddressId = null;
             checkoutEditPickerAutoPrimed = false;
             checkoutEditPickerPendingAddress = address;
@@ -3596,6 +3591,12 @@
                         return;
                     }
 
+                    if (scope === 'edit') {
+                        // Sửa tên đường/số nhà không làm mất tọa độ đã lưu.
+                        // Người dùng chỉ đổi tọa độ khi chủ động chọn pin/GPS mới.
+                        return;
+                    }
+
                     const picker = document.querySelector(`[data-location-picker="checkout-${scope}-location-picker"]`);
                     window.ChillDrinkLocationPicker?.invalidate(picker, 'Địa chỉ vừa thay đổi. Vui lòng kiểm tra lại vị trí trên bản đồ trước khi lưu.');
                     clearAddressLocationConfirmation();
@@ -3665,6 +3666,14 @@
             const houseNumber = document.getElementById('editAddressHouseNumber').value.trim();
             const street = document.getElementById('editAddressStreet').value.trim();
             let resolvedLocation = getPickerCoordinates('edit');
+            if (
+                (!Number.isFinite(resolvedLocation?.latitude) || !Number.isFinite(resolvedLocation?.longitude))
+                && address
+            ) {
+                // Dự phòng cho trường hợp bản đồ chưa mount xong: giữ tọa độ
+                // của địa chỉ đã lưu thay vì bắt người dùng ghim lại.
+                resolvedLocation = getAddressCoordinates(address);
+            }
             const button = this;
             const originalText = button.innerHTML;
             let saved = false;

@@ -743,8 +743,8 @@ class CheckoutController extends Controller
             'area' => ['nullable', 'string', 'max:255'],
             'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:255'],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
         ], [
             'phone.required' => 'Vui lòng nhập số điện thoại.',
@@ -762,8 +762,8 @@ class CheckoutController extends Controller
             'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
             'address' => $addressLine,
             'area' => $this->normalizeNullableString($validated['area'] ?? null),
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
+            'latitude' => $validated['latitude'] ?? $user->latitude,
+            'longitude' => $validated['longitude'] ?? $user->longitude,
         ])->save();
 
         if ($request->boolean('is_default') && Schema::hasTable('addresses')) {
@@ -864,8 +864,8 @@ class CheckoutController extends Controller
             'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:255'],
             'label' => ['nullable', 'string', 'max:100'],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
         ], [
             'phone.required' => 'Vui lòng nhập số điện thoại.',
@@ -894,8 +894,8 @@ class CheckoutController extends Controller
             'district' => null,
             'ward' => null,
             'detail' => $addressLine,
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
+            'latitude' => $validated['latitude'] ?? $address->latitude,
+            'longitude' => $validated['longitude'] ?? $address->longitude,
             'is_default' => $isDefault,
         ])->save();
 
@@ -1447,6 +1447,6 @@ class CheckoutController extends Controller
     {
         $address = trim((string) $value);
 
-        return (bool) preg_match('/(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b)/iu', $address);
+        return (bool) preg_match('/(?:\b(?:số|so|nhà|nha|ngõ|ngo|hẻm|hem|ngách|ngach|kiệt|kiet)\s*[:#.-]?\s*\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b|\b\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b)/iu', $address);
     }
 }

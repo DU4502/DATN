@@ -59,9 +59,9 @@
 @once
 <style>
 .order-delivery-chat-entry{display:block}
-.order-delivery-chat-overlay{position:fixed;inset:0;background:rgba(15,23,42,.38);display:none;align-items:flex-end;justify-content:center;padding:12px;z-index:2500}
+.order-delivery-chat-overlay{position:fixed;inset:0;background:rgba(15,23,42,.38);display:none;align-items:center;justify-content:center;padding:clamp(12px,4vw,24px);z-index:2500}
 .order-delivery-chat-overlay.is-open{display:flex}
-.order-delivery-chat-panel{width:min(390px,calc(100vw - 24px));height:min(590px,calc(100dvh - 40px));background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden;border:1px solid #dce9e5}
+.order-delivery-chat-panel{width:min(390px,100%);height:min(590px,calc(100dvh - 24px));min-height:0;background:#fff;border-radius:22px;box-shadow:0 24px 70px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden;border:1px solid #dce9e5}
 /* Shipper dùng một app mobile duy nhất kể cả trên PC: chat phải nằm bên trong đúng khung app 480px, không bay ra ngoài viewport desktop. */
 .order-delivery-chat-overlay[data-viewer="shipper"]{
     inset:64px auto 0 50%;
@@ -84,13 +84,13 @@ body.order-delivery-chat-open{overflow:hidden}
 .order-delivery-chat-title{font-weight:900;font-size:1rem}.order-delivery-chat-sub{font-size:.72rem;opacity:.86;margin-top:2px}
 .order-delivery-chat-close{width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:1.45rem;line-height:1;cursor:pointer}
 .order-delivery-chat-state{padding:8px 14px;background:#f7fbfa;border-bottom:1px solid #e7efec;color:#60716c;font-size:.76rem}
-.order-delivery-chat-messages{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px;background:#f6f9f8;display:flex;flex-direction:column;gap:8px}
+.order-delivery-chat-messages{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:14px;background:#f6f9f8;display:flex;flex-direction:column;gap:8px}
 .order-delivery-chat-empty{margin:auto;text-align:center;color:#84938f;font-size:.86rem;max-width:240px}
 .order-delivery-chat-msg{max-width:82%;display:flex;flex-direction:column;gap:3px}.order-delivery-chat-msg.mine{align-self:flex-end;align-items:flex-end}.order-delivery-chat-msg.other{align-self:flex-start;align-items:flex-start}
 .order-delivery-chat-bubble{padding:9px 11px;border-radius:15px;font-size:.9rem;line-height:1.42;white-space:pre-wrap;word-break:break-word}.mine .order-delivery-chat-bubble{background:#0d9373;color:#fff;border-bottom-right-radius:5px}.other .order-delivery-chat-bubble{background:#fff;color:#26332f;border:1px solid #dfe9e6;border-bottom-left-radius:5px}
 .order-delivery-chat-meta{font-size:.66rem;color:#84938f;padding:0 3px}
 .order-delivery-chat-quick{display:flex;flex-wrap:wrap;gap:6px;overflow:visible;padding:9px 11px;border-top:1px solid #e6eeeb;background:#fff}.order-delivery-chat-quick button{flex:1 1 calc(50% - 6px);min-width:0;border:1px solid #cfe1dc;background:#f7fbfa;color:#0d7e65;border-radius:12px;padding:7px 8px;font-size:.72rem;font-weight:700;line-height:1.2;white-space:normal;cursor:pointer}
-.order-delivery-chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid #e5eeeb;background:#fff}.order-delivery-chat-form input{flex:1;border:1px solid #cfddd9;border-radius:999px;padding:9px 13px;outline:none;font-size:.9rem}.order-delivery-chat-form input:focus{border-color:#0d9373;box-shadow:0 0 0 3px rgba(13,147,115,.1)}.order-delivery-chat-form button{width:40px;height:40px;border-radius:50%;border:0;background:#0d9373;color:#fff;display:grid;place-items:center}.order-delivery-chat-form.is-locked{display:none}.order-delivery-chat-quick.is-locked{display:none}
+.order-delivery-chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid #e5eeeb;background:#fff;flex-shrink:0}.order-delivery-chat-form input{flex:1 1 auto;min-width:0;border:1px solid #cfddd9;border-radius:999px;padding:9px 13px;outline:none;font-size:.9rem}.order-delivery-chat-form input:focus{border-color:#0d9373;box-shadow:0 0 0 3px rgba(13,147,115,.1)}.order-delivery-chat-form button{width:40px;height:40px;border-radius:50%;border:0;background:#0d9373;color:#fff;display:grid;place-items:center;flex:0 0 40px}.order-delivery-chat-form.is-locked{display:none}.order-delivery-chat-quick.is-locked{display:none}
 .order-delivery-chat-entry button{position:relative}
 .order-delivery-chat-badge{position:absolute;top:-8px;right:-8px;min-width:20px;height:20px;border-radius:999px;background:#dc2626;color:#fff;font-size:.68rem;font-weight:800;display:grid;place-items:center;padding:0 6px;box-shadow:0 8px 18px rgba(220,38,38,.28)}
 .order-delivery-chat-badge.is-pulse{animation:orderChatBadgePulse 1.2s ease-in-out infinite}

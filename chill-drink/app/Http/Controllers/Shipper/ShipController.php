@@ -802,6 +802,7 @@ class ShipController extends Controller
         $target = $this->targetForOrder($order, $status, $shipper);
         $bundleTrip = app(ShipperBundleService::class)->activeTripForShipper($shipper);
         $bundleRoute = $bundleTrip && in_array((int) $order->id, array_map('intval', $bundleTrip['order_ids'] ?? []), true)
+            && ($bundleNext['type'] ?? null) !== 'handover'
             ? $this->bundleRouteForMap($bundleTrip, $shipper, (float) $validated['latitude'], (float) $validated['longitude'], $routing)
             : null;
 
@@ -2184,7 +2185,17 @@ class ShipController extends Controller
             );
 
             if (! is_array($stageRoute) || empty($stageRoute['geometry'])) {
-                continue;
+                // Chặng đầu là đích hiện tại. Không được lấy một chặng phía sau
+                // làm tuyến chính nếu chặng hiện tại không dựng được đường; khi
+                // đó routeData sẽ dùng tuyến đơn trực tiếp tới target hiện tại.
+                if ($index === 0) {
+                    return null;
+                }
+
+                // Các chặng sau bị thiếu geometry thì dừng danh sách tại đây;
+                // tiếp tục dựng sẽ làm startPoint/route của các chặng sau lệch
+                // khỏi thứ tự thực tế của chuyến ghép.
+                break;
             }
 
             $stage['state'] = $index === 0 ? 'current' : 'future';

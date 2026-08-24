@@ -9,7 +9,7 @@
     @if($selectedOrder)
         @php
             $selectedStatus = \App\Support\OrderStatus::normalize((string) $selectedOrder->status);
-            $selectedLocked = in_array($selectedStatus, [\App\Support\OrderStatus::DELIVERED, \App\Support\OrderStatus::COMPLETED], true);
+            $selectedLocked = false;
             $phone = preg_replace('/[^0-9+]/', '', (string) ($selectedOrder->customerPhone() ?? ''));
         @endphp
         <div class="ship-chat-detail-head">

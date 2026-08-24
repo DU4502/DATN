@@ -45,6 +45,8 @@
     .tracking-hero-mini{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:18px;background:#ffffff;border:1px solid #e3ece9;box-shadow:0 12px 22px rgba(13,147,115,.08)}
     .tracking-hero-mini i{font-size:1.15rem;color:#0d9373}
     .tracking-progress{background:#fff;border:1px solid #e3ece9;border-radius:20px;padding:20px 22px;margin-bottom:18px;box-shadow:0 10px 30px rgba(20,74,63,.05)}
+    .tracking-confirm-card{display:flex;align-items:center;justify-content:space-between;gap:18px;background:linear-gradient(135deg,#effbf6,#ffffff);border:1px solid #bfe8d8;border-radius:20px;padding:16px 18px;margin-bottom:18px;box-shadow:0 10px 30px rgba(20,74,63,.05)}
+    .tracking-confirm-title{font-weight:900;color:#135b49}.tracking-confirm-text{color:#60716c;font-size:.88rem;line-height:1.5;margin-top:3px}.tracking-confirm-card .btn{border-radius:12px;white-space:nowrap;font-weight:850}
     .tracking-steps{display:grid;grid-template-columns:repeat(6,1fr);gap:0;position:relative}
     .tracking-step{position:relative;text-align:center;color:#94a3b8;z-index:1}
     .tracking-step:not(:last-child)::after{content:"";position:absolute;left:56%;right:-44%;top:19px;height:3px;background:#e5ebe9;z-index:-1}
@@ -54,6 +56,12 @@
     .tracking-step.is-done .tracking-step-icon,.tracking-step.is-current .tracking-step-icon{background:#0d9373;color:#fff;box-shadow:0 0 0 4px rgba(13,147,115,.12)}
     .tracking-step.is-current .tracking-step-icon{animation:trackingPulse 1.7s infinite}
     .tracking-step-label{font-size:.82rem;font-weight:750;line-height:1.35}
+    .tracking-summary-card{background:#fff;border:1px solid #e3ece9;border-radius:22px;margin-bottom:18px;overflow:hidden;box-shadow:0 10px 30px rgba(20,74,63,.05)}
+    .tracking-summary-card .tracking-hero,.tracking-summary-card .tracking-confirm-card,.tracking-summary-card .tracking-progress{border:0;border-radius:0;box-shadow:none;margin:0}
+    .tracking-summary-card .tracking-hero{padding:16px 22px;background:linear-gradient(135deg,#ffffff 0%,#f1fbf8 100%)}
+    .tracking-summary-card .tracking-confirm-card{padding:11px 22px;border-top:1px solid #e3ece9;border-bottom:1px solid #e3ece9;background:#f8fcfa}
+    .tracking-summary-card .tracking-confirm-text{font-size:.82rem}
+    .tracking-summary-card .tracking-progress{padding:14px 22px 17px}
     .tracking-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(300px,.75fr);gap:18px;align-items:start}
     .tracking-main,.tracking-side-card{background:#fff;border:1px solid #e3ece9;border-radius:20px;box-shadow:0 10px 30px rgba(20,74,63,.05)}
     .tracking-main{padding:6px 18px 18px;overflow:hidden}
@@ -76,7 +84,7 @@
     .tracking-driver-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tracking-driver-actions .btn{border-radius:12px;font-weight:800}
     @keyframes trackingPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.06);opacity:.72}}
     @media(max-width:900px){.tracking-hero,.tracking-grid{grid-template-columns:1fr}.tracking-main .delivery-live-map{height:390px!important}.tracking-steps{grid-template-columns:repeat(3,1fr);row-gap:18px}.tracking-step:nth-child(3n):after{display:none}.tracking-step:not(:last-child)::after{left:60%;right:-40%}}
-    @media(max-width:600px){.tracking-page{padding:16px 0 40px}.tracking-top{padding:0 2px}.tracking-title{font-size:1.25rem}.tracking-status{font-size:.72rem}.tracking-hero{padding:16px}.tracking-hero-title{font-size:1.02rem}.tracking-progress{padding:16px 10px}.tracking-step-label{font-size:.67rem}.tracking-step-icon{width:34px;height:34px}.tracking-step:not(:last-child)::after{top:16px}.tracking-main{padding:4px 8px 12px}.tracking-main .delivery-live-map{height:330px!important}.tracking-side-card{padding:15px}}
+    @media(max-width:600px){.tracking-page{padding:16px 0 40px}.tracking-top{padding:0 2px}.tracking-title{font-size:1.25rem}.tracking-status{font-size:.72rem}.tracking-hero{padding:16px}.tracking-summary-card .tracking-hero{padding:15px}.tracking-summary-card .tracking-confirm-card{align-items:flex-start;flex-direction:column;padding:12px 15px}.tracking-summary-card .tracking-confirm-card form,.tracking-summary-card .tracking-confirm-card .btn{width:100%}.tracking-hero-title{font-size:1.02rem}.tracking-progress{padding:16px 10px}.tracking-summary-card .tracking-progress{padding:14px 8px 16px}.tracking-step-label{font-size:.67rem}.tracking-step-icon{width:34px;height:34px}.tracking-step:not(:last-child)::after{top:16px}.tracking-main{padding:4px 8px 12px}.tracking-main .delivery-live-map{height:330px!important}.tracking-side-card{padding:15px}}
 </style>
 
 <main class="tracking-page">
@@ -90,34 +98,50 @@
             <div class="tracking-status" data-track-status>{{ $journey['label'] }}</div>
         </div>
 
-        <section class="tracking-hero">
-            <div>
-                <div class="tracking-hero-label"><span class="tracking-hero-dot"></span> Trạng thái hiện tại</div>
-                <div class="tracking-hero-title" data-track-stage>{{ $journey['stage'] }}</div>
-                <div class="tracking-hero-text" data-track-message>{{ $journey['message'] }}</div>
-            </div>
-            <div class="tracking-hero-mini">
-                <i class="bi bi-clock-history"></i>
+        <section class="tracking-summary-card">
+            <section class="tracking-hero">
                 <div>
-                    <div class="small text-secondary">Cập nhật gần nhất</div>
-                    <strong>{{ optional($order->updated_at)->format('H:i · d/m/Y') }}</strong>
+                    <div class="tracking-hero-label"><span class="tracking-hero-dot"></span> Trạng thái hiện tại</div>
+                    <div class="tracking-hero-title" data-track-stage>{{ $journey['stage'] }}</div>
+                    <div class="tracking-hero-text" data-track-message>{{ $journey['message'] }}</div>
                 </div>
-            </div>
-        </section>
-
-        <section class="tracking-progress" aria-label="Tiến trình đơn hàng">
-            <div class="tracking-steps" data-track-steps>
-                @foreach($steps as $index => $step)
-                    @php
-                        $done = $currentIndex >= 0 && $index < $currentIndex;
-                        $current = $index === $currentIndex;
-                    @endphp
-                    <div class="tracking-step {{ $done ? 'is-done' : '' }} {{ $current ? 'is-current' : '' }}" data-step-key="{{ $step['key'] }}">
-                        <div class="tracking-step-icon"><i class="bi {{ $done ? 'bi-check-lg' : $step['icon'] }}"></i></div>
-                        <div class="tracking-step-label">{{ $step['label'] }}</div>
+                <div class="tracking-hero-mini">
+                    <i class="bi bi-clock-history"></i>
+                    <div>
+                        <div class="small text-secondary">Cập nhật gần nhất</div>
+                        <strong>{{ optional($order->updated_at)->format('H:i · d/m/Y') }}</strong>
                     </div>
-                @endforeach
-            </div>
+                </div>
+            </section>
+
+            <section class="tracking-confirm-card {{ $status === \App\Support\OrderStatus::DELIVERED ? '' : 'd-none' }}" data-received-confirmation>
+                <div>
+                    <div class="tracking-confirm-title"><i class="bi bi-check2-circle me-1"></i>Bạn đã nhận được đơn hàng?</div>
+                    <div class="tracking-confirm-text">
+                        Bấm xác nhận để hoàn tất đơn. Nếu không xác nhận, hệ thống sẽ tự động hoàn tất sau
+                        {{ \App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES }} phút kể từ lúc shipper giao hàng.
+                    </div>
+                </div>
+                <form method="POST" action="{{ route('orders.confirm-received', $order) }}" onsubmit="return confirm('Xác nhận bạn đã nhận được đơn hàng này?');">
+                    @csrf
+                    <button type="submit" class="btn btn-success"><i class="bi bi-check-circle me-1"></i>Xác nhận hoàn thành</button>
+                </form>
+            </section>
+
+            <section class="tracking-progress" aria-label="Tiến trình đơn hàng">
+                <div class="tracking-steps" data-track-steps>
+                    @foreach($steps as $index => $step)
+                        @php
+                            $done = $currentIndex >= 0 && $index < $currentIndex;
+                            $current = $index === $currentIndex;
+                        @endphp
+                        <div class="tracking-step {{ $done ? 'is-done' : '' }} {{ $current ? 'is-current' : '' }}" data-step-key="{{ $step['key'] }}">
+                            <div class="tracking-step-icon"><i class="bi {{ $done ? 'bi-check-lg' : $step['icon'] }}"></i></div>
+                            <div class="tracking-step-label">{{ $step['label'] }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
         </section>
 
         <div class="tracking-grid">
@@ -192,6 +216,7 @@
     const driverVehicle = document.querySelector('[data-driver-vehicle]');
     const driverAvatar = document.querySelector('[data-driver-avatar]');
     const driverCall = document.querySelector('[data-driver-call]');
+    const receivedConfirmation = document.querySelector('[data-received-confirmation]');
     if (!liveRoot || !progress) return;
 
     const order = ['pending_confirmation','finding_shipper','shipper_assigned','shipper_picked_up','delivering','delivered'];
@@ -200,6 +225,9 @@
         const data = event.detail || {};
         const state = data.timeline_state || 'pending_confirmation';
         const currentIndex = order.indexOf(state);
+        if (receivedConfirmation) {
+            receivedConfirmation.classList.toggle('d-none', String(data.status || '') !== 'delivered');
+        }
         if (statusEl) statusEl.textContent = data.timeline_label || data.stage || data.status_label || 'Theo dõi đơn hàng';
         if (stageEl) stageEl.textContent = data.stage || data.timeline_label || 'Theo dõi đơn hàng';
         if (messageEl && data.message) messageEl.textContent = data.message;

@@ -624,7 +624,7 @@ $paymentLabels = $paymentLabels ?? [
                         <span>Xem chi tiết đơn hàng</span>
                         <i class="bi bi-chevron-down"></i>
                     </button>
-                    @if(($order->fulfillment_type ?? 'delivery') === 'delivery' && !in_array($statusKey, ['cancelled', 'completed'], true))
+                    @if(($order->fulfillment_type ?? 'delivery') === 'delivery' && $statusKey !== 'cancelled')
                         <a href="{{ route('orders.track', $order) }}" class="btn btn-sm btn-primary w-100 fw-semibold">
                             <i class="bi bi-geo-alt-fill me-1"></i>Theo dõi đơn hàng
                         </a>

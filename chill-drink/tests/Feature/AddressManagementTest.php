@@ -94,6 +94,38 @@ class AddressManagementTest extends TestCase
         ]);
     }
 
+    public function test_customer_can_update_saved_address_without_resubmitting_coordinates(): void
+    {
+        $user = User::factory()->create();
+        $address = Address::create([
+            'user_id' => $user->id,
+            'receiver_name' => 'Nguyễn Văn C',
+            'phone' => '0901234567',
+            'province' => 'Thanh Hóa',
+            'detail' => 'ngõ 910 Quang Trung',
+            'label' => 'Nhà',
+            'latitude' => 19.8067,
+            'longitude' => 105.7852,
+            'is_default' => true,
+            'created_at' => now(),
+        ]);
+
+        $this->actingAs($user)->putJson(route('checkout.addresses.update', $address), [
+            'name' => 'Nguyễn Văn C',
+            'phone' => '0901234567',
+            'area' => 'Thanh Hóa',
+            'street' => 'ngõ 910 Quang Trung',
+            'type' => 'Nhà',
+            'is_default' => true,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('addresses', [
+            'id' => $address->id,
+            'latitude' => 19.8067,
+            'longitude' => 105.7852,
+        ]);
+    }
+
     public function test_checkout_address_rejects_missing_coordinates(): void
     {
         $user = User::factory()->create();

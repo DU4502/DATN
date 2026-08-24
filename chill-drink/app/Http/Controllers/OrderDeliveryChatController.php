@@ -180,14 +180,12 @@ class OrderDeliveryChatController extends Controller
             return ['available' => false, 'locked' => true, 'message' => 'Chat sẽ mở sau khi tài xế bấm Nhận đơn.'];
         }
 
-        $locked = in_array($status, [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true);
-
         return [
             'available' => true,
-            'locked' => $locked,
-            'message' => $locked
-                ? 'Chuyến đã kết thúc. Tin nhắn chỉ được lưu/xem lại trong 24 giờ.'
-                : 'Chat ngắn theo chuyến. Tin nhắn tự hết hạn sau 24 giờ.',
+            // Khách và shipper vẫn cần trao đổi sau khi giao xong (ví dụ thiếu
+            // món, tiền COD hoặc hỗ trợ sau giao). Tin nhắn vẫn tự hết hạn 24h.
+            'locked' => false,
+            'message' => 'Chat theo chuyến vẫn mở sau khi giao xong và tự hết hạn sau 24 giờ.',
         ];
     }
 
