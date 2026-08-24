@@ -86,7 +86,7 @@
                                     {{ $incident['is_pending'] ? 'CẦN XỬ LÝ' : 'ĐÃ XỬ LÝ' }}
                                 </span>
                                 <span class="badge {{ ($incident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'bg-danger-subtle text-danger' : 'bg-info-subtle text-info-emphasis' }}">
-                                    {{ ($incident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'KHÁCH XIN HỦY' : 'SỰ CỐ TÀI XẾ' }}
+                                    {{ ($incident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'SỰ CỐ PHÍA KHÁCH' : 'SỰ CỐ TÀI XẾ' }}
                                 </span>
                                 @if($rootMode)
                                     <span class="badge bg-light text-dark">{{ $incident['branch_name'] }}</span>
@@ -121,18 +121,18 @@
                     <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap mt-4 pt-3 border-top">
                         @if(($incident['incident_type'] ?? 'driver_issue') === 'customer_cancel')
                             <div class="small text-secondary">
-                                Khách đã yêu cầu hủy sau khi đơn được xác nhận. Chỉ xử lý hủy tại sự cố này.
+                                Shipper báo sự cố phía khách. Admin/Super Admin xác nhận hủy tại đây và yêu cầu shipper mang đồ về quán.
                             </div>
                             <div class="d-flex gap-2 flex-wrap">
                                 <form action="{{ $resolveUrl }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="action" value="keep">
-                                    <button class="btn btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Tiếp tục giao đơn</button>
+                                    <button class="btn btn-outline-success" type="submit"><i class="bi bi-check-circle me-1"></i>Tiếp tục giao</button>
                                 </form>
                                 <form action="{{ $resolveUrl }}" method="POST" onsubmit="return confirm('Xác nhận hủy đơn theo yêu cầu sự cố của khách?');">
                                     @csrf
                                     <input type="hidden" name="action" value="cancel">
-                                    <button class="btn btn-danger" type="submit"><i class="bi bi-x-circle me-1"></i>Hủy đơn do sự cố</button>
+                                    <button class="btn btn-danger" type="submit"><i class="bi bi-box-arrow-in-left me-1"></i>Xác nhận hủy · mang về quán</button>
                                 </form>
                             </div>
                         @else

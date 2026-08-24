@@ -36,36 +36,16 @@ class ShipController extends Controller
 
 
     private const ISSUE_REASONS = [
-        'vehicle_problem' => 'Xe gặp sự cố',
-        'accident' => 'Tai nạn / va chạm',
-        'emergency' => 'Có việc khẩn cấp / không thể tiếp tục',
-        'health_problem' => 'Sức khỏe không đảm bảo',
-        'phone_problem' => 'Điện thoại / GPS gặp sự cố',
-        'store_problem' => 'Có vấn đề khi nhận hàng tại cửa hàng',
-        'customer_cancel_request' => 'Khách muốn hủy đơn',
-        'customer_unreachable' => 'Không liên hệ được khách',
-        'address_problem' => 'Không tìm thấy điểm giao',
-        'customer_changed_location' => 'Khách đổi điểm nhận',
-        'customer_refused' => 'Khách từ chối nhận',
-        'damaged_order' => 'Hàng bị đổ/hỏng',
-        'other' => 'Sự cố khác',
+        'customer_unreachable' => 'Không liên lạc được khách',
+        'customer_refused' => 'Gọi được nhưng khách không nhận hàng',
     ];
 
     private const ISSUE_REASON_FLOWS = [
-        'driver_issue' => [
-            'label' => 'Sự cố tài xế / chuyến giao',
-            'notice' => 'Đơn không bị hủy. Admin hoặc Super Admin sẽ quyết định giữ tài xế hay điều phối người thay thế.',
-            'reasons' => [
-                'vehicle_problem', 'accident', 'emergency', 'health_problem',
-                'phone_problem', 'store_problem', 'damaged_order', 'other',
-            ],
-        ],
         'customer_cancel' => [
-            'label' => 'Khách muốn hủy đơn',
-            'notice' => 'Yêu cầu chỉ được ghi nhận nội bộ. Admin hoặc Super Admin sẽ quyết định tiếp tục giao hay duyệt hủy đơn.',
+            'label' => 'Sự cố phía khách',
+            'notice' => 'Shipper chỉ báo về hệ thống. Admin hoặc Super Admin xác nhận hủy; shipper mang đồ về quán theo hướng dẫn.',
             'reasons' => [
-                'customer_cancel_request', 'customer_unreachable',
-                'customer_changed_location', 'customer_refused',
+                'customer_unreachable', 'customer_refused',
             ],
         ],
     ];
@@ -1276,13 +1256,7 @@ class ShipController extends Controller
             \App\Support\RealtimeShipperIncidentNotifier::reported($freshOrder, $incident);
         }
 
-        if ($validated['incident_type'] === 'driver_issue' && $incident) {
-            RealtimeOrderNotifier::deliveryDelayReported($freshOrder, $description, (int) ($incident['incident_id'] ?? 0));
-        }
-
-        return back()->with('success', $validated['incident_type'] === 'customer_cancel'
-            ? 'Đã ghi nhận yêu cầu hủy nội bộ. Chỉ Admin hoặc Super Admin quyết định; chưa có thay đổi nào được thông báo cho khách.'
-            : 'Đã báo sự cố. Admin chi nhánh và Super Admin đã được cảnh báo; khách hàng đã nhận thông báo xin lỗi về việc giao chậm.');
+        return back()->with('success', 'Đã báo sự cố phía khách. Admin hoặc Super Admin sẽ xác nhận hủy và hướng dẫn bạn mang đồ về quán.');
     }
 
     public function profile()

@@ -370,21 +370,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-warning small" id="issueFlowNotice"><strong>Shipper Chill Drink không tự hủy/từ chối chuyến.</strong> Admin hoặc Super Admin sẽ quyết định cách xử lý.</div>
-                <label class="form-label fw-semibold">Luồng sự cố <span class="text-danger">*</span></label>
-                <select class="form-select mb-3" name="incident_type" id="issueIncidentType" required>
-                    @foreach(($issueFlows ?? []) as $flowKey => $flow)
-                        <option value="{{ $flowKey }}">{{ $flow['label'] }}</option>
-                    @endforeach
-                </select>
+                <input type="hidden" name="incident_type" value="customer_cancel">
+                <div class="alert alert-warning small"><strong>Chỉ báo sự cố phía khách.</strong> Admin hoặc Super Admin sẽ xác nhận hủy và hướng dẫn bạn mang đồ về quán.</div>
                 <label class="form-label fw-semibold">Sự cố <span class="text-danger">*</span></label>
                 <select class="form-select mb-3" name="reason" id="issueReason" required>
                     <option value="">Chọn sự cố</option>
-                    @foreach(($issueFlows ?? []) as $flowKey => $flow)
-                        @foreach(($flow['reasons'] ?? []) as $value => $label)
-                            <option value="{{ $value }}" data-incident-flow="{{ $flowKey }}">{{ $label }}</option>
-                        @endforeach
-                    @endforeach
+                    <option value="customer_unreachable">Không liên lạc được khách</option>
+                    <option value="customer_refused">Gọi được nhưng khách không nhận hàng</option>
                 </select>
                 <label class="form-label fw-semibold">Mô tả thêm</label>
                 <textarea class="form-control" name="reason_detail" rows="3" maxlength="1000"></textarea>
@@ -396,27 +388,6 @@
         </form>
     </div>
 </div>
-<script>
-    (function () {
-        const flowSelect = document.getElementById('issueIncidentType');
-        const reasonSelect = document.getElementById('issueReason');
-        const notice = document.getElementById('issueFlowNotice');
-        const flows = @json($issueFlows ?? []);
-        if (!flowSelect || !reasonSelect) return;
-        const syncIssueFlow = () => {
-            const flow = flowSelect.value;
-            Array.from(reasonSelect.options).forEach((option) => {
-                const visible = !option.value || option.dataset.incidentFlow === flow;
-                option.hidden = !visible;
-                option.disabled = !visible;
-            });
-            if (reasonSelect.value && reasonSelect.selectedOptions[0]?.disabled) reasonSelect.value = '';
-            if (notice && flows[flow]?.notice) notice.textContent = flows[flow].notice;
-        };
-        flowSelect.addEventListener('change', syncIssueFlow);
-        syncIssueFlow();
-    })();
-</script>
 @endif
 @endsection
 

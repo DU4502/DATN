@@ -230,7 +230,7 @@ class ShipperIncidentService
     }
 
     /**
-     * Từ chối yêu cầu hủy của khách và tiếp tục chuyến. Đây vẫn là quyết định
+     * Từ chối hủy từ sự cố phía khách và tiếp tục chuyến. Đây vẫn là quyết định
      * nội bộ của quản lý, nên không gửi thông báo "khách yêu cầu hủy" cho khách.
      */
     public function keepCustomerCancelRequest(Order $order, ?User $actor = null): array
@@ -239,20 +239,20 @@ class ShipperIncidentService
         if (! $incident || ($incident['incident_type'] ?? 'driver_issue') !== 'customer_cancel') {
             return [
                 'status' => 'invalid_incident_type',
-                'message' => 'Đơn này không có yêu cầu hủy đang chờ xử lý.',
+                'message' => 'Đơn này không có sự cố phía khách đang chờ xử lý.',
             ];
         }
 
         $result = $this->keepCurrentShipper($order, $actor, notifyCustomer: false);
         if (($result['status'] ?? null) === 'kept') {
-            $result['message'] = 'Đã từ chối yêu cầu hủy nội bộ. Đơn tiếp tục được giao.';
+            $result['message'] = 'Đã từ chối hủy từ sự cố phía khách. Đơn tiếp tục được giao.';
         }
 
         return $result;
     }
 
     /**
-     * Duyệt yêu cầu khách xin hủy. Chỉ controller đã kiểm tra Admin/Super Admin
+     * Duyệt hủy do sự cố phía khách. Chỉ controller đã kiểm tra Admin/Super Admin
      * mới gọi được method này; force=true là cần thiết vì đơn có thể đã vào chuyến.
      */
     public function cancelCustomerRequest(Order $order, ?User $actor = null): array
@@ -261,14 +261,14 @@ class ShipperIncidentService
         if (! $incident || ($incident['incident_type'] ?? 'driver_issue') !== 'customer_cancel') {
             return [
                 'status' => 'invalid_incident_type',
-                'message' => 'Đơn này không có yêu cầu hủy đang chờ xử lý.',
+                'message' => 'Đơn này không có sự cố phía khách đang chờ xử lý.',
             ];
         }
 
         try {
             $cancelled = app(OrderCancellationService::class)->cancel(
                 $order,
-                'Duyệt hủy theo yêu cầu của khách: '.$incident['description'],
+                'Duyệt hủy do sự cố phía khách: '.$incident['description'].' Shipper mang đồ về quán.',
                 $actor,
                 force: true,
             );
@@ -282,12 +282,12 @@ class ShipperIncidentService
         $this->addHistory(
             (int) $incident['shipment_id'],
             'incident_resolved_cancel',
-            'Quản lý đã duyệt hủy yêu cầu nội bộ của khách'.($actor ? ' · '.$actor->name : '').'.'
+            'Quản lý đã xác nhận hủy do sự cố phía khách và yêu cầu shipper mang đồ về quán'.($actor ? ' · '.$actor->name : '').'.'
         );
 
         return [
             'status' => 'cancelled',
-            'message' => 'Đã duyệt hủy đơn theo yêu cầu nội bộ của khách.',
+            'message' => 'Đã xác nhận hủy do sự cố phía khách. Shipper mang đồ về quán.',
             'order' => $cancelled['order']->fresh(),
         ];
     }

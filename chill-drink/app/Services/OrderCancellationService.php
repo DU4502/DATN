@@ -149,6 +149,22 @@ class OrderCancellationService
                         ? 'Tách chuyến ghép vì đơn bị hệ thống/Super Admin hủy.'
                         : 'Tách chuyến ghép vì một đơn đã bị quán/admin hủy.'
                 );
+
+                if (Schema::hasTable('shipments') && ! DB::table('shipments')
+                    ->where('order_id', $locked->id)
+                    ->where('shipper_id', $shipper->id)
+                    ->exists()
+                ) {
+                    DB::table('shipments')->insert([
+                        'order_id' => $locked->id,
+                        'shipper_id' => $shipper->id,
+                        'status' => 'assigned',
+                        'assigned_at' => now(),
+                        'note' => 'Lưu vết shipper đã nhận đơn trước khi đơn bị hủy.',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
 
             $locked->forceFill([

@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="d-flex align-items-start gap-2">
                         <i class="bi bi-exclamation-circle-fill text-warning mt-1"></i>
                         <div class="min-w-0 flex-grow-1">
-                            <div class="fw-bold small">${esc(item.order_code || ('#' + item.order_id))} · ${item.incident_type === 'customer_cancel' ? 'Khách xin hủy' : 'Sự cố tài xế'} · ${esc(item.shipper_name || 'Shipper')}</div>
+                            <div class="fw-bold small">${esc(item.order_code || ('#' + item.order_id))} · ${item.incident_type === 'customer_cancel' ? 'Sự cố phía khách' : 'Sự cố tài xế'} · ${esc(item.shipper_name || 'Shipper')}</div>
                             <div class="small text-secondary mt-1">${esc(item.branch_name || '')}</div>
                             <div class="small mt-1">${esc(item.description || 'Shipper báo sự cố.')}</div>
                             <div class="small text-muted mt-1">${esc(item.reported_at_label || '')}</div>

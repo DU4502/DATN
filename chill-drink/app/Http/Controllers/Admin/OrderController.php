@@ -11,6 +11,7 @@ use App\Services\OrderCancellationService;
 use App\Services\SuperAdminOrderOverrideService;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Shipper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -134,6 +135,7 @@ class OrderController extends Controller
 
         $orders = $orders->paginate(12)->withQueryString();
         $shipmentIncidents = app(ShipperIncidentService::class)->pendingForOrders($orders->getCollection());
+        $historicalShippers = $this->historicalShippersForOrders($orders->getCollection());
         
         $latestOrderQuery = Order::query();
         $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
@@ -146,7 +148,7 @@ class OrderController extends Controller
             ? \Illuminate\Support\Carbon::parse($latestOrderUpdatedValue)->toIso8601String()
             : null;
 
-        return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId', 'latestOrderUpdatedAt', 'shipmentIncidents'));
+        return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId', 'latestOrderUpdatedAt', 'shipmentIncidents', 'historicalShippers'));
     }
 
     public function recent(Request $request): JsonResponse
@@ -236,6 +238,106 @@ class OrderController extends Controller
         ]);
     }
 
+    private function historicalShippersForOrders($orders): array
+    {
+        if (! Schema::hasTable('shipments')) {
+            return [];
+        }
+
+        $orderIds = collect($orders)
+            ->filter(fn (Order $order) => ! $order->shipper_id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+
+        if ($orderIds->isEmpty()) {
+            return [];
+        }
+
+        $shipments = DB::table('shipments')
+            ->whereIn('order_id', $orderIds)
+            ->whereNotNull('shipper_id')
+            ->orderByDesc('id')
+            ->get(['id', 'order_id', 'shipper_id', 'status']);
+
+        $latestByOrder = [];
+        foreach ($shipments as $shipment) {
+            $orderId = (int) $shipment->order_id;
+            $latestByOrder[$orderId] ??= $shipment;
+        }
+
+        if ($latestByOrder === []) {
+            return [];
+        }
+
+        $shippers = Shipper::with('user')
+            ->whereIn('id', collect($latestByOrder)->pluck('shipper_id')->unique()->values())
+            ->get()
+            ->keyBy('id');
+
+        $result = [];
+        foreach ($latestByOrder as $orderId => $shipment) {
+            $shipper = $shippers->get((int) $shipment->shipper_id);
+            if (! $shipper) {
+                continue;
+            }
+
+            $payload = $this->shipperPayload($shipper);
+            $payload['shipment_status'] = $shipment->status;
+            $payload['source_label'] = 'Đã nhận chuyến này';
+            $result[$orderId] = $payload;
+        }
+
+        return $result;
+    }
+
+    private function shipperPayloadForOrder(Order $order): ?array
+    {
+        if ($order->shipper) {
+            return $this->shipperPayload($order->shipper);
+        }
+
+        if (! Schema::hasTable('shipments')) {
+            return null;
+        }
+
+        $shipment = DB::table('shipments')
+            ->where('order_id', $order->id)
+            ->whereNotNull('shipper_id')
+            ->orderByDesc('id')
+            ->first(['id', 'shipper_id', 'status']);
+
+        if (! $shipment) {
+            return null;
+        }
+
+        $shipper = Shipper::with('user')->find((int) $shipment->shipper_id);
+        if (! $shipper) {
+            return null;
+        }
+
+        $payload = $this->shipperPayload($shipper);
+        $payload['shipment_status'] = $shipment->status;
+        $payload['source_label'] = 'Đã nhận chuyến này';
+
+        return $payload;
+    }
+
+    private function shipperPayload(Shipper $shipper): array
+    {
+        return [
+            'id' => (int) $shipper->id,
+            'name' => $shipper->user?->name ?: $shipper->code ?: 'Shipper',
+            'code' => $shipper->code,
+            'phone' => $shipper->phone ?: $shipper->user?->phone,
+            'vehicle_type' => $shipper->vehicle_type,
+            'license_plate' => $shipper->license_plate,
+            'status' => $shipper->status,
+            'source_label' => null,
+        ];
+    }
+
     private function orderBroadcastPayload(Order $order): array
     {
         $customerName = $order->customerName() ?: 'Khách hàng';
@@ -244,7 +346,7 @@ class OrderController extends Controller
         $total = (int) ($order->total ?? $order->total_price ?? 0);
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
         $shipmentIncident = app(ShipperIncidentService::class)->pendingIncident($order);
-        $shipper = $order->shipper;
+        $shipperPayload = $this->shipperPayloadForOrder($order);
         $user = auth()->user();
         $isSuperAdmin = (bool) $user?->isSuperAdmin();
         $isSuperAdminWorkspace = $isSuperAdmin && ! $user->isViewingAdminWorkspace();
@@ -287,15 +389,7 @@ class OrderController extends Controller
                 'settled_at' => $order->codReceivable->settled_at?->format('d/m/Y H:i'),
             ] : null,
             'shipping_address' => $order->getShippingAddress(),
-            'shipper' => $shipper ? [
-                'id' => (int) $shipper->id,
-                'name' => $shipper->user?->name ?: $shipper->code ?: 'Shipper',
-                'code' => $shipper->code,
-                'phone' => $shipper->phone ?: $shipper->user?->phone,
-                'vehicle_type' => $shipper->vehicle_type,
-                'license_plate' => $shipper->license_plate,
-                'status' => $shipper->status,
-            ] : null,
+            'shipper' => $shipperPayload,
             'delivered_at' => $order->delivered_at?->format('d/m/Y H:i:s'),
             'auto_complete_at' => $order->delivered_at?->copy()->addMinutes(\App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES)->format('d/m/Y H:i:s'),
             'status' => $currentStatus,

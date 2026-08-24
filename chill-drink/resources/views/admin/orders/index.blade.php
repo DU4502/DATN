@@ -401,6 +401,9 @@
                                     @if(($order->fulfillment_type ?? 'delivery') === 'delivery')
                                         <div class="mb-3">
                                             <div class="admin-kicker mb-2 text-secondary fw-bold" style="letter-spacing:.05em;">NGƯỜI GIAO HÀNG</div>
+                                            @php
+                                                $historicalShipper = $historicalShippers[(int) $order->id] ?? null;
+                                            @endphp
                                             @if($order->shipper)
                                                 <div class="p-3 bg-light border rounded-4 d-flex align-items-start gap-3">
                                                     <div class="d-flex align-items-center justify-content-center flex-shrink-0 bg-white text-primary border" style="width:42px;height:42px;border-radius:13px;">
@@ -412,6 +415,18 @@
                                                         <div class="text-secondary mt-1">{{ $order->shipper->vehicle_type ?: 'Chưa cập nhật xe' }} @if($order->shipper->license_plate)· <strong>{{ $order->shipper->license_plate }}</strong>@endif</div>
                                                     </div>
                                                     <span class="badge bg-warning text-dark">{{ strtoupper($order->shipper->status ?: 'assigned') }}</span>
+                                                </div>
+                                            @elseif($historicalShipper)
+                                                <div class="p-3 bg-light border rounded-4 d-flex align-items-start gap-3">
+                                                    <div class="d-flex align-items-center justify-content-center flex-shrink-0 bg-white text-primary border" style="width:42px;height:42px;border-radius:13px;">
+                                                        <i class="bi bi-bicycle"></i>
+                                                    </div>
+                                                    <div class="small flex-grow-1">
+                                                        <div class="fw-bold text-dark">{{ $historicalShipper['name'] ?? $historicalShipper['code'] ?? 'Shipper' }}</div>
+                                                        <div class="text-secondary mt-1">Mã: <strong>{{ $historicalShipper['code'] ?? '-' }}</strong> · {{ $historicalShipper['phone'] ?? 'Chưa có SĐT' }}</div>
+                                                        <div class="text-secondary mt-1">{{ $historicalShipper['vehicle_type'] ?? 'Chưa cập nhật xe' }} @if(!empty($historicalShipper['license_plate']))· <strong>{{ $historicalShipper['license_plate'] }}</strong>@endif</div>
+                                                    </div>
+                                                    <span class="badge bg-info text-dark">{{ $historicalShipper['source_label'] ?? 'Đã nhận chuyến' }}</span>
                                                 </div>
                                             @else
                                                 <div class="small text-secondary p-3 bg-light border rounded-4">Chưa có shipper được gán.</div>
@@ -477,12 +492,12 @@
                                             <div class="d-flex align-items-start gap-2">
                                                 <i class="bi bi-exclamation-triangle-fill mt-1" style="font-size:1rem;"></i>
                                                 <div class="flex-grow-1 min-w-0">
-                                                    <div class="fw-bold">{{ ($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'Khách xin hủy đơn cần duyệt' : 'Sự cố tài xế cần xử lý' }}</div>
+                                                    <div class="fw-bold">{{ ($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'Sự cố phía khách cần xác nhận hủy' : 'Sự cố tài xế cần xử lý' }}</div>
                                                     <div class="small mt-1"><strong>{{ $shipmentIncident['shipper_name'] }}</strong> · {{ $shipmentIncident['description'] }}</div>
                                                     @if(!empty($shipmentIncident['reported_at_label']))
                                                         <div class="small text-secondary mt-1">Báo lúc {{ $shipmentIncident['reported_at_label'] }}</div>
                                                     @endif
-                                                    <div class="small mt-2">{{ ($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'Yêu cầu hủy chỉ xử lý nội bộ; khách không nhận thông báo về thao tác quản lý này.' : 'Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.' }}</div>
+                                                    <div class="small mt-2">{{ ($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel' ? 'Admin/Super Admin xác nhận hủy tại trang Sự cố giao vận và yêu cầu shipper mang đồ về quán.' : 'Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.' }}</div>
                                                     <div class="d-flex flex-wrap gap-2 mt-3">
                                                         @if(($shipmentIncident['incident_type'] ?? 'driver_issue') === 'customer_cancel')
                                                             <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0">
@@ -493,7 +508,7 @@
                                                             <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0" onsubmit="return confirm('Duyệt hủy đơn theo yêu cầu nội bộ này?');">
                                                                 @csrf
                                                                 <input type="hidden" name="action" value="cancel">
-                                                                <button class="btn btn-sm btn-danger" type="submit">Duyệt hủy đơn</button>
+                                                                <button class="btn btn-sm btn-danger" type="submit">Xác nhận hủy · mang về quán</button>
                                                             </form>
                                                         @else
                                                             <form action="{{ $incidentResolveUrl }}" method="POST" class="m-0">
@@ -867,10 +882,10 @@
                     <div class="d-flex align-items-start gap-2">
                         <i class="bi bi-exclamation-triangle-fill mt-1"></i>
                         <div class="flex-grow-1">
-                            <div class="fw-bold">${isCustomerCancel ? 'Khách xin hủy đơn cần duyệt' : 'Sự cố tài xế cần xử lý'}</div>
+                            <div class="fw-bold">${isCustomerCancel ? 'Sự cố phía khách cần xác nhận hủy' : 'Sự cố tài xế cần xử lý'}</div>
                             <div class="small mt-1"><strong>${escapeHtml(incident.shipper_name || 'Shipper')}</strong> · ${escapeHtml(incident.description || 'Shipper báo sự cố.')}</div>
                             ${incident.reported_at_label ? `<div class="small text-secondary mt-1">Báo lúc ${escapeHtml(incident.reported_at_label)}</div>` : ''}
-                            <div class="small mt-2">${isCustomerCancel ? 'Yêu cầu hủy chỉ xử lý nội bộ; khách không nhận thông báo về thao tác quản lý này.' : 'Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.'}</div>
+                            <div class="small mt-2">${isCustomerCancel ? 'Admin/Super Admin xác nhận hủy tại trang Sự cố giao vận và yêu cầu shipper mang đồ về quán.' : 'Đơn không bị hủy. Nếu đổi người, hệ thống tự tìm shipper rảnh gần điểm tiếp quản.'}</div>
                             <div class="d-flex flex-wrap gap-2 mt-3">
                                 ${isCustomerCancel ? `
                                     <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0">
@@ -881,7 +896,7 @@
                                     <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0" onsubmit="return confirm('Duyệt hủy đơn theo yêu cầu nội bộ này?');">
                                         <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
                                         <input type="hidden" name="action" value="cancel">
-                                        <button class="btn btn-sm btn-danger" type="submit"><i class="bi bi-x-circle me-1"></i>Duyệt hủy đơn</button>
+                                        <button class="btn btn-sm btn-danger" type="submit"><i class="bi bi-box-arrow-in-left me-1"></i>Xác nhận hủy · mang về quán</button>
                                     </form>
                                 ` : `
                                     <form action="${escapeHtml(resolveUrl)}" method="POST" class="m-0">
@@ -965,6 +980,9 @@
         function shipperInfoHtml(payload) {
             const shipper = payload.shipper || null;
             const deliveredWaiting = payload.status === 'delivered' && payload.auto_complete_at;
+            const shipperBadge = shipper
+                ? (shipper.source_label || String(shipper.status || 'assigned').toUpperCase())
+                : '';
 
             return `
                 <div class="mb-4">
@@ -977,7 +995,7 @@
                                 <div class="text-secondary mt-1">Mã: <strong>${escapeHtml(shipper.code || '-')}</strong> · ${escapeHtml(shipper.phone || 'Chưa có SĐT')}</div>
                                 <div class="text-secondary mt-1">${escapeHtml(shipper.vehicle_type || 'Chưa cập nhật xe')}${shipper.license_plate ? ` · <strong>${escapeHtml(shipper.license_plate)}</strong>` : ''}</div>
                             </div>
-                            <span class="badge bg-warning text-dark">${escapeHtml(String(shipper.status || 'assigned').toUpperCase())}</span>
+                            <span class="badge ${shipper.source_label ? 'bg-info' : 'bg-warning'} text-dark">${escapeHtml(shipperBadge)}</span>
                         </div>
                     ` : '<div class="small text-secondary p-3 bg-light border rounded-4">Chưa có shipper được gán.</div>'}
                     ${deliveredWaiting ? `

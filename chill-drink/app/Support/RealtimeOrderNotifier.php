@@ -58,7 +58,7 @@ class RealtimeOrderNotifier
 
     /**
      * Gửi lời xin lỗi riêng cho khách khi sự cố thuộc về tài xế/chuyến giao.
-     * Luồng khách xin hủy không gọi method này để không làm lộ yêu cầu nội bộ.
+     * Luồng sự cố phía khách không gọi method này để không làm lộ yêu cầu nội bộ.
      */
     public static function deliveryDelayReported(Order $order, string $incidentDescription = '', ?int $incidentId = null): void
     {

@@ -59,7 +59,7 @@ class OrderShipmentIncidentController extends Controller
                 $message .= ' Tài xế thay thế cách điểm tiếp quản khoảng '.number_format($distanceKm, 1, ',', '.').' km · '.$minutes.' phút.';
             }
 
-            // Nhánh khách xin hủy không phát thông báo trạng thái cho khách;
+            // Nhánh sự cố phía khách không phát thông báo trạng thái cho khách;
             // đây là quyết định vận hành nội bộ theo yêu cầu nghiệp vụ.
             if (($result['status'] ?? null) === 'cancelled') {
                 return back()->with('success', $message);
