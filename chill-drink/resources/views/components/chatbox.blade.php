@@ -71,8 +71,8 @@
         showScrollToLatest: false,
         supportIssue: null,
         confirmChangeBranch: false,
-        groupOrderCode: {{ json_encode(request()->routeIs('group-orders.show') && isset($group) ? $group->code : null) }},
-        groupBranchId: {{ json_encode(request()->routeIs('group-orders.show') && isset($group) ? $group->branch_id : null) }},
+        groupOrderCode: @json(request()->routeIs('group-orders.show') && isset($group) ? $group->code : null),
+        groupBranchId: @json(request()->routeIs('group-orders.show') && isset($group) ? $group->branch_id : null),
 
         get hasUserSentMessage() {
             return this.messages.some(m => Number(m.sender_id) === Number(this.currentUserId));
@@ -812,7 +812,7 @@
                         <span>Chat đơn nhóm</span>
                         <span x-show="groupUnread > 0" class="w-2 h-2 rounded-full" style="background: #dc3545;"></span>
                     </div>
-                    <div class="text-xs opacity-70" style="color: var(--c-text);">Trò chuyện với thành viên trong phòng</div>
+                    <div class="text-xs opacity-70" style="color: var(--c-text);">Trò chuyện trong đơn nhóm với các thành viên</div>
                 </div>
             </div>
             <span x-show="groupUnread > 0" x-text="groupUnread" class="px-2 py-0.5 rounded-full text-xs font-bold text-white" style="background: #dc3545;"></span>

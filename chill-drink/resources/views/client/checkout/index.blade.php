@@ -1348,7 +1348,7 @@
                                     <span class="text-primary" id="summaryGrandTotal">{{ number_format($grandTotal, 0, ',', '.') }}đ</span>
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-primary btn-lg w-100" id="placeOrderButton" @disabled(! $checkoutPhoneReady)>
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="placeOrderButton">
                                 <i class="bi bi-check2-circle me-2"></i>Đặt hàng
                             </button>
                             <div
