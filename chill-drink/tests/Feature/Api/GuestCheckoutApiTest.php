@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -19,11 +20,25 @@ class GuestCheckoutApiTest extends TestCase
     public function test_guest_api_checkout_uses_a_valid_pending_payment_status(): void
     {
         Queue::fake();
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => 1000,
+                    'duration' => 180,
+                    'geometry' => ['coordinates' => [[106.7009, 10.7769], [106.701, 10.777]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
 
         $branch = Branch::create([
             'name' => 'API Test Branch',
             'code' => 'API-TEST',
             'address' => 'Test address',
+            'latitude' => 10.7769,
+            'longitude' => 106.7009,
             'status' => true,
         ]);
         $category = Category::create([
@@ -51,6 +66,9 @@ class GuestCheckoutApiTest extends TestCase
             'guest_email' => 'api-guest@example.com',
             'guest_phone' => '0900000000',
             'branch_id' => $branch->id,
+            'shipping_address' => '123 Test Street, Test Area',
+            'latitude' => 10.777,
+            'longitude' => 106.701,
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 2],
             ],

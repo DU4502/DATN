@@ -2507,7 +2507,7 @@ function normalizeLegacyAnalyticsForm(form) {
                     <label class="form-label small fw-bold" for="staff_branch">Chi nhánh phụ trách</label>
                     <select id="staff_branch" class="form-select" name="branch_id">
                         <option value="">-- Chưa gán chi nhánh --</option>
-                        @foreach(\App\Models\Branch::where('status', true)->orderBy('name')->get() as $branch)
+                        @foreach(\App\Models\Branch::active()->orderBy('name')->get() as $branch)
                             <option value="{{ $branch->id }}" {{ old('branch_id') == $branch->id ? 'selected' : '' }}>
                                 {{ $branch->name }}
                             </option>

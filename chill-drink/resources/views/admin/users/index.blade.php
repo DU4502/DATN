@@ -88,7 +88,7 @@
                         $avatar = $user->avatar;
                         $avatarIsImage = $avatar && ! str_starts_with($avatar, 'preset-');
                         $avatarUrl = $avatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null;
-                        $roleName = $roleOptions[(int) $user->role_id] ?? 'Không rõ';
+                        $roleName = $roleOptions[(int) $user->role_id] ?? ($user->isCskh() ? 'Vai trò legacy' : 'Không rõ');
                     @endphp
                     <tr>
                         <td>
@@ -151,11 +151,30 @@
                                                 <div class="fw-bold mb-3">{{ $user->name }}</div>
 
                                                 <label for="role_id_{{ $user->id }}" class="form-label fw-semibold">Vai trò mới</label>
-                                                <select id="role_id_{{ $user->id }}" name="role_id" class="form-select" @disabled($user->id === auth()->id())>
+                                                <select id="role_id_{{ $user->id }}" name="role_id" class="form-select js-user-role-select" data-branch-roles="{{ implode(',', $branchRoleIds) }}" data-branch-target="staff_branch_{{ $user->id }}" @disabled($user->id === auth()->id())>
+                                                    @if(! array_key_exists((int) $user->role_id, $roleOptions))
+                                                        <option value="" selected disabled>Chọn vai trò thay thế</option>
+                                                    @endif
                                                     @foreach($roleOptions as $roleId => $roleName)
                                                         <option value="{{ $roleId }}" @selected((int) $user->role_id === (int) $roleId)>{{ $roleName }}</option>
                                                     @endforeach
                                                 </select>
+
+                                                @if($branches->isNotEmpty() || ($user->branch && ! $user->branch->status))
+                                                    <div id="staff_branch_{{ $user->id }}" class="mt-3">
+                                                        <label for="branch_id_{{ $user->id }}" class="form-label fw-semibold">Chi nhánh làm việc</label>
+                                                        <select id="branch_id_{{ $user->id }}" name="branch_id" class="form-select js-shipper-branch-select">
+                                                            <option value="">Chọn chi nhánh</option>
+                                                            @if($user->branch && ! $user->branch->status && ! $branches->contains('id', $user->branch->id))
+                                                                <option value="{{ $user->branch->id }}" selected>{{ $user->branch->name }} (Ngừng hoạt động - hiện tại)</option>
+                                                            @endif
+                                                            @foreach($branches as $branch)
+                                                                <option value="{{ $branch->id }}" @selected((int) $user->branch_id === (int) $branch->id)>{{ $branch->name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        <small class="text-secondary d-block mt-2">Nhân viên và Shipper chỉ thao tác trong phạm vi chi nhánh này.</small>
+                                                    </div>
+                                                @endif
 
                                                 @if($user->id === auth()->id())
                                                     <input type="hidden" name="role_id" value="{{ $user->role_id }}">
@@ -196,3 +215,25 @@
 </section>
 
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-user-role-select').forEach(function (roleSelect) {
+        const branchWrapper = document.getElementById(roleSelect.dataset.branchTarget);
+        if (!branchWrapper) return;
+
+        const branchSelect = branchWrapper.querySelector('.js-shipper-branch-select');
+        const syncBranchField = function () {
+            const needsBranch = roleSelect.dataset.branchRoles.split(',').includes(roleSelect.value);
+            branchWrapper.hidden = !needsBranch;
+            branchSelect.required = needsBranch;
+            branchSelect.disabled = !needsBranch;
+        };
+
+        roleSelect.addEventListener('change', syncBranchField);
+        syncBranchField();
+    });
+});
+</script>
+@endpush

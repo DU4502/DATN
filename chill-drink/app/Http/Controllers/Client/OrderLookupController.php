@@ -8,6 +8,7 @@ use App\Support\OrderStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\URL;
 
 class OrderLookupController extends Controller
 {
@@ -56,8 +57,23 @@ class OrderLookupController extends Controller
 
         $statusLabel = OrderStatus::label(OrderStatus::normalize((string) $order->status));
         $badgeColor  = $order->getStatusBadgeColor();
+        $trackingUrl = null;
 
-        return view('client.order-lookup.result', compact('order', 'statusLabel', 'badgeColor'));
+        if ($order->isGuest()
+            && filled($order->guest_token)
+            && ($order->fulfillment_type ?? 'delivery') === 'delivery'
+            && OrderStatus::normalize((string) $order->status) !== OrderStatus::CANCELLED) {
+            $trackingUrl = URL::temporarySignedRoute(
+                'checkout.guest.track',
+                now()->addDays(7),
+                [
+                    'order' => $order->id,
+                    'token' => $order->guest_token,
+                ]
+            );
+        }
+
+        return view('client.order-lookup.result', compact('order', 'statusLabel', 'badgeColor', 'trackingUrl'));
     }
 
     /**

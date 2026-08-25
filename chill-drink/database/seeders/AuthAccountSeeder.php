@@ -18,6 +18,8 @@ class AuthAccountSeeder extends Seeder
                 ['id' => 2, 'name' => 'admin', 'description' => 'Quản trị viên'],
                 ['id' => 3, 'name' => 'super_admin', 'description' => 'Quản trị toàn hệ thống'],
                 ['id' => 4, 'name' => 'cskh', 'description' => 'Nhân viên CSKH'],
+                ['id' => User::STAFF_ROLE_ID, 'name' => 'staff', 'description' => 'Nhân viên cửa hàng'],
+                ['id' => User::SHIPPER_ROLE_ID, 'name' => 'shipper', 'description' => 'Nhân viên giao hàng'],
             ];
 
             foreach ($roles as $role) {
@@ -64,20 +66,12 @@ class AuthAccountSeeder extends Seeder
                 'role_id' => 3,
                 'phone' => '0900000003',
             ],
-            [
-                'name' => 'Nhân viên CSKH',
-                'email' => 'cskh@chilldrink.com',
-                'password' => 'Cskh@123',
-                'role_id' => 4,
-                'phone' => '0900000004',
-            ],
         ];
 
         foreach ($accounts as $account) {
             $data = [
                 'name' => $account['name'],
                 'password' => Hash::make($account['password']),
-                'plain_password' => $account['password'],
                 'role_id' => $account['role_id'],
                 'phone' => $account['phone'],
                 'is_active' => true,

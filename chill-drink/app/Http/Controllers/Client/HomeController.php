@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Favorite;
 use App\Models\Branch;
+use App\Support\OrderDistancePolicy;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -17,8 +19,11 @@ class HomeController extends Controller
      */
     public function index()
     {
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
+
         // Get featured products
         $featuredProducts = Product::where('status', true)
+            ->with(['branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->latest()
             ->take(8)
             ->get();
@@ -34,7 +39,7 @@ class HomeController extends Controller
         ];
 
         $discoverProductsBySlug = Product::query()
-            ->with('category')
+            ->with(['category', 'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->where('status', true)
             ->whereIn('slug', $discoverProductSlugs)
             ->get()
@@ -48,9 +53,6 @@ class HomeController extends Controller
         $favoriteProductIds = auth()->check()
             ? Favorite::where('user_id', auth()->id())->pluck('product_id')
             : collect();
-
-        $branchId = session('nearest_branch_id');
-        $branch = $branchId ? Branch::find($branchId) : null;
 
         $slides = $branch ? $branch->slides()->where('is_active', true)->get() : collect();
 
@@ -86,9 +88,14 @@ class HomeController extends Controller
         $nearestBranch = null;
         $minDistance = INF;
 
-        foreach ($branches as $b) {
-            $distance = $b->distanceTo($latitude, $longitude);
-            if ($distance < $minDistance) {
+        // Haversine chỉ lọc sơ bộ, quyết định cuối cùng dùng road-route.
+        $candidates = $branches
+            ->filter(fn (Branch $branch) => $branch->distanceTo($latitude, $longitude) <= OrderDistancePolicy::MAX_DISTANCE_KM)
+            ->sortBy(fn (Branch $branch) => $branch->distanceTo($latitude, $longitude));
+
+        foreach ($candidates as $b) {
+            $distance = OrderDistancePolicy::distanceFromBranch($b, $latitude, $longitude);
+            if ($distance !== null && OrderDistancePolicy::isInsideServiceRadius($distance) && $distance < $minDistance) {
                 $minDistance = $distance;
                 $nearestBranch = $b;
             }
@@ -120,6 +127,11 @@ class HomeController extends Controller
             ]);
         }
 
-        return response()->json(['success' => false, 'message' => 'Không tìm thấy chi nhánh gần nhất.']);
+        return response()->json([
+            'success' => false,
+            'message' => $candidates->isNotEmpty()
+                ? OrderDistancePolicy::routingUnavailableMessage()
+                : OrderDistancePolicy::message(),
+        ], $candidates->isNotEmpty() ? 503 : 422);
     }
 }

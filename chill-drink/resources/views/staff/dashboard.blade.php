@@ -1,7 +1,7 @@
 @extends('layouts.staff')
 
 @section('page-title', 'Tổng quát')
-@section('hide-topbar-search')
+@section('hide-topbar-search', true)
 
 @section('content')
 <div class="mb-4">
@@ -68,7 +68,7 @@
     @forelse($recentOrders as $order)
     @php
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
-        $nextStatus = \App\Support\OrderStatus::nextStatus((string) $order->status, $fulfillmentType);
+        $nextStatus = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
         $canCancel = in_array($order->status, [\App\Support\OrderStatus::PENDING, \App\Support\OrderStatus::CONFIRMED, \App\Support\OrderStatus::PREPARING]);
     @endphp
     <div class="p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">

@@ -45,6 +45,7 @@ class Order extends Model
         'status',
         'cancellation_reason',
         'delivered_at',
+        'shipper_id',
         'note',
         'scheduled_at',
         'status_changed_at',
@@ -82,6 +83,50 @@ class Order extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * Tài xế hiện đang được gán cho đơn. Giữ quan hệ ở Order để Admin/Super Admin
+     * có thể hiển thị thông tin giao hàng mà không query tay trong Blade.
+     */
+    public function shipper()
+    {
+        return $this->belongsTo(Shipper::class, 'shipper_id');
+    }
+
+    public function shipments()
+    {
+        return $this->hasMany(Shipment::class, 'order_id');
+    }
+
+    public function bundleTripOrder()
+    {
+        return $this->hasOne(DeliveryBundleTripOrder::class, 'order_id');
+    }
+
+    public function dispatchDecisions()
+    {
+        return $this->hasMany(DeliveryDispatchDecision::class, 'order_id');
+    }
+
+    public function deliveryMessages()
+    {
+        return $this->hasMany(DeliveryOrderMessage::class, 'order_id');
+    }
+
+    public function issueReports()
+    {
+        return $this->hasMany(OrderIssueReport::class, 'order_id');
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'order_id');
+    }
+
+    public function codReceivable()
+    {
+        return $this->hasOne(ShipperCodReceivable::class);
     }
 
     public function statusChangedBy()

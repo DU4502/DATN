@@ -10,10 +10,13 @@ use App\Notifications\OrderIssueReportCreatedNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use App\Support\OrderStatus;
+use Throwable;
 
 class OrderIssueReportController extends Controller
 {
@@ -60,30 +63,60 @@ class OrderIssueReportController extends Controller
             'evidence.*' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ])->validate();
 
-        $evidenceFiles = $evidenceUploads
-            ->map(fn ($file) => [
-                'path' => $file->store('order-issue-evidence'),
-                'name' => $file->getClientOriginalName(),
-            ])
-            ->values()
-            ->all();
+        $storedPaths = [];
+        try {
+            $report = DB::transaction(function () use ($order, $request, $data, $evidenceUploads, &$storedPaths): OrderIssueReport {
+                $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+                abort_unless($lockedOrder->user_id === $request->user()->id, 403);
 
-        $report = OrderIssueReport::create([
-            'order_id' => $order->id,
-            'user_id' => $request->user()->id,
-            'type' => $data['type'],
-            'description' => trim($data['description']),
-            // Giữ lại ảnh đầu tiên để tương thích với các yêu cầu hỗ trợ cũ.
-            'evidence_path' => $evidenceFiles[0]['path'] ?? null,
-            'evidence_name' => $evidenceFiles[0]['name'] ?? null,
-            'evidence_files' => $evidenceFiles,
-            'received_at' => now(),
-        ]);
+                if (OrderStatus::normalize((string) $lockedOrder->status) !== OrderStatus::COMPLETED || ! $this->canReportIssueToday($lockedOrder)) {
+                    throw ValidationException::withMessages([
+                        'order' => 'Đơn hàng không còn đủ điều kiện gửi yêu cầu hỗ trợ.',
+                    ]);
+                }
+
+                if ($lockedOrder->issueReports()->where('user_id', $request->user()->id)->whereNotIn('status', ['resolved', 'rejected'])->exists()) {
+                    throw ValidationException::withMessages([
+                        'order' => 'Đơn hàng này đã có một yêu cầu hỗ trợ đang được xử lý.',
+                    ]);
+                }
+
+                $evidenceFiles = $evidenceUploads
+                    ->map(function ($file) use (&$storedPaths): array {
+                        $path = $file->store('order-issue-evidence');
+                        $storedPaths[] = $path;
+
+                        return [
+                            'path' => $path,
+                            'name' => $file->getClientOriginalName(),
+                        ];
+                    })
+                    ->values()
+                    ->all();
+
+                return $lockedOrder->issueReports()->create([
+                    'user_id' => $request->user()->id,
+                    'type' => $data['type'],
+                    'description' => trim($data['description']),
+                    'evidence_path' => $evidenceFiles[0]['path'] ?? null,
+                    'evidence_name' => $evidenceFiles[0]['name'] ?? null,
+                    'evidence_files' => $evidenceFiles,
+                    'received_at' => now(),
+                ]);
+            });
+        } catch (Throwable $exception) {
+            foreach ($storedPaths as $storedPath) {
+                Storage::delete($storedPath);
+            }
+
+            throw $exception;
+        }
 
         $report->load('order');
         \App\Support\ChatHelper::notifyOrderIssue($report);
         $request->user()->notify(new OrderIssueReportCreatedNotification($report));
         User::query()->whereIn('role_id', [2, 3, 4])->get()
+            ->filter(fn (User $staff) => $staff->isSuperAdmin() || (int) $staff->branch_id === (int) $order->branch_id)
             ->each(fn (User $staff) => $staff->notify(new OrderIssueReportCreatedNotification($report)));
 
         return redirect()->route('orders.issues.create', $order)->with('success', 'Đã gửi yêu cầu hỗ trợ. Bạn có thể theo dõi tiến trình xử lý ngay bên dưới.');
@@ -120,18 +153,33 @@ class OrderIssueReportController extends Controller
     {
         abort_unless($order->user_id === $request->user()->id && $issue->order_id === $order->id && $issue->user_id === $request->user()->id, 403);
 
-        if (in_array($issue->status, ['rejected'], true)) {
-            return back()->with('error', 'Yêu cầu này đã bị từ chối và không thể xác nhận.');
+        $confirmed = DB::transaction(function () use ($request, $order, $issue): ?bool {
+            $lockedIssue = OrderIssueReport::query()->lockForUpdate()->findOrFail($issue->id);
+            abort_unless($order->user_id === $request->user()->id && $lockedIssue->order_id === $order->id && $lockedIssue->user_id === $request->user()->id, 403);
+
+            if ($lockedIssue->status !== 'resolved' || blank($lockedIssue->resolution_type)) {
+                return null;
+            }
+
+            if ($lockedIssue->customer_confirmed_at !== null) {
+                return false;
+            }
+
+            $lockedIssue->update(['customer_confirmed_at' => now()]);
+
+            return true;
+        });
+
+        if ($confirmed === null) {
+            return back()->with('error', 'Yêu cầu chưa có phương án hoàn tất để xác nhận.');
         }
 
-        $issue->update([
-            'status' => 'resolved',
-            'customer_confirmed_at' => now(),
-            'resolved_at' => now(),
-        ]);
-        User::query()->whereIn('role_id', [2, 3, 4])->get()
-            ->filter(fn (User $staff) => $staff->isSuperAdmin() || (int) $staff->branch_id === (int) $order->branch_id)
-            ->each(fn (User $staff) => $staff->notify(new \App\Notifications\OrderIssueReportStatusNotification($issue)));
+        $issue->refresh();
+        if ($confirmed) {
+            User::query()->whereIn('role_id', [2, 3, 4])->get()
+                ->filter(fn (User $staff) => $staff->isSuperAdmin() || (int) $staff->branch_id === (int) $order->branch_id)
+                ->each(fn (User $staff) => $staff->notify(new \App\Notifications\OrderIssueReportStatusNotification($issue)));
+        }
 
         return back()->with('success', 'Cảm ơn bạn đã xác nhận. Yêu cầu hỗ trợ đã hoàn tất.');
     }

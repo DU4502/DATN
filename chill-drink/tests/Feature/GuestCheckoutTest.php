@@ -3,20 +3,36 @@
 namespace Tests\Feature;
 
 use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\User;
+use App\Services\EmailRecipientVerificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class GuestCheckoutTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app->instance(EmailRecipientVerificationService::class, new class extends EmailRecipientVerificationService
+        {
+            public function assertDeliverable(string $email): void
+            {
+                // Default test double: skip live SMTP probing.
+            }
+        });
+    }
 
     public function test_guest_can_complete_cod_checkout(): void
     {
@@ -69,6 +85,96 @@ class GuestCheckoutTest extends TestCase
             ->assertOk()
             ->assertSee('Chúng tôi đã gửi email xác nhận đến:')
             ->assertSee('guest@example.com');
+    }
+
+    public function test_guest_checkout_rolls_back_when_confirmation_email_cannot_be_sent(): void
+    {
+        [$product, $productSize] = $this->sellableProduct();
+        $branchId = Branch::query()->firstOrCreate(
+            ['code' => 'HN'],
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
+        )->id;
+
+        $this->withSession([
+            'cart' => [
+                'cart-1' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ],
+            'checkout_cart_keys' => ['cart-1'],
+        ])
+            ->post(route('checkout.guest.info.store'), [
+                'guest_name' => 'Khách Vãng Lai',
+                'guest_phone' => '0912345678',
+                'guest_email' => 'guest@example.com',
+                'delivery_type' => 'pickup',
+                'branch_id' => $branchId,
+                'note' => 'Ít đá',
+            ]);
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with('guest@example.com')
+            ->andReturnSelf();
+        Mail::shouldReceive('send')
+            ->once()
+            ->andThrow(new \RuntimeException('SMTP failed'));
+
+        $response = $this->post(route('checkout.guest.process'), [
+            'payment_method' => 'cod',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error', fn (string $message) => str_contains($message, 'Không gửi được email xác nhận'));
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_guest_checkout_rejects_nonexistent_email_before_creating_order(): void
+    {
+        [$product, $productSize] = $this->sellableProduct();
+        $branchId = Branch::query()->firstOrCreate(
+            ['code' => 'HN'],
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
+        )->id;
+
+        $this->app->instance(EmailRecipientVerificationService::class, new class extends EmailRecipientVerificationService
+        {
+            public function assertDeliverable(string $email): void
+            {
+                throw new \RuntimeException('Địa chỉ email này không tồn tại hoặc không nhận thư. Vui lòng kiểm tra lại.');
+            }
+        });
+
+        $this->withSession([
+            'cart' => [
+                'cart-1' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ],
+            'checkout_cart_keys' => ['cart-1'],
+        ])
+            ->post(route('checkout.guest.info.store'), [
+                'guest_name' => 'Khách Vãng Lai',
+                'guest_phone' => '0912345678',
+                'guest_email' => 'phuongthao.lhn12bvsgsg@gmail.com',
+                'delivery_type' => 'pickup',
+                'branch_id' => $branchId,
+                'note' => 'Ít đá',
+            ])
+            ->assertSessionHasErrors('guest_email');
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertGuest();
     }
 
     public function test_guest_checkout_rejects_invalid_vietnamese_phone_number(): void
@@ -182,6 +288,7 @@ class GuestCheckoutTest extends TestCase
     public function test_guest_checkout_can_convert_demo_cart_items_into_payable_products(): void
     {
         Mail::fake();
+        $this->fakeRoutingDistance(1000);
 
         $branchId = Branch::query()->updateOrCreate(
             ['code' => 'HN'],
@@ -234,6 +341,8 @@ class GuestCheckoutTest extends TestCase
 
     public function test_guest_checkout_rejects_delivery_branch_outside_15_km(): void
     {
+        $this->fakeRoutingDistance(20000);
+
         [$product, $productSize] = $this->sellableProduct();
         $branchId = Branch::query()->create([
             'code' => 'HCM-FAR',
@@ -267,12 +376,34 @@ class GuestCheckoutTest extends TestCase
                 'shipping_area_ui' => 'Hà Nội',
                 'latitude' => 21.0278,
                 'longitude' => 105.8342,
+                'note' => 'Giao tại sảnh chính',
             ])
             ->assertSessionHasErrors('branch_id');
     }
 
+    private function fakeRoutingDistance(int $distanceMeters): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => $distanceMeters,
+                    'duration' => 180,
+                    'geometry' => ['coordinates' => [[106.7009, 10.7769], [105.8342, 21.0278]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
+    }
+
     private function sellableProduct(): array
     {
+        Branch::query()->firstOrCreate(
+            ['code' => 'HN'],
+            ['name' => 'Chi nhánh Hà Nội', 'address' => 'Hà Nội', 'status' => 1]
+        );
+
         $categoryName = 'Trà sữa '.uniqid();
         $categorySlug = 'tra-sua-'.uniqid();
         $productSlug = 'tra-sua-guest-'.uniqid();
@@ -288,9 +419,15 @@ class GuestCheckoutTest extends TestCase
             'name' => 'Trà sữa test guest',
             'slug' => $productSlug,
             'price' => 100000,
-            'stock' => 100,
             'status' => true,
         ]);
+        Branch::query()->where('status', true)->pluck('id')->each(function ($branchId) use ($product) {
+            BranchProductStatus::create([
+                'branch_id' => $branchId,
+                'product_id' => $product->id,
+                'is_available' => true,
+            ]);
+        });
 
         $size = Size::create([
             'name' => 'M',

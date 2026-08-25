@@ -8,9 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/css/bootstrap-local.css', 'resources/js/app.js'])
     @include('admin.partials.styles')
 </head>
 <body>
@@ -53,7 +51,6 @@
             </form>
         </div>
     </aside>
-
     <div class="admin-content">
         <header class="admin-topbar">
             <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -105,7 +102,6 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     window.showRealtimeToast = function (message, type = 'info') {
         const containerId = 'realtimeToastContainer';

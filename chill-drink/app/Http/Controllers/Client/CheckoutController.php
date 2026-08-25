@@ -9,18 +9,21 @@ use App\Support\RealtimeOrderNotifier;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Category;
+use App\Models\GroupOrder;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
-use App\Models\Voucher;
 use App\Models\UserVoucher;
+use App\Models\Voucher;
 use App\Notifications\GroupOrderCompletedNotification;
 use App\Services\OrderCodeGenerator;
+use App\Services\ProductAvailabilityService;
 use App\Support\ShippingFee;
 use App\Support\AddressLearning;
 use App\Support\OrderDistancePolicy;
+use App\Support\ProductSizePrice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,21 +42,14 @@ class CheckoutController extends Controller
      */
     public function index(Request $request)
     {
-        $groupOrderId = session('checkout_group_order_id');
-        if ($groupOrderId) {
-            $groupOrder = \App\Models\GroupOrder::find($groupOrderId);
-            $canContinueGroupCheckout = $groupOrder
-                && (int) $groupOrder->owner_id === (int) auth()->id()
-                && $groupOrder->status === 'closed'
-                && ! $groupOrder->order_id;
+        $hadGroupCheckoutSession = session()->has('checkout_group_order_id');
+        $groupCheckout = $this->groupCheckoutContext();
+        if ($hadGroupCheckoutSession && ! $groupCheckout) {
+            session()->put('cart', session()->pull('personal_cart_backup', []));
+            session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys', 'group_branch_id']);
 
-            if (! $canContinueGroupCheckout) {
-                session()->put('cart', session()->pull('personal_cart_backup', []));
-                session()->forget(['checkout_cart_keys', 'checkout_group_order_id', 'group_cart_keys', 'group_branch_id']);
-
-                return redirect()->route('home')
-                    ->with('success', 'Đơn nhóm này đã được đặt hoặc không còn chờ thanh toán.');
-            }
+            return redirect()->route('home')
+                ->with('success', 'Đơn nhóm này đã được đặt hoặc không còn chờ thanh toán.');
         }
 
         $cart = session()->get('cart', []);
@@ -91,13 +87,14 @@ class CheckoutController extends Controller
         $paymentOptions = $this->paymentOptions();
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
+        $isGroupCheckout = (bool) $groupCheckout;
+        $groupCheckoutBranch = $groupCheckout['branch'] ?? null;
         $branches = Branch::where('status', true)
             ->orderBy('name')
             ->get();
         
         $user = auth()->user();
         [$addressBook, $selectedAddressId] = $this->checkoutAddressBook($user);
-        
         // Get user coordinates for distance calculation
         $userLatitude = $user->latitude;
         $userLongitude = $user->longitude;
@@ -186,7 +183,7 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->sortByDesc(fn ($userVoucher) => str_starts_with(strtoupper((string) $userVoucher->voucher?->code), 'HT'))
+                ->map(fn ($uv) => $uv->voucher)
                 ->values();
         } else {
             // For guest users
@@ -200,7 +197,7 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->sortByDesc(fn ($userVoucher) => str_starts_with(strtoupper((string) $userVoucher->voucher?->code), 'HT'))
+                ->map(fn ($uv) => $uv->voucher)
                 ->values();
         }
 
@@ -218,7 +215,9 @@ class CheckoutController extends Controller
             'branches',
             'branchesJson',
             'userLatitude',
-            'userLongitude'
+            'userLongitude',
+            'isGroupCheckout',
+            'groupCheckoutBranch'
         ));
     }
 
@@ -229,6 +228,14 @@ class CheckoutController extends Controller
     {
         $groupMemberUserIds = collect();
         $completedGroupOrder = null;
+
+        // Đơn nhóm đã chốt chi nhánh từ lúc tạo phòng. Không nhận lại branch_id
+        // từ UI để người dùng không thể đổi sang chi nhánh khác ở checkout.
+        $groupCheckout = $this->groupCheckoutContext();
+        if ($groupCheckout) {
+            $request->merge(['branch_id' => $groupCheckout['branch']->id]);
+        }
+
         if ($request->filled('scheduled_at') && ! $request->filled('delivery_type')) {
             $request->merge([
                 'delivery_type' => 'scheduled',
@@ -246,14 +253,6 @@ class CheckoutController extends Controller
 
         if (! $request->filled('delivery_type')) {
             $request->merge(['delivery_type' => 'now']);
-        }
-
-        if (auth()->check() && ! $request->filled('shipping_phone_ui')) {
-            $userPhone = auth()->user()->phone;
-            if (empty($userPhone) || $userPhone === 'Chưa cập nhật') {
-                $userPhone = '0987654321';
-            }
-            $request->merge(['shipping_phone_ui' => $userPhone]);
         }
 
         if (! $request->filled('shipping_method_ui')) {
@@ -274,6 +273,7 @@ class CheckoutController extends Controller
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
             'shipping_phone_ui' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
+            'address_location_confirmed' => ['nullable', Rule::in(['1'])],
             'latitude' => ['nullable', 'numeric', 'between:-90,90', 'required_if:fulfillment_type,delivery'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180', 'required_if:fulfillment_type,delivery'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
@@ -307,9 +307,18 @@ class CheckoutController extends Controller
             'fulfillment_type.in' => 'Phương thức nhận hàng không hợp lệ.',
             'branch_id.required' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
-            'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
-            'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra khoảng cách dưới 15 km.',
+            'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra lộ trình không quá 15 km.',
+            'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra lộ trình không quá 15 km.',
         ]);
+
+        if (
+            $request->input('fulfillment_type') === 'delivery'
+            && $request->input('address_location_confirmed') !== '1'
+        ) {
+            throw ValidationException::withMessages([
+                'shipping_address_ui' => 'Vui lòng cập nhật lại địa chỉ và xác nhận vị trí trên bản đồ cho đơn hàng này.',
+            ]);
+        }
 
         if (
             $request->input('fulfillment_type') === 'delivery'
@@ -346,20 +355,19 @@ class CheckoutController extends Controller
         try {
             DB::beginTransaction();
 
-            $orderItems = $this->prepareOrderItems($cart);
-            $subtotal = collect($orderItems)->sum('total_price');
             $fulfillmentType = $request->input('fulfillment_type', 'delivery');
 
             $branchId = $request->input('branch_id');
-            if (! $branchId && $fulfillmentType === 'delivery') {
-                $branchId = Branch::query()
-                    ->where('status', true)
-                    ->when($request->filled(['latitude', 'longitude']), function ($query) {
-                        $query->whereNotNull('latitude')->whereNotNull('longitude');
-                    })
-                    ->orderBy('id')
-                    ->value('id');
+
+            $branch = Branch::query()->whereKey($branchId)->where('status', true)->first();
+            if (! $branch) {
+                throw new \RuntimeException('Chi nhánh đã chọn không còn hoạt động. Vui lòng chọn lại chi nhánh.');
             }
+
+            app(ProductAvailabilityService::class)->assertCartAvailable($cart, $branch, true);
+            $orderItems = $this->prepareOrderItems($cart);
+            $subtotal = collect($orderItems)->sum('total_price');
+            $cupCount = max(1, (int) collect($orderItems)->sum(fn ($item) => (int) ($item['quantity'] ?? 1)));
 
             // Handle shipping fee based on delivery type
             if ($fulfillmentType === 'pickup') {
@@ -367,17 +375,16 @@ class CheckoutController extends Controller
             } else {
                 $lat = $request->input('latitude');
                 $lng = $request->input('longitude');
-                $branch = Branch::find($branchId);
-
                 if ($lat !== null && $lng !== null && $branch && $branch->latitude !== null && $branch->longitude !== null) {
                     $distance = $serviceDistance ?? $branch->distanceTo((float) $lat, (float) $lng);
-                    $shippingQuote = ShippingFee::calculate($distance, $request->shipping_method_ui);
+                    $shippingQuote = ShippingFee::calculate($distance, $request->shipping_method_ui, $cupCount);
                     $shippingFee = $shippingQuote['total_fee'];
                 } else {
                     $shippingQuote = ShippingFee::quoteForAddress(
                         $request->shipping_address_ui,
                         $request->shipping_area_ui,
-                        $request->shipping_method_ui
+                        $request->shipping_method_ui,
+                        $cupCount
                     );
                     $shippingFee = $shippingQuote['total_fee'];
                 }
@@ -394,8 +401,9 @@ class CheckoutController extends Controller
             ])->filter()->implode(', '));
             $distanceText = isset($distance) ? sprintf('khoảng cách %.1f km', $distance) : 'phí cố định';
             $shippingNote = sprintf(
-                'Giao hàng: %s, phí %s%s',
+                'Giao hàng: %s, %d cốc, phí %s%s',
                 $distanceText,
+                $cupCount,
                 ShippingFee::formatCurrency($shippingFee),
                 $addressText ? ", địa chỉ: {$addressText}" : ''
             );
@@ -557,7 +565,23 @@ class CheckoutController extends Controller
 
     public function success(Order $order)
     {
-        abort_unless(GuestOrderAccess::canView($order), 403);
+        if (! GuestOrderAccess::canView($order)) {
+            if (! $order->isGuest()) {
+                if (! auth()->check()) {
+                    return redirect()
+                        ->guest(route('login'))
+                        ->with('error', 'Vui lòng đăng nhập bằng đúng tài khoản đã đặt đơn để xem trang xác nhận này.');
+                }
+
+                return redirect()
+                    ->route('home')
+                    ->with('error', 'Đơn hàng này thuộc tài khoản khác. Hãy đăng nhập đúng tài khoản đã đặt đơn.');
+            }
+
+            return redirect()
+                ->route('order-lookup.index')
+                ->with('error', 'Link xem đơn khách vãng lai không còn hợp lệ. Hãy mở lại từ email hoặc tra cứu bằng mã đơn.');
+        }
 
         $order->load('orderItems.product', 'branch');
 
@@ -576,6 +600,34 @@ class CheckoutController extends Controller
         }
 
         return view('client.checkout.success', $payload);
+    }
+
+    protected function groupCheckoutContext(): ?array
+    {
+        $groupOrderId = (int) session('checkout_group_order_id', 0);
+        if ($groupOrderId <= 0) {
+            return null;
+        }
+
+        $groupOrder = GroupOrder::query()
+            ->with('branch')
+            ->whereKey($groupOrderId)
+            ->where('owner_id', auth()->id())
+            ->where('status', 'closed')
+            ->whereNull('order_id')
+            ->first();
+
+        $branch = $groupOrder?->branch;
+        if (! $groupOrder || ! $branch || ! $branch->status) {
+            return null;
+        }
+
+        session()->put('group_branch_id', (int) $branch->id);
+
+        return [
+            'group' => $groupOrder,
+            'branch' => $branch,
+        ];
     }
 
     protected function checkoutAddressBook($user): array
@@ -598,11 +650,14 @@ class CheckoutController extends Controller
 
     protected function checkoutPrimaryAddressPayload($user, bool $isDefault = true): array
     {
+        [$houseNumber, $street] = $this->splitHouseNumberAndStreet((string) ($user->address ?? ''));
+
         return [
             'id' => 'primary',
             'name' => trim((string) ($user->name ?? '')) ?: 'Chưa cập nhật',
             'phone' => trim((string) ($user->phone ?? '')) ?: 'Chưa cập nhật',
-            'street' => trim((string) ($user->address ?? '')),
+            'house_number' => $houseNumber,
+            'street' => $street,
             'area' => trim((string) ($user->area ?? '')),
             'latitude' => $user->latitude,
             'longitude' => $user->longitude,
@@ -614,6 +669,7 @@ class CheckoutController extends Controller
 
     protected function checkoutAddressPayload(Address $address): array
     {
+        [$houseNumber, $street] = $this->splitHouseNumberAndStreet((string) ($address->detail ?? ''));
         $area = collect([
             $address->ward,
             $address->district,
@@ -624,7 +680,8 @@ class CheckoutController extends Controller
             'id' => 'address-' . $address->id,
             'name' => trim((string) ($address->receiver_name ?? '')) ?: 'Chưa cập nhật',
             'phone' => trim((string) ($address->phone ?? '')) ?: 'Chưa cập nhật',
-            'street' => trim((string) ($address->detail ?? '')),
+            'house_number' => $houseNumber,
+            'street' => $street,
             'area' => trim($area),
             'latitude' => $address->latitude,
             'longitude' => $address->longitude,
@@ -639,6 +696,41 @@ class CheckoutController extends Controller
         $value = trim((string) $value);
 
         return $value === '' ? null : $value;
+    }
+
+    protected function splitHouseNumberAndStreet(string $value): array
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return [null, null];
+        }
+
+        if (preg_match('/^(?:so\s*)?(\d+[a-zA-Z]?(?:\/\d+[a-zA-Z]?)*)(?:\s+|-|,)+(.*)$/iu', $value, $matches)) {
+            $houseNumber = trim((string) ($matches[1] ?? ''));
+            $street = trim((string) ($matches[2] ?? ''));
+
+            return [
+                $houseNumber !== '' ? $houseNumber : null,
+                $street !== '' ? $street : null,
+            ];
+        }
+
+        return [null, $value];
+    }
+
+    protected function composeHouseNumberStreet(?string $houseNumber, ?string $street): ?string
+    {
+        $parts = array_values(array_filter([
+            $this->normalizeNullableString($houseNumber),
+            $this->normalizeNullableString($street),
+        ]));
+
+        if ($parts === []) {
+            return null;
+        }
+
+        return implode(' ', $parts);
     }
 
     protected function validateOrderServiceRadius(mixed $fulfillmentType, mixed $branchId, mixed $latitude, mixed $longitude): ?float
@@ -657,7 +749,13 @@ class CheckoutController extends Controller
 
         $distance = OrderDistancePolicy::distanceFromBranch($branch, $latitude, $longitude);
 
-        if ($distance === null || ! OrderDistancePolicy::isInsideServiceRadius($distance)) {
+        if ($distance === null) {
+            throw ValidationException::withMessages([
+                'branch_id' => OrderDistancePolicy::routingUnavailableMessage(),
+            ]);
+        }
+
+        if (! OrderDistancePolicy::isInsideServiceRadius($distance)) {
             throw ValidationException::withMessages([
                 'branch_id' => OrderDistancePolicy::message(),
             ]);
@@ -672,6 +770,7 @@ class CheckoutController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
             'area' => ['nullable', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
@@ -681,16 +780,19 @@ class CheckoutController extends Controller
             'phone.not_in' => 'Vui lòng nhập số điện thoại.',
             'phone.regex' => 'Số điện thoại không đúng.',
             'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
+            'latitude.required' => 'Vui lòng xác nhận vị trí nhận hàng trên bản đồ.',
+            'longitude.required' => 'Vui lòng xác nhận vị trí nhận hàng trên bản đồ.',
         ]);
 
         $user = $request->user();
+        $addressLine = $this->composeHouseNumberStreet($validated['house_number'] ?? null, $validated['street'] ?? null);
         $user->forceFill([
             'name' => trim((string) $validated['name']),
             'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
-            'address' => $this->normalizeNullableString($validated['street'] ?? null),
+            'address' => $addressLine,
             'area' => $this->normalizeNullableString($validated['area'] ?? null),
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
+            'latitude' => $validated['latitude'] ?? $user->latitude,
+            'longitude' => $validated['longitude'] ?? $user->longitude,
         ])->save();
 
         if ($request->boolean('is_default') && Schema::hasTable('addresses')) {
@@ -716,19 +818,23 @@ class CheckoutController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
             'area' => ['nullable', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:255'],
             'label' => ['nullable', 'string', 'max:100'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
             'is_default' => ['nullable', 'boolean'],
         ], [
             'phone.required' => 'Vui lòng nhập số điện thoại.',
             'phone.not_in' => 'Vui lòng nhập số điện thoại.',
             'phone.regex' => 'Số điện thoại không đúng.',
             'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
+            'latitude.required' => 'Vui lòng xác nhận vị trí nhận hàng trên bản đồ.',
+            'longitude.required' => 'Vui lòng xác nhận vị trí nhận hàng trên bản đồ.',
         ]);
 
         $user = $request->user();
+        $addressLine = $this->composeHouseNumberStreet($validated['house_number'] ?? null, $validated['street'] ?? null);
 
         $isDefault = $request->boolean('is_default') || $request->boolean('isDefault');
 
@@ -746,7 +852,7 @@ class CheckoutController extends Controller
             'province' => $this->normalizeNullableString($validated['area'] ?? null),
             'district' => null,
             'ward' => null,
-            'detail' => $this->normalizeNullableString($validated['street'] ?? null),
+            'detail' => $addressLine,
             'latitude' => $validated['latitude'] ?? null,
             'longitude' => $validated['longitude'] ?? null,
             'is_default' => $isDefault,
@@ -758,7 +864,7 @@ class CheckoutController extends Controller
             $user->forceFill([
                 'name' => trim((string) $validated['name']),
                 'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
-                'address' => $this->normalizeNullableString($validated['street'] ?? null),
+                'address' => $addressLine,
                 'area' => $this->normalizeNullableString($validated['area'] ?? null),
                 'latitude' => $validated['latitude'] ?? null,
                 'longitude' => $validated['longitude'] ?? null,
@@ -784,6 +890,7 @@ class CheckoutController extends Controller
             'name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'max:30', 'not_in:Chưa cập nhật', 'regex:/^0[0-9]{9,10}$/'],
             'area' => ['nullable', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:50'],
             'street' => ['required', 'string', 'max:255'],
             'label' => ['nullable', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -794,9 +901,12 @@ class CheckoutController extends Controller
             'phone.not_in' => 'Vui lòng nhập số điện thoại.',
             'phone.regex' => 'Số điện thoại không đúng.',
             'street.required' => 'Vui lòng nhập địa chỉ cụ thể.',
+            'latitude.required' => 'Vui lòng xác nhận vị trí nhận hàng trên bản đồ.',
+            'longitude.required' => 'Vui lòng xác nhận vị trí nhận hàng trên bản đồ.',
         ]);
 
         $isDefault = $request->boolean('is_default') || $request->boolean('isDefault');
+        $addressLine = $this->composeHouseNumberStreet($validated['house_number'] ?? null, $validated['street'] ?? null);
 
         if ($isDefault) {
             Address::query()
@@ -812,9 +922,9 @@ class CheckoutController extends Controller
             'province' => $this->normalizeNullableString($validated['area'] ?? null),
             'district' => null,
             'ward' => null,
-            'detail' => $this->normalizeNullableString($validated['street'] ?? null),
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
+            'detail' => $addressLine,
+            'latitude' => $validated['latitude'] ?? $address->latitude,
+            'longitude' => $validated['longitude'] ?? $address->longitude,
             'is_default' => $isDefault,
         ])->save();
 
@@ -824,7 +934,7 @@ class CheckoutController extends Controller
             $request->user()->forceFill([
                 'name' => trim((string) $validated['name']),
                 'phone' => $this->normalizeNullableString($validated['phone'] ?? null),
-                'address' => $this->normalizeNullableString($validated['street'] ?? null),
+                'address' => $addressLine,
                 'area' => $this->normalizeNullableString($validated['area'] ?? null),
                 'latitude' => $validated['latitude'] ?? null,
                 'longitude' => $validated['longitude'] ?? null,
@@ -885,7 +995,11 @@ class CheckoutController extends Controller
             $ownedVoucher = UserVoucher::query()
                 ->where('coupon_id', $voucher->id)
                 ->where('is_used', false)
-                ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()), fn ($query) => $query->where('guest_identifier', session()->getId()))
+                ->when(
+                    auth()->check(),
+                    fn ($query) => $query->where('user_id', auth()->id()),
+                    fn ($query) => $query->where('guest_identifier', session()->getId())
+                )
                 ->exists();
             if (! $ownedVoucher) {
                 throw new \RuntimeException('Voucher hỗ trợ này không thuộc tài khoản của bạn.');
@@ -938,12 +1052,15 @@ class CheckoutController extends Controller
     {
         $voucher->increment('used_count');
 
-        if (Str::startsWith(Str::upper((string) $voucher->code), 'HT')) {
-            UserVoucher::query()
+        if (auth()->check() && Schema::hasTable('user_vouchers')) {
+            \App\Models\UserVoucher::where('user_id', auth()->id())
                 ->where('coupon_id', $voucher->id)
-                ->where('is_used', false)
-                ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()), fn ($query) => $query->where('guest_identifier', session()->getId()))
-                ->update(['is_used' => true, 'used_at' => now()]);
+                ->where('is_used', 0)
+                ->limit(1)
+                ->update([
+                    'is_used' => 1,
+                    'used_at' => now(),
+                ]);
         }
 
         if (Schema::hasTable('user_coupon_usage')) {
@@ -1066,17 +1183,23 @@ class CheckoutController extends Controller
 
         $price = max(0, (int) ($item['price'] ?? $item['base_price'] ?? 0));
 
-        return Product::create([
+        $product = Product::create([
             'category_id' => $category?->id,
             'name' => $fallbackName,
             'slug' => $fallbackSlug,
             'price' => $price,
-            'stock' => 100,
             'status' => true,
             'description' => trim((string) ($item['description'] ?? '')) !== ''
                 ? $item['description']
                 : 'Sản phẩm được tạo tự động để hỗ trợ thanh toán.',
         ]);
+
+        app(ProductAvailabilityService::class)->syncProduct(
+            $product,
+            Branch::query()->where('status', true)->pluck('id')->mapWithKeys(fn ($id) => [$id => true])->all()
+        );
+
+        return $product;
     }
 
     protected function prepareOrderItems(array $cart): array
@@ -1101,16 +1224,6 @@ class CheckoutController extends Controller
             }
 
             $quantity = max(1, min(99, (int) ($item['quantity'] ?? 1)));
-
-            if (Schema::hasColumn('products', 'stock')) {
-                $stock = (int) ($product->stock ?? 0);
-
-                if ($stock < $quantity) {
-                    throw new \RuntimeException("Sản phẩm {$product->name} chỉ còn {$stock} món trong kho.");
-                }
-
-                $product->decrement('stock', $quantity);
-            }
 
             $unitPrice = $this->currentUnitPriceForCheckoutItem($item, $product);
 
@@ -1170,6 +1283,7 @@ class CheckoutController extends Controller
         $fallbackPrice = max(0, (int) ($item['price'] ?? $product?->price ?? 0));
         $toppingTotal = max(0, (int) ($item['topping_total'] ?? collect($item['toppings'] ?? [])->sum('price')));
         $sizeExtra = max(0, (int) ($item['size_extra'] ?? 0));
+        $basePrice = max(0, (int) ($product?->price ?? 0));
 
         if (
             $productId <= 0
@@ -1186,7 +1300,7 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice + $toppingTotal);
+                return ProductSizePrice::unitPrice($basePrice, (int) $productSizePrice, $sizeExtra) + $toppingTotal;
             }
         }
 
@@ -1199,12 +1313,12 @@ class CheckoutController extends Controller
                 ->value('price');
 
             if (is_numeric($productSizePrice)) {
-                return max(0, (int) $productSizePrice + $toppingTotal);
+                return ProductSizePrice::unitPrice($basePrice, (int) $productSizePrice, $sizeExtra) + $toppingTotal;
             }
         }
 
         if ($product && is_numeric($product->price ?? null)) {
-            return max(0, (int) $product->price + $sizeExtra + $toppingTotal);
+            return ProductSizePrice::unitPrice($basePrice, (int) ($item['size_extra'] ?? null), $sizeExtra) + $toppingTotal;
         }
 
         return $fallbackPrice;
@@ -1377,6 +1491,6 @@ class CheckoutController extends Controller
     {
         $address = trim((string) $value);
 
-        return (bool) preg_match('/(?:^\s*(?:số|so|nhà|nha)?\s*\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b|\b(?:số|so|nhà|nha)\s+\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b)/iu', $address);
+        return (bool) preg_match('/(?:\b(?:số|so|nhà|nha|ngõ|ngo|hẻm|hem|ngách|ngach|kiệt|kiet)\s*[:#.-]?\s*\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b|\b\d+[a-z]?(?:[\/-]\d+[a-z]?)*(?![.,]\d)\b)/iu', $address);
     }
 }

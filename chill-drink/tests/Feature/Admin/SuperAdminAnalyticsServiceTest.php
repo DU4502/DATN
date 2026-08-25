@@ -12,6 +12,7 @@ use App\Models\Size;
 use App\Models\User;
 use App\Services\AnalyticsPeriodContext;
 use App\Services\SuperAdminAnalyticsService;
+use App\Support\OrderStatus;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -35,7 +36,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
             'total' => 110000,
         ]);
         $paidProcessing = $this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 120000,
         ]);
@@ -71,7 +72,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $user = User::factory()->create();
 
         $this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'subtotal' => 90000,
             'total' => 100000,
@@ -94,7 +95,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         [$product, $productSize] = $this->createProductWithSize();
 
         $validOrder = $this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
         ]);
         $invalidOrder = $this->createOrder($user, $branch, [
@@ -129,10 +130,10 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $userB = User::factory()->create();
 
         $this->createOrder($userA, $branch, ['status' => 'completed', 'payment_status' => 'pending']);
-        $this->createOrder($userA, $branch, ['status' => 'processing', 'payment_status' => 'paid']);
-        $this->createOrder($userB, $branch, ['status' => 'processing', 'payment_status' => 'paid']);
+        $this->createOrder($userA, $branch, ['status' => OrderStatus::PREPARING, 'payment_status' => 'paid']);
+        $this->createOrder($userB, $branch, ['status' => OrderStatus::PREPARING, 'payment_status' => 'paid']);
         $this->createOrder(null, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'guest_name' => 'Khach Vang Lai',
             'guest_phone' => '0900000000',
@@ -149,8 +150,8 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $branchB = $this->createBranch(['code' => 'BRB', 'name' => 'Branch B']);
         $user = User::factory()->create();
 
-        $this->createOrder($user, $branchA, ['status' => 'processing', 'payment_status' => 'paid', 'total' => 111000]);
-        $this->createOrder($user, $branchB, ['status' => 'processing', 'payment_status' => 'paid', 'total' => 222000]);
+        $this->createOrder($user, $branchA, ['status' => OrderStatus::PREPARING, 'payment_status' => 'paid', 'total' => 111000]);
+        $this->createOrder($user, $branchB, ['status' => OrderStatus::PREPARING, 'payment_status' => 'paid', 'total' => 222000]);
 
         $query = $service->validSalesOrdersQuery();
         $service->applyBranchScope($query, $branchB->id);
@@ -165,13 +166,13 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $user = User::factory()->create();
 
         $this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'created_at' => Carbon::parse('2026-07-10 09:00:00'),
             'total' => 100000,
         ]);
         $this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'created_at' => Carbon::parse('2026-07-20 09:00:00'),
             'total' => 200000,
@@ -197,7 +198,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         [$product, $productSize] = $this->createProductWithSize();
 
         $currentPaid = $this->createOrder($userA, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 120000,
             'created_at' => CarbonImmutable::parse('2026-07-20 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -213,7 +214,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $this->createOrderItem($currentCompleted, $product, $productSize, ['quantity' => 1, 'total_price' => 30000]);
 
         $guestOrder = $this->createOrder(null, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 50000,
             'created_at' => CarbonImmutable::parse('2026-07-22 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -230,7 +231,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         ]);
 
         $this->createOrder($userB, $otherBranch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 333000,
             'created_at' => CarbonImmutable::parse('2026-07-23 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -265,7 +266,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $user = User::factory()->create();
 
         $this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 450000,
             'created_at' => CarbonImmutable::parse('2026-07-20 10:00:00', 'Asia/Ho_Chi_Minh'),
@@ -320,13 +321,13 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $user = User::factory()->create();
 
         $this->createOrder($user, $branchA, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 100000,
             'created_at' => CarbonImmutable::parse('2026-07-20 09:00:00', 'Asia/Ho_Chi_Minh'),
         ]);
         $this->createOrder($user, $branchB, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 300000,
             'created_at' => CarbonImmutable::parse('2026-07-20 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -358,7 +359,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         [$product, $productSize] = $this->createProductWithSize();
 
         $orderA = $this->createOrder($userA, $branchA, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 100000,
             'created_at' => CarbonImmutable::parse('2026-07-20 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -374,7 +375,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $this->createOrderItem($orderB, $product, $productSize, ['quantity' => 3, 'total_price' => 90000]);
 
         $this->createOrder($userB, $branchC, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 999000,
             'created_at' => CarbonImmutable::parse('2026-07-20 11:00:00', 'Asia/Ho_Chi_Minh'),
@@ -403,7 +404,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $user = User::factory()->create();
         [$product, $productSize] = $this->createProductWithSize();
         $this->createOrderItem($this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 100000,
             'created_at' => CarbonImmutable::parse('2026-07-20 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -514,7 +515,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
             'created_at' => CarbonImmutable::parse('2026-07-20 09:30:00', 'Asia/Ho_Chi_Minh'),
         ]);
         $this->createOrder($user, $branchA, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 777000,
             'created_at' => CarbonImmutable::parse('2026-07-10 09:30:00', 'Asia/Ho_Chi_Minh'),
@@ -701,7 +702,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         [$missingProduct, $missingSize] = $this->createProductWithSize(['name' => 'Sản phẩm sẽ mất']);
 
         $currentPaid = $this->createOrder($userA, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 120000,
             'created_at' => CarbonImmutable::parse('2026-07-20 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -719,7 +720,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $this->createOrderItem($currentCompleted, $softProduct, $softSize, ['quantity' => 1, 'unit_price' => 50000, 'total_price' => 50000]);
 
         $currentGuest = $this->createOrder(null, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 50000,
             'created_at' => CarbonImmutable::parse('2026-07-20 11:00:00', 'Asia/Ho_Chi_Minh'),
@@ -737,7 +738,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         ]);
 
         $compareOrder = $this->createOrder($userA, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 110000,
             'created_at' => CarbonImmutable::parse('2026-07-19 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -987,7 +988,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $user = User::factory()->create();
 
         $this->createOrder($user, $branchA, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 125000,
             'created_at' => CarbonImmutable::parse('2026-07-20 10:00:00', 'Asia/Ho_Chi_Minh'),
@@ -1090,7 +1091,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         [$missingProduct, $missingSize] = $this->createProductWithSize(['name' => 'Sản phẩm khuyết']);
 
         $paidA = $this->createOrder($userA, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 100000,
             'created_at' => CarbonImmutable::parse('2026-07-20 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -1107,7 +1108,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $this->createOrderItem($completedB, $softProduct, $softSize, ['quantity' => 2, 'unit_price' => 40000, 'total_price' => 80000]);
 
         $guestCurrent = $this->createOrder(null, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 50000,
             'created_at' => CarbonImmutable::parse('2026-07-20 11:00:00', 'Asia/Ho_Chi_Minh'),
@@ -1122,7 +1123,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         ]);
 
         $compareOrder = $this->createOrder($userA, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => 110000,
             'created_at' => CarbonImmutable::parse('2026-07-19 09:00:00', 'Asia/Ho_Chi_Minh'),
@@ -1213,9 +1214,9 @@ class SuperAdminAnalyticsServiceTest extends TestCase
             $this->createBranch(['code' => 'CC1', 'name' => 'Gamma']),
         ]);
 
-        $this->createOrder($user, $branches[0], ['status' => 'processing', 'payment_status' => 'paid', 'total' => 100000, 'created_at' => CarbonImmutable::parse('2026-07-20 10:00:00', 'Asia/Ho_Chi_Minh')]);
+        $this->createOrder($user, $branches[0], ['status' => OrderStatus::PREPARING, 'payment_status' => 'paid', 'total' => 100000, 'created_at' => CarbonImmutable::parse('2026-07-20 10:00:00', 'Asia/Ho_Chi_Minh')]);
         $this->createOrder($user, $branches[0], ['status' => 'completed', 'payment_status' => 'pending', 'total' => 50000, 'created_at' => CarbonImmutable::parse('2026-07-20 10:05:00', 'Asia/Ho_Chi_Minh')]);
-        $this->createOrder($user, $branches[1], ['status' => 'processing', 'payment_status' => 'paid', 'total' => 70000, 'created_at' => CarbonImmutable::parse('2026-07-20 10:10:00', 'Asia/Ho_Chi_Minh')]);
+        $this->createOrder($user, $branches[1], ['status' => OrderStatus::PREPARING, 'payment_status' => 'paid', 'total' => 70000, 'created_at' => CarbonImmutable::parse('2026-07-20 10:10:00', 'Asia/Ho_Chi_Minh')]);
 
         DB::connection()->flushQueryLog();
         DB::connection()->enableQueryLog();
@@ -1250,7 +1251,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
 
         $manyBranches->take(10)->each(function (Branch $branch) use ($user): void {
             $this->createOrder($user, $branch, [
-                'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
                 'payment_status' => 'paid',
                 'total' => 10000,
                 'created_at' => CarbonImmutable::parse('2026-07-20 10:00:00', 'Asia/Ho_Chi_Minh'),
@@ -1428,7 +1429,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
     private function createProductSale(User $user, Branch $branch, Product $product, ProductSize $productSize, int $quantity, int $totalPrice, string $createdAt): Order
     {
         $order = $this->createOrder($user, $branch, [
-            'status' => 'processing',
+            'status' => OrderStatus::PREPARING,
             'payment_status' => 'paid',
             'total' => $totalPrice,
             'created_at' => CarbonImmutable::parse($createdAt, 'Asia/Ho_Chi_Minh'),

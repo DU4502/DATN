@@ -90,8 +90,11 @@ class GroupOrderController extends Controller
             'cancelled' => [],
         ];
 
-        if (!in_array($request->status, $allowedTransitions[$groupOrder->status] ?? [], true)) {
-            return redirect()->back()->with('error', 'KhÃ´ng thá»ƒ chuyá»ƒn sang tráº¡ng thÃ¡i nÃ y.');
+        // Admin thường đi đúng state-machine; Super Admin được override mọi
+        // trạng thái hợp lệ của đơn nhóm, kể cả quay ngược để sửa dữ liệu vận hành.
+        if (! $user->isSuperAdmin()
+            && ! in_array($request->status, $allowedTransitions[$groupOrder->status] ?? [], true)) {
+            return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này.');
         }
 
         $data = [

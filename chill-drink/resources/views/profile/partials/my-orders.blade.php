@@ -18,6 +18,12 @@ $paymentLabels = $paymentLabels ?? [
         background: #ffffff;
         overflow: hidden;
         box-shadow: 0 14px 34px rgba(79, 183, 168, 0.08);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .order-card.is-realtime-updated {
+        border-color: rgba(13, 147, 115, 0.55);
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.12), 0 14px 34px rgba(79, 183, 168, 0.12);
     }
 
     .order-card-header {
@@ -36,6 +42,9 @@ $paymentLabels = $paymentLabels ?? [
         padding: 0.35rem 0.85rem;
         font-size: 0.78rem;
         font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
     }
 
     .order-status-pending {
@@ -46,6 +55,24 @@ $paymentLabels = $paymentLabels ?? [
     .order-status-in-progress {
         background: #e8f4ff;
         color: #1d5f9c;
+    }
+
+    .order-status-confirmed,
+    .order-status-preparing {
+        background: #e8f4ff;
+        color: #1d5f9c;
+    }
+
+    .order-status-ready,
+    .order-status-delivered {
+        background: #e6f9f4;
+        color: #0a6b4e;
+    }
+
+    .order-status-shipper-picked-up,
+    .order-status-delivering {
+        background: #f1e9ff;
+        color: #5b3f9e;
     }
 
     .order-status-shipper-accepted {
@@ -88,6 +115,149 @@ $paymentLabels = $paymentLabels ?? [
 
     .order-item-row:last-child {
         border-bottom: 0;
+    }
+
+    .order-detail-toggle {
+        border: 1px solid rgba(13, 147, 115, 0.22);
+        background: #ffffff;
+        color: var(--drink-primary-dark);
+        border-radius: 999px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.82rem;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    }
+
+    .order-detail-toggle:hover {
+        background: var(--drink-primary-soft);
+        border-color: rgba(13, 147, 115, 0.34);
+        transform: translateY(-1px);
+    }
+
+    .order-detail-toggle i {
+        transition: transform 0.2s ease;
+    }
+
+    .order-detail-toggle[aria-expanded="true"] i {
+        transform: rotate(180deg);
+    }
+
+    .order-detail-panel {
+        border-top: 1px solid rgba(213, 238, 232, 0.9);
+        background: linear-gradient(180deg, #fcfffe 0%, #f7fffc 100%);
+    }
+
+    .order-detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+    }
+
+    .order-detail-item {
+        padding: 1rem;
+        border: 1px solid rgba(213, 238, 232, 0.92);
+        border-radius: 18px;
+        background: #ffffff;
+    }
+
+    .order-detail-head {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.85rem;
+    }
+
+    .order-detail-thumb {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        overflow: hidden;
+        flex: 0 0 auto;
+        background: var(--drink-primary-soft);
+    }
+
+    .order-detail-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .order-detail-main {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .order-detail-title {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: start;
+    }
+
+    .order-detail-name {
+        font-weight: 800;
+        color: var(--drink-ink);
+        line-height: 1.35;
+    }
+
+    .order-detail-meta {
+        color: var(--drink-muted);
+        font-size: 0.82rem;
+        margin-top: 0.2rem;
+    }
+
+    .order-detail-total {
+        color: var(--drink-primary-dark);
+        font-weight: 800;
+    }
+
+    .order-detail-body {
+        margin-top: 0.9rem;
+        padding-left: calc(52px + 0.85rem);
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+
+    .order-detail-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: start;
+        font-size: 0.9rem;
+    }
+
+    .order-detail-row strong {
+        font-weight: 700;
+    }
+
+    .order-detail-label {
+        color: var(--drink-muted);
+        font-size: 0.74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .order-detail-note {
+        color: var(--drink-muted);
+        font-size: 0.84rem;
+        line-height: 1.55;
+    }
+
+    .order-detail-line-total {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.75rem;
+        align-items: center;
+        margin-top: 0.2rem;
+        padding: 0.65rem 0.8rem;
+        border-radius: 10px;
+        background: linear-gradient(180deg, #effcf8 0%, #e7faf4 100%);
+        color: var(--drink-primary-dark);
+        font-weight: 800;
     }
 
     .order-review-collapse {
@@ -194,6 +364,19 @@ $paymentLabels = $paymentLabels ?? [
         border-radius: 20px;
         background: var(--drink-primary-soft);
     }
+
+    @media (max-width: 575.98px) {
+        .order-detail-body {
+            padding-left: 0;
+        }
+
+        .order-detail-title,
+        .order-detail-row,
+        .order-detail-line-total {
+            grid-template-columns: 1fr;
+            gap: 0.3rem;
+        }
+    }
 </style>
 
 <div id="profile-orders" class="mt-4">
@@ -212,7 +395,7 @@ $paymentLabels = $paymentLabels ?? [
     @forelse($profileOrders as $order)
     <?php $statusKey = $order->status_display_key ?? $order->status; ?>
     <?php $status = $orderStatusLabels[$statusKey] ?? ['label' => $order->status, 'class' => 'order-status-pending']; ?>
-    <article class="order-card mb-4" id="order-{{ $order->id }}" data-order-id="{{ $order->id }}">
+    <article class="order-card mb-4" id="order-{{ $order->id }}" data-order-id="{{ $order->id }}" data-order-status="{{ $statusKey }}">
         <div class="order-card-header">
             <div>
                 <div class="fw-bold text-primary">{{ $order->displayCode() }}</div>
@@ -221,17 +404,19 @@ $paymentLabels = $paymentLabels ?? [
                 <div class="small fw-semibold text-primary mt-1"><i class="bi bi-calendar-check me-1"></i>Nhận lúc {{ $order->scheduled_at->format('H:i · d/m/Y') }}</div>
                 @endif
             </div>
-            <span class="order-status-badge {{ $status['class'] }}" data-order-status-badge data-status="{{ $statusKey }}">{{ $status['label'] }}</span>
+            <span class="order-status-badge {{ $status['class'] }}" data-order-status-badge data-status="{{ $statusKey }}">
+                <i class="bi {{ \App\Support\OrderStatus::notificationIcon($statusKey) }}" data-order-status-icon aria-hidden="true"></i>
+                <span data-order-status-label>{{ $status['label'] }}</span>
+            </span>
         </div>
 
         @php
         $reviewedProducts = $order->reviewed_products ?? [];
-        $groupedItems = $order->orderItems->groupBy(function ($item) {
-        return $item->product?->id ? 'product-' . $item->product->id : 'item-' . $item->id;
-        });
         @endphp
 
-        @foreach($groupedItems as $group)
+        @foreach(collect($order->orderItems ?? [])->groupBy(function ($item) {
+        return $item->product?->id ? 'product-' . $item->product->id : 'item-' . $item->id;
+        }) as $group)
         @php
         $item = $group->first();
         $product = $item->product;
@@ -347,7 +532,9 @@ $paymentLabels = $paymentLabels ?? [
         <div class="order-card-footer">
             <div class="text-secondary small">
                 <div class="mb-2">
-                    <strong class="text-dark">Thông tin giao hàng:</strong>
+                    <strong class="text-dark">
+                        {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'Thông tin nhận hàng:' : 'Thông tin giao hàng:' }}
+                    </strong>
                 </div>
                 <div class="d-flex align-items-start gap-2 mb-1">
                     <i class="bi bi-person text-primary"></i>
@@ -357,12 +544,32 @@ $paymentLabels = $paymentLabels ?? [
                     <i class="bi bi-telephone text-primary"></i>
                     <span>{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</span>
                 </div>
-                <div class="d-flex align-items-start gap-2 mb-2">
-                    <i class="bi bi-geo-alt text-primary"></i>
-                    <span>{{ $order->getShippingAddress() }}</span>
-                </div>
+                @if(($order->fulfillment_type ?? 'delivery') === 'pickup')
+                    <div class="d-flex align-items-start gap-2 mb-1">
+                        <i class="bi bi-shop text-primary"></i>
+                        <span>
+                            Nhận tại
+                            <strong class="text-dark">{{ $order->branch?->name ?? 'chi nhánh đã chọn' }}</strong>
+                        </span>
+                    </div>
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <i class="bi bi-geo-alt text-primary"></i>
+                        <span>{{ $order->branch?->address ?? 'Chưa cập nhật địa chỉ chi nhánh' }}</span>
+                    </div>
+                @else
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <i class="bi bi-geo-alt text-primary"></i>
+                        <span>{{ $order->getShippingAddress() }}</span>
+                    </div>
+                @endif
                 
                 <div class="border-top pt-2 mt-2">
+                    <div class="mb-1">
+                        Hình thức nhận:
+                        <strong class="text-dark">
+                            {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'Nhận tại chi nhánh' : 'Giao đến địa chỉ' }}
+                        </strong>
+                    </div>
                     <div class="mb-1">Thanh toán: <strong class="text-dark">{{ $paymentLabels[$order->payment_method] ?? strtoupper($order->payment_method) }}</strong></div>
                     @if($order->note)
                     <div class="mt-1">
@@ -392,7 +599,7 @@ $paymentLabels = $paymentLabels ?? [
                     @endif
                 </div>
                 @if($order->status === 'cancelled' && $order->cancellation_reason)
-                <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
+                <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2 cancellation-reason-alert" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
                     <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
                     <div class="flex-grow-1">
                         <div class="fw-bold mb-1">Lý do hủy đơn:</div>
@@ -406,6 +613,23 @@ $paymentLabels = $paymentLabels ?? [
                 <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
                 
                 <div class="d-flex flex-column gap-2 mt-2">
+                    <button
+                        type="button"
+                        class="order-detail-toggle w-100 justify-content-center"
+                        data-order-detail-toggle
+                        data-order-detail-target="order-detail-{{ $order->id }}"
+                        aria-expanded="false"
+                        aria-controls="order-detail-{{ $order->id }}"
+                    >
+                        <span>Xem chi tiết đơn hàng</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    @if(($order->fulfillment_type ?? 'delivery') === 'delivery' && $statusKey !== 'cancelled')
+                        <a href="{{ route('orders.track', $order) }}" class="btn btn-sm btn-primary w-100 fw-semibold">
+                            <i class="bi bi-geo-alt-fill me-1"></i>Theo dõi đơn hàng
+                        </a>
+                    @endif
+
                     <form method="POST" action="{{ route('orders.reorder', $order) }}">
                         @csrf
                         <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
@@ -414,24 +638,40 @@ $paymentLabels = $paymentLabels ?? [
                         <a href="{{ route('orders.issues.create', $order) }}" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-headset me-1"></i>Báo vấn đề đơn</a>
                     @endif
                     
-                    @if($statusKey === 'pending' || $order->status === 'pending')
-                        <button type="button" class="btn btn-sm btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#customerCancelOrderModal" data-order-id="{{ $order->id }}">
-                            <i class="bi bi-x-circle me-1"></i>Hủy đơn hàng
-                        </button>
-                    @endif
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger w-100 {{ $statusKey === \App\Support\OrderStatus::PENDING ? '' : 'd-none' }}"
+                        data-bs-toggle="modal"
+                        data-bs-target="#customerCancelOrderModal"
+                        data-order-id="{{ $order->id }}"
+                        data-order-cancel-action
+                    >
+                        <i class="bi bi-x-circle me-1"></i>Hủy đơn hàng
+                    </button>
                     
                     @if($statusKey === 'delivered' || $order->status === 'delivered')
-                        <form method="POST" action="{{ route('orders.confirm-received', $order) }}" onsubmit="return confirm('Xác nhận bạn đã nhận được đơn hàng này?');">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-success w-100">
-                                <i class="bi bi-check-circle me-1"></i>Xác nhận đã nhận
-                            </button>
-                        </form>
+                        @if($order->delivered_at)
+                            <div class="small text-secondary text-center">
+                                Tự hoàn thành lúc <strong>{{ $order->delivered_at->copy()->addMinutes(\App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES)->format('H:i') }}</strong> nếu bạn không xác nhận.
+                            </div>
+                        @endif
                     @endif
+                    <form
+                        method="POST"
+                        action="{{ route('orders.confirm-received', $order) }}"
+                        class="{{ $statusKey === \App\Support\OrderStatus::DELIVERED ? '' : 'd-none' }}"
+                        data-order-confirm-action
+                        onsubmit="return confirm('Xác nhận bạn đã nhận được đơn hàng này?');"
+                    >
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-success w-100">
+                            <i class="bi bi-check-circle me-1"></i>Xác nhận đã nhận
+                        </button>
+                    </form>
                 </div>
                 
                 @if($order->payment_method === 'vnpay' && in_array($order->payment_status, ['pending', 'failed']) && $order->status !== 'cancelled')
-                    <div class="mt-2">
+                    <div class="mt-2" data-order-payment-action>
                         @if($order->payment_status === 'failed')
                             <div class="badge bg-danger-subtle text-danger mb-2">
                                 <i class="bi bi-exclamation-triangle me-1"></i>
@@ -458,6 +698,119 @@ $paymentLabels = $paymentLabels ?? [
                         Đã thanh toán
                     </div>
                 @endif
+            </div>
+        </div>
+
+        <div class="order-detail-panel d-none" id="order-detail-{{ $order->id }}" data-order-detail-panel>
+            <div class="p-3 p-md-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h3 class="h6 fw-bold mb-1">Chi tiết đơn hàng</h3>
+                        <p class="text-secondary small mb-0">Hiển thị đầy đủ size, topping, đường, đá và ghi chú của từng món.</p>
+                    </div>
+                    <span class="badge text-bg-light border">{{ $order->orderItems->count() }} món cấu hình</span>
+                </div>
+
+                <div class="order-detail-list">
+                    @foreach($order->orderItems as $detailItem)
+                        @php
+                            $detailProduct = $detailItem->product;
+                            $detailToppings = $detailItem->toppingLines ?? collect();
+                            $detailSizeName = trim((string) ($detailItem->productSize?->size?->name ?? ''));
+                            $detailSizeLabel = $detailSizeName !== '' ? 'Size '.$detailSizeName : null;
+                            $detailQuantity = max(1, (int) ($detailItem->quantity ?? 1));
+                            $detailBaseUnitPrice = max(0, (int) ($detailProduct->price ?? 0));
+                            $detailLineTotal = (int) $detailItem->getSubtotal();
+                            $detailUnitPrice = max(0, (int) ($detailItem->unit_price ?? 0));
+                            $detailToppingUnitTotal = (int) $detailToppings->sum(fn ($line) => (int) ($line->price ?? 0));
+                            $detailSizeExtraUnit = max(0, $detailUnitPrice - $detailBaseUnitPrice - $detailToppingUnitTotal);
+                        @endphp
+                        <div class="order-detail-item">
+                            <div class="order-detail-head">
+                                <div class="order-detail-thumb">
+                                    @if($detailProduct)
+                                        <x-product-image
+                                            :src="$detailProduct->image_url"
+                                            :sku="$detailProduct->sku"
+                                            :name="$detailProduct->name"
+                                            :alt="$detailProduct->name"
+                                            :category="$detailProduct->category?->name"
+                                            :width="180" />
+                                    @else
+                                        <img src="{{ view()->shared('uiDefaultImage', 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=200&q=85') }}" alt="Sản phẩm">
+                                    @endif
+                                </div>
+                                <div class="order-detail-main">
+                                    <div class="order-detail-title">
+                                        <div>
+                                            <div class="order-detail-name">{{ $detailProduct?->name ?? 'Sản phẩm đã xóa' }}</div>
+                                            <div class="order-detail-meta">
+                                                {{ collect([$detailSizeLabel, 'x'.$detailQuantity])->filter()->implode(' · ') }}
+                                            </div>
+                                        </div>
+                                        <strong class="order-detail-total">{{ number_format($detailLineTotal, 0, ',', '.') }}đ</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="order-detail-body">
+                                <div>
+                                    <div class="order-detail-label">Giá gốc</div>
+                                    <div class="order-detail-row">
+                                        <span>{{ number_format($detailBaseUnitPrice, 0, ',', '.') }}đ × {{ $detailQuantity }}</span>
+                                        <strong>{{ number_format($detailBaseUnitPrice * $detailQuantity, 0, ',', '.') }}đ</strong>
+                                    </div>
+                                </div>
+
+                                @if($detailSizeExtraUnit > 0)
+                                    <div>
+                                        <div class="order-detail-label">Phụ thu size</div>
+                                        <div class="order-detail-row">
+                                            <span>+{{ number_format($detailSizeExtraUnit, 0, ',', '.') }}đ × {{ $detailQuantity }}</span>
+                                            <strong>+{{ number_format($detailSizeExtraUnit * $detailQuantity, 0, ',', '.') }}đ</strong>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                @if($detailToppings->isNotEmpty())
+                                    <div>
+                                        <div class="order-detail-label">Topping</div>
+                                        @foreach($detailToppings as $toppingLine)
+                                            @php($detailToppingLineTotal = max(0, (int) ($toppingLine->price ?? 0)) * $detailQuantity)
+                                            <div class="order-detail-row">
+                                                <span>
+                                                    + {{ $toppingLine->topping?->name ?? 'Topping' }}
+                                                    @if($detailQuantity > 1)
+                                                        <span class="d-block text-secondary small">{{ number_format((int) ($toppingLine->price ?? 0), 0, ',', '.') }}đ × {{ $detailQuantity }}</span>
+                                                    @endif
+                                                </span>
+                                                <strong>+{{ number_format($detailToppingLineTotal, 0, ',', '.') }}đ</strong>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                <div class="order-detail-row">
+                                    <span>Đường</span>
+                                    <strong>{{ (int) ($detailItem->sugar_level ?? 100) }}%</strong>
+                                </div>
+                                <div class="order-detail-row">
+                                    <span>Đá</span>
+                                    <strong>{{ (int) ($detailItem->ice_level ?? 100) }}%</strong>
+                                </div>
+
+                                @if(filled($detailItem->item_note))
+                                    <div class="order-detail-note">Ghi chú: {{ $detailItem->item_note }}</div>
+                                @endif
+
+                                <div class="order-detail-line-total">
+                                    <span>Tạm tính món</span>
+                                    <strong>{{ number_format($detailLineTotal, 0, ',', '.') }}đ</strong>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         </div>
     </article>
@@ -530,16 +883,19 @@ $paymentLabels = $paymentLabels ?? [
 </script>
 
 <script>
-    function highlightOrderCard(orderCard) {
+    function highlightOrderCard(orderCard, shouldScroll = false) {
         if (!orderCard) {
             return;
         }
 
-        orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        orderCard.style.boxShadow = '0 0 0 2px rgba(13, 147, 115, 0.25)';
+        if (shouldScroll) {
+            orderCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        orderCard.classList.add('is-realtime-updated');
 
         window.setTimeout(() => {
-            orderCard.style.boxShadow = '';
+            orderCard.classList.remove('is-realtime-updated');
         }, 2500);
     }
 
@@ -550,7 +906,8 @@ $paymentLabels = $paymentLabels ?? [
         if (orderId) {
             highlightOrderCard(
                 document.getElementById(`order-${orderId}`)
-                    || document.querySelector(`[data-order-id="${orderId}"]`)
+                    || document.querySelector(`[data-order-id="${orderId}"]`),
+                true
             );
         }
 
@@ -568,30 +925,75 @@ $paymentLabels = $paymentLabels ?? [
                 button.setAttribute('aria-expanded', String(isHidden));
             });
         });
+
+        document.querySelectorAll('[data-order-detail-toggle]').forEach(function (button) {
+            const targetId = button.dataset.orderDetailTarget;
+            const panel = targetId ? document.getElementById(targetId) : null;
+
+            if (!panel) {
+                return;
+            }
+
+            button.addEventListener('click', function () {
+                const isHidden = panel.classList.contains('d-none');
+                panel.classList.toggle('d-none', !isHidden);
+                button.setAttribute('aria-expanded', String(isHidden));
+                button.querySelector('span').textContent = isHidden ? 'Thu gọn chi tiết' : 'Xem chi tiết đơn hàng';
+            });
+        });
     });
 
     const statusClassMap = @json(collect(\App\Support\OrderStatus::userBadgeStyles())->mapWithKeys(fn ($item, $key) => [$key => $item['class']]));
+    const statusLabelMap = @json(collect(\App\Support\OrderStatus::userBadgeStyles())->mapWithKeys(fn ($item, $key) => [$key => $item['label']]));
+    const statusIconMap = @json(collect(array_keys(\App\Support\OrderStatus::userBadgeStyles()))->mapWithKeys(fn ($status) => [$status => \App\Support\OrderStatus::notificationIcon($status)]));
 
-    document.addEventListener('order:status-updated', function (event) {
-        const payload = event.detail || {};
-        const orderCard = document.querySelector(`[data-order-id="${payload.order_id}"]`);
+    function applyOrderStatusUpdate(payload) {
+        const orderId = String(payload?.order_id ?? '').trim();
+        const status = String(payload?.status ?? payload?.order_status ?? '').trim();
+        const orderCard = Array.from(document.querySelectorAll('.order-card[data-order-id]'))
+            .find(card => String(card.dataset.orderId) === orderId);
 
-        if (!orderCard || !payload.status) {
-            return;
+        if (!orderCard || !status) {
+            console.warn('[Order realtime] matching order card not found', { orderId, status });
+            return false;
         }
 
         const badge = orderCard.querySelector('[data-order-status-badge]');
 
         if (!badge) {
-            return;
+            console.warn('[Order realtime] status badge not found', { orderId, status });
+            return false;
         }
 
-        badge.dataset.status = payload.status;
-        badge.textContent = payload.status_label || payload.status;
-        badge.className = `order-status-badge ${statusClassMap[payload.status] || 'order-status-pending'}`;
+        let statusLabel = badge.querySelector('[data-order-status-label]');
+        let statusIcon = badge.querySelector('[data-order-status-icon]');
+
+        if (!statusLabel || !statusIcon) {
+            badge.replaceChildren();
+            statusIcon = document.createElement('i');
+            statusIcon.dataset.orderStatusIcon = '';
+            statusIcon.setAttribute('aria-hidden', 'true');
+            statusLabel = document.createElement('span');
+            statusLabel.dataset.orderStatusLabel = '';
+            badge.append(statusIcon, statusLabel);
+        }
+
+        orderCard.dataset.orderStatus = status;
+        if (payload.updated_at) orderCard.dataset.orderUpdatedAt = payload.updated_at;
+        badge.dataset.status = status;
+        statusLabel.textContent = statusLabelMap[status] || payload.status_label || status;
+        statusIcon.className = `bi ${payload.status_icon || statusIconMap[status] || 'bi-bell'}`;
+        badge.className = `order-status-badge ${statusClassMap[status] || 'order-status-pending'}`;
+
+        const cancelAction = orderCard.querySelector('[data-order-cancel-action]');
+        const confirmAction = orderCard.querySelector('[data-order-confirm-action]');
+        const paymentAction = orderCard.querySelector('[data-order-payment-action]');
+        if (cancelAction) cancelAction.classList.toggle('d-none', status !== 'pending');
+        if (confirmAction) confirmAction.classList.toggle('d-none', status !== 'delivered');
+        if (paymentAction && status === 'cancelled') paymentAction.classList.add('d-none');
         
         // If order is cancelled and has a reason, display it in the footer
-        if (payload.status === 'cancelled' && payload.cancellation_reason) {
+        if (status === 'cancelled' && payload.cancellation_reason) {
             const footer = orderCard.querySelector('.order-card-footer > div:first-child');
             if (footer) {
                 // Remove existing cancellation reason if any
@@ -615,6 +1017,11 @@ $paymentLabels = $paymentLabels ?? [
         }
         
         highlightOrderCard(orderCard);
+        return true;
+    }
+
+    document.addEventListener('order:status-updated', function (event) {
+        applyOrderStatusUpdate(event.detail || {});
     });
 
     function escapeHtml(text) {

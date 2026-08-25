@@ -75,6 +75,24 @@ class GoogleController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
+        if ($user->isCskh()) {
+            request()->session()->forget('url.intended');
+
+            return redirect()->route('admin.chat.index');
+        }
+
+        if ($user->isShipper()) {
+            request()->session()->forget('url.intended');
+
+            return redirect()->route('shipper.dashboard');
+        }
+
+        if ($user->isStaffOnly()) {
+            request()->session()->forget('url.intended');
+
+            return redirect()->route('staff.dashboard');
+        }
+
         if (str_contains(session('url.intended', ''), '/chat')) {
             request()->session()->forget('url.intended');
         }

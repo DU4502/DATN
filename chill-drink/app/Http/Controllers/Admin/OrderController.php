@@ -5,8 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\AddressLearning;
+use App\Services\ShipperDispatchService;
+use App\Services\ShipperIncidentService;
+use App\Services\OrderCancellationService;
+use App\Services\SuperAdminOrderOverrideService;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Shipper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +54,7 @@ class OrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             // Giao dịch VNPay chưa hoàn tất chưa phải là đơn cần xử lý.
@@ -133,21 +138,37 @@ class OrderController extends Controller
             : $orders->orderByDesc('id');
 
         $orders = $orders->paginate(12)->withQueryString();
+        $shipmentIncidents = app(ShipperIncidentService::class)->pendingForOrders($orders->getCollection());
+        $historicalShippers = $this->historicalShippersForOrders($orders->getCollection());
         
         $latestOrderQuery = Order::query();
         $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
         $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
+        $latestUpdatedQuery = Order::query()
+            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+        $latestUpdatedQuery = $this->applyBranchScope($latestUpdatedQuery);
+        $latestOrderUpdatedValue = $latestUpdatedQuery->max('updated_at');
+        $latestOrderUpdatedAt = $latestOrderUpdatedValue
+            ? \Illuminate\Support\Carbon::parse($latestOrderUpdatedValue)->toIso8601String()
+            : null;
 
-        return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId'));
+        return view('admin.orders.index', compact('orders', 'filters', 'statusOptions', 'latestOrderId', 'latestOrderUpdatedAt', 'shipmentIncidents', 'historicalShippers'));
     }
 
     public function recent(Request $request): JsonResponse
     {
         $afterId = max(0, (int) $request->query('after_id', 0));
         $updatedAfter = $request->query('updated_after');
+        if ($updatedAfter) {
+            try {
+                $updatedAfter = \Illuminate\Support\Carbon::parse($updatedAfter)->toDateTimeString();
+            } catch (\Throwable) {
+                $updatedAfter = null;
+            }
+        }
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
 
         if ($afterId > 0 || $updatedAfter) {
@@ -165,7 +186,8 @@ class OrderController extends Controller
         $orders = $this->applyBranchScope($orders);
         
         $orders = $orders
-            ->orderByDesc('id')
+            ->when($updatedAfter, fn ($query) => $query->orderByDesc('updated_at'))
+            ->when(! $updatedAfter, fn ($query) => $query->orderByDesc('id'))
             ->limit(20)
             ->get()
             ->map(fn (Order $order) => $this->orderBroadcastPayload($order))
@@ -174,11 +196,150 @@ class OrderController extends Controller
         $latestOrderQuery = Order::query();
         $latestOrderQuery = $this->applyBranchScope($latestOrderQuery);
         $latestOrderId = (int) ($latestOrderQuery->max('id') ?? 0);
+        $latestUpdatedQuery = Order::query()
+            ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+        $latestUpdatedQuery = $this->applyBranchScope($latestUpdatedQuery);
+        $latestUpdatedValue = $latestUpdatedQuery->max('updated_at');
+        $latestUpdatedAt = $latestUpdatedValue
+            ? \Illuminate\Support\Carbon::parse($latestUpdatedValue)->toIso8601String()
+            : null;
 
         return response()->json([
             'orders' => $orders,
             'latest_id' => $latestOrderId,
+            'latest_updated_at' => $latestUpdatedAt,
+            'generated_at' => now()->toIso8601String(),
         ]);
+    }
+
+    public function pendingAlerts(Request $request): JsonResponse
+    {
+        $orders = Order::query()
+            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
+            ->where('status', OrderStatus::PENDING)
+            ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+
+        $orders = $this->applyBranchScope($orders);
+
+        $pendingOrders = $orders
+            ->orderBy('created_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (Order $order) => $this->orderBroadcastPayload($order))
+            ->values();
+
+        $pendingCountQuery = Order::query()
+            ->where('status', OrderStatus::PENDING)
+            ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+
+        $pendingCountQuery = $this->applyBranchScope($pendingCountQuery);
+        $pendingCount = (int) $pendingCountQuery->count();
+
+        return response()->json([
+            'orders' => $pendingOrders,
+            'pending_count' => $pendingCount,
+            'generated_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    private function historicalShippersForOrders($orders): array
+    {
+        if (! Schema::hasTable('shipments')) {
+            return [];
+        }
+
+        $orderIds = collect($orders)
+            ->filter(fn (Order $order) => ! $order->shipper_id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+
+        if ($orderIds->isEmpty()) {
+            return [];
+        }
+
+        $shipments = DB::table('shipments')
+            ->whereIn('order_id', $orderIds)
+            ->whereNotNull('shipper_id')
+            ->orderByDesc('id')
+            ->get(['id', 'order_id', 'shipper_id', 'status']);
+
+        $latestByOrder = [];
+        foreach ($shipments as $shipment) {
+            $orderId = (int) $shipment->order_id;
+            $latestByOrder[$orderId] ??= $shipment;
+        }
+
+        if ($latestByOrder === []) {
+            return [];
+        }
+
+        $shippers = Shipper::with('user')
+            ->whereIn('id', collect($latestByOrder)->pluck('shipper_id')->unique()->values())
+            ->get()
+            ->keyBy('id');
+
+        $result = [];
+        foreach ($latestByOrder as $orderId => $shipment) {
+            $shipper = $shippers->get((int) $shipment->shipper_id);
+            if (! $shipper) {
+                continue;
+            }
+
+            $payload = $this->shipperPayload($shipper);
+            $payload['shipment_status'] = $shipment->status;
+            $payload['source_label'] = 'Đã nhận chuyến này';
+            $result[$orderId] = $payload;
+        }
+
+        return $result;
+    }
+
+    private function shipperPayloadForOrder(Order $order): ?array
+    {
+        if ($order->shipper) {
+            return $this->shipperPayload($order->shipper);
+        }
+
+        if (! Schema::hasTable('shipments')) {
+            return null;
+        }
+
+        $shipment = DB::table('shipments')
+            ->where('order_id', $order->id)
+            ->whereNotNull('shipper_id')
+            ->orderByDesc('id')
+            ->first(['id', 'shipper_id', 'status']);
+
+        if (! $shipment) {
+            return null;
+        }
+
+        $shipper = Shipper::with('user')->find((int) $shipment->shipper_id);
+        if (! $shipper) {
+            return null;
+        }
+
+        $payload = $this->shipperPayload($shipper);
+        $payload['shipment_status'] = $shipment->status;
+        $payload['source_label'] = 'Đã nhận chuyến này';
+
+        return $payload;
+    }
+
+    private function shipperPayload(Shipper $shipper): array
+    {
+        return [
+            'id' => (int) $shipper->id,
+            'name' => $shipper->user?->name ?: $shipper->code ?: 'Shipper',
+            'code' => $shipper->code,
+            'phone' => $shipper->phone ?: $shipper->user?->phone,
+            'vehicle_type' => $shipper->vehicle_type,
+            'license_plate' => $shipper->license_plate,
+            'status' => $shipper->status,
+            'source_label' => null,
+        ];
     }
 
     private function orderBroadcastPayload(Order $order): array
@@ -188,9 +349,29 @@ class OrderController extends Controller
         $customerPhone = $order->customerPhone() ?: '';
         $total = (int) ($order->total ?? $order->total_price ?? 0);
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
+        $shipmentIncident = app(ShipperIncidentService::class)->pendingIncident($order);
+        $shipperPayload = $this->shipperPayloadForOrder($order);
+        $user = auth()->user();
+        $isSuperAdmin = (bool) $user?->isSuperAdmin();
+        $isSuperAdminWorkspace = $isSuperAdmin && ! $user->isViewingAdminWorkspace();
+        $currentStatus = OrderStatus::normalize((string) $order->status);
+        $statusOptionsForActor = $this->orderManagementOptionsForOrder($order);
+        $canCancelForActor = $isSuperAdmin
+            ? OrderStatus::canSuperAdminCancelFrom($currentStatus)
+            : $currentStatus === OrderStatus::PENDING;
+        $orderCode = $order->displayCode();
+        $canConfirm = $currentStatus === OrderStatus::PENDING
+            && ! ($order->payment_method === 'vnpay' && $order->payment_status !== 'paid');
+        $confirmBlockReason = $canConfirm
+            ? null
+            : (($currentStatus !== OrderStatus::PENDING)
+                ? 'Đơn này không còn ở trạng thái chờ xác nhận.'
+                : 'Đơn VNPay phải thanh toán thành công trước khi xác nhận.');
 
         return [
             'order_id' => $order->id,
+            'order_code' => $orderCode,
+            'branch_id' => is_numeric($order->branch_id) ? (int) $order->branch_id : null,
             'branch_name' => $order->branch?->name ?? 'Chưa gán',
             'customer_name' => $customerName,
             'customer_email' => $customerEmail,
@@ -206,23 +387,49 @@ class OrderController extends Controller
             'payment_status' => $order->payment_status,
             'payment_method_label' => $this->paymentMethodLabel($order->payment_method),
             'payment_status_label' => $this->paymentStatusLabel($order->payment_status),
+            'cod_reconciliation' => $order->payment_method === 'cod' && $order->codReceivable ? [
+                'amount' => (int) $order->codReceivable->amount,
+                'is_settled' => (bool) $order->codReceivable->settlement_id,
+                'settled_at' => $order->codReceivable->settled_at?->format('d/m/Y H:i'),
+            ] : null,
             'shipping_address' => $order->getShippingAddress(),
-            'status' => $order->status,
-            'status_label' => OrderStatus::label((string) $order->status),
+            'shipper' => $shipperPayload,
+            'delivered_at' => $order->delivered_at?->format('d/m/Y H:i:s'),
+            'auto_complete_at' => $order->delivered_at?->copy()->addMinutes(\App\Services\DeliveredOrderCompletionService::AUTO_COMPLETE_AFTER_MINUTES)->format('d/m/Y H:i:s'),
+            'status' => $currentStatus,
+            'status_label' => OrderStatus::label($currentStatus),
             'status_changed_at' => $order->status_changed_at?->format('d/m/Y H:i'),
             'status_changed_by_name' => $order->status_changed_by
                 ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên')
                 : null,
-            'next_status' => OrderStatus::nextStatus((string) $order->status, $fulfillmentType),
-            'can_cancel' => OrderStatus::normalize((string) $order->status) !== OrderStatus::CANCELLED,
-            'status_options' => OrderStatus::stepwiseOptions((string) $order->status, $fulfillmentType),
+            'next_status' => $this->orderManagementNextStatusForOrder($order),
+            'can_cancel' => $canCancelForActor,
+            'status_options' => $statusOptionsForActor,
+            'super_admin_override' => $isSuperAdmin,
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
+            'created_at_iso' => $order->created_at?->toIso8601String(),
             'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'delivery_type' => $order->delivery_type,
             'delivery_note' => $order->delivery_note,
             'scheduled_delivery_time' => $order->scheduled_delivery_time?->format('H:i · d/m/Y'),
-            'message' => "Đơn hàng mới #{$order->id} từ {$customerName}",
-            'status_update_url' => route('admin.orders.updateStatus', $order->id),
+            'message' => "Đơn hàng mới {$orderCode} từ {$customerName}",
+            'can_confirm' => $canConfirm,
+            'confirm_block_reason' => $confirmBlockReason,
+            'status_update_url' => $isSuperAdminWorkspace
+                ? route('admin.super-admin.manage.orders.updateStatus', $order->id)
+                : route('admin.orders.updateStatus', $order->id),
+            'url' => $isSuperAdminWorkspace
+                ? route('admin.super-admin.manage.orders.index', ['q' => $orderCode])
+                : route('admin.orders.index', ['q' => $orderCode]),
+            'shipment_incident' => $shipmentIncident ? [
+                'shipper_name' => $shipmentIncident['shipper_name'] ?? 'Shipper',
+                'description' => $shipmentIncident['description'] ?? 'Shipper báo sự cố.',
+                'incident_type' => $shipmentIncident['incident_type'] ?? 'driver_issue',
+                'reported_at_label' => $shipmentIncident['reported_at_label'] ?? null,
+            ] : null,
+            'incident_resolve_url' => $isSuperAdminWorkspace
+                ? route('admin.super-admin.manage.orders.shipper-incident.resolve', $order->id)
+                : route('admin.orders.shipper-incident.resolve', $order->id),
             'items' => $order->orderItems->map(fn ($item) => [
                 'product_name' => $item->product?->name ?? 'Sản phẩm đã xóa',
                 'image_url' => $item->product?->image_url,
@@ -233,6 +440,15 @@ class OrderController extends Controller
                 'unit_price' => (int) $item->unit_price,
                 'unit_price_formatted' => number_format((int) $item->unit_price, 0, ',', '.') . 'đ',
                 'total_formatted' => number_format((int) $item->getSubtotal(), 0, ',', '.') . 'đ',
+            ])->toArray(),
+            'reviews' => $order->reviews->map(fn ($review) => [
+                'product_name' => $review->product?->name ?? 'Sản phẩm đã xóa',
+                'product_image' => $review->product?->image_url,
+                'user_name' => $review->user?->name ?? 'Khách hàng',
+                'user_email' => $review->user?->email ?? '',
+                'rating' => (int) $review->rating,
+                'comment' => $review->comment ?? '',
+                'created_at' => $review->created_at?->format('d/m/Y H:i'),
             ])->toArray(),
         ];
     }
@@ -289,17 +505,63 @@ class OrderController extends Controller
         ]);
 
         $order = Order::findOrFail($id);
-        
-        // Check if current user (Admin) can access this order's branch
         $user = auth()->user();
-        if (!$user->isSuperAdmin() && $order->branch_id !== $user->branch_id) {
+        $isSuperAdmin = (bool) $user?->isSuperAdmin();
+
+        // Admin thường chỉ can thiệp đơn thuộc chi nhánh của mình.
+        // Super Admin là quyền cao nhất và không bị branch scope chặn.
+        if (! $isSuperAdmin && $order->branch_id !== $user->branch_id) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không có quyền cập nhật đơn hàng của chi nhánh khác.',
+                ], 403);
+            }
+
             abort(403, 'Không có quyền cập nhật đơn hàng của chi nhánh khác.');
         }
 
-        $newStatus = OrderStatus::normalize($request->status);
+        $newStatus = OrderStatus::normalize((string) $request->status);
+        $oldStatus = OrderStatus::normalize((string) $order->status);
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
 
-        // Kiểm tra yêu cầu lý do hủy
+        if ($oldStatus === $newStatus) {
+            $data = $this->statusUpdateData($order);
+            $message = 'Trạng thái đơn hàng không thay đổi.';
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'order_id' => $order->id,
+                    'status' => $oldStatus,
+                    'status_label' => $data['status_label'],
+                    'status_options' => $data['status_options'],
+                    'data' => $data,
+                ]);
+            }
+
+            return redirect()->back()->with('success', $message);
+        }
+
+        // Trang Đơn hàng chỉ được xử lý tới bước shipper đã lấy hàng.
+        // Các bước sau đó chỉ xử lý qua trang Sự cố giao vận khi thật sự có sự cố.
+        $transitionAllowed = OrderStatus::canOrderManagementAdvanceTo($oldStatus, $newStatus, $fulfillmentType);
+
+        if (! $transitionAllowed) {
+            $message = $newStatus === OrderStatus::CANCELLED
+                ? 'Không thể hủy đơn sau khi đã xác nhận. Vui lòng xử lý tại mục Sự cố giao vận.'
+                : 'Trang Đơn hàng chỉ được chuyển trạng thái tới bước Sẵn sàng giao. Các bước shipper đã lấy hàng/đang giao/đã giao/hoàn thành chỉ xử lý qua luồng giao vận hoặc trang Sự cố giao vận khi có sự cố.';
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return redirect()->back()->with('error', $message);
+        }
+
+        // Hủy đơn là nghiệp vụ có hậu quả voucher/shipper nên mọi vai trò,
+        // kể cả Super Admin, vẫn phải ghi lý do để audit rõ ràng.
         if ($newStatus === OrderStatus::CANCELLED && empty($request->cancellation_reason)) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
@@ -307,24 +569,15 @@ class OrderController extends Controller
                     'message' => 'Vui lòng nhập lý do hủy đơn hàng.',
                 ], 422);
             }
+
             return redirect()->back()->with('error', 'Vui lòng nhập lý do hủy đơn hàng.');
         }
 
-        // Kiểm tra logic chuyển trạng thái
-        if (! OrderStatus::canAdvanceTo((string) $order->status, $newStatus, $fulfillmentType)) {
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Không thể chuyển sang trạng thái này. Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn (nếu được phép).',
-                ], 422);
-            }
-            return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này. Chỉ được chuyển sang bước tiếp theo hoặc hủy đơn (nếu được phép).');
-        }
-
-        // Kiểm tra thanh toán VNPay trước khi xác nhận
-        if ($newStatus === OrderStatus::CONFIRMED && 
-            $order->payment_method === 'vnpay' && 
-            $order->payment_status !== 'paid') {
+        // Quyền cao không đồng nghĩa bỏ qua điều kiện nghiệp vụ. Đơn VNPay vẫn phải
+        // thanh toán thành công trước khi bất kỳ ai, kể cả Super Admin, xác nhận.
+        if ($newStatus === OrderStatus::CONFIRMED
+            && $order->payment_method === 'vnpay'
+            && $order->payment_status !== 'paid') {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
@@ -334,79 +587,150 @@ class OrderController extends Controller
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
         }
 
-        $oldStatus = OrderStatus::normalize((string) $order->status);
+        $dispatchResult = null;
+        $overrideWarning = null;
 
-        DB::transaction(function () use ($order, $newStatus, $oldStatus, $request) {
-            $order->status = $newStatus;
-        
-        // Lưu thông tin người thay đổi trạng thái
-        $order->status_changed_at = now();
-        $order->status_changed_by = auth()->id();
-        
-        // Lưu lý do hủy nếu trạng thái là cancelled
-        if ($newStatus === OrderStatus::CANCELLED) {
-            $order->cancellation_reason = $request->cancellation_reason;
-        }
-        
-        // Lưu thời gian giao hàng nếu chuyển sang DELIVERED
-        if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
-            $order->delivered_at = now();
-        }
-        
-        $order->save();
+        if ($isSuperAdmin) {
+            $override = app(SuperAdminOrderOverrideService::class)->override(
+                $order,
+                $newStatus,
+                $user,
+                $request->cancellation_reason,
+            );
 
-        // Xử lý khi đơn bị hủy: hoàn tồn kho, giảm used_count voucher, thu hồi điểm nếu trước đó completed
-        if ($newStatus === OrderStatus::CANCELLED && $oldStatus !== OrderStatus::CANCELLED) {
-            DB::transaction(function () use ($order, $oldStatus) {
-                foreach ($order->orderItems as $item) {
-                    if ($item->product) {
-                        $item->product->increment('stock', $item->quantity);
+            $order = $override['order'];
+            $dispatchResult = $override['dispatch'] ?? null;
+            $overrideWarning = $override['warning'] ?? null;
+        } else {
+            if ($newStatus === OrderStatus::CANCELLED && $oldStatus !== OrderStatus::CANCELLED) {
+                $cancelResult = app(OrderCancellationService::class)->cancel(
+                    $order,
+                    (string) $request->cancellation_reason,
+                    $user
+                );
+                $order = $cancelResult['order'];
+            } else {
+                DB::transaction(function () use ($order, $newStatus, $oldStatus) {
+                    $order->status = $newStatus;
+                    $order->status_changed_at = now();
+                    $order->status_changed_by = auth()->id();
+
+                    if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
+                        $order->delivered_at = now();
                     }
+
+                    $order->save();
+
+                    if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
+                        app(AddressLearning::class)->markOrderDelivered($order->fresh());
+                    }
+                });
+            }
+
+            if ($newStatus === OrderStatus::CONFIRMED
+                && $oldStatus !== OrderStatus::CONFIRMED
+                && ($order->fulfillment_type ?? 'delivery') === 'delivery') {
+                $dispatchResult = app(ShipperDispatchService::class)
+                    ->dispatchConfirmedOrder($order->fresh(['branch']));
+                $order->refresh();
+            }
+
+            if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
+                $order->payment_status = 'paid';
+                $order->save();
+
+                if ($order->shipper_id && ($shipper = \App\Models\Shipper::query()->find($order->shipper_id))) {
+                    app(\App\Services\ShipperCodService::class)->recordCollection($order->fresh(), $shipper);
                 }
+            }
 
-                if ($order->coupon_id) {
-                    \App\Models\Voucher::where('id', $order->coupon_id)
-                        ->where('used_count', '>', 0)
-                        ->decrement('used_count');
-                }
-
-                if ($oldStatus === OrderStatus::COMPLETED) {
-                    $order->revokeLoyaltyPoints();
-                }
-            });
-        }
-        if ($newStatus === OrderStatus::DELIVERED && $oldStatus !== OrderStatus::DELIVERED) {
-            app(AddressLearning::class)->markOrderDelivered($order->fresh());
+            if ($newStatus === OrderStatus::COMPLETED && $oldStatus !== OrderStatus::COMPLETED) {
+                $order->awardLoyaltyPoints();
+            }
         }
 
-        // Nếu chuyển sang COMPLETED, cập nhật payment_status cho COD và cộng điểm thưởng
-        });
-
-        if ($newStatus === OrderStatus::COMPLETED && $order->payment_method === 'cod') {
-            $order->payment_status = 'paid';
-            $order->save();
-        }
-        
-        // Award loyalty points when order is completed
-        if ($newStatus === OrderStatus::COMPLETED && $oldStatus !== OrderStatus::COMPLETED) {
-            $order->awardLoyaltyPoints();
-        }
-
-        RealtimeOrderNotifier::orderStatusUpdated($order);
+        RealtimeOrderNotifier::orderStatusUpdated($order->fresh());
 
         $statusLabel = OrderStatus::label($newStatus);
+        $dispatchSuffix = '';
+        if (($dispatchResult['status'] ?? null) === 'assigned') {
+            $shipperName = $dispatchResult['shipper']?->user?->name ?: $dispatchResult['shipper']?->code ?: 'shipper';
+            $mode = $dispatchResult['dispatch_mode'] ?? 'available';
+            $modeText = match ($mode) {
+                'returning' => ' (chuyển hướng shipper đang quay về)',
+                'bundle' => ' (ghép chuyến thuận đường)',
+                default => '',
+            };
+            $scoreText = isset($dispatchResult['dispatch_score'])
+                ? ' · score '.number_format((float) $dispatchResult['dispatch_score'], 1, ',', '.')
+                : '';
+            $etaSeconds = (float) ($dispatchResult['dispatch_features']['pickup_eta_s'] ?? 0);
+            $etaText = $etaSeconds > 0 ? ' · ETA tới quán ~'.number_format($etaSeconds / 60, 1, ',', '.').' phút' : '';
+            $dispatchSuffix = " Đã tự động gán cho {$shipperName}{$modeText}{$scoreText}{$etaText}.";
+        } elseif (($dispatchResult['status'] ?? null) === 'waiting') {
+            $dispatchSuffix = ' Chưa có shipper rảnh phù hợp, đơn đang chờ hệ thống điều phối.';
+        } elseif (($dispatchResult['status'] ?? null) === 'error') {
+            $dispatchSuffix = ' Điều phối shipper chưa thành công, vui lòng kiểm tra lại.';
+        }
 
-        // Return JSON for AJAX requests
+        $prefix = $isSuperAdmin ? 'Super Admin đã cập nhật' : 'Đã cập nhật';
+        $message = "{$prefix} trạng thái đơn hàng thành: {$statusLabel}.{$dispatchSuffix}";
+        if ($overrideWarning) {
+            $message .= ' '.$overrideWarning;
+        }
+
         if ($request->expectsJson() || $request->ajax()) {
+            $data = $this->statusUpdateData($order->fresh());
+            $responseStatusOptions = $this->orderManagementOptionsForOrder($order->fresh());
+
             return response()->json([
                 'success' => true,
-                'message' => "Đã cập nhật trạng thái đơn hàng thành: {$statusLabel}",
+                'message' => $message,
                 'order_id' => $order->id,
                 'status' => $newStatus,
                 'status_label' => $statusLabel,
+                'super_admin_override' => $isSuperAdmin,
+                'status_options' => $responseStatusOptions,
+                'data' => $data,
             ]);
         }
-        return redirect()->back()->with('success', "Đã cập nhật trạng thái đơn hàng thành: {$statusLabel}");
+
+        return redirect()->back()->with('success', $message);
+    }
+
+    private function statusUpdateData(Order $order): array
+    {
+        $status = OrderStatus::normalize((string) $order->status);
+        $statusOptions = $this->orderManagementOptionsForOrder($order);
+        $nextStatus = $this->orderManagementNextStatusForOrder($order);
+
+        return [
+            'id' => (int) $order->id,
+            'order_code' => $order->displayCode(),
+            'status' => $status,
+            'status_label' => OrderStatus::label($status),
+            'status_icon' => OrderStatus::notificationIcon($status),
+            'status_class' => 'status-text-'.$status,
+            'status_options' => $statusOptions,
+            'next_status' => $nextStatus,
+            'can_update' => count($statusOptions) > 1,
+            'updated_at' => $order->updated_at?->toIso8601String(),
+        ];
+    }
+
+    private function orderManagementOptionsForOrder(Order $order): array
+    {
+        $status = OrderStatus::normalize((string) $order->status);
+        $options = OrderStatus::orderManagementOptions($status, $order->fulfillment_type ?? 'delivery');
+
+        return $options;
+    }
+
+    private function orderManagementNextStatusForOrder(Order $order): ?string
+    {
+        $nextStatus = OrderStatus::orderManagementNextStatus((string) $order->status, $order->fulfillment_type ?? 'delivery');
+
+        return $nextStatus;
     }
 
     /**

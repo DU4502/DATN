@@ -13,7 +13,7 @@ class SuperAdminTimeMatrixTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_super_admin_time_matrix_renders_replacement_table_and_export_links(): void
+    public function test_super_admin_hides_time_matrix_while_preserving_other_business_analytics(): void
     {
         $superAdmin = User::factory()->create([
             'email' => User::SUPER_ADMIN_EMAIL,
@@ -23,10 +23,9 @@ class SuperAdminTimeMatrixTest extends TestCase
         $response = $this->actingAs($superAdmin)->get('/admin/super-admin?analytics_period_type=year&analytics_year=2026');
 
         $response->assertOk()
-            ->assertSee('So sánh chi nhánh theo thời gian', false)
-            ->assertSee('Tải Excel', false)
-            ->assertSee('Bảng đang xem', false)
-            ->assertSee('Toàn bộ dữ liệu', false)
+            ->assertSee('Phân tích kinh doanh', false)
+            ->assertSee('data-branch-ranking-region', false)
+            ->assertDontSee('So sánh chi nhánh theo thời gian', false)
             ->assertDontSee('Doanh thu 7 ngày', false)
             ->assertDontSee('Người dùng mới', false);
     }

@@ -12,9 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/css/bootstrap-local.css', 'resources/js/app.js'])
 
     <style>
         /* ─── Design Tokens ─── */
@@ -1165,7 +1163,7 @@
             }
         }
         END COMMENT */
-    </style>
+</style>
 </head>
 
 <body>
@@ -1342,8 +1340,8 @@
                                     </span>
                                 </div>
                                 @if(Auth::user()->unreadNotifications->count() > 0)
-                                <button type="button" 
-                                        class="btn btn-sm btn-outline-primary w-100" 
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary w-100"
                                         id="markAllReadBtn"
                                         style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                     <i class="bi bi-check2-all me-1"></i>Đánh dấu tất cả đã đọc
@@ -1432,7 +1430,7 @@
         </nav>
     </header>
 
-    <main style="min-height: 100vh;">
+    <main style="min-height: {{ request()->routeIs('login', 'register', 'password.*', 'verification.*') ? 'calc(100dvh - 80px)' : '100vh' }}; overflow: {{ request()->routeIs('login', 'register', 'password.*', 'verification.*') ? 'hidden' : 'visible' }};">
         @yield('content')
     </main>
 
@@ -1491,7 +1489,12 @@
     </footer>
     @endunless
 
-    @if(!auth()->check() || auth()->user()?->isCustomer())
+    @php
+        $isGroupOrderMember = request()->routeIs('group-orders.show')
+            && isset($currentMember)
+            && $currentMember;
+    @endphp
+    @if(!auth()->check() || auth()->user()?->isCustomer() || $isGroupOrderMember)
         @include('components.chatbox')
     @endif
 
@@ -1527,7 +1530,6 @@
         @endif
     @endauth
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         /* Header shrink on scroll */
         const header = document.getElementById('siteHeader');
@@ -1602,12 +1604,28 @@
                 return;
             }
 
+            const isQuantityForm = form.matches('[data-cart-qty-form]');
+            const quantityInput = isQuantityForm ? form.querySelector('[data-cart-qty-input]') : null;
+            const currentQuantityValue = quantityInput ? String(quantityInput.value || '').trim() : '';
+
+            if (isQuantityForm && form._cartQtySyncing) {
+                event.preventDefault();
+                form._cartQtyPending = currentQuantityValue;
+                return;
+            }
+
             event.preventDefault();
 
             const submitter = event.submitter;
             const formData = new FormData(form);
             const isAddAction = form.action.includes('/cart/add/');
             const originalSubmitterHtml = submitter?.innerHTML;
+
+            if (isQuantityForm) {
+                form._cartQtySyncing = true;
+                form._cartQtyPending = null;
+                form._cartQtyLastSent = currentQuantityValue;
+            }
 
             function cartButton() {
                 const buttons = Array.from(document.querySelectorAll('[data-cart-button]'));
@@ -1725,6 +1743,9 @@
 
                 const isWarning = options.type === 'warning';
                 const icon = isWarning ? 'bi-exclamation-triangle' : 'bi-bag-check';
+                const redirectUrl = !isWarning
+                    ? (options.redirectUrl || '{{ route('cart.index', [], false) }}')
+                    : (options.redirectUrl || '');
                 const action = options.redirectUrl
                     ? `<a class="btn btn-primary rounded-pill fw-bold cart-feedback-action" href="${escapeHtml(options.redirectUrl)}">${escapeHtml(options.redirectLabel || 'Mở')}</a>`
                     : '';
@@ -1736,6 +1757,7 @@
 
                 feedback.classList.toggle('is-warning', isWarning);
                 feedback.setAttribute('role', isWarning ? 'alertdialog' : 'status');
+                feedback.classList.toggle('is-clickable', Boolean(redirectUrl));
                 feedback.innerHTML = `
                     <span class="cart-feedback-icon"><i class="bi ${icon}"></i></span>
                     <span class="cart-feedback-copy">
@@ -1747,6 +1769,18 @@
                         <button type="button" class="cart-feedback-close" aria-label="Đóng">${isWarning ? 'Để sau' : '<i class="bi bi-x-lg"></i>'}</button>
                     </span>
                 `;
+                feedback.onclick = (event) => {
+                    if (!redirectUrl) {
+                        return;
+                    }
+
+                    if (event.target.closest('button, a, input, select, textarea')) {
+                        return;
+                    }
+
+                    window.location.href = redirectUrl;
+                };
+                feedback.style.cursor = redirectUrl ? 'pointer' : '';
                 feedback.querySelector('.cart-feedback-close')?.addEventListener('click', hideCartFeedback);
                 document.body.classList.toggle('cart-warning-open', isWarning);
                 feedback.classList.add('show');
@@ -1768,12 +1802,15 @@
             setAddButtonState('loading');
 
             try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
                 const response = await fetch(form.action, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken
                     },
+                    credentials: 'same-origin',
                     body: formData
                 });
 
@@ -1786,7 +1823,11 @@
                         errorData = {};
                     }
 
-                    showCartFeedback(errorData.message || 'Không thể thêm sản phẩm vào giỏ hàng.', {
+                    const fallbackMessage = response.status === 419
+                        ? 'Phiên đăng nhập hoặc CSRF token đã hết hạn. Hãy tải lại trang rồi thử lại.'
+                        : 'Không thể thêm sản phẩm vào giỏ hàng.';
+
+                    showCartFeedback(errorData.message || fallbackMessage, {
                         type: 'warning',
                         redirectUrl: errorData.redirect_url,
                         redirectLabel: errorData.redirect_label,
@@ -1806,7 +1847,10 @@
                 if (isAddAction) {
                     setAddButtonState('success');
                     flyToCart();
-                    showCartFeedback(data.message);
+                    showCartFeedback(data.message, {
+                        redirectUrl: '{{ route('cart.index', [], false) }}',
+                        redirectLabel: 'Xem giỏ hàng',
+                    });
                 }
 
                 if (document.body.dataset.page === 'cart') {
@@ -1836,15 +1880,21 @@
                             input.value = item.quantity;
 
                             const qtyForm = input.closest('form');
-                            const minusButton = qtyForm?.querySelector('button[aria-label^="Giảm"]');
-                            const plusButton = qtyForm?.querySelector('button[aria-label^="Tăng"]');
+                            const minusButton = qtyForm?.querySelector('[data-cart-qty-minus], button[aria-label^="Giảm"]');
+                            const plusButton = qtyForm?.querySelector('[data-cart-qty-plus], button[aria-label^="Tăng"]');
 
                             if (minusButton) {
-                                minusButton.value = Math.max(1, item.quantity - 1);
+                                if ('value' in minusButton) {
+                                    minusButton.value = Math.max(1, item.quantity - 1);
+                                }
+                                minusButton.disabled = item.quantity <= 1;
                             }
 
                             if (plusButton) {
-                                plusButton.value = item.quantity + 1;
+                                if ('value' in plusButton) {
+                                    plusButton.value = item.quantity + 1;
+                                }
+                                plusButton.disabled = item.quantity >= 99;
                             }
                         });
 
@@ -1878,6 +1928,28 @@
                         setAddButtonState('idle');
                     }, isAddAction ? 900 : 0);
                 }
+
+                if (isQuantityForm) {
+                    form._cartQtySyncing = false;
+
+                    const pendingQuantity = form._cartQtyPending;
+                    form._cartQtyPending = null;
+
+                    if (pendingQuantity && pendingQuantity !== form._cartQtyLastSent) {
+                        if (quantityInput) {
+                            quantityInput.value = pendingQuantity;
+                        }
+
+                        window.setTimeout(() => {
+                            if (typeof form.requestSubmit === 'function') {
+                                form.requestSubmit();
+                                return;
+                            }
+
+                            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                        }, 0);
+                    }
+                }
             }
         });
     </script>
@@ -1889,7 +1961,7 @@
             if (!notificationContainer) return;
 
             const alerts = notificationContainer.querySelectorAll('.alert');
-            
+
             alerts.forEach(function(alert) {
                 // Giữ đủ lâu để người dùng đọc và thao tác nếu thông báo có hướng dẫn.
                 const dismissTimer = setTimeout(function() {
@@ -1897,7 +1969,7 @@
                     alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
                     alert.style.opacity = '0';
                     alert.style.transform = 'translateX(100%)';
-                    
+
                     // Remove from DOM after animation
                     setTimeout(function() {
                         if (alert.parentNode) {
@@ -1996,6 +2068,11 @@
             @auth
             // Chỉ chạy khi user đã đăng nhập
             if (!navigator.geolocation) return;
+            const preservePageStateDuringGeoUpdate = @json(request()->routeIs('checkout.*', 'cart.index'));
+
+            if (preservePageStateDuringGeoUpdate) {
+                return;
+            }
 
             // Hàm gửi tọa độ lên server
             function submitLocation(lat, lng) {

@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Review;
 use App\Models\Favorite;
 use App\Support\ProductCatalog;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -20,7 +21,13 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::query()->with(['category', 'sizes', 'toppings']);
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
+        $query = Product::query()->with([
+            'category',
+            'sizes',
+            'toppings',
+            'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id)),
+        ]);
         $this->onlyVisibleProducts($query);
 
         $hasSkuColumn = Schema::hasColumn('products', 'sku');
@@ -165,7 +172,7 @@ class ProductController extends Controller
             ->limit(4)
             ->get();
 
-        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers'));
+        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers', 'branch'));
     }
 
     /**
@@ -173,6 +180,7 @@ class ProductController extends Controller
      */
     public function show(Request $request, string $slug)
     {
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
         $legacySlugAliases = [
             'cam-vat-nguyen-chat' => 'nuoc-ep-cam',
         ];
@@ -184,7 +192,12 @@ class ProductController extends Controller
         $hasReviewsTable = Schema::hasTable('reviews');
         $productQuery = Product::where('slug', $slug)
             ->where('status', true)
-            ->with(['category', 'sizes', 'toppings']);
+            ->with([
+                'category',
+                'sizes',
+                'toppings',
+                'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id)),
+            ]);
 
         if ($hasReviewsTable) {
             $productQuery->with([
@@ -278,7 +291,7 @@ class ProductController extends Controller
                 'image_url' => $item['image'],
                 'gallery_images' => [$item['image']],
                 'description' => $item['description'],
-                'stock' => 20,
+                'is_available' => null,
                 'category' => (object) ['name' => $item['category']],
             ];
 
@@ -291,11 +304,12 @@ class ProductController extends Controller
                 'remaining_reviews' => 0,
             ];
 
-            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState'));
+            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState', 'branch'));
         }
 
         // Get related products
         $relatedProducts = Product::where('category_id', $product->category_id)
+            ->with(['branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->where('id', '!=', $product->id)
             ->where('status', true)
             ->take(4)
@@ -315,7 +329,8 @@ class ProductController extends Controller
             'relatedProducts',
             'approvedReviews',
             'reviewSummary',
-            'reviewFormState'
+            'reviewFormState',
+            'branch'
         ));
     }
 

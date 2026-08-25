@@ -80,10 +80,12 @@
             'order_processing': '{{ \App\Support\OrderStatus::notificationIconByType('order_processing') }}',
             'order_shipper_accepted': '{{ \App\Support\OrderStatus::notificationIconByType('order_shipper_accepted') }}',
             'order_shipped': '{{ \App\Support\OrderStatus::notificationIconByType('order_shipped') }}',
+            'order_arriving_soon': '{{ \App\Support\OrderStatus::notificationIconByType('order_arriving_soon') }}',
             'order_arrived': '{{ \App\Support\OrderStatus::notificationIconByType('order_arrived') }}',
             'order_completed': '{{ \App\Support\OrderStatus::notificationIconByType('order_completed') }}',
             'order_delivered': '{{ \App\Support\OrderStatus::notificationIconByType('order_delivered') }}',
-            'order_cancelled': '{{ \App\Support\OrderStatus::notificationIconByType('order_cancelled') }}'
+            'order_cancelled': '{{ \App\Support\OrderStatus::notificationIconByType('order_cancelled') }}',
+            'delivery_delay_reported': '{{ \App\Support\OrderStatus::notificationIconByType('delivery_delay_reported') }}'
         };
 
         function notificationIcon(type) {
@@ -194,25 +196,24 @@
                     if (!knownNotificationIds.has(notification.id)) {
                         knownNotificationIds.add(notification.id);
 
-                        if (!isFirstPoll && notification.message && typeof window.showRealtimeToast === 'function') {
-                            const toastMessage = notification.title
-                                ? `${notification.title}: ${notification.message}`
-                                : notification.message;
-                            window.showRealtimeToast(
-                                toastMessage,
-                                'info',
-                                notification.url || orderNotificationUrl(notification.order_id)
-                            );
-                        }
+                        const payload = {
+                            order_id: notification.order_id,
+                            order_code: notification.order_code,
+                            status: notification.status,
+                            status_label: notification.status_label,
+                            updated_at: notification.updated_at,
+                            message: notification.message,
+                            url: notification.url || orderNotificationUrl(notification.order_id),
+                        };
 
-                        document.dispatchEvent(new CustomEvent('order:status-updated', {
-                            detail: {
-                                order_id: notification.order_id,
-                                status: notification.status,
-                                status_label: notification.status_label,
-                                message: notification.message,
-                            },
-                        }));
+                        if (typeof window.dispatchOrderStatusUpdate === 'function') {
+                            window.dispatchOrderStatusUpdate(payload, { toast: !isFirstPoll });
+                        } else {
+                            if (!isFirstPoll && notification.message && typeof window.showRealtimeToast === 'function') {
+                                window.showRealtimeToast(notification.message, 'info', payload.url);
+                            }
+                            document.dispatchEvent(new CustomEvent('order:status-updated', { detail: payload }));
+                        }
                     }
                 });
 

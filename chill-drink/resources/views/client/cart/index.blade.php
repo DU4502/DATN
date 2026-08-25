@@ -161,7 +161,7 @@
     }
 
     .cart-qty input {
-        width: 44px;
+        width: 52px;
         border: 0;
         background: transparent;
         text-align: center;
@@ -350,12 +350,12 @@
                                     </div>
 
                                     <div class="d-flex flex-column align-items-md-end gap-3">
-                                        <form action="{{ route('cart.update', $id) }}" method="POST" class="cart-qty" data-ajax-cart>
+                                        <form action="{{ route('cart.update', $id) }}" method="POST" class="cart-qty" data-ajax-cart data-cart-qty-form>
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" name="quantity" value="{{ max(1, $item['quantity'] - 1) }}" aria-label="Giảm số lượng">-</button>
-                                            <input type="number" name="quantity" value="{{ $item['quantity'] }}" min="1" max="99" aria-label="Số lượng" data-cart-quantity="{{ $id }}">
-                                            <button type="submit" name="quantity" value="{{ $item['quantity'] + 1 }}" aria-label="Tăng số lượng">+</button>
+                                            <button type="button" data-cart-qty-minus aria-label="Giảm số lượng">-</button>
+                                            <input type="text" name="quantity" value="{{ $item['quantity'] }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" spellcheck="false" min="1" max="99" aria-label="Số lượng" data-cart-quantity="{{ $id }}" data-cart-qty-input>
+                                            <button type="button" data-cart-qty-plus aria-label="Tăng số lượng">+</button>
                                         </form>
 
                                         <div class="d-flex align-items-center gap-3">
@@ -441,8 +441,8 @@
                                     @else
                                         <a href="{{ route('login') }}" class="cart-recommend-action is-favorite" aria-label="Đăng nhập để yêu thích"><i class="bi bi-heart"></i></a>
                                     @endauth
-                                    @if(($product->stock ?? 1) > 0)
-                                        <form method="POST" action="{{ route('cart.add', $product->id) }}" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="cart-recommend-action is-add" aria-label="Thêm {{ $product->name }} vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
+                                    @if($product->availabilityAt($branch) === true)
+                                        <form method="POST" action="{{ route('cart.add', $product->id) }}" data-ajax-cart data-product-availability="{{ $product->id }}" data-branch-id="{{ $branch?->id }}">@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="cart-recommend-action is-add" aria-label="Thêm {{ $product->name }} vào giỏ" data-product-action><i class="bi bi-plus-lg"></i></button></form>
                                     @endif
                                 </div>
                                 <a href="{{ route('products.show', $product->slug) }}" class="cart-recommend-card overflow-hidden h-100 d-block text-decoration-none text-dark">
@@ -455,6 +455,7 @@
                                         class="recommend-image"
                                     />
                                     <div class="p-3">
+                                        <x-product-availability-badge :product="$product" :branch="$branch" class="mb-2" />
                                         <h3 class="h5 fw-bold mb-1">{{ $product->name }}</h3>
                                         <p class="text-primary fw-semibold mb-0">{{ number_format($product->price, 0, ',', '.') }}đ</p>
                                     </div>
@@ -537,6 +538,151 @@
                     button.disabled = false;
                 }
             });
+        });
+
+        document.querySelectorAll('[data-cart-qty-form]').forEach((form) => {
+            const input = form.querySelector('[data-cart-qty-input]');
+            const minusButton = form.querySelector('[data-cart-qty-minus]');
+            const plusButton = form.querySelector('[data-cart-qty-plus]');
+
+            if (!input || !minusButton || !plusButton) {
+                return;
+            }
+
+            const clampQuantity = (value) => {
+                const normalized = Number.parseInt(String(value || '').replace(/[^\d]/g, ''), 10);
+                return Number.isFinite(normalized) ? Math.min(99, Math.max(1, normalized)) : 1;
+            };
+
+            const render = () => {
+                const quantity = clampQuantity(input.value || 1);
+                input.value = String(quantity);
+                minusButton.disabled = quantity <= 1;
+                plusButton.disabled = quantity >= 99;
+            };
+
+            const stopRepeat = () => {
+                if (minusButton._repeatTimer) {
+                    window.clearTimeout(minusButton._repeatTimer);
+                    minusButton._repeatTimer = null;
+                }
+
+                if (minusButton._repeatInterval) {
+                    window.clearInterval(minusButton._repeatInterval);
+                    minusButton._repeatInterval = null;
+                }
+
+                if (plusButton._repeatTimer) {
+                    window.clearTimeout(plusButton._repeatTimer);
+                    plusButton._repeatTimer = null;
+                }
+
+                if (plusButton._repeatInterval) {
+                    window.clearInterval(plusButton._repeatInterval);
+                    plusButton._repeatInterval = null;
+                }
+            };
+
+            const submitForm = () => {
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                    return;
+                }
+
+                form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            };
+
+            const syncSoon = (() => {
+                let timer = null;
+
+                return (delay = 220) => {
+                    clearTimeout(timer);
+                    timer = window.setTimeout(() => {
+                        timer = null;
+                        submitForm();
+                    }, delay);
+                };
+            })();
+
+            const setQuantity = (nextQuantity, immediate = false) => {
+                input.value = String(clampQuantity(nextQuantity));
+                render();
+                syncSoon(immediate ? 0 : 220);
+            };
+
+            const startRepeat = (delta, button) => {
+                stopRepeat();
+                setQuantity(clampQuantity(input.value || 1) + delta, true);
+                button._repeatTimer = window.setTimeout(() => {
+                    button._repeatInterval = window.setInterval(() => {
+                        setQuantity(clampQuantity(input.value || 1) + delta, true);
+                    }, 75);
+                }, 260);
+            };
+
+            minusButton.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                startRepeat(-1, minusButton);
+            });
+
+            plusButton.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                startRepeat(1, plusButton);
+            });
+
+            [minusButton, plusButton].forEach((button) => {
+                button.addEventListener('pointerup', stopRepeat);
+                button.addEventListener('pointercancel', stopRepeat);
+                button.addEventListener('lostpointercapture', stopRepeat);
+            });
+
+            input.addEventListener('input', () => {
+                const digitsOnly = String(input.value || '').replace(/[^\d]/g, '');
+                if (input.value !== digitsOnly) {
+                    input.value = digitsOnly;
+                }
+
+                if (digitsOnly === '') {
+                    return;
+                }
+
+                render();
+                syncSoon();
+            });
+
+            input.addEventListener('click', () => {
+                input.select();
+            });
+
+            input.addEventListener('blur', () => {
+                if (String(input.value || '').trim() === '') {
+                    setQuantity(1, true);
+                    return;
+                }
+
+                setQuantity(input.value, true);
+            });
+
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    stopRepeat();
+                    setQuantity(input.value || 1, true);
+                    return;
+                }
+
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    stopRepeat();
+                    setQuantity(clampQuantity(input.value || 1) + 1, true);
+                } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    stopRepeat();
+                    setQuantity(clampQuantity(input.value || 1) - 1, true);
+                }
+            });
+
+            render();
         });
 
         const selectAll = document.getElementById('cartSelectAll');

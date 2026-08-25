@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\MessageResource;
 use App\Models\Branch;
 use App\Models\Conversation;
+use App\Models\GroupOrder;
 use App\Models\Message;
 use App\Models\OrderIssueReport;
 use App\Models\User;
@@ -104,8 +105,7 @@ class ChatController extends Controller
                     'branch_name'     => $conversation->branch?->name ?? '',
                     'status'          => $conversation->status,
                     'guest_token'     => $conversation->guest_token,
-            'guest_name'      => $conversation->guest_name,
-            'support_issue'   => null,
+                    'guest_name'      => $conversation->guest_name,
                 ]);
             }
         }
@@ -176,13 +176,12 @@ class ChatController extends Controller
         }
 
         // Authenticated user
-        $this->ensureCustomer();
+        $this->ensureCustomerOrGroupOrderMember($request);
         $user = auth()->user();
 
         $conversation = $user->conversations()
             ->where('status', 'open')
-            ->orderByDesc('last_message_at')
-            ->orderByDesc('created_at')
+            ->latest()
             ->first();
 
         if (!$conversation) {
@@ -334,15 +333,7 @@ class ChatController extends Controller
         }
 
         if ($request->input('mark_as_read') && auth()->check()) {
-            $readConversationIds = $conversation->branch_id
-                ? Conversation::query()
-                    ->where('user_id', $conversation->user_id)
-                    ->where('branch_id', $conversation->branch_id)
-                    ->pluck('id')
-                : collect([$conversation->id]);
-
-            Message::query()
-                ->whereIn('conversation_id', $readConversationIds)
+            $conversation->messages()
                 ->where('is_read', false)
                 ->where('sender_id', '!=', auth()->id())
                 ->update(['is_read' => true]);
@@ -351,10 +342,10 @@ class ChatController extends Controller
         return response()->json([
             'success'             => true,
             'conversation_status' => $conversation->status,
-            'support_issue'       => $this->supportIssuePayload($conversation),
             'messages'            => $messages->map(
                 fn (Message $message) => MessageResource::toPublicArray($message)
             ),
+            'support_issue'       => $this->supportIssuePayload($conversation),
         ]);
     }
 
@@ -379,10 +370,7 @@ class ChatController extends Controller
         $this->authorizeConversation($conversation, $request);
 
         if ($conversation->status === 'closed') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Phiên chat đã kết thúc.',
-            ], 403);
+            $conversation->update(['status' => 'open']);
         }
 
         $attachmentPath = null;
@@ -443,6 +431,7 @@ class ChatController extends Controller
     {
         // User đã đăng nhập
         if (auth()->check()) {
+            $this->ensureCustomerOrGroupOrderMember($request);
             if ($conversation->user_id !== auth()->id()) {
                 abort(403, 'Bạn không có quyền truy cập cuộc trò chuyện này.');
             }
@@ -509,8 +498,20 @@ class ChatController extends Controller
         ];
     }
 
-    protected function ensureCustomer(): void
+    protected function ensureCustomerOrGroupOrderMember(Request $request): void
     {
-        abort_unless(auth()->user()?->isCustomer(), 403);
+        $user = auth()->user();
+        if ($user?->isCustomer()) {
+            return;
+        }
+
+        $groupCode = trim((string) $request->input('group_order_code'));
+        abort_if($groupCode === '', 403);
+
+        $groupOrder = GroupOrder::query()->where('code', $groupCode)->first();
+        abort_unless($groupOrder && (
+            (int) $groupOrder->owner_id === (int) $user->id
+            || $groupOrder->members()->where('user_id', $user->id)->exists()
+        ), 403);
     }
 }

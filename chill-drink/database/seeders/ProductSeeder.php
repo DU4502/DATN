@@ -109,10 +109,6 @@ class ProductSeeder extends Seeder
             $data['image'] = ProductImage::forProduct(null, $item['slug'], 700);
         }
 
-        if (Schema::hasColumn('products', 'stock')) {
-            $data['stock'] = 40 + (($index * 7) % 45);
-        }
-
         if (Schema::hasColumn('products', 'status')) {
             $data['status'] = true;
         }

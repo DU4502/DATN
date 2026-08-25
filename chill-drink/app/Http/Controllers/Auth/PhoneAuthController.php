@@ -190,6 +190,12 @@ class PhoneAuthController extends Controller
             return route('admin.chat.index', absolute: false);
         }
 
+        if ($user->isShipper()) {
+            request()->session()->forget('url.intended');
+
+            return route('shipper.dashboard', absolute: false);
+        }
+
         if ($user->isStaffOnly()) {
             request()->session()->forget('url.intended');
 

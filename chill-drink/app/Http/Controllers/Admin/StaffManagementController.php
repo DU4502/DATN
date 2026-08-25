@@ -4,13 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\DeliveryFeeSetting;
+use App\Models\Shipper;
 use App\Models\User;
 use App\Models\SystemLog;
+use App\Rules\ActiveBranchAssignment;
+use App\Services\ShipperHomeBranchService;
+use App\Support\ShippingFee;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use RuntimeException;
 
 class StaffManagementController extends Controller
 {
@@ -18,13 +26,13 @@ class StaffManagementController extends Controller
      * Danh sách nhân viên — Admin/SuperAdmin chỉ thấy nhân viên thuộc chi nhánh của mình.
      * Super Admin thấy tất cả.
      */
-    public function index(Request $request): View
+    public function index(Request $request, ShipperHomeBranchService $homeBranches): View
     {
         $authUser = auth()->user();
         $search   = trim((string) $request->query('q', ''));
         $status   = (string) $request->query('status', 'all');
 
-        $query = User::where('role_id', 5)->with('branch')->orderBy('name');
+        $query = User::where('role_id', User::SHIPPER_ROLE_ID)->with(['branch', 'shipper'])->orderBy('name');
 
         // Admin chỉ thấy nhân viên của chi nhánh mình
         if ($authUser->isAdmin() && ! $authUser->isSuperAdmin()) {
@@ -52,18 +60,18 @@ class StaffManagementController extends Controller
 
         // Dropdown chi nhánh: Super Admin thấy tất cả, Admin chỉ thấy chi nhánh mình
         $branches = $authUser->isSuperAdmin()
-            ? Branch::orderBy('name')->get()
-            : Branch::where('id', $authUser->branch_id)->get();
+            ? Branch::active()->orderBy('name')->get()
+            : Branch::active()->where('id', $authUser->branch_id)->get();
 
         $stats = [
             'total'  => (clone $query->getQuery())->count(),
-            'active' => User::where('role_id', 5)->when(
+            'active' => User::where('role_id', User::SHIPPER_ROLE_ID)->when(
                 $authUser->isAdmin() && ! $authUser->isSuperAdmin(),
                 fn ($q) => $authUser->branch_id
                     ? $q->where('branch_id', $authUser->branch_id)
                     : $q->whereRaw('1 = 0')
             )->where('is_active', true)->count(),
-            'locked' => User::where('role_id', 5)->when(
+            'locked' => User::where('role_id', User::SHIPPER_ROLE_ID)->when(
                 $authUser->isAdmin() && ! $authUser->isSuperAdmin(),
                 fn ($q) => $authUser->branch_id
                     ? $q->where('branch_id', $authUser->branch_id)
@@ -71,7 +79,130 @@ class StaffManagementController extends Controller
             )->where('is_active', false)->count(),
         ];
 
-        return view('admin.staff.index', compact('staffUsers', 'branches', 'stats', 'search', 'status'));
+        $deliveryFeeSettings = ShippingFee::settings();
+        $branchTransferStates = [];
+        if ($authUser->isSuperAdmin()) {
+            foreach ($staffUsers as $staffUser) {
+                $branchTransferStates[(int) $staffUser->id] = $homeBranches->canTransfer($staffUser);
+            }
+        }
+
+        return view('admin.staff.index', compact(
+            'staffUsers',
+            'branches',
+            'stats',
+            'search',
+            'status',
+            'deliveryFeeSettings',
+            'branchTransferStates'
+        ));
+    }
+
+    /**
+     * Cập nhật chính sách phí giao hàng toàn hệ thống.
+     * Chỉ Super Admin được phép sửa; Admin thường chỉ xem cấu hình hiện tại.
+     */
+    public function updateDeliveryFeeSettings(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()?->isSuperAdmin(), 403, 'Chỉ Super Admin được thay đổi phí giao hàng.');
+
+        $validated = $request->validateWithBag('deliveryFeeSettings', [
+            'free_distance_km' => ['required', 'numeric', 'min:0', 'max:15'],
+            'fast_surcharge' => ['required', 'integer', 'min:0', 'max:1000000'],
+            'tier_max' => ['required', 'array', 'min:1', 'max:10'],
+            'tier_max.*' => ['nullable', 'integer', 'min:1', 'max:999'],
+            'tier_price' => ['required', 'array', 'min:1', 'max:10'],
+            'tier_price.*' => ['required', 'integer', 'min:0', 'max:1000000'],
+        ], [
+            'free_distance_km.required' => 'Vui lòng nhập số km được miễn phí ship.',
+            'free_distance_km.max' => 'Khoảng cách miễn phí không được vượt quá phạm vi giao hàng 15 km.',
+            'tier_max.required' => 'Cần ít nhất một bậc số lượng cốc.',
+            'tier_price.required' => 'Cần nhập đơn giá/km cho từng bậc số lượng.',
+            'tier_price.*.required' => 'Mỗi bậc số lượng phải có đơn giá/km.',
+        ]);
+
+        $maxValues = array_values($validated['tier_max']);
+        $priceValues = array_values($validated['tier_price']);
+
+        if (count($maxValues) !== count($priceValues)) {
+            $exception = ValidationException::withMessages([
+                'tier_price' => 'Dữ liệu bậc số lượng không đồng bộ. Vui lòng tải lại trang và thử lại.',
+            ]);
+            $exception->errorBag = 'deliveryFeeSettings';
+            throw $exception;
+        }
+
+        $tiers = [];
+        $nextMin = 1;
+        $lastIndex = count($maxValues) - 1;
+
+        foreach ($maxValues as $index => $maxRaw) {
+            $max = ($maxRaw === null || $maxRaw === '') ? null : (int) $maxRaw;
+            $price = max(0, (int) ($priceValues[$index] ?? 0));
+
+            if ($max === null && $index !== $lastIndex) {
+                $exception = ValidationException::withMessages([
+                    'tier_max' => 'Chỉ bậc cuối cùng mới được để trống giới hạn cốc (không giới hạn).',
+                ]);
+                $exception->errorBag = 'deliveryFeeSettings';
+                throw $exception;
+            }
+
+            if ($max !== null && $max < $nextMin) {
+                $exception = ValidationException::withMessages([
+                    'tier_max' => 'Mốc số lượng cốc phải tăng dần và không được chồng lấn.',
+                ]);
+                $exception->errorBag = 'deliveryFeeSettings';
+                throw $exception;
+            }
+
+            $tiers[] = [
+                'min_cups' => $nextMin,
+                'max_cups' => $max,
+                'price_per_km' => $price,
+            ];
+
+            if ($max !== null) {
+                $nextMin = $max + 1;
+            }
+        }
+
+        if (($tiers[array_key_last($tiers)]['max_cups'] ?? null) !== null) {
+            $exception = ValidationException::withMessages([
+                'tier_max' => 'Bậc cuối cùng phải để trống ô “Đến ... cốc” để áp dụng cho mọi đơn lớn hơn.',
+            ]);
+            $exception->errorBag = 'deliveryFeeSettings';
+            throw $exception;
+        }
+
+        DB::transaction(function () use ($request, $validated, $tiers): void {
+            $setting = DeliveryFeeSetting::query()->first() ?? new DeliveryFeeSetting();
+            $setting->fill([
+                'free_distance_km' => round((float) $validated['free_distance_km'], 2),
+                'fast_surcharge' => (int) $validated['fast_surcharge'],
+                'cup_tiers' => $tiers,
+                'updated_by' => $request->user()->id,
+            ]);
+            $setting->save();
+
+            SystemLog::record(
+                $request->user(),
+                'Đã cập nhật chính sách phí giao hàng',
+                'admin',
+                'success',
+                [
+                    'free_distance_km' => (float) $validated['free_distance_km'],
+                    'fast_surcharge' => (int) $validated['fast_surcharge'],
+                    'cup_tiers' => $tiers,
+                ],
+            );
+        });
+
+        ShippingFee::clearSettingsCache();
+
+        return redirect()
+            ->to(route('admin.super-admin.manage.staff.index').'#delivery-fee-settings')
+            ->with('success', 'Đã lưu chính sách phí giao hàng. Checkout sẽ áp dụng ngay cho đơn mới.');
     }
 
     /**
@@ -89,7 +220,7 @@ class StaffManagementController extends Controller
             'name'      => ['required', 'string', 'max:150'],
             'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment()],
         ], [
             'name.required'      => 'Vui lòng nhập tên nhân viên.',
             'email.required'     => 'Vui lòng nhập email.',
@@ -108,21 +239,43 @@ class StaffManagementController extends Controller
                 ->withErrors(['email' => 'Email đã được sử dụng.'], 'createStaff');
         }
 
-        // Admin thường chỉ có thể tạo nhân viên thuộc chi nhánh của mình
+        // P15: mỗi shipper phải có một HOME BRANCH cố định.
         $branchId = $validated['branch_id'] ?? null;
+        if ($authUser->isSuperAdmin() && ! $branchId) {
+            return redirect()->back()->withInput()->withErrors([
+                'branch_id' => 'Shipper phải được gán một home branch khi tạo tài khoản.',
+            ], 'createStaff');
+        }
         if ($authUser->isAdmin() && ! $authUser->isSuperAdmin()) {
             abort_unless($authUser->branch_id, 403, 'Admin phÃ¡i Ä‘Æ°á»£c gÃ¡n chi nhÃ¡nh trÆ°á»›c khi táº¡o nhÃ¢n viÃªn.');
             $branchId = $authUser->branch_id;
+        }
+
+        if (! Branch::active()->whereKey($branchId)->exists()) {
+            return redirect()->back()->withInput()->withErrors([
+                'branch_id' => 'Không thể tạo Shipper tại chi nhánh đã ngừng hoạt động.',
+            ], 'createStaff');
         }
 
         $staff = User::create([
             'name'      => $validated['name'],
             'email'     => $validated['email'], // đã lowercase từ bước merge trước validate
             'password'  => Hash::make($validated['password']),
-            'role_id'   => 5,
+            'role_id'   => User::SHIPPER_ROLE_ID,
             'branch_id' => $branchId,
             'is_active' => true,
         ]);
+
+        Shipper::query()->firstOrCreate(
+            ['user_id' => $staff->id],
+            [
+                'code' => 'SHP-'.str_pad((string) $staff->id, 5, '0', STR_PAD_LEFT),
+                'phone' => (string) ($staff->phone ?? ''),
+                'vehicle_type' => 'bike',
+                'status' => 'offline',
+                'station_branch_id' => $branchId,
+            ]
+        );
 
         SystemLog::record(
             $request->user(),
@@ -139,7 +292,7 @@ class StaffManagementController extends Controller
     /**
      * Cập nhật thông tin nhân viên
      */
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(Request $request, User $user, ShipperHomeBranchService $homeBranches): RedirectResponse
     {
         $this->ensureCanManage($user);
 
@@ -152,7 +305,7 @@ class StaffManagementController extends Controller
         $validated = $request->validateWithBag($bag, [
             'name'      => ['required', 'string', 'max:150'],
             'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment($user->branch_id ? (int) $user->branch_id : null)],
             'password'  => ['nullable', 'string', 'min:8', 'confirmed'],
         ], [
             'name.required'      => 'Vui lòng nhập tên nhân viên.',
@@ -168,9 +321,25 @@ class StaffManagementController extends Controller
             'email' => $validated['email'],
         ];
 
-        // Chỉ Super Admin mới được thay đổi chi nhánh của nhân viên
-        if (auth()->user()->isSuperAdmin()) {
-            $data['branch_id'] = $validated['branch_id'] ?? null;
+        // P15: Super Admin được điều chuyển HOME BRANCH, nhưng chỉ khi shipper sạch nhiệm vụ/COD.
+        $actor = auth()->user();
+        if ($actor->isSuperAdmin()) {
+            $newBranchId = isset($validated['branch_id']) ? (int) $validated['branch_id'] : 0;
+            if ($newBranchId < 1) {
+                return redirect()->back()->withInput()->withErrors([
+                    'branch_id' => 'Shipper phải có một home branch.',
+                ], $bag);
+            }
+            if ((int) ($user->branch_id ?? 0) !== $newBranchId) {
+                try {
+                    $homeBranches->transfer($user, $newBranchId, $actor);
+                    $user->refresh();
+                } catch (RuntimeException $exception) {
+                    return redirect()->back()->withInput()->withErrors([
+                        'branch_id' => $exception->getMessage(),
+                    ], $bag);
+                }
+            }
         }
 
         if (! empty($validated['password'])) {
@@ -208,18 +377,24 @@ class StaffManagementController extends Controller
     /**
      * Cập nhật chi nhánh nhân viên
      */
-    public function updateBranch(Request $request, User $user): RedirectResponse
+    public function updateBranch(Request $request, User $user, ShipperHomeBranchService $homeBranches): RedirectResponse
     {
         $this->ensureCanManage($user);
 
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Chỉ Super Admin được điều chuyển home branch của shipper.');
+
         $validated = $request->validate([
-            'branch_id' => ['nullable', 'exists:branches,id'],
+            'branch_id' => ['required', 'integer', new ActiveBranchAssignment($user->branch_id ? (int) $user->branch_id : null)],
         ]);
 
-        $user->update(['branch_id' => $validated['branch_id'] ?? null]);
+        try {
+            $updated = $homeBranches->transfer($user, (int) $validated['branch_id'], $request->user());
+        } catch (RuntimeException $exception) {
+            return redirect()->back()->with('error', $exception->getMessage());
+        }
 
         return redirect()->back()
-            ->with('success', "Đã cập nhật chi nhánh cho nhân viên {$user->name}.");
+            ->with('success', "Đã điều chuyển {$updated->name} sang home branch {$updated->branch?->name}.");
     }
 
     /**
@@ -229,24 +404,12 @@ class StaffManagementController extends Controller
     {
         $this->ensureCanManage($user);
 
-        $name = $user->name;
-        $user->delete();
-
-        SystemLog::record(
-            $request->user(),
-            "Đã xóa tài khoản nhân viên {$name}",
-            'admin',
-            'success',
-            [],
-        );
-
-        return redirect()->route('admin.staff.index')
-            ->with('success', "Đã xóa nhân viên {$name}.");
+        abort(403, 'Hệ thống không cho phép xóa nhân viên. Chỉ có thể sửa, khóa hoặc đổi chi nhánh.');
     }
 
     private function ensureCanManage(User $user): void
     {
-        if (! $user->isStaffOnly()) {
+        if (! $user->isShipper()) {
             abort(403, 'Chỉ được quản lý tài khoản nhân viên.');
         }
 

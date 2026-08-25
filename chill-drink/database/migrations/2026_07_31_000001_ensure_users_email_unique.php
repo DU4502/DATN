@@ -5,58 +5,52 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Đảm bảo cột email trong bảng users có UNIQUE index.
- *
- * Migration này idempotent: nếu unique index đã tồn tại thì bỏ qua,
- * không gây lỗi khi chạy lại.
- *
- * Mục đích: Không cho phép một địa chỉ email được dùng cho nhiều tài khoản
- * dù khác vai trò (User, Nhân viên, Admin, Super Admin).
- */
 return new class extends Migration
 {
     public function up(): void
     {
-        // Xóa duplicate emails trước (nếu có) để không vi phạm unique khi thêm index.
-        // Giữ lại bản ghi có id nhỏ nhất cho mỗi email, xóa các bản trùng còn lại.
+        if ($this->hasUniqueEmailIndex()) {
+            return;
+        }
+
         $duplicates = DB::table('users')
-            ->select('email', DB::raw('MIN(id) as keep_id'))
+            ->selectRaw('email, COUNT(*) as records_count')
             ->whereNotNull('email')
             ->groupBy('email')
             ->havingRaw('COUNT(*) > 1')
             ->get();
 
-        foreach ($duplicates as $dup) {
-            DB::table('users')
-                ->where('email', $dup->email)
-                ->where('id', '!=', $dup->keep_id)
-                ->delete();
+        if ($duplicates->isNotEmpty()) {
+            $groupsCount = $duplicates->count();
+            $recordsCount = (int) $duplicates->sum('records_count');
+
+            throw new \RuntimeException(
+                "Cannot add unique users.email index: {$groupsCount} duplicate email group(s) "
+                ."containing {$recordsCount} record(s) exist. Resolve duplicates manually before running this migration."
+            );
         }
 
         Schema::table('users', function (Blueprint $table) {
-            // Kiểm tra xem unique index đã tồn tại chưa trước khi tạo
-            $indexes = collect(
-                collect(Schema::getIndexes('users'))
-                    ->filter(static fn (array $index): bool => (bool) ($index['unique'] ?? false)
-                        && in_array('email', $index['columns'] ?? [], true))
-                    ->all()
-            );
-
-            if ($indexes->isEmpty()) {
-                $table->unique('email', 'users_email_unique');
-            }
+            $table->unique('email', 'users_email_unique');
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            try {
-                $table->dropUnique('users_email_unique');
-            } catch (\Throwable) {
-                // Ignore nếu index không tồn tại
+        // No-op: this migration cannot know whether the unique index existed
+        // before it ran, so rollback must not weaken an existing schema.
+    }
+
+    private function hasUniqueEmailIndex(): bool
+    {
+        return collect(Schema::getIndexes('users'))->contains(
+            static function (array $index): bool {
+                $columns = array_values($index['columns'] ?? []);
+
+                return (bool) ($index['unique'] ?? false)
+                    && count($columns) === 1
+                    && $columns[0] === 'email';
             }
-        });
+        );
     }
 };

@@ -86,7 +86,6 @@ class DemoBranchStatisticsSeeder extends Seeder
                     'name' => $config['display_name'],
                     'email' => $adminEmail,
                     'password' => Hash::make('12345678'),
-                    'plain_password' => '12345678',
                     'role_id' => 2,
                     'is_active' => true,
                     'phone' => $config['phone'],
@@ -145,7 +144,6 @@ class DemoBranchStatisticsSeeder extends Seeder
                 [
                     'description' => 'Sản phẩm demo cho thống kê chi nhánh',
                     'price' => random_int(45000, 70000),
-                    'stock' => 100,
                     'status' => true,
                 ]
             );

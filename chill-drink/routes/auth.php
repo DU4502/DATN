@@ -5,7 +5,6 @@ use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationCodeController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\FacebookController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
@@ -39,12 +38,6 @@ Route::middleware('guest')->group(function () {
 
     Route::get('auth/google/callback', [GoogleController::class, 'callback'])
         ->name('auth.google.callback');
-
-    Route::get('auth/facebook/redirect', [FacebookController::class, 'redirect'])
-        ->name('auth.facebook.redirect');
-
-    Route::get('auth/facebook/callback', [FacebookController::class, 'callback'])
-        ->name('auth.facebook.callback');
 
     Route::post('auth/phone/verify', [PhoneAuthController::class, 'verifyPhone'])
         ->name('auth.phone.verify');

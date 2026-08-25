@@ -58,8 +58,10 @@ class ProductRequest extends FormRequest
             'gallery_images.*' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048'],
             'price' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'description' => ['nullable', 'string', 'max:5000'],
-            'stock' => ['required', 'integer', 'min:0', 'max:100000'],
             'status' => ['required', 'boolean'],
+            'branch_statuses_submitted' => ['sometimes', 'boolean'],
+            'branch_statuses' => ['sometimes', 'array'],
+            'branch_statuses.*' => ['boolean'],
         ];
     }
 
@@ -83,9 +85,6 @@ class ProductRequest extends FormRequest
             'price.required' => 'Vui lòng nhập giá bán.',
             'price.numeric' => 'Giá bán phải là số.',
             'price.min' => 'Giá bán không được âm.',
-            'stock.required' => 'Vui lòng nhập tồn kho.',
-            'stock.integer' => 'Tồn kho phải là số nguyên.',
-            'stock.min' => 'Tồn kho không được âm.',
             'description.max' => 'Mô tả không được vượt quá :max ký tự.',
         ];
     }

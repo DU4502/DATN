@@ -71,6 +71,8 @@
         showScrollToLatest: false,
         supportIssue: null,
         confirmChangeBranch: false,
+        groupOrderCode: {{ json_encode(request()->routeIs('group-orders.show') && isset($group) ? $group->code : null) }},
+        groupBranchId: {{ json_encode(request()->routeIs('group-orders.show') && isset($group) ? $group->branch_id : null) }},
 
         get hasUserSentMessage() {
             return this.messages.some(m => Number(m.sender_id) === Number(this.currentUserId));
@@ -95,7 +97,7 @@
                 this.groupChatOpen = false;
             });
 
-            if (!this.isCustomer && this.isLoggedIn) {
+            if (!this.isCustomer && this.isLoggedIn && !this.groupOrderCode) {
                 return;
             }
 
@@ -223,7 +225,9 @@
                 }
                 if (!this.conversationId || !this.isOpen || this.needLogin) return;
 
-                if (this.branchId) {
+                if (this.groupBranchId && Number(this.branchId) !== Number(this.groupBranchId)) {
+                    await this.selectBranch({ id: Number(this.groupBranchId), name: '' });
+                } else if (this.branchId) {
                     await this.fetchMessages(true);
                     this.subscribeEchoChannel();
                     this.startPolling();
@@ -301,6 +305,7 @@
 
             try {
                 const body = { conversation_id: this.conversationId, branch_id: branch.id };
+                if (this.groupOrderCode) body.group_order_code = this.groupOrderCode;
                 if (!this.isLoggedIn && this.guestToken) body.guest_token = this.guestToken;
 
                 const res = await fetch('{{ route('chat.select-branch') }}', {
@@ -363,6 +368,7 @@
             this.endingSession = true;
             try {
                 const body = { conversation_id: this.conversationId };
+                if (this.groupOrderCode) body.group_order_code = this.groupOrderCode;
                 if (!this.isLoggedIn && this.guestToken) body.guest_token = this.guestToken;
 
                 const res = await fetch('{{ route('chat.end-session') }}', {
@@ -465,7 +471,7 @@
             if (!this.isLoggedIn) return;
             if (!this.conversationId) {
                 try {
-                    const res = await fetch('{{ route('chat.index', [], false) }}');
+                    const res = await fetch(this.chatIndexUrl());
                     const data = await res.json();
                     if (data.success) {
                         this.conversationId = data.conversation_id;
@@ -477,7 +483,9 @@
             }
             if (!this.conversationId) return;
             try {
-                const res  = await fetch('{{ route('chat.messages', [], false) }}?conversation_id=' + this.conversationId);
+                const params = new URLSearchParams({ conversation_id: this.conversationId });
+                if (this.groupOrderCode) params.set('group_order_code', this.groupOrderCode);
+                const res  = await fetch('{{ route('chat.messages', [], false) }}?' + params.toString());
                 const data = await res.json();
                 if (data.success) {
                     const uid = {{ auth()->id() ?? 0 }};
@@ -522,10 +530,7 @@
 
         async getOrCreateConversation() {
             try {
-                let url = '{{ route('chat.index') }}';
-                if (!this.isLoggedIn && this.guestToken) {
-                    url += '?guest_token=' + encodeURIComponent(this.guestToken);
-                }
+                const url = this.chatIndexUrl();
                 const res = await fetch(url);
                 if (res.status === 401 || res.redirected) {
                     this.needLogin = true;
@@ -554,6 +559,14 @@
             }
         },
 
+        chatIndexUrl() {
+            const params = new URLSearchParams();
+            if (this.groupOrderCode) params.set('group_order_code', this.groupOrderCode);
+            if (!this.isLoggedIn && this.guestToken) params.set('guest_token', this.guestToken);
+            const query = params.toString();
+            return '{{ route('chat.index') }}' + (query ? '?' + query : '');
+        },
+
         async fetchMessages(markRead = false) {
             if (!this.conversationId) return;
             if (this.messages.length === 0) {
@@ -562,6 +575,9 @@
             try {
                 let url = '{{ route('chat.messages') }}?conversation_id=' + this.conversationId
                     + (markRead ? '&mark_as_read=1' : '');
+                if (this.groupOrderCode) {
+                    url += '&group_order_code=' + encodeURIComponent(this.groupOrderCode);
+                }
                 if (!this.isLoggedIn && this.guestToken) {
                     url += '&guest_token=' + encodeURIComponent(this.guestToken);
                 }
@@ -641,6 +657,7 @@
             const formData = new FormData();
             formData.append('conversation_id', this.conversationId);
             formData.append('content', text);
+            if (this.groupOrderCode) formData.append('group_order_code', this.groupOrderCode);
             if (!this.isLoggedIn && this.guestToken) {
                 formData.append('guest_token', this.guestToken);
             }

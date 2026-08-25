@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Product;
+use App\Services\ProductAvailabilityService;
+use App\Support\OrderStatus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -21,7 +26,7 @@ class ProductController extends Controller
             'q' => trim((string) $request->query('q', '')),
             'category' => trim((string) $request->query('category', '')),
             'status' => trim((string) $request->query('status', '')),
-            'stock' => trim((string) $request->query('stock', '')),
+            'availability' => trim((string) $request->query('availability', '')),
             'sort' => trim((string) $request->query('sort', 'latest')),
         ];
 
@@ -30,23 +35,21 @@ class ProductController extends Controller
             ->get(['id', 'name', 'slug']);
         $categoryIds = $categories->pluck('id')->map(fn($id) => (string) $id)->all();
 
+        $user = $request->user();
+        $managedBranch = $user->isSuperAdmin() ? null : $user->branch;
+        $branches = $user->isSuperAdmin()
+            ? Branch::query()->where('status', true)->orderBy('name')->get()
+            : collect([$managedBranch])->filter();
+
         $productsQuery = Product::query()
-            ->with('category')
+            ->with(['category', 'branchStatuses.branch'])
+            ->when(! $user->isSuperAdmin(), function ($query) use ($managedBranch) {
+                $query->whereHas('branchStatuses', fn ($statusQuery) => $statusQuery
+                    ->where('branch_id', $managedBranch?->id));
+            })
             ->when($filters['q'] !== '', function ($query) use ($filters) {
-                $keyword = $filters['q'];
-
-                $query->where(function ($builder) use ($keyword) {
-                    $builder
-                        ->where('name', 'like', '%' . $keyword . '%')
-                        ->orWhere('slug', 'like', '%' . $keyword . '%')
-                        ->orWhere('description', 'like', '%' . $keyword . '%')
-                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                            $categoryQuery->where('name', 'like', '%' . $keyword . '%');
-                        });
-
-                    if (Schema::hasColumn('products', 'sku')) {
-                        $builder->orWhere('sku', 'like', '%' . $keyword . '%');
-                    }
+                $query->where(function ($builder) use ($filters) {
+                    $this->applyProductSearchKeyword($builder, $filters['q']);
                 });
             })
             ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
@@ -54,20 +57,37 @@ class ProductController extends Controller
             })
             ->when($filters['status'] === 'active', fn($query) => $query->where('status', true))
             ->when($filters['status'] === 'hidden', fn($query) => $query->where('status', false))
-            ->when($filters['stock'] === 'low', fn($query) => $query->where('stock', '>', 0)->where('stock', '<=', 5))
-            ->when($filters['stock'] === 'out', fn($query) => $query->where('stock', '<=', 0));
+            ->when(in_array($filters['availability'], ['available', 'out_of_stock', 'unassigned'], true), function ($query) use ($filters, $managedBranch, $request) {
+                $branchId = $managedBranch?->id ?: (int) $request->query('branch_id');
+
+                if (! $branchId) {
+                    return;
+                }
+
+                if ($filters['availability'] === 'unassigned') {
+                    $query->whereDoesntHave('branchStatuses', fn ($statusQuery) => $statusQuery->where('branch_id', $branchId));
+                    return;
+                }
+
+                $query->whereHas('branchStatuses', fn ($statusQuery) => $statusQuery
+                    ->where('branch_id', $branchId)
+                    ->where('is_available', $filters['availability'] === 'available'));
+            });
 
         match ($filters['sort']) {
             'name' => $productsQuery->orderBy('name'),
             'price_asc' => $productsQuery->orderBy('price'),
             'price_desc' => $productsQuery->orderByDesc('price'),
-            'stock_asc' => $productsQuery->orderBy('stock'),
             default => $productsQuery->latest(),
         };
 
         $products = $productsQuery->paginate(12)->withQueryString();
         $totalProducts = Product::count();
-        $lowStockProducts = Product::where('stock', '>', 0)->where('stock', '<=', 5)->count();
+        $unavailableProducts = $managedBranch
+            ? Product::query()->whereHas('branchStatuses', fn ($query) => $query
+                ->where('branch_id', $managedBranch->id)
+                ->where('is_available', false))->count()
+            : 0;
         $activeFiltersCount = collect($filters)
             ->filter(fn($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
             ->count();
@@ -81,7 +101,9 @@ class ProductController extends Controller
             'quickCategories',
             'filters',
             'totalProducts',
-            'lowStockProducts',
+            'unavailableProducts',
+            'branches',
+            'managedBranch',
             'activeFiltersCount'
         ));
     }
@@ -106,8 +128,11 @@ class ProductController extends Controller
             };
         })->values();
         $allToppings = \App\Models\Topping::where('status', true)->get();
+        $branches = auth()->user()->isSuperAdmin()
+            ? Branch::query()->where('status', true)->orderBy('name')->get()
+            : Branch::query()->whereKey(auth()->user()->branch_id)->where('status', true)->get();
 
-        return view('admin.products.create', compact('categories', 'allSizes', 'allToppings'));
+        return view('admin.products.create', compact('categories', 'allSizes', 'allToppings', 'branches'));
     }
 
     /**
@@ -115,16 +140,27 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'slug' => Str::slug((string) $request->input('name', '')),
+        ]);
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products', 'slug')->whereNull('deleted_at'),
+            ],
             'image' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'gallery_images' => 'nullable|array',
             'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'stock' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
+            'branch_statuses' => ['nullable', 'array'],
+            'branch_statuses.*' => ['required', 'boolean'],
         ]);
 
         if ($sizeError = $this->validateSizePrices($request)) {
@@ -134,10 +170,9 @@ class ProductController extends Controller
         $data = [
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
-            'slug' => Str::slug($validated['name']),
+            'slug' => $validated['slug'],
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
-            'stock' => $validated['stock'] ?? 999,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -153,13 +188,23 @@ class ProductController extends Controller
             }
         }
 
-        $product = Product::create($data);
+        $product = DB::transaction(function () use ($data, $request) {
+            $product = Product::create($data);
+            if ($request->boolean('branch_statuses_submitted')) {
+                app(ProductAvailabilityService::class)->syncProduct(
+                    $product,
+                    $this->authorizedBranchStatuses($request)
+                );
+            }
 
-        $this->syncProductSizes($product, $request);
+            $this->syncProductSizes($product, $request);
 
-        if ($request->has('toppings')) {
-            $product->toppings()->sync($request->input('toppings'));
-        }
+            if ($request->has('toppings')) {
+                $product->toppings()->sync($request->input('toppings'));
+            }
+
+            return $product;
+        });
 
         return redirect()
             ->route('admin.products.index')
@@ -171,7 +216,12 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::with('category')
+        $product = Product::with([
+            'category',
+            'branchStatuses' => fn ($query) => $query
+                ->with('branch')
+                ->when(! auth()->user()->isSuperAdmin(), fn ($statusQuery) => $statusQuery->where('branch_id', auth()->user()->branch_id)),
+        ])
             ->withCount('orderItems')
             ->whereKey($id)
             ->orWhere('slug', $id)
@@ -209,8 +259,12 @@ class ProductController extends Controller
         $allToppings = \App\Models\Topping::all();
         $selectedSizes = $product->sizes()->pluck('product_sizes.price', 'sizes.id')->toArray();
         $selectedToppings = $product->toppings()->pluck('toppings.id')->toArray();
+        $branches = auth()->user()->isSuperAdmin()
+            ? Branch::query()->where('status', true)->orderBy('name')->get()
+            : Branch::query()->whereKey(auth()->user()->branch_id)->where('status', true)->get();
+        $branchStatuses = $product->branchStatuses()->pluck('is_available', 'branch_id')->all();
 
-        return view('admin.products.edit', compact('product', 'categories', 'allSizes', 'allToppings', 'selectedSizes', 'selectedToppings'));
+        return view('admin.products.edit', compact('product', 'categories', 'allSizes', 'allToppings', 'selectedSizes', 'selectedToppings', 'branches', 'branchStatuses'));
     }
 
     /**
@@ -220,9 +274,21 @@ class ProductController extends Controller
     {
         $product = $this->findProduct($id);
 
+        $request->merge([
+            'slug' => Str::slug((string) $request->input('name', '')),
+        ]);
+
         $validated = $request->validate([
             'category_id' => 'required|exists:categories,id',
             'name' => 'required|string|max:255',
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products', 'slug')
+                    ->ignore($product->id)
+                    ->whereNull('deleted_at'),
+            ],
             'image' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'gallery_images' => 'nullable|array',
             'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
@@ -230,8 +296,9 @@ class ProductController extends Controller
             'remove_gallery_images.*' => 'string',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'stock' => 'nullable|integer|min:0',
             'status' => 'nullable|boolean',
+            'branch_statuses' => ['nullable', 'array'],
+            'branch_statuses.*' => ['required', 'boolean'],
         ]);
 
         if ($sizeError = $this->validateSizePrices($request)) {
@@ -241,10 +308,9 @@ class ProductController extends Controller
         $data = [
             'category_id' => $validated['category_id'],
             'name' => $validated['name'],
-            'slug' => Str::slug($validated['name']),
+            'slug' => $validated['slug'],
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
-            'stock' => $validated['stock'] ?? 999,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -277,15 +343,22 @@ class ProductController extends Controller
             $data['gallery_images'] = $galleryImages;
         }
 
-        $product->update($data);
+        DB::transaction(function () use ($product, $data, $request) {
+            $product->update($data);
+            if ($request->boolean('branch_statuses_submitted')) {
+                app(ProductAvailabilityService::class)->syncProduct(
+                    $product,
+                    $this->authorizedBranchStatuses($request)
+                );
+            }
+            $this->syncProductSizes($product, $request);
 
-        $this->syncProductSizes($product, $request);
-
-        if ($request->has('toppings')) {
-            $product->toppings()->sync($request->input('toppings'));
-        } else {
-            $product->toppings()->detach();
-        }
+            if ($request->has('toppings')) {
+                $product->toppings()->sync($request->input('toppings'));
+            } else {
+                $product->toppings()->detach();
+            }
+        });
 
         return redirect()
             ->route('admin.products.index')
@@ -298,6 +371,12 @@ class ProductController extends Controller
     public function destroy(string $id)
     {
         $product = $this->findProduct($id);
+
+        if ($this->productHasUnfinishedOrders($product)) {
+            return redirect()
+                ->route('admin.products.index', $this->returnPageParameters(request()))
+                ->with('error', 'Không thể xóa sản phẩm vì vẫn còn đơn hàng chưa hoàn thành.');
+        }
 
         // Soft delete instead of permanent delete
         $product->delete();
@@ -323,20 +402,8 @@ class ProductController extends Controller
         $productsQuery = Product::onlyTrashed()
             ->with('category')
             ->when($filters['q'] !== '', function ($query) use ($filters) {
-                $keyword = $filters['q'];
-
-                $query->where(function ($builder) use ($keyword) {
-                    $builder
-                        ->where('name', 'like', '%' . $keyword . '%')
-                        ->orWhere('slug', 'like', '%' . $keyword . '%')
-                        ->orWhere('description', 'like', '%' . $keyword . '%')
-                        ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                            $categoryQuery->where('name', 'like', '%' . $keyword . '%');
-                        });
-
-                    if (Schema::hasColumn('products', 'sku')) {
-                        $builder->orWhere('sku', 'like', '%' . $keyword . '%');
-                    }
+                $query->where(function ($builder) use ($filters) {
+                    $this->applyProductSearchKeyword($builder, $filters['q']);
                 });
             })
             ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
@@ -379,13 +446,9 @@ class ProductController extends Controller
     {
         $product = Product::withTrashed()->whereKey($id)->orWhere('slug', $id)->firstOrFail();
 
-        $hasOrders = \Illuminate\Support\Facades\DB::table('order_items')
-            ->where('product_id', $product->id)
-            ->exists();
-
-        if ($hasOrders) {
+        if ($this->productHasUnfinishedOrders($product)) {
             return redirect()->route('admin.products.trash')
-                ->with('error', 'Không thể xóa vĩnh viễn! Sản phẩm này đã tồn tại trong lịch sử đơn hàng của khách hàng. Vui lòng duy trì lưu trữ trong thùng rác.');
+                ->with('error', 'Không thể xóa vĩnh viễn vì sản phẩm vẫn còn đơn hàng chưa hoàn thành.');
         }
 
         if ($product->image) {
@@ -433,9 +496,61 @@ class ProductController extends Controller
         $page = (int) ($request->input('return_page') ?: $request->query('page'));
 
         return array_filter(array_merge(
-            request()->only(['q', 'category', 'status', 'stock', 'sort']),
+            request()->only(['q', 'category', 'status', 'availability', 'branch_id', 'sort']),
             $page > 1 ? ['page' => $page] : []
         ), fn($value) => $value !== null && $value !== '');
+    }
+
+    private function applyProductSearchKeyword($query, string $keyword): void
+    {
+        $keyword = trim($keyword);
+
+        if ($keyword === '') {
+            return;
+        }
+
+        $priceKeyword = preg_replace('/[^\d]/', '', $keyword) ?: '';
+
+        $query->where(function ($builder) use ($keyword, $priceKeyword) {
+            $builder
+                ->where('name', 'like', '%' . $keyword . '%')
+                ->orWhere('slug', 'like', '%' . $keyword . '%')
+                ->orWhere('description', 'like', '%' . $keyword . '%')
+                ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
+                    $categoryQuery->where('name', 'like', '%' . $keyword . '%');
+                });
+
+            if (Schema::hasColumn('products', 'sku')) {
+                $builder->orWhere('sku', 'like', '%' . $keyword . '%');
+            }
+
+            if ($priceKeyword !== '') {
+                $builder->orWhereRaw(
+                    "REPLACE(REPLACE(CAST(price AS CHAR), '.', ''), ',', '') LIKE ?",
+                    ['%' . $priceKeyword . '%']
+                );
+            }
+        });
+    }
+
+    private function authorizedBranchStatuses(Request $request): array
+    {
+        $statuses = (array) $request->input('branch_statuses', []);
+        $user = $request->user();
+
+        if ($user->isSuperAdmin()) {
+            $allowedBranchIds = Branch::query()->where('status', true)->pluck('id')->map(fn ($id) => (string) $id);
+
+            return collect($statuses)->only($allowedBranchIds)->all();
+        }
+
+        if (! $user->branch_id) {
+            abort(403, 'Tài khoản chưa được gán chi nhánh.');
+        }
+
+        return array_key_exists((string) $user->branch_id, $statuses)
+            ? [$user->branch_id => $statuses[$user->branch_id]]
+            : [];
     }
 
     private function findProduct(string $id): Product
@@ -465,6 +580,26 @@ class ProductController extends Controller
         }
 
         return null;
+    }
+
+    private function productHasUnfinishedOrders(Product $product): bool
+    {
+        if (! Schema::hasTable('order_items') || ! Schema::hasTable('orders')) {
+            return false;
+        }
+
+        $query = DB::table('order_items')
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('order_items.product_id', $product->id);
+
+        if (Schema::hasColumn('orders', 'status')) {
+            $query->whereRaw(
+                'LOWER(COALESCE(orders.status, "")) NOT IN (?, ?)',
+                [OrderStatus::COMPLETED, OrderStatus::CANCELLED]
+            );
+        }
+
+        return $query->exists();
     }
 
     private function syncProductSizes(Product $product, Request $request): void

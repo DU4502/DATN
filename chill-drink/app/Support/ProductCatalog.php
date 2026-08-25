@@ -188,6 +188,7 @@ class ProductCatalog
         }
 
         $latest = Product::query()
+            ->withTrashed()
             ->where('sku', 'like', $prefix.'%')
             ->orderByDesc('sku')
             ->value('sku');
@@ -204,7 +205,7 @@ class ProductCatalog
     {
         if ($item = self::findByName($name)) {
             return [
-                'sku' => $item['sku'],
+                'sku' => self::uniqueSku($item['sku'], $categoryName, $ignoreId),
                 'slug' => $item['slug'],
                 'description' => $item['description'],
             ];
@@ -215,5 +216,20 @@ class ProductCatalog
             'slug' => self::uniqueSlug($name, $ignoreId),
             'description' => self::descriptionFor($name, $categoryName),
         ];
+    }
+
+    private static function uniqueSku(string $preferredSku, ?string $categoryName, ?int $ignoreId = null): string
+    {
+        if (! Schema::hasColumn('products', 'sku')) {
+            return $preferredSku;
+        }
+
+        $exists = Product::query()
+            ->withTrashed()
+            ->when($ignoreId, fn ($query) => $query->whereKeyNot($ignoreId))
+            ->where('sku', $preferredSku)
+            ->exists();
+
+        return $exists ? self::nextSku($categoryName) : $preferredSku;
     }
 }

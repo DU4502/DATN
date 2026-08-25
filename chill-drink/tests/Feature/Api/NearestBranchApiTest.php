@@ -5,6 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Branch;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -30,6 +31,19 @@ class NearestBranchApiTest extends TestCase
                 $table->timestamps();
             });
         }
+
+        Http::preventStrayRequests();
+        Http::fake([
+            '*/route/v1/*' => Http::response([
+                'code' => 'Ok',
+                'routes' => [[
+                    'distance' => 5000,
+                    'duration' => 600,
+                    'geometry' => ['coordinates' => [[105.804817, 21.028511], [105.85, 21.03]]],
+                    'legs' => [],
+                ]],
+            ]),
+        ]);
     }
 
     public function test_it_returns_the_nearest_branch_for_a_location(): void

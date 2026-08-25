@@ -1234,27 +1234,30 @@
                                 <div class="shop-product-price mb-3">
                                     <span class="h5 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
                                 </div>
+                                <div class="mb-2">
+                                    <x-product-availability-badge :product="$product" :branch="$branch" />
+                                </div>
                                 <div class="d-flex align-items-center gap-2 shop-product-actions">
                                     <a href="{{ route('products.show', $product->slug) }}" class="product-detail-btn">Chi tiết</a>
-                                    @if(($product->stock ?? 1) > 0)
-                                        <button
-                                            type="button"
-                                            class="product-cart-btn"
-                                            aria-label="Chọn size và thêm {{ $product->name }}"
-                                            data-quick-add
-                                            data-action="{{ route('cart.add', $product->id) }}"
-                                            data-name="{{ $product->name }}"
-                                            data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
-                                            data-base-price="{{ (int) ($product->price ?? 0) }}"
-                                            data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
-                                            data-image="{{ $product->image_url }}"
-                                            data-category="{{ $product->category?->name }}"
-                                        >
-                                            <i class="bi bi-cart-plus" aria-hidden="true"></i>
-                                        </button>
-                                    @else
-                                        <span class="badge text-bg-danger rounded-pill">Hết hàng</span>
-                                    @endif
+                                    <button
+                                        type="button"
+                                        class="product-cart-btn {{ $product->availabilityAt($branch) === true ? '' : 'disabled' }}"
+                                        aria-label="Chọn size và thêm {{ $product->name }}"
+                                        data-quick-add
+                                        data-action="{{ route('cart.add', $product->id) }}"
+                                        data-name="{{ $product->name }}"
+                                        data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
+                                        data-base-price="{{ (int) ($product->price ?? 0) }}"
+                                        data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
+                                        data-image="{{ $product->image_url }}"
+                                        data-category="{{ $product->category?->name }}"
+                                        data-product-availability="{{ $product->id }}"
+                                        data-branch-id="{{ $branch?->id }}"
+                                        data-product-action
+                                        @disabled($product->availabilityAt($branch) !== true)
+                                    >
+                                        <i class="bi {{ $product->availabilityAt($branch) === true ? 'bi-cart-plus' : 'bi-cart-x' }}" aria-hidden="true"></i>
+                                    </button>
                                 </div>
                             </article>
                         </div>
@@ -1611,11 +1614,21 @@
                     const sz = sizeBtn.dataset.value;
                     if (sz === 'S') {
                         sizeBtn.dataset.extraPrice = '0';
-                    } else if (sizesMap[sz] !== undefined) {
-                        const extraPrice = Number(sizesMap[sz]);
-                        sizeBtn.dataset.extraPrice = extraPrice;
                         const small = sizeBtn.querySelector('small');
-                        if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
+                        if (small) small.textContent = 'Giá gốc';
+                        return;
+                    }
+
+                    const fallbackExtra = sz === 'M' ? 5000 : 10000;
+                    const rawPrice = sizesMap[sz] !== undefined ? Number(sizesMap[sz]) : null;
+                    const extraPrice = Number.isFinite(rawPrice)
+                        ? (rawPrice >= currentBasePrice ? Math.max(0, rawPrice - currentBasePrice) : Math.max(0, rawPrice))
+                        : fallbackExtra;
+
+                    sizeBtn.dataset.extraPrice = String(extraPrice);
+                    const small = sizeBtn.querySelector('small');
+                    if (small) {
+                        small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
                     }
                 });
 

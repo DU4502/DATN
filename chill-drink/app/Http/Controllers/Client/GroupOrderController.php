@@ -10,6 +10,7 @@ use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderMessage;
 use App\Models\Product;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -132,7 +133,13 @@ class GroupOrderController extends Controller
             $group->update(['owner_last_seen_at' => now()]);
         }
         $group->load(['owner', 'branch', 'members.items.product', 'items']);
-        $products = Product::with('category')->where('status', true)->orderBy('name')->get();
+        $products = Product::with('category')
+            ->where('status', true)
+            ->whereHas('branchStatuses', fn ($query) => $query
+                ->where('branch_id', $group->branch_id)
+                ->where('is_available', true))
+            ->orderBy('name')
+            ->get();
         $toppings = Schema::hasTable('toppings')
             ? DB::table('toppings')->where('status', 1)->orderBy('name')->get(['id', 'name', 'price'])
             : collect();
@@ -448,9 +455,12 @@ class GroupOrderController extends Controller
             $member = $this->currentMember($group);
             $product = Product::whereKey($data['product_id'])->lockForUpdate()->firstOrFail();
             abort_unless((bool) $product->status, 422, 'Sản phẩm hiện không còn bán.');
-
-            $alreadyReserved = (int) $group->items()->where('product_id', $product->id)->sum('quantity');
-            abort_if($alreadyReserved + $data['quantity'] > (int) $product->stock, 422, 'Sản phẩm không đủ số lượng tồn kho.');
+            $branch = Branch::query()->whereKey($group->branch_id)->where('status', true)->firstOrFail();
+            try {
+                app(ProductAvailabilityService::class)->assertAvailable($product, $branch, true);
+            } catch (\RuntimeException $exception) {
+                abort(422, $exception->getMessage());
+            }
 
             $selectedIds = collect($data['toppings'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
             $availableToppings = DB::table('toppings')->where('status', 1)->get(['id', 'name', 'price']);
@@ -505,8 +515,12 @@ class GroupOrderController extends Controller
             abort_if($lockedItem->quantity >= 20, 422, 'Mỗi món chỉ được chọn tối đa 20 phần.');
 
             $product = Product::whereKey($lockedItem->product_id)->lockForUpdate()->firstOrFail();
-            $reserved = (int) $group->items()->where('product_id', $product->id)->sum('quantity');
-            abort_if($reserved + 1 > (int) $product->stock, 422, 'Sản phẩm không đủ số lượng tồn kho.');
+            $branch = Branch::query()->whereKey($group->branch_id)->where('status', true)->firstOrFail();
+            try {
+                app(ProductAvailabilityService::class)->assertAvailable($product, $branch, true);
+            } catch (\RuntimeException $exception) {
+                abort(422, $exception->getMessage());
+            }
 
             $lockedItem->increment('quantity');
         });
@@ -573,9 +587,8 @@ class GroupOrderController extends Controller
                     if (!$product || !$product->status) {
                         throw new \Exception('Có sản phẩm đã ngừng bán. Vui lòng xóa khỏi đơn.');
                     }
-                    if ($productItems->sum('quantity') > (int) $product->stock) {
-                        throw new \Exception("Sản phẩm {$product->name} không đủ tồn kho.");
-                    }
+                    $branch = Branch::query()->whereKey($lockedGroup->branch_id)->where('status', true)->firstOrFail();
+                    app(ProductAvailabilityService::class)->assertAvailable($product, $branch, true);
                     foreach ($productItems as $item) {
                         $item->update(['unit_price' => $this->currentPrice($product, $item->size, $item->toppings ?? [])]);
                     }

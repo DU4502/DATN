@@ -9,9 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/css/bootstrap-local.css', 'resources/js/app.js'])
 
     <style>
         :root {
@@ -275,6 +273,17 @@
             gap: 0.85rem;
         }
 
+        .root-topbar-left {
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .root-topbar-search {
+            position: relative;
+            width: min(380px, 32vw);
+            margin-left: 0.4rem;
+        }
+
         .root-mobile-toggle {
             width: 42px;
             height: 42px;
@@ -417,6 +426,7 @@
             .root-sidebar.open { transform: translateX(0); }
             .root-content { margin-left: 0; }
             .root-mobile-toggle { display: inline-flex; }
+            .root-topbar-search { width: min(100%, 360px); }
             .root-sidebar-backdrop {
                 position: fixed;
                 inset: 0;
@@ -429,6 +439,7 @@
 
         @media (max-width: 575.98px) {
             .root-topbar { padding: 0 1rem; }
+            .root-topbar-search { width: 100%; margin-left: 0; }
             .root-page { padding: 1.05rem 0.9rem 1.6rem; }
             .root-live, .root-breadcrumb span { display: none; }
             .root-footer { align-items: flex-start; flex-direction: column; padding: 0.85rem 0.9rem; }
@@ -463,8 +474,9 @@
                 <a href="{{ route('admin.super-admin.manage.toppings.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.toppings.*', 'admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
                 <a href="{{ route('admin.super-admin.manage.products.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.products.*', 'admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
                 <a href="{{ route('admin.super-admin.manage.categories.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.categories.*', 'admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.super-admin.manage.slides.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.slides.*', 'admin.slides.*') ? 'active' : '' }}"><i class="bi bi-images"></i> Trình chiếu</a>
                 <a href="{{ route('admin.super-admin.manage.orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.orders.*', 'admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.super-admin.manage.shipper-incidents.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.shipper-incidents.*', 'admin.shipper-incidents.*') ? 'active' : '' }}"><i class="bi bi-exclamation-triangle"></i> Sự cố giao vận</a>
+                <a href="{{ route('admin.super-admin.manage.cod-settlements.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.cod-settlements.*', 'admin.cod-settlements.*') ? 'active' : '' }}"><i class="bi bi-cash-coin"></i> Đối soát COD</a>
                 <a href="{{ route('admin.super-admin.manage.group-orders.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.group-orders.*', 'admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.super-admin.manage.reviews.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.reviews.*', 'admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.super-admin.manage.users.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.users.*', 'admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
@@ -486,8 +498,24 @@
                 <div class="root-topbar-left">
                     <button type="button" class="root-mobile-toggle" data-root-toggle aria-label="Mở menu"><i class="bi bi-list"></i></button>
                     <div class="root-breadcrumb"><span>Chill Drink / Hệ thống / </span><strong>@yield('page-title', 'Quản trị cấp cao')</strong></div>
+                    @unless(View::hasSection('hide-topbar-search'))
+                        <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search root-topbar-search" role="search">
+                            @foreach(request()->except(['q', 'page']) as $key => $value)
+                                @if(is_array($value))
+                                    @foreach($value as $item)
+                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                @endif
+                            @endforeach
+                            <span class="admin-search-icon"><i class="bi bi-search"></i></span>
+                            <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
+                        </form>
+                    @endunless
                 </div>
                 <div class="root-topbar-right">
+                    @include('partials.shipper-incident-center')
                     <div class="dropdown">
                         <button type="button" class="root-topbar-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo">
                             <i class="bi bi-bell"></i>
@@ -542,7 +570,20 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            function cleanupOrphanModalBackdrop() {
+                if (document.querySelector('.modal.show')) return;
+                document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+
+            window.addEventListener('pageshow', cleanupOrphanModalBackdrop);
+            document.addEventListener('hidden.bs.modal', () => window.setTimeout(cleanupOrphanModalBackdrop, 80));
+        })();
+    </script>
     @include('partials.realtime')
     <script>
         const rootSidebar = document.querySelector('[data-root-sidebar]');
@@ -730,5 +771,6 @@
             }, 5000);
         })();
     </script>
+    @stack('scripts')
 </body>
 </html>
