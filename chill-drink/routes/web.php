@@ -490,10 +490,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/orders/{order}/issues/{issue}/confirm', [ClientOrderIssueReportController::class, 'confirmResolution'])->name('orders.issues.confirm');
     Route::post('/orders/{order}/cancel', [ProfileController::class, 'cancelOrder'])->name('orders.cancel');
     Route::post('/orders/{order}/confirm-received', [ProfileController::class, 'confirmReceived'])->name('orders.confirm-received');
-    Route::get('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'create'])->name('orders.issues.create');
-    Route::get('/orders/{order}/support/status', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'status'])->name('orders.issues.status');
-    Route::post('/orders/{order}/support', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'store'])->name('orders.issues.store');
-    Route::post('/orders/{order}/support/{issue}/confirm', [\App\Http\Controllers\Client\OrderIssueReportController::class, 'confirmResolution'])->name('orders.issues.confirm');
     Route::get('/notifications/feed', [ProfileController::class, 'notificationsFeed'])->name('notifications.feed');
     Route::post('/notifications/mark-all-read', [ProfileController::class, 'markAllNotificationsRead'])->name('notifications.mark-all-read');
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
