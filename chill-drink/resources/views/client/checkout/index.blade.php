@@ -1348,10 +1348,17 @@
                                     <span class="text-primary" id="summaryGrandTotal">{{ number_format($grandTotal, 0, ',', '.') }}đ</span>
                                 </div>
                             </div>
-
                             <button type="submit" class="btn btn-primary btn-lg w-100" id="placeOrderButton" @disabled(! $checkoutPhoneReady)>
                                 <i class="bi bi-check2-circle me-2"></i>Đặt hàng
                             </button>
+                            <div
+                                class="alert alert-warning small mt-3 mb-0 {{ $checkoutPhoneReady && $primaryAddress !== '' ? 'd-none' : '' }}"
+                                id="checkoutContactWarning"
+                                role="alert"
+                            >
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                Vui lòng cập nhật địa chỉ nhận hàng và số điện thoại trước khi đặt hàng.
+                            </div>
                             <a href="{{ route('cart.index') }}" class="btn btn-outline-primary w-100 mt-3">Quay lại giỏ hàng</a>
                         </div>
                     </div>
@@ -1769,6 +1776,7 @@
         const selectedDefaultBadge = document.getElementById('selectedDefaultBadge');
         const addressList = document.getElementById('addressList');
         const placeOrderButton = document.getElementById('placeOrderButton');
+        const checkoutContactWarning = document.getElementById('checkoutContactWarning');
         const noteInput = document.getElementById('note');
         const addressHouseNumberWarning = document.querySelector('[data-address-house-number-warning]');
         const noteRequiredIndicator = document.querySelector('[data-note-required-indicator]');
@@ -2414,10 +2422,10 @@
         function syncCheckoutPhoneState() {
             const phoneValue = String(shippingPhoneInput?.value || '').trim();
             const hasPhone = isValidCheckoutPhone(phoneValue);
+            const hasDeliveryAddress = !fulfillmentDeliveryInput?.checked
+                || String(shippingAddressInput?.value || '').trim() !== '';
 
-            if (placeOrderButton) {
-                placeOrderButton.disabled = !hasPhone;
-            }
+            checkoutContactWarning?.classList.toggle('d-none', hasPhone && hasDeliveryAddress);
         }
 
         function escapeHtml(value) {
@@ -3626,6 +3634,25 @@
         });
 
         placeOrderButton?.closest('form')?.addEventListener('submit', function (event) {
+            const hasPhone = isValidCheckoutPhone(shippingPhoneInput?.value || '');
+            const missingDeliveryAddress = Boolean(
+                fulfillmentDeliveryInput?.checked
+                && !String(shippingAddressInput?.value || '').trim()
+            );
+
+            if (!hasPhone || missingDeliveryAddress) {
+                event.preventDefault();
+                checkoutContactWarning?.classList.remove('d-none');
+                if (checkoutContactWarning) {
+                    checkoutContactWarning.innerHTML = `<i class="bi bi-exclamation-circle me-1"></i>${missingDeliveryAddress
+                        ? 'Vui lòng thêm địa chỉ nhận hàng và số điện thoại để tiếp tục đặt đơn nhóm.'
+                        : 'Vui lòng cập nhật số điện thoại hợp lệ để tiếp tục đặt đơn nhóm.'}`;
+                    checkoutContactWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                window.setTimeout(() => openEditModal(), 250);
+                return;
+            }
+
             if (fulfillmentDeliveryInput?.checked && addressLocationConfirmedInput?.value !== '1') {
                 event.preventDefault();
                 if (checkoutRecentOrderDrift) {
@@ -3635,9 +3662,6 @@
                     showAddressHouseNumberWarning('Vui lòng cập nhật địa chỉ và xác nhận lại vị trí trên bản đồ cho đơn hàng này.', true);
                     addressListModal.show();
                 }
-                return;
-            }
-
             if (!fulfillmentDeliveryInput?.checked || hasHouseNumber(shippingAddressInput?.value || '')) {
                 clearAddressHouseNumberWarning();
                 hideAddressHouseNumberWarning();

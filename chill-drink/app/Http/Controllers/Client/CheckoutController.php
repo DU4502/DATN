@@ -255,6 +255,12 @@ class CheckoutController extends Controller
             $request->merge(['delivery_type' => 'now']);
         }
 
+        if (auth()->check() && ! $request->filled('shipping_phone_ui')) {
+            $userPhone = trim((string) auth()->user()->phone);
+            if ($userPhone !== '' && $userPhone !== 'Chưa cập nhật') {
+                $request->merge(['shipping_phone_ui' => $userPhone]);
+            }
+        }
         if (! $request->filled('shipping_method_ui')) {
             $request->merge(['shipping_method_ui' => 'standard']);
         }
