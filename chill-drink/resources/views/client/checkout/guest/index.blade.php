@@ -321,6 +321,86 @@
     .pickup-fields.is-hidden {
         display: none;
     }
+
+    .guest-verification-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .guest-verification-option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        min-height: 74px;
+        padding: 0.85rem 1rem;
+        border: 1.5px solid var(--guest-border);
+        border-radius: 18px;
+        background: #fff;
+        cursor: pointer;
+        transition: 0.2s ease;
+    }
+
+    .guest-verification-option:has(input:checked) {
+        border-color: var(--guest-primary);
+        background: #eefaf6;
+        box-shadow: 0 0 0 3px rgba(9, 151, 116, 0.1);
+    }
+
+    .guest-verification-option input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .guest-verification-icon {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 14px;
+        background: #e3f6f0;
+        color: var(--guest-primary);
+        font-size: 1.15rem;
+    }
+
+    .guest-verification-panel {
+        margin-top: 0.85rem;
+        padding: 1rem;
+        border: 1px solid var(--guest-border);
+        border-radius: 18px;
+        background: #fbfefd;
+    }
+
+    .guest-verification-panel.is-hidden {
+        display: none;
+    }
+
+    .guest-otp-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.65rem;
+        margin-top: 0.75rem;
+    }
+
+    .guest-verification-status {
+        min-height: 20px;
+        margin-top: 0.6rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .guest-verification-status.is-success { color: #087f5b; }
+    .guest-verification-status.is-error { color: #c92a2a; }
+
+    @media (max-width: 575.98px) {
+        .guest-verification-options,
+        .guest-otp-row {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 <section class="guest-checkout-page" data-guest-checkout data-should-prompt-location="{{ ($shouldPromptLocation ?? false) ? '1' : '0' }}" data-reverse-geocode-url="{{ route('api.reverse-geocode') }}">
@@ -340,23 +420,44 @@
                 <div class="guest-panel p-4 p-md-5">
                     <form method="POST" action="{{ route('checkout.guest.info.store') }}" id="guestInfoForm">
                         @csrf
+                        @php
+                            $verificationMethod = old(
+                                'verification_method',
+                                $guestInfo['verification_method'] ?? (filled($guestInfo['guest_email'] ?? null) ? 'email' : 'phone')
+                            );
+                        @endphp
 
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <label for="guest_name" class="form-label fw-semibold">Họ và tên *</label>
                                 <input type="text" id="guest_name" name="guest_name" class="form-control guest-input @error('guest_name') is-invalid @enderror" value="{{ old('guest_name', $guestInfo['guest_name'] ?? '') }}" required autocomplete="name">
                                 @error('guest_name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
 
-                            <div class="col-md-6">
-                                <label for="guest_phone" class="form-label fw-semibold">Số điện thoại *</label>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold d-block">Chọn cách xác thực mua hàng *</label>
+                                <div class="guest-verification-options">
+                                    <label class="guest-verification-option">
+                                        <input type="radio" name="verification_method" value="phone" @checked($verificationMethod === 'phone')>
+                                        <span class="guest-verification-icon"><i class="bi bi-phone"></i></span>
+                                        <span><strong class="d-block">Số điện thoại</strong><small class="text-secondary">Nhận mã SMS OTP</small></span>
+                                    </label>
+                                    <label class="guest-verification-option">
+                                        <input type="radio" name="verification_method" value="email" @checked($verificationMethod === 'email')>
+                                        <span class="guest-verification-icon"><i class="bi bi-envelope-check"></i></span>
+                                        <span><strong class="d-block">Email</strong><small class="text-secondary">Nhận link xác nhận đơn</small></span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 guest-verification-panel {{ $verificationMethod === 'phone' ? '' : 'is-hidden' }}" data-verification-panel="phone">
+                                <label for="guest_phone" class="form-label fw-semibold">Số điện thoại nhận OTP</label>
                                 <input
                                     type="tel"
                                     id="guest_phone"
                                     name="guest_phone"
                                     class="form-control guest-input @error('guest_phone') is-invalid @enderror"
                                     value="{{ old('guest_phone', $guestInfo['guest_phone'] ?? '') }}"
-                                    required
                                     autocomplete="tel-national"
                                     inputmode="numeric"
                                     maxlength="11"
@@ -368,12 +469,22 @@
                                 <div class="invalid-feedback" data-guest-phone-feedback>
                                     @error('guest_phone'){{ $message }}@else Số điện thoại phải là số di động Việt Nam hợp lệ.@enderror
                                 </div>
+                                <input type="hidden" name="firebase_id_token" value="{{ old('firebase_id_token', $guestInfo['firebase_id_token'] ?? '') }}" data-guest-firebase-token>
+                                <div class="guest-otp-row">
+                                    <button type="button" class="btn btn-outline-primary rounded-pill px-4" data-guest-send-otp>Gửi mã SMS</button>
+                                    <div class="input-group" data-guest-otp-box hidden>
+                                        <input type="text" class="form-control guest-input" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="Mã OTP 6 số" data-guest-otp-code>
+                                        <button type="button" class="btn btn-primary" data-guest-verify-otp>Xác minh</button>
+                                    </div>
+                                </div>
+                                <div id="guestPhoneRecaptcha"></div>
+                                <div class="guest-verification-status" data-guest-phone-status></div>
                             </div>
 
-                            <div class="col-12">
-                                <label for="guest_email" class="form-label fw-semibold">Địa chỉ email *</label>
-                                <input type="email" id="guest_email" name="guest_email" class="form-control guest-input @error('guest_email') is-invalid @enderror" value="{{ old('guest_email', $guestInfo['guest_email'] ?? '') }}" required autocomplete="email">
-                                <div class="form-text"><i class="bi bi-envelope-check me-1"></i>Nhận hóa đơn & cập nhật trạng thái đơn hàng qua email.</div>
+                            <div class="col-12 guest-verification-panel {{ $verificationMethod === 'email' ? '' : 'is-hidden' }}" data-verification-panel="email">
+                                <label for="guest_email" class="form-label fw-semibold">Địa chỉ email nhận link xác nhận</label>
+                                <input type="email" id="guest_email" name="guest_email" class="form-control guest-input @error('guest_email') is-invalid @enderror" value="{{ old('guest_email', $guestInfo['guest_email'] ?? '') }}" autocomplete="email">
+                                <div class="form-text"><i class="bi bi-envelope-check me-1"></i>Chúng tôi sẽ gửi link xác nhận đơn hàng đến email này.</div>
                                 @error('guest_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                         </div>
@@ -574,7 +685,19 @@
         const pickupInput = document.getElementById('deliveryTypePickup');
         const branchSelect = document.getElementById('branch_id');
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
+        const guestInfoForm = document.getElementById('guestInfoForm');
         const guestPhoneInput = document.getElementById('guest_phone');
+        const guestEmailInput = document.getElementById('guest_email');
+        const verificationMethodInputs = Array.from(document.querySelectorAll('input[name="verification_method"]'));
+        const verificationPanels = Array.from(document.querySelectorAll('[data-verification-panel]'));
+        const firebaseTokenInput = document.querySelector('[data-guest-firebase-token]');
+        const sendOtpButton = document.querySelector('[data-guest-send-otp]');
+        const verifyOtpButton = document.querySelector('[data-guest-verify-otp]');
+        const otpBox = document.querySelector('[data-guest-otp-box]');
+        const otpCodeInput = document.querySelector('[data-guest-otp-code]');
+        const phoneVerificationStatus = document.querySelector('[data-guest-phone-status]');
+        const phoneRecaptcha = document.getElementById('guestPhoneRecaptcha');
+        const firebaseConfig = @json(config('services.firebase.phone_auth.web_config'));
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
         const noteInput = document.getElementById('note');
@@ -618,6 +741,66 @@
         let draftLongitude = null;
         let draftAddress = '';
         let draftArea = '';
+        let firebaseAuth = null;
+        let recaptchaVerifier = null;
+        let confirmationResult = null;
+        let verifiedPhone = firebaseTokenInput?.value ? normalizeVietnamesePhone(guestPhoneInput?.value) : '';
+
+        function selectedVerificationMethod() {
+            return verificationMethodInputs.find((input) => input.checked)?.value || 'phone';
+        }
+
+        function setPhoneVerificationStatus(message = '', type = '') {
+            if (!phoneVerificationStatus) return;
+            phoneVerificationStatus.textContent = message;
+            phoneVerificationStatus.classList.toggle('is-success', type === 'success');
+            phoneVerificationStatus.classList.toggle('is-error', type === 'error');
+        }
+
+        function resetPhoneVerification() {
+            if (firebaseTokenInput) firebaseTokenInput.value = '';
+            verifiedPhone = '';
+            confirmationResult = null;
+            if (otpCodeInput) otpCodeInput.value = '';
+            if (otpBox) otpBox.hidden = true;
+            setPhoneVerificationStatus('');
+        }
+
+        function syncVerificationMethod() {
+            const method = selectedVerificationMethod();
+            verificationPanels.forEach((panel) => panel.classList.toggle('is-hidden', panel.dataset.verificationPanel !== method));
+            if (guestPhoneInput) {
+                guestPhoneInput.required = method === 'phone';
+                guestPhoneInput.disabled = method !== 'phone';
+            }
+            if (firebaseTokenInput) firebaseTokenInput.disabled = method !== 'phone';
+            if (otpCodeInput) otpCodeInput.disabled = method !== 'phone';
+            if (guestEmailInput) {
+                guestEmailInput.required = method === 'email';
+                guestEmailInput.disabled = method !== 'email';
+            }
+        }
+
+        function internationalVietnamesePhone(value) {
+            const local = normalizeVietnamesePhone(value);
+            return local.startsWith('0') ? `+84${local.slice(1)}` : `+${local}`;
+        }
+
+        async function ensureFirebasePhoneAuth() {
+            if (firebaseAuth && recaptchaVerifier) return true;
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) return false;
+
+            const [{ initializeApp, getApp, getApps }, { getAuth, RecaptchaVerifier, signInWithPhoneNumber }] = await Promise.all([
+                import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'),
+                import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js'),
+            ]);
+            const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+            firebaseAuth = getAuth(firebaseApp);
+            firebaseAuth.languageCode = 'vi';
+            window.__guestCheckoutPhoneAuth = { signInWithPhoneNumber };
+            recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, phoneRecaptcha, { size: 'invisible' });
+            return true;
+        }
 
         function escapeAddressHtml(value) {
             return String(value || '')
@@ -725,6 +908,12 @@
 
         function syncGuestPhoneInput(touched = false) {
             if (!guestPhoneInput) {
+                return true;
+            }
+
+            if (selectedVerificationMethod() !== 'phone') {
+                guestPhoneInput.setCustomValidity('');
+                guestPhoneInput.classList.remove('is-invalid');
                 return true;
             }
 
@@ -1331,6 +1520,9 @@
         }
         guestPhoneInput?.addEventListener('input', function () {
             syncGuestPhoneInput(false);
+            if (verifiedPhone && normalizeVietnamesePhone(guestPhoneInput.value) !== verifiedPhone) {
+                resetPhoneVerification();
+            }
         });
         guestPhoneInput?.addEventListener('blur', function () {
             syncGuestPhoneInput(true);
@@ -1354,10 +1546,76 @@
             noteInput.setCustomValidity('');
             noteInput.classList.remove('is-invalid');
         });
-        document.getElementById('guestInfoForm')?.addEventListener('submit', function (event) {
+        verificationMethodInputs.forEach((input) => input.addEventListener('change', syncVerificationMethod));
+
+        sendOtpButton?.addEventListener('click', async function () {
             if (!syncGuestPhoneInput(true)) {
+                guestPhoneInput?.reportValidity();
+                return;
+            }
+
+            resetPhoneVerification();
+            sendOtpButton.disabled = true;
+            setPhoneVerificationStatus('Đang gửi mã SMS...');
+
+            try {
+                const ready = await ensureFirebasePhoneAuth();
+                const signInWithPhoneNumber = window.__guestCheckoutPhoneAuth?.signInWithPhoneNumber;
+                if (!ready || !signInWithPhoneNumber) {
+                    throw new Error('SMS OTP chưa được cấu hình. Vui lòng chọn xác thực bằng email.');
+                }
+                confirmationResult = await signInWithPhoneNumber(
+                    firebaseAuth,
+                    internationalVietnamesePhone(guestPhoneInput.value),
+                    recaptchaVerifier
+                );
+                if (otpBox) otpBox.hidden = false;
+                otpCodeInput?.focus();
+                setPhoneVerificationStatus('Mã OTP đã được gửi. Vui lòng nhập đủ 6 số.', 'success');
+            } catch (error) {
+                console.error('Guest checkout SMS send failed:', error);
+                setPhoneVerificationStatus(error.message || 'Không thể gửi mã SMS. Vui lòng thử lại.', 'error');
+                recaptchaVerifier?.clear();
+                recaptchaVerifier = null;
+            } finally {
+                sendOtpButton.disabled = false;
+            }
+        });
+
+        verifyOtpButton?.addEventListener('click', async function () {
+            const code = String(otpCodeInput?.value || '').trim();
+            if (!confirmationResult || !/^\d{6}$/.test(code)) {
+                setPhoneVerificationStatus('Vui lòng nhập đúng mã OTP 6 chữ số.', 'error');
+                return;
+            }
+
+            verifyOtpButton.disabled = true;
+            setPhoneVerificationStatus('Đang xác minh mã OTP...');
+            try {
+                const result = await confirmationResult.confirm(code);
+                const token = await result.user.getIdToken();
+                if (firebaseTokenInput) firebaseTokenInput.value = token;
+                verifiedPhone = normalizeVietnamesePhone(guestPhoneInput.value);
+                setPhoneVerificationStatus('Số điện thoại đã được xác minh.', 'success');
+            } catch (error) {
+                if (firebaseTokenInput) firebaseTokenInput.value = '';
+                verifiedPhone = '';
+                setPhoneVerificationStatus('Mã OTP không đúng hoặc đã hết hạn.', 'error');
+            } finally {
+                verifyOtpButton.disabled = false;
+            }
+        });
+
+        guestInfoForm?.addEventListener('submit', function (event) {
+            if (selectedVerificationMethod() === 'phone' && !syncGuestPhoneInput(true)) {
                 event.preventDefault();
                 guestPhoneInput?.reportValidity();
+                return;
+            }
+
+            if (selectedVerificationMethod() === 'phone' && !firebaseTokenInput?.value) {
+                event.preventDefault();
+                setPhoneVerificationStatus('Vui lòng gửi và xác minh mã OTP trước khi tiếp tục.', 'error');
                 return;
             }
 
@@ -1384,6 +1642,7 @@
         });
         syncAddressHouseNumberNotice();
         syncGuestSummary();
+        syncVerificationMethod();
         syncGuestPhoneInput(false);
         findNearestBranchButton?.addEventListener('click', function () {
             const originalText = this.innerHTML;

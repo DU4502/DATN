@@ -532,11 +532,14 @@ class GroupOrderController extends Controller
 
     public function resume(string $code)
     {
-        if (session()->has('checkout_group_order_id')) {
-            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
-        }
         $group = GroupOrder::with(['items.product.category', 'items.member'])->where('code', $code)->firstOrFail();
         abort_unless($group->owner_id === auth()->id() && $group->status === 'closed' && ! $group->order_id, 403);
+
+        $pendingGroupId = (int) session('checkout_group_order_id', 0);
+        if ($pendingGroupId > 0 && $pendingGroupId !== (int) $group->id) {
+            return back()->with('error', 'Bạn đang có một đơn nhóm khác chờ thanh toán.');
+        }
+
         if ($group->items->isEmpty()) {
             return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
         }
@@ -593,7 +596,9 @@ class GroupOrderController extends Controller
                 'group_member_name' => $item->member->name ?? null, 'note' => $item->note,
             ];
         }
-        session()->put('personal_cart_backup', session()->get('cart', []));
+        if (! session()->has('checkout_group_order_id')) {
+            session()->put('personal_cart_backup', session()->get('cart', []));
+        }
         session()->put('cart', $cart);
         session()->put('group_cart_keys', array_keys($cart));
         session()->put('checkout_group_order_id', $group->id);

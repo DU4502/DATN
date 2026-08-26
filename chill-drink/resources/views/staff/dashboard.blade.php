@@ -17,41 +17,65 @@
     <div class="col-6 col-lg-3">
         <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
             <div class="d-flex align-items-center justify-content-between">
-                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">ĐƠN HÔM NAY</span>
+                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">CÔNG VIỆC HIỆN TẠI</span>
                 <span style="width:36px;height:36px;border-radius:10px;background:#e6f7f2;display:flex;align-items:center;justify-content:center;color:#00a870;"><i class="bi bi-receipt"></i></span>
             </div>
-            <span class="fw-bold" style="font-size:1.8rem;color:#111827;line-height:1;">{{ $todayOrders }}</span>
-            <small class="text-secondary">đơn hàng mới</small>
+            <span class="fw-bold" style="font-size:1.8rem;color:#111827;line-height:1;">{{ $totalWork }}</span>
+            <small class="text-secondary">đơn và đơn nhóm cần theo dõi</small>
         </div>
     </div>
     <div class="col-6 col-lg-3">
         <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
             <div class="d-flex align-items-center justify-content-between">
-                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">CHỜ XỬ LÝ</span>
+                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">ĐƠN MỚI</span>
                 <span style="width:36px;height:36px;border-radius:10px;background:#fff8e6;display:flex;align-items:center;justify-content:center;color:#d97706;"><i class="bi bi-hourglass-split"></i></span>
             </div>
-            <span class="fw-bold" style="font-size:1.8rem;color:#d97706;line-height:1;">{{ $pendingOrders }}</span>
-            <small class="text-secondary">cần xử lý ngay</small>
+            <span class="fw-bold" style="font-size:1.8rem;color:#d97706;line-height:1;">{{ $newOrders }}</span>
+            <small class="text-secondary">đang chờ xác nhận</small>
         </div>
     </div>
     <div class="col-6 col-lg-3">
         <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
             <div class="d-flex align-items-center justify-content-between">
-                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">DOANH THU HÔM NAY</span>
-                <span style="width:36px;height:36px;border-radius:10px;background:#edf7ff;display:flex;align-items:center;justify-content:center;color:#0284c7;"><i class="bi bi-currency-dollar"></i></span>
+                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">ĐANG CHUẨN BỊ</span>
+                <span style="width:36px;height:36px;border-radius:10px;background:#edf7ff;display:flex;align-items:center;justify-content:center;color:#0284c7;"><i class="bi bi-cup-hot"></i></span>
             </div>
-            <span class="fw-bold" style="font-size:1.4rem;color:#0284c7;line-height:1;">{{ number_format($todayRevenue, 0, ',', '.') }}đ</span>
-            <small class="text-secondary">đã thanh toán</small>
+            <span class="fw-bold" style="font-size:1.8rem;color:#0284c7;line-height:1;">{{ $preparingOrders }}</span>
+            <small class="text-secondary">đã xác nhận hoặc đang pha chế</small>
         </div>
     </div>
     <div class="col-6 col-lg-3">
         <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
             <div class="d-flex align-items-center justify-content-between">
-                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">ĐƠN NHÓM MỞ</span>
-                <span style="width:36px;height:36px;border-radius:10px;background:#f1f0ff;display:flex;align-items:center;justify-content:center;color:#7c3aed;"><i class="bi bi-people-fill"></i></span>
+                <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">CHỜ BÀN GIAO</span>
+                <span style="width:36px;height:36px;border-radius:10px;background:#f1f0ff;display:flex;align-items:center;justify-content:center;color:#7c3aed;"><i class="bi bi-box-seam"></i></span>
             </div>
-            <span class="fw-bold" style="font-size:1.8rem;color:#7c3aed;line-height:1;">{{ $openGroups }}</span>
-            <small class="text-secondary">đang mở</small>
+            <span class="fw-bold" style="font-size:1.8rem;color:#7c3aed;line-height:1;">{{ $readyForDeliveryOrders }}</span>
+            <small class="text-secondary">đơn đang chờ Shipper lấy</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-4">
+        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+            <span class="text-secondary" style="font-size:0.8rem;font-weight:600;">CHỜ KHÁCH LẤY</span>
+            <span class="fw-bold text-success" style="font-size:1.8rem;line-height:1;">{{ $readyForPickupOrders }}</span>
+            <small class="text-secondary">đơn tự lấy đã chuẩn bị xong</small>
+        </div>
+    </div>
+    <div class="col-6 col-lg-4">
+        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+            <span class="text-secondary" style="font-size:0.8rem;font-weight:600;">ĐƠN NHÓM</span>
+            <span class="fw-bold" style="font-size:1.8rem;color:#7c3aed;line-height:1;">{{ $groupOrdersToHandle }}</span>
+            <small class="text-secondary">đang mở hoặc chờ xử lý</small>
+        </div>
+    </div>
+    <div class="col-12 col-lg-4">
+        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+            <span class="text-secondary" style="font-size:0.8rem;font-weight:600;">ĐƠN TRONG NGÀY</span>
+            <span class="fw-bold" style="font-size:1.8rem;color:#111827;line-height:1;">{{ $todayOrders }}</span>
+            <small class="text-secondary">tại chi nhánh của bạn</small>
         </div>
     </div>
 </div>
@@ -61,7 +85,7 @@
     <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
         <div>
             <h3 class="h5 fw-bold mb-1">Đơn hàng cần xử lý</h3>
-            <small class="text-secondary">Đơn đang trong quá trình xử lý (chưa hoàn thành hoặc hủy)</small>
+            <small class="text-secondary">Ưu tiên đơn cũ nhất thuộc công việc tại quán</small>
         </div>
         <a href="{{ route('staff.orders.index') }}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
     </div>
@@ -69,7 +93,7 @@
     @php
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
         $nextStatus = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
-        $canCancel = in_array($order->status, [\App\Support\OrderStatus::PENDING, \App\Support\OrderStatus::CONFIRMED, \App\Support\OrderStatus::PREPARING]);
+        $canCancel = $order->status === \App\Support\OrderStatus::PENDING;
     @endphp
     <div class="p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-3">
@@ -167,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 <!-- Liên kết nhanh -->
 <div class="row g-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <a href="{{ route('staff.orders.index') }}" class="admin-card p-4 d-flex align-items-center gap-3 text-decoration-none" style="color:inherit;">
             <span style="width:48px;height:48px;border-radius:12px;background:#e6f7f2;display:flex;align-items:center;justify-content:center;color:#00a870;font-size:1.4rem;flex-shrink:0;"><i class="bi bi-receipt"></i></span>
             <div>
@@ -177,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <i class="bi bi-chevron-right ms-auto text-secondary"></i>
         </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <a href="{{ route('staff.group-orders.index') }}" class="admin-card p-4 d-flex align-items-center gap-3 text-decoration-none" style="color:inherit;">
             <span style="width:48px;height:48px;border-radius:12px;background:#f1f0ff;display:flex;align-items:center;justify-content:center;color:#7c3aed;font-size:1.4rem;flex-shrink:0;"><i class="bi bi-people-fill"></i></span>
             <div>
@@ -187,12 +211,22 @@ document.addEventListener('DOMContentLoaded', function () {
             <i class="bi bi-chevron-right ms-auto text-secondary"></i>
         </a>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <a href="{{ route('staff.chat.index') }}" class="admin-card p-4 d-flex align-items-center gap-3 text-decoration-none" style="color:inherit;">
             <span style="width:48px;height:48px;border-radius:12px;background:#fff8e6;display:flex;align-items:center;justify-content:center;color:#d97706;font-size:1.4rem;flex-shrink:0;"><i class="bi bi-chat-dots"></i></span>
             <div>
                 <div class="fw-bold">Chat hỗ trợ</div>
                 <small class="text-secondary">Trả lời khách hàng</small>
+            </div>
+            <i class="bi bi-chevron-right ms-auto text-secondary"></i>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ route('staff.products.availability.index') }}" class="admin-card p-4 d-flex align-items-center gap-3 text-decoration-none" style="color:inherit;">
+            <span style="width:48px;height:48px;border-radius:12px;background:#fee2e2;display:flex;align-items:center;justify-content:center;color:#dc2626;font-size:1.4rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></span>
+            <div>
+                <div class="fw-bold">Tình trạng sản phẩm</div>
+                <small class="text-secondary">Còn hàng hoặc tạm hết</small>
             </div>
             <i class="bi bi-chevron-right ms-auto text-secondary"></i>
         </a>

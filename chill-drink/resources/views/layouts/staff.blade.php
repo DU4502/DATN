@@ -29,6 +29,9 @@
             <a href="{{ route('staff.orders.index') }}" class="nav-link {{ request()->routeIs('staff.orders.*') ? 'active' : '' }}">
                 <i class="bi bi-receipt"></i> Đơn hàng
             </a>
+            <a href="{{ route('staff.products.availability.index') }}" class="nav-link {{ request()->routeIs('staff.products.availability.*') ? 'active' : '' }}">
+                <i class="bi bi-box-seam"></i> Tình trạng sản phẩm
+            </a>
             <a href="{{ route('staff.group-orders.index') }}" class="nav-link {{ request()->routeIs('staff.group-orders.*') ? 'active' : '' }}">
                 <i class="bi bi-people-fill"></i> Đơn nhóm
             </a>

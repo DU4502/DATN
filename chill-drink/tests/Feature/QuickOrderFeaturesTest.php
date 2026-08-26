@@ -260,6 +260,26 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame('cancelled', $group->fresh()->status);
     }
 
+    public function test_owner_can_resume_the_same_pending_group_checkout_without_overwriting_personal_cart(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'resume-owner']);
+        $product = Product::factory()->create(['status' => true]);
+        $item = GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
+            'product_id' => $product->id, 'size' => 'S', 'quantity' => 1, 'unit_price' => (int) $product->price]);
+        $personalCart = ['personal-before-group' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
+
+        $this->actingAs($owner)->withSession(['cart' => $personalCart])->post(route('group-orders.close', $group->code));
+        $groupKey = 'group-'.$group->id.'-'.$item->id;
+
+        $this->post(route('group-orders.resume', $group->code))
+            ->assertRedirect(route('cart.index'));
+
+        $this->assertSame($group->id, session('checkout_group_order_id'));
+        $this->assertArrayHasKey($groupKey, session('cart'));
+        $this->assertSame($personalCart, session('personal_cart_backup'));
+    }
+
     public function test_group_checkout_links_order_and_restores_personal_cart(): void
     {
         Http::preventStrayRequests();
@@ -424,7 +444,7 @@ class QuickOrderFeaturesTest extends TestCase
             ->assertSee('data-vue-group-chat', false)
             ->assertSee('Trò chuyện trong đơn nhóm')
             ->assertSee('Hỗ trợ khách hàng')
-            ->assertSee('groupOrderCode: "'.$group->code.'"', false)
+            ->assertSee('groupOrderCode: &quot;'.$group->code.'&quot;', false)
             ->assertSee('groupBranchId: '.$group->branch_id, false);
 
         $chat = $this->getJson(route('chat.index', ['group_order_code' => $group->code]))

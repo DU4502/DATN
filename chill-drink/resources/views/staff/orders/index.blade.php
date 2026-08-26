@@ -171,6 +171,12 @@
                                                 <div class="flex-grow-1">
                                                     <strong>{{ $item->product?->name ?? 'Sản phẩm đã xóa' }}</strong>
                                                     <div class="text-secondary small">Size: {{ $item->productSize?->size?->name ?? '?' }} · Đá {{ (int)$item->ice_level }}% · Đường {{ (int)$item->sugar_level }}%</div>
+                                                    @if($item->toppingLines->isNotEmpty())
+                                                        <div class="text-secondary small">Topping: {{ $item->toppingLines->pluck('topping.name')->filter()->implode(', ') }}</div>
+                                                    @endif
+                                                    @if(filled($item->item_note))
+                                                        <div class="text-primary small"><i class="bi bi-chat-left-text me-1"></i>{{ $item->item_note }}</div>
+                                                    @endif
                                                 </div>
                                                 <div class="text-end">
                                                     <div class="fw-bold">{{ number_format($item->getSubtotal(), 0, ',', '.') }}đ</div>
@@ -201,18 +207,6 @@
                                     <div class="alert alert-danger border-0 py-2 px-3 mb-3" style="border-radius:10px;font-size:.82rem;">
                                         <i class="bi bi-exclamation-triangle me-1"></i>
                                         Lý do hủy: {{ $order->cancellation_reason }}
-                                    </div>
-                                    @endif
-
-                                    @php($shipmentIncident = $shipmentIncidents[(int) $order->id] ?? null)
-                                    @if($shipmentIncident)
-                                    <div class="alert alert-warning border-0 p-3 mb-3" style="border-radius:12px;font-size:.84rem;">
-                                        <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Sự cố shipper cần xử lý</div>
-                                        <div><strong>{{ $shipmentIncident['shipper_name'] }}</strong> · {{ $shipmentIncident['description'] }}</div>
-                                        @if(!empty($shipmentIncident['reported_at_label']))
-                                            <div class="text-secondary mt-1">Báo lúc {{ $shipmentIncident['reported_at_label'] }}</div>
-                                        @endif
-                                        <div class="mt-2">Quyết định xử lý thuộc Admin chi nhánh hoặc Super Admin.</div>
                                     </div>
                                     @endif
 
@@ -251,7 +245,7 @@
                                         </div>
                                         @endif
 
-                                        @if(!in_array($order->status, [\App\Support\OrderStatus::COMPLETED, \App\Support\OrderStatus::CANCELLED], true))
+                                        @if($order->status === \App\Support\OrderStatus::PENDING)
                                         <div class="mt-2">
                                             <button type="button" class="btn btn-outline-danger w-100" style="border-radius:10px;"
                                                     data-bs-toggle="modal" data-bs-target="#cancelOrderModal{{ $order->id }}">
@@ -266,6 +260,7 @@
                     </td>
                 </tr>
 
+                @if($order->status === \App\Support\OrderStatus::PENDING)
                 <!-- Modal hủy đơn -->
                 <div class="modal fade" id="cancelOrderModal{{ $order->id }}" tabindex="-1">
                     <div class="modal-dialog">
@@ -291,6 +286,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 @empty
                 <tr>

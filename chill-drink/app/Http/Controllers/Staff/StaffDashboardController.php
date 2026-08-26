@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\GroupOrder;
 use App\Models\Order;
 use App\Support\OrderStatus;
-use Illuminate\Support\Facades\DB;
 
 class StaffDashboardController extends Controller
 {
@@ -24,56 +23,62 @@ class StaffDashboardController extends Controller
             $orderQuery->whereRaw('1 = 0');
         }
 
-        $todayOrders   = (clone $orderQuery)->whereDate('created_at', today())->count();
-        $pendingOrders = (clone $orderQuery)->whereIn('status', [OrderStatus::PENDING, OrderStatus::CONFIRMED])->count();
-        $todayRevenue  = (clone $orderQuery)->whereDate('created_at', today())
-            ->where(fn ($q) => $q->where('payment_status', 'paid')->orWhere('status', 'completed'))
-            ->sum('total');
+        $todayOrders = (clone $orderQuery)->whereDate('created_at', today())->count();
+        $newOrders = (clone $orderQuery)->where('status', OrderStatus::PENDING)->count();
+        $preparingOrders = (clone $orderQuery)
+            ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::PREPARING])
+            ->count();
+        $readyForDeliveryOrders = (clone $orderQuery)
+            ->where('fulfillment_type', 'delivery')
+            ->where('status', OrderStatus::READY_FOR_DELIVERY)
+            ->count();
+        $readyForPickupOrders = (clone $orderQuery)
+            ->where('fulfillment_type', 'pickup')
+            ->where('status', OrderStatus::READY_FOR_PICKUP)
+            ->count();
 
         $groupOrderQuery = GroupOrder::query();
         if ($branchId) {
-            $groupOrderQuery->where(function ($q) use ($branchId) {
-                $q->whereDoesntHave('order')
-                  ->orWhereHas('order', fn ($o) => $o->where('branch_id', $branchId));
-            });
+            $groupOrderQuery->where('branch_id', $branchId);
         } else {
             $groupOrderQuery->whereRaw('1 = 0');
         }
 
-        $openGroups = (clone $groupOrderQuery)->where('status', 'open')->count();
+        $groupOrdersToHandle = (clone $groupOrderQuery)
+            ->whereIn('status', ['open', 'closed'])
+            ->count();
 
-        // 5 đơn hàng gần nhất cần xử lý (tất cả trạng thái đang trong quá trình xử lý)
-        $processingStatuses = [
+        // Ưu tiên các đơn cũ nhất còn thuộc phạm vi xử lý tại quán.
+        $workStatuses = [
             OrderStatus::PENDING,
             OrderStatus::CONFIRMED,
             OrderStatus::PREPARING,
             OrderStatus::READY_FOR_DELIVERY,
-            OrderStatus::SHIPPER_PICKED_UP,
-            OrderStatus::DELIVERING,
-            OrderStatus::DELIVERED,
             OrderStatus::READY_FOR_PICKUP,
         ];
 
         $recentOrders = (clone $orderQuery)
             ->with(['user', 'branch'])
-            ->whereIn('status', $processingStatuses)
-            ->latest()
-            ->take(5)
+            ->whereIn('status', $workStatuses)
+            ->oldest()
+            ->take(8)
             ->get();
 
-        // Thống kê trạng thái
-        $statusStats = [];
-        foreach (OrderStatus::filterOptions() as $status => $label) {
-            $statusStats[$label] = (clone $orderQuery)->where('status', $status)->count();
-        }
+        $totalWork = $newOrders
+            + $preparingOrders
+            + $readyForDeliveryOrders
+            + $readyForPickupOrders
+            + $groupOrdersToHandle;
 
         return view('staff.dashboard', compact(
             'todayOrders',
-            'pendingOrders',
-            'todayRevenue',
-            'openGroups',
+            'newOrders',
+            'preparingOrders',
+            'readyForDeliveryOrders',
+            'readyForPickupOrders',
+            'groupOrdersToHandle',
+            'totalWork',
             'recentOrders',
-            'statusStats',
         ));
     }
 }

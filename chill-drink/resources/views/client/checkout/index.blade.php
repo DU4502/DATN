@@ -258,7 +258,7 @@
         overflow-y: auto;
         overscroll-behavior: contain;
         scrollbar-gutter: stable;
-        padding-right: 0.85rem;
+        padding-right: 0.45rem;
         margin-right: 0;
         scrollbar-width: thin;
         scrollbar-color: rgba(18, 126, 112, 0.42) transparent;
@@ -285,21 +285,80 @@
     .summary-card-footer {
         flex: 0 0 auto;
         border-top: 1px solid var(--drink-border);
-        margin-top: 1rem;
-        padding-top: 1rem;
+        margin-top: 0.75rem;
+        padding-top: 0.9rem;
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), #ffffff 48%);
     }
 
     .summary-card .checkout-summary-item {
-        gap: 0.9rem !important;
-        align-items: flex-start !important;
-        padding-bottom: 0.95rem;
-        border-bottom: 1px solid #edf3f1;
+        display: grid !important;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 0.85rem !important;
+        padding: 0.85rem;
+        border: 1px solid #e8f1ef;
+        border-radius: 18px;
+        background: linear-gradient(145deg, #ffffff, #f8fcfb);
     }
 
     .summary-card .checkout-summary-item:last-child {
-        border-bottom: 0;
-        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+
+    .checkout-summary-content {
+        min-width: 0;
+    }
+
+    .checkout-summary-title-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .checkout-summary-name {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--drink-ink);
+        font-size: 0.96rem;
+        font-weight: 800;
+        line-height: 1.35;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .checkout-summary-line-total {
+        flex: 0 0 auto;
+        color: var(--drink-primary);
+        font-size: 0.96rem;
+        font-weight: 850;
+        line-height: 1.35;
+        white-space: nowrap;
+    }
+
+    .checkout-summary-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.4rem;
+    }
+
+    .checkout-summary-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        min-height: 24px;
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+        background: #edf7f4;
+        color: #42605a;
+        font-size: 0.72rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .checkout-summary-chip.is-member {
+        background: #fff4e8;
+        color: #a95712;
     }
 
     .checkout-summary-meta {
@@ -310,26 +369,79 @@
     }
 
     .checkout-summary-price-lines {
-        margin-top: 0.35rem;
-        font-size: 0.82rem;
-        line-height: 1.35;
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px dashed #dbe9e6;
+        font-size: 0.76rem;
+        line-height: 1.45;
         color: var(--drink-muted);
     }
 
-    .checkout-summary-unit-total {
-        margin-top: 0.15rem;
-        font-size: 0.9rem;
-        font-weight: 800;
-        color: var(--drink-ink);
-        white-space: nowrap;
+    .summary-costs {
+        display: grid;
+        gap: 0.65rem;
     }
 
-    .checkout-summary-grand-total {
-        margin-top: 0.18rem;
-        font-size: 1.02rem;
-        font-weight: 800;
+    .summary-cost-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        color: var(--drink-ink);
+        font-size: 0.92rem;
+    }
+
+    .summary-cost-row > :last-child {
+        text-align: right;
+    }
+
+    .summary-total-row {
+        margin-top: 0.15rem;
+        padding: 0.8rem 0.9rem;
+        border-radius: 16px;
+        background: #edf9f5;
+    }
+
+    .summary-total-row strong {
+        font-size: 1.3rem;
+    }
+
+    .summary-item-count {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        background: #edf9f5;
         color: var(--drink-primary);
-        white-space: nowrap;
+        font-size: 0.76rem;
+        font-weight: 800;
+    }
+
+    .summary-add-more {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 0.35rem;
+    }
+
+    @media (max-width: 575.98px) {
+        .summary-card .checkout-summary-item {
+            grid-template-columns: 54px minmax(0, 1fr);
+            padding: 0.7rem;
+        }
+
+        .checkout-item-img {
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+        }
+
+        .checkout-summary-title-row {
+            display: block;
+        }
+
+        .checkout-summary-line-total {
+            margin-top: 0.15rem;
+        }
     }
 
     @media (max-width: 991.98px) {
@@ -1307,18 +1419,20 @@
                 </div>
 
                 <div class="col-lg-5">
-                    <div class="checkout-panel summary-card p-4 p-md-5">
-                        <div class="summary-card-head d-flex align-items-center justify-content-between gap-3 mb-4">
+                    <div class="checkout-panel summary-card p-4">
+                        <div class="summary-card-head d-flex align-items-center justify-content-between gap-3 mb-3">
                             <div class="min-w-0">
-                                <h2 class="h4 fw-bold mb-1">Đơn hàng của bạn</h2>
-                                <p class="text-secondary mb-0"><span data-checkout-item-count>{{ count($cart) }}</span> món trong giỏ</p>
-                                <a href="{{ route('products.index') }}" class="small fw-semibold text-primary text-decoration-none text-nowrap"><i class="bi bi-plus-circle me-1"></i>Thêm món khác</a>
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <h2 class="h4 fw-bold mb-0">Đơn hàng của bạn</h2>
+                                    <span class="summary-item-count"><span data-checkout-item-count>{{ count($cart) }}</span>&nbsp;món</span>
+                                </div>
+                                <a href="{{ route('products.index') }}" class="summary-add-more small fw-semibold text-primary text-decoration-none text-nowrap"><i class="bi bi-plus-circle me-1"></i>Thêm món khác</a>
                             </div>
                             <span class="payment-icon"><i class="bi bi-receipt"></i></span>
                         </div>
 
                         <div class="summary-card-items">
-                            <div class="vstack gap-3 mb-4">
+                            <div class="vstack gap-2">
                                 @foreach($cart as $cartKey => $item)
                                     @include('client.checkout._summary-item')
                                 @endforeach
@@ -1326,30 +1440,30 @@
                         </div>
 
                         <div class="summary-card-footer">
-                            <div class="border-top pt-4">
-                                <div class="d-flex justify-content-between mb-3">
+                            <div class="summary-costs">
+                                <div class="summary-cost-row">
                                     <span class="text-secondary">Tạm tính</span>
                                     <span data-checkout-subtotal>{{ number_format($total, 0, ',', '.') }}đ</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-3">
+                                <div class="summary-cost-row">
                                     <span class="text-secondary">Phí vận chuyển</span>
                                     <span class="text-primary fw-semibold" id="summaryShippingFee">{{ number_format($shippingFee, 0, ',', '.') }}đ</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-3 small">
+                                <div class="summary-cost-row small">
                                     <span class="text-secondary">Khoảng cách</span>
                                     <span id="summaryShippingDistance">Phí giao hàng cố định</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-3">
+                                <div class="summary-cost-row">
                                     <span class="text-secondary">Phiếu ưu đãi</span>
                                     <span id="summaryVoucherText">{{ $discount > 0 ? '-' . number_format($discount, 0, ',', '.') . 'đ' : 'Chưa áp dụng' }}</span>
                                 </div>
-                                <div class="d-flex justify-content-between h4 fw-bold mb-4">
-                                    <span>Tổng cộng</span>
-                                    <span class="text-primary" id="summaryGrandTotal">{{ number_format($grandTotal, 0, ',', '.') }}đ</span>
+                                <div class="summary-cost-row summary-total-row">
+                                    <span class="fw-bold">Tổng cộng</span>
+                                    <strong class="text-primary" id="summaryGrandTotal">{{ number_format($grandTotal, 0, ',', '.') }}đ</strong>
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-lg w-100" id="placeOrderButton" @disabled(! $checkoutPhoneReady)>
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mt-3" id="placeOrderButton" @disabled(! $checkoutPhoneReady)>
                                 <i class="bi bi-check2-circle me-2"></i>Đặt hàng
                             </button>
                             <a href="{{ route('cart.index') }}" class="btn btn-outline-primary w-100 mt-3">Quay lại giỏ hàng</a>

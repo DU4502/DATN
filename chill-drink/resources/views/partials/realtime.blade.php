@@ -7,12 +7,14 @@
             : array_values(array_filter([(int) (session('nearest_branch_id') ?? $realtimeUser?->branch_id)]));
         $realtimeAdminChannels = $realtimeUser?->isSuperAdmin()
             ? array_merge(['admin-notifications'], array_map(fn ($branchId) => 'admin-notifications.'.$branchId, $realtimeBranchIds))
-            : ($realtimeUser?->isAdmin() && is_numeric($realtimeUser?->branch_id)
+            : (($realtimeUser?->isAdmin() || $realtimeUser?->isStaffOnly()) && is_numeric($realtimeUser?->branch_id)
                 ? ['admin-notifications.'.(int) $realtimeUser->branch_id]
                 : []);
+        $receivesBranchOrders = ($realtimeUser?->isAdmin() || $realtimeUser?->isSuperAdmin() || $realtimeUser?->isStaffOnly()) ?? false;
     @endphp
     window.realtimeConfig = {
         isAdmin: @json(($realtimeUser?->isAdmin() || $realtimeUser?->isSuperAdmin()) ?? false),
+        receivesBranchOrders: @json($receivesBranchOrders),
         adminBranchId: @json($realtimeUser?->isAdmin() && is_numeric($realtimeUser?->branch_id) ? (int) $realtimeUser->branch_id : null),
         adminChannels: @json($realtimeAdminChannels),
         userId: @json(auth()->id()),
@@ -92,7 +94,7 @@
                 .listen('.product.availability.updated', applyAvailability);
         });
 
-        if (window.realtimeConfig.isAdmin) {
+        if (window.realtimeConfig.receivesBranchOrders) {
             window.realtimeConfig.adminChannels.forEach(function (adminChannel) {
                 window.Echo.private(adminChannel)
                     .listen('.order.created', function (payload) {

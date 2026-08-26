@@ -29,6 +29,7 @@ use App\Http\Controllers\Staff\StaffDashboardController;
 use App\Http\Controllers\Staff\StaffOrderController;
 use App\Http\Controllers\Staff\StaffGroupOrderController;
 use App\Http\Controllers\Staff\StaffChatController;
+use App\Http\Controllers\Staff\StaffProductAvailabilityController;
 use App\Http\Controllers\Client\CheckoutController;
 use App\Http\Controllers\Client\GroupOrderController;
 use App\Http\Controllers\Client\HomeController;
@@ -684,6 +685,12 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'staff'])->group(fun
     // Đơn hàng
     Route::get('/orders', [StaffOrderController::class, 'index'])->name('orders.index');
     Route::put('/orders/{id}/status', [StaffOrderController::class, 'updateStatus'])->name('orders.updateStatus');
+
+    // Tình trạng bán sản phẩm tại đúng chi nhánh của Staff
+    Route::get('/products/availability', [StaffProductAvailabilityController::class, 'index'])
+        ->name('products.availability.index');
+    Route::patch('/products/{product}/availability', [StaffProductAvailabilityController::class, 'update'])
+        ->name('products.availability.update');
 
     // Đơn nhóm
     Route::get('/group-orders', [StaffGroupOrderController::class, 'index'])->name('group-orders.index');

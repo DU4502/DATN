@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Services\OrderCodeGenerator;
 use App\Services\EmailRecipientVerificationService;
+use App\Services\FirebasePhoneAuthService;
 use App\Services\ProductAvailabilityService;
 use App\Support\GuestOrderAccess;
 use App\Support\OrderDistancePolicy;
@@ -88,7 +89,11 @@ class GuestCheckoutController extends CheckoutController
         ));
     }
 
-    public function storeInfo(Request $request, EmailRecipientVerificationService $emailRecipientVerificationService)
+    public function storeInfo(
+        Request $request,
+        EmailRecipientVerificationService $emailRecipientVerificationService,
+        FirebasePhoneAuthService $phoneAuth
+    )
     {
         if (auth()->check()) {
             return redirect()->route('checkout.index');
@@ -98,19 +103,30 @@ class GuestCheckoutController extends CheckoutController
             $request->merge(['fulfillment_type' => $request->input('delivery_type'), 'delivery_type' => 'now']);
         }
 
+        if (! $request->filled('verification_method')) {
+            $request->merge(['verification_method' => $request->filled('guest_email') ? 'email' : 'phone']);
+        }
+
         $validated = $request->validate([
             'guest_name' => ['required', 'string', 'max:255'],
+            'verification_method' => ['required', Rule::in(['phone', 'email'])],
             'guest_phone' => [
-                'required',
+                'nullable',
+                'required_if:verification_method,phone',
                 'string',
                 'max:30',
                 function ($attribute, $value, $fail) {
+                    if (blank($value)) {
+                        return;
+                    }
+
                     if (! $this->isValidVietnameseMobilePhone($value)) {
                         $fail('Số điện thoại phải là số di động Việt Nam hợp lệ (ví dụ 0912345678 hoặc 84912345678).');
                     }
                 },
             ],
-            'guest_email' => ['required', 'string', 'email', 'max:255'],
+            'guest_email' => ['nullable', 'required_if:verification_method,email', 'string', 'email', 'max:255'],
+            'firebase_id_token' => ['nullable', 'required_if:verification_method,phone', 'string', 'max:5000'],
             'fulfillment_type' => ['required', Rule::in(['delivery', 'pickup'])],
             'shipping_address_ui' => ['nullable', 'string', 'max:255', 'required_if:fulfillment_type,delivery'],
             'shipping_area_ui' => ['nullable', 'string', 'max:255'],
@@ -133,9 +149,11 @@ class GuestCheckoutController extends CheckoutController
             'delivery_note' => ['nullable', 'string', 'max:1000'],
         ], [
             'guest_name.required' => 'Vui lòng nhập họ tên.',
-            'guest_phone.required' => 'Vui lòng nhập số điện thoại.',
-            'guest_email.required' => 'Vui lòng nhập email.',
+            'verification_method.required' => 'Vui lòng chọn xác thực bằng số điện thoại hoặc email.',
+            'guest_phone.required_if' => 'Vui lòng nhập số điện thoại để nhận mã OTP.',
+            'guest_email.required_if' => 'Vui lòng nhập email để nhận link xác nhận đơn hàng.',
             'guest_email.email' => 'Email không đúng định dạng.',
+            'firebase_id_token.required_if' => 'Vui lòng xác minh mã OTP được gửi đến số điện thoại.',
             'shipping_address_ui.required_if' => 'Vui lòng nhập địa chỉ giao hàng.',
             'branch_id.required' => 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
@@ -144,14 +162,35 @@ class GuestCheckoutController extends CheckoutController
             'scheduled_delivery_time.required_if' => 'Vui lòng chọn ngày và giờ muốn nhận hàng.',
         ]);
 
-        $validated['guest_phone'] = $this->normalizeVietnamesePhoneNumber($validated['guest_phone']);
+        $validated['guest_phone'] = filled($validated['guest_phone'] ?? null)
+            ? $this->normalizeVietnamesePhoneNumber($validated['guest_phone'])
+            : null;
+        $validated['guest_email'] = filled($validated['guest_email'] ?? null)
+            ? Str::lower(trim((string) $validated['guest_email']))
+            : null;
 
-        try {
-            $emailRecipientVerificationService->assertDeliverable($validated['guest_email']);
-        } catch (Throwable $e) {
-            throw ValidationException::withMessages([
-                'guest_email' => $e->getMessage(),
-            ]);
+        if ($validated['verification_method'] === 'phone') {
+            try {
+                $phone = $phoneAuth->verifyPhoneTokenMatches(
+                    (string) ($validated['firebase_id_token'] ?? ''),
+                    (string) $validated['guest_phone']
+                );
+                $validated['guest_phone'] = $phone['local'];
+                $validated['guest_email'] = null;
+            } catch (Throwable $e) {
+                throw ValidationException::withMessages([
+                    'guest_phone' => 'Không thể xác minh số điện thoại. Vui lòng gửi lại mã OTP và thử lại.',
+                ]);
+            }
+        } else {
+            try {
+                $emailRecipientVerificationService->assertDeliverable((string) $validated['guest_email']);
+                $validated['firebase_id_token'] = null;
+            } catch (Throwable $e) {
+                throw ValidationException::withMessages([
+                    'guest_email' => $e->getMessage(),
+                ]);
+            }
         }
 
         if (
@@ -253,6 +292,7 @@ class GuestCheckoutController extends CheckoutController
         }
 
         $emailRecipientVerificationService = app(EmailRecipientVerificationService::class);
+        $phoneAuth = app(FirebasePhoneAuthService::class);
 
         $guestInfo = session('guest_checkout');
 
@@ -294,13 +334,23 @@ class GuestCheckoutController extends CheckoutController
             );
         }
 
+        $verificationMethod = ($guestInfo['verification_method'] ?? 'email') === 'phone' ? 'phone' : 'email';
         try {
-            $emailRecipientVerificationService->assertDeliverable((string) ($guestInfo['guest_email'] ?? ''));
+            if ($verificationMethod === 'phone') {
+                $phoneAuth->verifyPhoneTokenMatches(
+                    (string) ($guestInfo['firebase_id_token'] ?? ''),
+                    (string) ($guestInfo['guest_phone'] ?? '')
+                );
+            } else {
+                $emailRecipientVerificationService->assertDeliverable((string) ($guestInfo['guest_email'] ?? ''));
+            }
         } catch (Throwable $e) {
             return redirect()
                 ->route('checkout.guest.index')
                 ->withInput()
-                ->with('error', $e->getMessage());
+                ->with('error', $verificationMethod === 'phone'
+                    ? 'Phiên xác minh số điện thoại đã hết hạn. Vui lòng nhận lại mã OTP.'
+                    : $e->getMessage());
         }
 
         try {
@@ -376,8 +426,8 @@ class GuestCheckoutController extends CheckoutController
             $orderData = [
                 'user_id'        => null,
                 'guest_name'     => $guestInfo['guest_name'],
-                'guest_phone'    => $guestInfo['guest_phone'],
-                'guest_email'    => strtolower($guestInfo['guest_email']),
+                'guest_phone'    => $guestInfo['guest_phone'] ?? null,
+                'guest_email'    => filled($guestInfo['guest_email'] ?? null) ? Str::lower($guestInfo['guest_email']) : null,
                 'guest_token'    => $guestToken,
                 'fulfillment_type' => $deliveryType,
                 'branch_id'      => $branchId,
@@ -386,10 +436,11 @@ class GuestCheckoutController extends CheckoutController
                 'scheduled_at' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
                 'delivery_note' => $guestInfo['delivery_note'] ?? null,
                 'payment_method' => $request->payment_method,
-                // Đơn hàng ẩn với admin cho đến khi guest xác nhận email
-                'status'                         => 'awaiting_email_confirmation',
-                'confirmation_token'             => Str::random(48),
-                'confirmation_token_expires_at'  => now()->addMinutes(15),
+                'status'                         => $verificationMethod === 'email'
+                    ? OrderStatus::AWAITING_EMAIL_CONFIRMATION
+                    : OrderStatus::PENDING,
+                'confirmation_token'             => $verificationMethod === 'email' ? Str::random(48) : null,
+                'confirmation_token_expires_at'  => $verificationMethod === 'email' ? now()->addMinutes(15) : null,
                 'note' => $note,
             ];
 
@@ -445,7 +496,7 @@ class GuestCheckoutController extends CheckoutController
 
             // Chỉ gửi email xác nhận cho COD orders
             // VNPay orders sẽ gửi email sau khi thanh toán thành công
-            if ($order->payment_method !== 'vnpay') {
+            if ($verificationMethod === 'email' && $order->payment_method !== 'vnpay') {
                 $this->sendEmailConfirmationRequest($order);
             }
 
@@ -455,8 +506,10 @@ class GuestCheckoutController extends CheckoutController
             GuestOrderAccess::remember($order);
             GuestOrderAccess::storeConvertPayload($order);
 
-            // Chưa notify admin — đơn chỉ được chuyển lên admin sau khi guest xác nhận email
-            // RealtimeOrderNotifier chỉ chạy sau khi confirmEmail()
+            if ($verificationMethod === 'phone' && $order->payment_method !== 'vnpay') {
+                RealtimeOrderNotifier::orderStatusUpdated($order);
+                RealtimeOrderNotifier::orderCreated($order);
+            }
 
             if ($order->payment_method === 'vnpay') {
                 return redirect()
@@ -464,7 +517,9 @@ class GuestCheckoutController extends CheckoutController
                     ->with('success', 'Đơn hàng đã được tạo. Vui lòng thanh toán qua VNPay.');
             }
 
-            return redirect()->route('checkout.guest.pending-confirmation', $order);
+            return $verificationMethod === 'email'
+                ? redirect()->route('checkout.guest.pending-confirmation', $order)
+                : redirect()->route('checkout.success', $order);
 
         } catch (Throwable $e) {
             if (DB::transactionLevel() > 0) {

@@ -105,11 +105,16 @@ class RealtimeAuthorizationTest extends TestCase
         $branch = $this->branch('RT-ADMIN-A');
         $otherBranch = $this->branch('RT-ADMIN-B');
         $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+        $staff = User::factory()->create(['role_id' => User::STAFF_ROLE_ID, 'branch_id' => $branch->id]);
         $superAdmin = User::factory()->create(['role_id' => 3, 'branch_id' => null]);
 
         $this->authorizeChannel($admin, 'private-admin-notifications.'.$branch->id)->assertOk();
         $this->authorizeChannel($admin, 'private-admin-notifications.'.$otherBranch->id)->assertForbidden();
         $this->authorizeChannel($admin, 'private-admin-notifications')->assertForbidden();
+
+        $this->authorizeChannel($staff, 'private-admin-notifications.'.$branch->id)->assertOk();
+        $this->authorizeChannel($staff, 'private-admin-notifications.'.$otherBranch->id)->assertForbidden();
+        $this->authorizeChannel($staff, 'private-admin-notifications')->assertForbidden();
 
         $this->authorizeChannel($superAdmin, 'private-admin-notifications')->assertOk();
         $this->authorizeChannel($superAdmin, 'private-admin-notifications.'.$branch->id)->assertOk();

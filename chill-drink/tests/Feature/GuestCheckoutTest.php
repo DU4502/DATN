@@ -11,6 +11,7 @@ use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\User;
 use App\Services\EmailRecipientVerificationService;
+use App\Services\FirebasePhoneAuthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -85,6 +86,114 @@ class GuestCheckoutTest extends TestCase
             ->assertOk()
             ->assertSee('Chúng tôi đã gửi email xác nhận đến:')
             ->assertSee('guest@example.com');
+    }
+
+    public function test_guest_can_checkout_with_verified_phone_without_email(): void
+    {
+        Mail::fake();
+        $this->app->instance(FirebasePhoneAuthService::class, new class extends FirebasePhoneAuthService
+        {
+            public function verifyPhoneTokenMatches(string $idToken, string $expectedPhone): array
+            {
+                return [
+                    'firebase_user' => (object) ['phone_number' => '+84912345678'],
+                    'international' => '+84912345678',
+                    'local' => '0912345678',
+                ];
+            }
+        });
+
+        [$product, $productSize] = $this->sellableProduct();
+        $branchId = Branch::query()->where('code', 'HN')->value('id');
+
+        $this->withSession([
+            'cart' => [
+                'phone-cart' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ],
+            'checkout_cart_keys' => ['phone-cart'],
+        ])->post(route('checkout.guest.info.store'), [
+            'guest_name' => 'Khách Phone',
+            'verification_method' => 'phone',
+            'guest_phone' => '0912345678',
+            'firebase_id_token' => 'verified-firebase-token',
+            'delivery_type' => 'pickup',
+            'branch_id' => $branchId,
+        ])->assertRedirect(route('checkout.guest.payment'));
+
+        $response = $this->post(route('checkout.guest.process'), ['payment_method' => 'cod']);
+        $order = Order::query()->latest('id')->firstOrFail();
+
+        $this->assertSame('0912345678', $order->guest_phone);
+        $this->assertNull($order->guest_email);
+        $this->assertSame('pending', $order->status);
+        $this->assertNull($order->confirmation_token);
+        $response->assertRedirect(route('checkout.success', $order));
+        Mail::assertNothingSent();
+    }
+
+    public function test_guest_can_checkout_with_email_without_phone(): void
+    {
+        Mail::fake();
+        [$product, $productSize] = $this->sellableProduct();
+        $branchId = Branch::query()->where('code', 'HN')->value('id');
+
+        $this->withSession([
+            'cart' => [
+                'email-cart' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ],
+            'checkout_cart_keys' => ['email-cart'],
+        ])->post(route('checkout.guest.info.store'), [
+            'guest_name' => 'Khách Email',
+            'verification_method' => 'email',
+            'guest_email' => 'email-only@example.com',
+            'delivery_type' => 'pickup',
+            'branch_id' => $branchId,
+        ])->assertRedirect(route('checkout.guest.payment'));
+
+        $response = $this->post(route('checkout.guest.process'), ['payment_method' => 'cod']);
+        $order = Order::query()->latest('id')->firstOrFail();
+
+        $this->assertNull($order->guest_phone);
+        $this->assertSame('email-only@example.com', $order->guest_email);
+        $this->assertSame('awaiting_email_confirmation', $order->status);
+        $response->assertRedirect(route('checkout.guest.pending-confirmation', $order));
+    }
+
+    public function test_guest_must_choose_and_complete_one_verification_method(): void
+    {
+        $branchId = Branch::query()->firstOrCreate(
+            ['code' => 'VERIFY-REQUIRED'],
+            ['name' => 'Chi nhánh Verify', 'address' => 'Hà Nội', 'status' => 1]
+        )->id;
+
+        $this->post(route('checkout.guest.info.store'), [
+            'guest_name' => 'Khách Thiếu Liên Hệ',
+            'verification_method' => 'email',
+            'delivery_type' => 'pickup',
+            'branch_id' => $branchId,
+        ])->assertSessionHasErrors('guest_email');
+
+        $this->post(route('checkout.guest.info.store'), [
+            'guest_name' => 'Khách Thiếu OTP',
+            'verification_method' => 'phone',
+            'guest_phone' => '0912345678',
+            'delivery_type' => 'pickup',
+            'branch_id' => $branchId,
+        ])->assertSessionHasErrors('firebase_id_token');
     }
 
     public function test_guest_checkout_rolls_back_when_confirmation_email_cannot_be_sent(): void

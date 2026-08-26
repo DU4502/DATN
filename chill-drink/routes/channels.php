@@ -23,7 +23,7 @@ Broadcast::channel('admin-notifications', function ($user) {
 Broadcast::channel('admin-notifications.{branchId}', function ($user, $branchId) {
     return $user
         && ($user->isSuperAdmin() || (
-            $user->isAdmin()
+            ($user->isAdmin() || $user->isStaffOnly())
             && is_numeric($user->branch_id)
             && (int) $user->branch_id === (int) $branchId
         ));

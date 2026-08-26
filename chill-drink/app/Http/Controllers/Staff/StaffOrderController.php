@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\ShipperDispatchService;
-use App\Services\ShipperIncidentService;
 use App\Services\OrderCancellationService;
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
@@ -43,7 +42,14 @@ class StaffOrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'orderItems.product', 'orderItems.productSize.size'])
+            ->with([
+                'user',
+                'branch',
+                'address',
+                'orderItems.product',
+                'orderItems.productSize.size',
+                'orderItems.toppingLines.topping',
+            ])
             ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword       = $filters['q'];
@@ -77,9 +83,8 @@ class StaffOrderController extends Controller
         }
 
         $orders = $this->applyBranchScope($orders)->latest()->paginate(12)->withQueryString();
-        $shipmentIncidents = app(ShipperIncidentService::class)->pendingForOrders($orders->getCollection());
 
-        return view('staff.orders.index', compact('orders', 'filters', 'statusOptions', 'shipmentIncidents'));
+        return view('staff.orders.index', compact('orders', 'filters', 'statusOptions'));
     }
 
     public function updateStatus(Request $request, $id)

@@ -124,8 +124,11 @@
                     <h2 class="h4 fw-bold mb-3">Thông tin đơn</h2>
                     <div class="small text-secondary mb-3">
                         <div><strong>{{ $guestInfo['guest_name'] ?? '' }}</strong></div>
-                        <div>{{ $guestInfo['guest_phone'] ?? '' }}</div>
-                        <div>{{ $guestInfo['guest_email'] ?? '' }}</div>
+                        @if(($guestInfo['verification_method'] ?? 'email') === 'phone')
+                            <div><i class="bi bi-phone me-1"></i>{{ $guestInfo['guest_phone'] ?? '' }} <span class="badge text-bg-success ms-1">Đã xác minh OTP</span></div>
+                        @else
+                            <div><i class="bi bi-envelope me-1"></i>{{ $guestInfo['guest_email'] ?? '' }} <span class="badge text-bg-info ms-1">Xác nhận qua email</span></div>
+                        @endif
                         @if(($guestInfo['fulfillment_type'] ?? '') === 'pickup' && $branch)
                             <div class="mt-2"><i class="bi bi-shop me-1"></i>Lấy tại: {{ $branch->name }}</div>
                         @else
