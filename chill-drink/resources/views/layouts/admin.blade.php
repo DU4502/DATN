@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>Admin - {{ config('app.name', 'Chill Drink') }}</title>
@@ -25,6 +25,9 @@
     @endphp
     <div class="admin-shell">
         <aside class="admin-sidebar">
+            <button type="button" class="admin-sidebar-close" data-admin-sidebar-close aria-label="Đóng menu quản trị">
+                <i class="bi bi-x-lg"></i>
+            </button>
             <a href="{{ route('admin.dashboard', $adminRouteParams) }}" class="admin-logo">
                 <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 2px;">
                 <span>
@@ -56,24 +59,22 @@
                     @endphp
                     <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
+                <a href="{{ route('admin.order-issues.index') }}" class="nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ <span id="sidebar-order-issue-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size:.72rem;{{ ($pendingOrderIssueCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ min(99, $pendingOrderIssueCount ?? 0) }}</span></a>
             </nav>
 
-            <div class="admin-sidebar-footer">
-                @if($adminPreviewMode)
+            @if($adminPreviewMode)
+                <div class="admin-sidebar-footer">
                     <a href="{{ route('admin.preview-admin.exit') }}" class="nav-link mb-1"><i class="bi bi-arrow-counterclockwise"></i> Quay lại cấp cao</a>
-                @endif
-                <a href="{{ route('home') }}" class="nav-link mb-1"><i class="bi bi-arrow-left-square"></i> Về trang chủ</a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-primary w-100 btn-sm">
-                        <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
-                    </button>
-                </form>
-            </div>
+                </div>
+            @endif
         </aside>
+        <div class="admin-sidebar-backdrop" data-admin-sidebar-backdrop></div>
         <div class="admin-content">
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <button type="button" class="admin-mobile-toggle" data-admin-sidebar-toggle aria-label="Mở menu quản trị">
+                        <i class="bi bi-list"></i>
+                    </button>
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
                     @if($adminPreviewMode)
                         <a href="{{ route('admin.preview-admin.exit') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
@@ -107,12 +108,30 @@
                         $adminAvatarIsImage = $adminAvatar && ! str_starts_with($adminAvatar, 'preset-');
                         $adminAvatarUrl = $adminAvatarIsImage ? asset('storage/' . $adminAvatar) : null;
                     @endphp
-                    <div class="admin-avatar" aria-label="Tài khoản">
-                        @if($adminAvatarUrl)
-                            <img src="{{ $adminAvatarUrl }}" alt="{{ Auth::user()->name }}">
-                        @else
-                            {{ mb_substr(Auth::user()->name, 0, 1) }}
-                        @endif
+                    <div class="dropdown" data-admin-account-menu>
+                        <button type="button" class="admin-avatar border-0 p-0" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mở menu tài khoản" data-admin-avatar-toggle>
+                            @if($adminAvatarUrl)
+                                <img src="{{ $adminAvatarUrl }}" alt="{{ Auth::user()->name }}">
+                            @else
+                                {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
+                            @endif
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end admin-dropdown-menu mt-2">
+                            <div class="px-3 py-2">
+                                <strong class="d-block text-truncate" style="max-width:220px;">{{ Auth::user()->name }}</strong>
+                                <span class="text-secondary small">{{ $currentAdminUser?->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị chi nhánh' }}</span>
+                            </div>
+                            <div class="dropdown-divider my-1"></div>
+                            <a class="dropdown-item" href="{{ route('home') }}"><i class="bi bi-house-door"></i>Về trang chủ</a>
+                            @if($adminPreviewMode)
+                                <a class="dropdown-item" href="{{ route('admin.preview-admin.exit') }}"><i class="bi bi-arrow-counterclockwise"></i>Quay lại cấp cao</a>
+                            @endif
+                            <div class="dropdown-divider my-1"></div>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item danger text-danger"><i class="bi bi-box-arrow-right"></i>Đăng xuất</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -1154,7 +1173,34 @@
                 filterToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
             });
         }
+
+        const adminSidebar = document.querySelector('.admin-sidebar');
+        const adminSidebarToggle = document.querySelector('[data-admin-sidebar-toggle]');
+        const adminSidebarClose = document.querySelector('[data-admin-sidebar-close]');
+        const adminSidebarBackdrop = document.querySelector('[data-admin-sidebar-backdrop]');
+
+        const setAdminSidebarOpen = (open) => {
+            if (!adminSidebar) return;
+            adminSidebar.classList.toggle('open', open);
+            adminSidebarBackdrop?.classList.toggle('show', open);
+            document.body.classList.toggle('admin-sidebar-open', open);
+            adminSidebarToggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+
+        adminSidebarToggle?.addEventListener('click', () => setAdminSidebarOpen(true));
+        adminSidebarClose?.addEventListener('click', () => setAdminSidebarOpen(false));
+        adminSidebarBackdrop?.addEventListener('click', () => setAdminSidebarOpen(false));
+        adminSidebar?.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => setAdminSidebarOpen(false));
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') setAdminSidebarOpen(false);
+        });
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 992) setAdminSidebarOpen(false);
+        });
     </script>
+    @include('partials.order-issue-notification-badge')
     @stack('scripts')
 </body>
 </html>

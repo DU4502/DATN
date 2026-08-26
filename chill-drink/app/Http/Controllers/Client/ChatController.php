@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\Conversation;
 use App\Models\GroupOrder;
 use App\Models\Message;
+use App\Models\OrderIssueReport;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -201,6 +202,7 @@ class ChatController extends Controller
             'status'          => $conversation->status,
             'guest_token'     => null,
             'is_logged_in'    => true,
+            'support_issue'   => $this->supportIssuePayload($conversation),
         ]);
     }
 
@@ -343,6 +345,7 @@ class ChatController extends Controller
             'messages'            => $messages->map(
                 fn (Message $message) => MessageResource::toPublicArray($message)
             ),
+            'support_issue'       => $this->supportIssuePayload($conversation),
         ]);
     }
 
@@ -440,6 +443,59 @@ class ChatController extends Controller
         if (!$guestToken || $conversation->guest_token !== $guestToken) {
             abort(403, 'Token không hợp lệ. Vui lòng bắt đầu lại phiên chat.');
         }
+    }
+
+    private function supportIssuePayload(Conversation $conversation): ?array
+    {
+        if (! $conversation->user_id) {
+            return null;
+        }
+
+        $reports = OrderIssueReport::query()
+            ->with('order.orderItems.product.category')
+            ->where('user_id', $conversation->user_id);
+
+        if ($conversation->order_id) {
+            $reports->where('order_id', $conversation->order_id);
+        } elseif ($conversation->branch_id) {
+            $reports->whereHas('order', fn ($query) => $query->where('branch_id', $conversation->branch_id));
+        } else {
+            return null;
+        }
+
+        $report = $reports->latest()->first();
+        if (! $report || ! $report->order) {
+            return null;
+        }
+
+        $types = [
+            'missing_item' => 'Thiếu món',
+            'wrong_item' => 'Sai món',
+            'quality_issue' => 'Chất lượng đồ uống',
+            'other' => 'Vấn đề khác',
+        ];
+        $statuses = [
+            'open' => 'Đang chờ xử lý',
+            'processing' => 'Đang xử lý',
+            'resolved' => 'Đã hoàn tất',
+            'rejected' => 'Không được chấp nhận',
+        ];
+
+        $firstItem = $report->order->orderItems->first();
+        $productName = $firstItem?->product?->name ?? 'Đơn hàng '.$report->order->displayCode();
+        if ($report->order->orderItems->count() > 1) {
+            $productName .= ' và '.($report->order->orderItems->count() - 1).' món khác';
+        }
+
+        return [
+            'order_code' => $report->order->displayCode(),
+            'type' => $types[$report->type] ?? 'Yêu cầu hỗ trợ',
+            'status' => $report->status,
+            'status_label' => $statuses[$report->status] ?? 'Đang chờ xử lý',
+            'product_name' => $productName,
+            'image_url' => $firstItem?->product?->image_url,
+            'url' => route('orders.issues.create', $report->order, false),
+        ];
     }
 
     protected function ensureCustomerOrGroupOrderMember(Request $request): void

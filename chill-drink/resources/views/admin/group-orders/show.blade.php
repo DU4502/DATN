@@ -6,6 +6,12 @@
 @php
     $total = $groupOrder->items->sum(fn ($item) => $item->subtotal());
     $statusLabel = match($groupOrder->status) { 'open' => 'Đang mở', 'closed' => 'Chờ thanh toán', 'ordered' => 'Đã đặt hàng', 'cancelled' => 'Đã hủy', default => $groupOrder->status };
+    [$paymentLabel, $paymentColor] = match(true) {
+        !$groupOrder->order => ['Chưa tạo đơn thanh toán', 'secondary'],
+        $groupOrder->order->payment_method === 'vnpay' && $groupOrder->order->payment_status === 'paid' => ['VNPay đã thanh toán', 'success'],
+        $groupOrder->order->payment_method === 'vnpay' => ['VNPay chưa thanh toán', 'warning'],
+        default => ['COD · Thanh toán khi nhận hàng', 'info'],
+    };
 @endphp
 <style>
     .admin-group-product { display: flex; align-items: center; gap: .85rem; min-width: 280px; }
@@ -17,16 +23,7 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <div><a href="{{ route('admin.group-orders.index') }}" class="text-decoration-none text-secondary"><i class="bi bi-arrow-left me-1"></i>Danh sách đơn nhóm</a><h2 class="h4 fw-bold mt-2 mb-0">{{ $groupOrder->name }}</h2></div>
     <div class="d-flex align-items-center gap-2">
-        <form action="{{ route('admin.group-orders.updateStatus', $groupOrder) }}" method="POST" class="d-inline-flex align-items-center gap-2 m-0">
-            @csrf
-            @method('PUT')
-            <select name="status" class="form-select form-select-sm shadow-none fw-bold" onchange="this.form.submit()" style="min-width:140px;">
-                <option value="open" @selected($groupOrder->status === 'open')>Đang mở</option>
-                <option value="closed" @selected($groupOrder->status === 'closed')>Chờ thanh toán</option>
-                <option value="ordered" @selected($groupOrder->status === 'ordered')>Đã đặt hàng</option>
-                <option value="cancelled" @selected($groupOrder->status === 'cancelled')>Đã hủy</option>
-            </select>
-        </form>
+        <span class="badge bg-{{ $paymentColor }}-subtle text-{{ $paymentColor }}-emphasis fs-6 px-3 py-2">{{ $paymentLabel }}</span>
         <span class="badge bg-primary-subtle text-primary-emphasis fs-6 px-3 py-2">{{ $statusLabel }}</span>
     </div>
 </div>

@@ -328,8 +328,17 @@ const groupOrderRoom = {
         this.stopTimers = [];
         this.abortController = new AbortController();
         this.isRefreshing = false;
+        this.isCheckingState = false;
+        this.isMutating = false;
+        this.roomFingerprint = null;
+        this.suppressLeaveBeacon = false;
         const signal = this.abortController.signal;
 
+        this.root.addEventListener('submit', (event) => {
+            if (!event.target.closest('form[data-group-async-action]')) {
+                this.suppressLeaveBeacon = true;
+            }
+        }, { signal, capture: true });
         this.root.addEventListener('submit', (event) => this.submitAsync(event), { signal });
 
         const copyButton = this.root.querySelector('[data-copy-group-link]');
@@ -360,6 +369,7 @@ const groupOrderRoom = {
 
             const submitter = event.submitter || form.querySelector('button[type="submit"], button:not([type])');
             if (submitter) submitter.disabled = true;
+            this.isMutating = true;
 
             try {
                 const response = await fetch(form.action, {
@@ -383,10 +393,12 @@ const groupOrderRoom = {
                     return;
                 }
                 this.replaceLiveSections(page, isJoining);
+                await this.captureRoomFingerprint();
                 this.showMessage(page.querySelector('.alert-success')?.textContent.trim() || 'Đã cập nhật đơn nhóm.');
             } catch {
                 this.showMessage('Kết nối bị gián đoạn. Vui lòng thử lại.', true);
             } finally {
+                this.isMutating = false;
                 if (submitter?.isConnected) submitter.disabled = false;
             }
         },
@@ -399,9 +411,24 @@ const groupOrderRoom = {
                 if (current && updated && current.outerHTML !== updated.outerHTML) current.replaceWith(updated);
             });
         },
+        async captureRoomFingerprint() {
+            const stateUrl = this.root.dataset.stateUrl;
+            if (!stateUrl) return;
+            try {
+                const response = await fetch(stateUrl, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    signal: this.abortController.signal,
+                });
+                if (response.ok) this.roomFingerprint = (await response.json()).fingerprint || this.roomFingerprint;
+            } catch (error) {
+                if (error.name !== 'AbortError') return;
+            }
+        },
         setupLiveRoom(signal) {
             const refresh = async () => {
-                if (document.hidden || this.isRefreshing) return;
+                if (document.hidden || this.isRefreshing || this.isMutating) return false;
                 this.isRefreshing = true;
                 try {
                     const response = await fetch(window.location.href, {
@@ -410,17 +437,56 @@ const groupOrderRoom = {
                         cache: 'no-store',
                         signal,
                     });
-                    if (!response.ok) return;
+                    // Không điều hướng theo redirect của request nền: trong môi trường
+                    // chạy dưới thư mục con, middleware có thể trả về URL dashboard
+                    // dù trang phòng hiện tại vẫn hợp lệ.
+                    if (response.redirected) return false;
+                    if (!response.ok) return false;
                     const page = new DOMParser().parseFromString(await response.text(), 'text/html');
                     this.replaceLiveSections(page, false);
+                    return true;
                 } catch (error) {
-                    if (error.name !== 'AbortError') return;
+                    return false;
                 } finally {
                     this.isRefreshing = false;
                 }
             };
 
-            this.stopTimers.push(createVisibleInterval(refresh, 3000, false));
+            const checkForChanges = async () => {
+                if (document.hidden || this.isRefreshing || this.isCheckingState || this.isMutating) return;
+                const stateUrl = this.root.dataset.stateUrl;
+                if (!stateUrl) {
+                    await refresh();
+                    return;
+                }
+
+                this.isCheckingState = true;
+                try {
+                    const response = await fetch(stateUrl, {
+                        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin',
+                        cache: 'no-store',
+                        signal,
+                    });
+                    if (!response.ok) return;
+                    const fingerprint = (await response.json()).fingerprint;
+                    if (!fingerprint) return;
+                    if (this.roomFingerprint === null) {
+                        this.roomFingerprint = fingerprint;
+                        return;
+                    }
+                    if (fingerprint !== this.roomFingerprint) {
+                        if (await refresh()) this.roomFingerprint = fingerprint;
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError') return;
+                } finally {
+                    this.isCheckingState = false;
+                }
+            };
+
+            this.captureRoomFingerprint();
+            this.stopTimers.push(createVisibleInterval(checkForChanges, 400, false));
         },
         async copyLink(button) {
             const input = this.root.querySelector('#groupShareUrl');
@@ -524,6 +590,10 @@ const groupOrderRoom = {
                     });
                     if (!response.ok) return;
                     const state = await response.json();
+                    if (state.redirect_url) {
+                        window.location.assign(state.redirect_url);
+                        return;
+                    }
                     if (!state.is_open && !reloading) {
                         reloading = true;
                         window.location.reload();
@@ -534,7 +604,7 @@ const groupOrderRoom = {
             };
             this.stopTimers.push(createVisibleInterval(sync, 3000));
             const reportOwnerLeft = () => {
-                if (!leaveUrl) return;
+                if (!leaveUrl || this.suppressLeaveBeacon) return;
                 const data = new FormData();
                 data.append('_token', csrf);
                 navigator.sendBeacon(leaveUrl, data);
@@ -555,7 +625,7 @@ const groupOrderChat = {
         initialMembers: { type: Array, required: true },
     },
     data() {
-        return { messages: [], members: this.initialMembers, recipientId: null, content: '', loading: false, syncing: false, sending: false, error: '', timer: null, visibilityHandler: null, unifiedToggleHandler: null, unifiedCloseHandler: null, unifiedHostHandler: null, unifiedHostReady: false, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '', groupIsOpen: this.groupIsOpen, echoChannel: null };
+        return { messages: [], members: this.initialMembers, recipientId: null, content: '', loading: false, syncing: false, sending: false, error: '', timer: null, visibilityHandler: null, unifiedToggleHandler: null, unifiedCloseHandler: null, unifiedHostHandler: null, unifiedHostReady: false, isOpen: false, notificationsReady: false, notifications: [], seenPrivateMessageIds: {}, lastIncomingPrivateId: 0, lastIncomingGroupId: 0, lastMarkedReadId: 0, privateUnread: 0, groupUnread: 0, unreadCounts: {}, showContacts: false, memberSearch: '', groupIsOpen: this.groupIsOpen, echoChannel: null, showScrollToLatest: false };
     },
     computed: {
         currentMemberId() { return this.memberId; },
@@ -617,7 +687,7 @@ const groupOrderChat = {
         scheduleSync(immediate = false) {
             window.clearTimeout(this.timer);
             if (document.hidden) return;
-            const delay = immediate ? 0 : (this.isOpen ? 1500 : 8000);
+            const delay = immediate ? 0 : 500;
             this.timer = window.setTimeout(async () => {
                 try {
                     await this.loadMessages(false);
@@ -635,6 +705,7 @@ const groupOrderChat = {
         openChatDirect() {
             this.isOpen = true;
             window.dispatchEvent(new CustomEvent('group-chat-opened'));
+            this.$nextTick(() => this.scrollMessagesToBottom(true));
         },
         selectRecipient(id) {
             this.recipientId = id;
@@ -673,9 +744,7 @@ const groupOrderChat = {
 
                     if (!this.recipientId) {
                         this.messages.push(payloadMessage);
-                        if (this.isOpen) {
-                            this.$nextTick(() => { const box = this.$refs.messages; if (box) box.scrollTop = box.scrollHeight; });
-                        }
+                        if (this.isOpen) this.$nextTick(() => this.scrollMessagesToBottom());
                     } else {
                         this.groupUnread += 1;
                     }
@@ -753,7 +822,7 @@ const groupOrderChat = {
                 if (changed) {
                     const hasNewMessage = nextLast?.id !== currentLast?.id;
                     this.messages = nextMessages;
-                    if (hasNewMessage) this.$nextTick(() => { const box = this.$refs.messages; if (box) box.scrollTop = box.scrollHeight; });
+                    if (hasNewMessage) this.$nextTick(() => this.scrollMessagesToBottom(showLoading));
                 }
                 const newestUnread = [...nextMessages].reverse().find((message) => Number(message.sender_id) === requestedRecipientId && !message.read_at);
                 if (requestedRecipientId && this.isOpen && newestUnread && Number(newestUnread.id) > this.lastMarkedReadId) {
@@ -779,9 +848,26 @@ const groupOrderChat = {
             const text = `${type} từ ${message.sender_name}: ${preview}`;
             const notification = { id: `${isPrivate ? 'p' : 'g'}-${message.id}`, text, senderId: Number(message.sender_id), isPrivate };
             if (!this.notifications.some((item) => item.id === notification.id)) this.notifications.push(notification);
-            window.setTimeout(() => this.dismissNotification(notification.id), 6000);
+            window.setTimeout(() => this.dismissNotification(notification.id), 15000);
         },
         dismissNotification(id) { this.notifications = this.notifications.filter((item) => item.id !== id); },
+        isNearMessageBottom() {
+            const box = this.$refs.messages;
+            return !box || (box.scrollHeight - box.scrollTop - box.clientHeight) < 72;
+        },
+        handleMessagesScroll() {
+            this.showScrollToLatest = !this.isNearMessageBottom();
+        },
+        scrollMessagesToBottom(force = false) {
+            const box = this.$refs.messages;
+            if (!box) return;
+            if (!force && !this.isNearMessageBottom()) {
+                this.showScrollToLatest = true;
+                return;
+            }
+            box.scrollTop = box.scrollHeight;
+            this.showScrollToLatest = false;
+        },
         openNotification(notification) {
             this.isOpen = true;
             window.dispatchEvent(new CustomEvent('group-chat-opened'));
@@ -806,7 +892,7 @@ const groupOrderChat = {
                 if (!response.ok) { this.error = data.message || 'Không thể gửi tin nhắn.'; return; }
                 this.messages.push(data.message);
                 this.content = '';
-                this.$nextTick(() => { this.$refs.messages.scrollTop = this.$refs.messages.scrollHeight; });
+                this.$nextTick(() => this.scrollMessagesToBottom(true));
             } catch { this.error = 'Kết nối bị gián đoạn.'; }
             finally { this.sending = false; }
         },
@@ -841,7 +927,7 @@ const groupOrderChat = {
                 <span class="member-avatar" style="width:26px;height:26px;font-size:.7rem;">{{ (members.find(m => Number(m.id) === Number(recipientId))?.name || '?').charAt(0).toUpperCase() }}</span>
                 <strong>{{ members.find(m => Number(m.id) === Number(recipientId))?.name || 'Thành viên' }}</strong>
             </div>
-            <div class="group-chat-messages" ref="messages">
+            <div class="group-chat-messages" ref="messages" @scroll.passive="handleMessagesScroll">
                 <div v-if="loading && !messages.length" class="text-center text-secondary">Đang tải tin nhắn...</div>
                 <div v-else-if="!messages.length" class="text-center text-secondary">Chưa có tin nhắn. Hãy bắt đầu trò chuyện!</div>
                 <div v-for="message in messages" :key="message.id" class="group-chat-message" :class="{ 'is-mine': Number(message.sender_id) === currentMemberId }">
@@ -852,6 +938,7 @@ const groupOrderChat = {
                 <div class="flex-grow-1"><input :value="content" @input="content = $event.target.value" maxlength="1000" class="form-control group-input" :placeholder="recipientId ? 'Nhắn riêng...' : 'Nhắn cho cả nhóm...'" :disabled="!groupIsOpen"></div>
                 <button class="btn btn-primary group-chat-send" :disabled="!groupIsOpen || sending || !content.trim()" aria-label="Gửi tin nhắn"><i class="bi bi-send"></i></button>
             </form>
+            <button v-if="showScrollToLatest" type="button" class="group-chat-scroll-latest" @click="scrollMessagesToBottom(true)" aria-label="Cuộn xuống tin nhắn mới nhất" title="Tin nhắn mới nhất"><i class="bi bi-arrow-down"></i></button>
             <div v-if="error" class="text-danger small px-3 pb-3">{{ error }}</div>
         </section>
         </div>`,

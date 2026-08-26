@@ -28,8 +28,8 @@ class OrderIssueReportController extends Controller
         }
 
         $reports = $order->issueReports()->where('user_id', $request->user()->id)->latest()->get();
-        if ($reports->isEmpty() && ! $this->canReportIssueToday($order)) {
-            return redirect()->route('orders.index')->with('error', 'Yêu cầu hỗ trợ chỉ được gửi trong ngày đơn hàng hoàn thành.');
+        if ($reports->isEmpty() && ! $order->canSubmitIssueReport()) {
+            return redirect()->route('orders.index')->with('error', 'Yêu cầu hỗ trợ chỉ được gửi trong vòng 2 giờ kể từ khi bạn xác nhận đã nhận đơn.');
         }
 
         return view('profile.order-issue-report', [
@@ -44,8 +44,8 @@ class OrderIssueReportController extends Controller
         if (OrderStatus::normalize((string) $order->status) !== OrderStatus::COMPLETED) {
             return redirect()->route('orders.index')->with('error', 'Chỉ có thể báo vấn đề sau khi đơn hàng đã hoàn thành.');
         }
-        if (! $this->canReportIssueToday($order)) {
-            return redirect()->route('orders.index')->with('error', 'Yêu cầu hỗ trợ chỉ được gửi trong ngày đơn hàng hoàn thành.');
+        if (! $order->canSubmitIssueReport()) {
+            return redirect()->route('orders.index')->with('error', 'Yêu cầu hỗ trợ chỉ được gửi trong vòng 2 giờ kể từ khi bạn xác nhận đã nhận đơn.');
         }
         if ($order->issueReports()->where('user_id', $request->user()->id)->whereNotIn('status', ['resolved', 'rejected'])->exists()) {
             return redirect()->route('orders.issues.create', $order)->with('error', 'Đơn hàng này đã có một yêu cầu hỗ trợ đang được xử lý.');
@@ -69,7 +69,7 @@ class OrderIssueReportController extends Controller
                 $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
                 abort_unless($lockedOrder->user_id === $request->user()->id, 403);
 
-                if (OrderStatus::normalize((string) $lockedOrder->status) !== OrderStatus::COMPLETED || ! $this->canReportIssueToday($lockedOrder)) {
+                if (OrderStatus::normalize((string) $lockedOrder->status) !== OrderStatus::COMPLETED || ! $lockedOrder->canSubmitIssueReport()) {
                     throw ValidationException::withMessages([
                         'order' => 'Đơn hàng không còn đủ điều kiện gửi yêu cầu hỗ trợ.',
                     ]);
@@ -184,10 +184,4 @@ class OrderIssueReportController extends Controller
         return back()->with('success', 'Cảm ơn bạn đã xác nhận. Yêu cầu hỗ trợ đã hoàn tất.');
     }
 
-    private function canReportIssueToday(Order $order): bool
-    {
-        $completedAt = $order->status_changed_at ?? $order->updated_at;
-
-        return $completedAt !== null && $completedAt->isSameDay(now());
-    }
 }

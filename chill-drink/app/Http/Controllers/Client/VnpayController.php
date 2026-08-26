@@ -6,7 +6,10 @@ use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 use App\Http\Controllers\Controller;
+use App\Models\GroupOrder;
 use App\Models\Order;
+use App\Models\User;
+use App\Notifications\GroupOrderCompletedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
+use Throwable;
 
 class VnpayController extends Controller
 {
@@ -140,6 +144,7 @@ class VnpayController extends Controller
                 'status' => $newStatus,
                 'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
             ]);
+            $this->completePaidGroupOrder($order);
 
             // Send email confirmation for guest orders after successful payment
             if ($order->isGuest()) {
@@ -214,6 +219,7 @@ class VnpayController extends Controller
                     'status' => $newStatus,
                     'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
                 ]);
+                $this->completePaidGroupOrder($order);
 
                 // Send email confirmation for guest orders after successful payment
                 if ($order->isGuest()) {
@@ -241,6 +247,33 @@ class VnpayController extends Controller
             config('services.vnpay.url'),
             config('services.vnpay.return_url'),
         ])->every(fn ($value) => filled($value));
+    }
+
+    private function completePaidGroupOrder(Order $order): void
+    {
+        $updated = GroupOrder::query()
+            ->where('order_id', $order->id)
+            ->where('status', 'closed')
+            ->update([
+                'status' => 'ordered',
+                'status_changed_at' => now(),
+                'status_changed_by' => null,
+            ]);
+
+        if ($updated === 0) {
+            return;
+        }
+
+        $groupOrder = GroupOrder::query()->where('order_id', $order->id)->firstOrFail();
+
+        $memberIds = $groupOrder->members()
+            ->whereNotNull('user_id')
+            ->where('user_id', '!=', $groupOrder->owner_id)
+            ->pluck('user_id')
+            ->unique();
+
+        User::query()->whereIn('id', $memberIds)->get()
+            ->each(fn (User $member) => $member->notify(new GroupOrderCompletedNotification($groupOrder->fresh())));
     }
 
     private function hasValidSignature(Request $request): bool

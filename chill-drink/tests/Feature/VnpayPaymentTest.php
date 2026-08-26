@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Order;
+use App\Models\GroupOrder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -107,6 +108,15 @@ class VnpayPaymentTest extends TestCase
     {
         $user = $this->customer();
         $order = $this->vnpayOrder($user);
+        $groupOrder = GroupOrder::create([
+            'owner_id' => $user->id,
+            'name' => 'Nhóm chờ VNPay',
+            'code' => 'VNPAYGR1',
+            'status' => 'closed',
+            'closes_at' => now(),
+            'locked_at' => now(),
+            'order_id' => $order->id,
+        ]);
         $params = $this->signedParams([
             'vnp_Amount' => $order->total * 100,
             'vnp_ResponseCode' => '00',
@@ -128,6 +138,7 @@ class VnpayPaymentTest extends TestCase
             'status' => 'pending',
             'vnpay_transaction_id' => '14933728',
         ]);
+        $this->assertSame('ordered', $groupOrder->fresh()->status);
     }
 
     private function signedParams(array $params): array

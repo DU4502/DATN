@@ -103,7 +103,9 @@
         gap: 0.65rem;
         margin-top: 0.85rem;
         overflow-x: auto;
-        padding-bottom: 0.2rem;
+        padding: 0.15rem 0.15rem 0.35rem;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(13, 147, 115, 0.35) transparent;
     }
 
     .detail-thumb {
@@ -382,6 +384,24 @@
         aspect-ratio: 1;
         line-height: 1;
         box-sizing: border-box;
+        transition: color .18s ease, border-color .18s ease, background-color .18s ease, transform .18s ease, opacity .18s ease;
+    }
+
+    .detail-favorite-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .detail-favorite-btn.is-active,
+    .detail-favorite-btn.is-active:hover,
+    .detail-favorite-btn.is-active:focus {
+        color: #fff;
+        border-color: #e83e5b;
+        background: #e83e5b;
+    }
+
+    .detail-favorite-btn.is-loading {
+        opacity: .58;
+        pointer-events: none;
     }
 
     .product-detail-actions {
@@ -926,9 +946,56 @@
         }
     }
 
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        .product-detail-wrap { padding-top: .75rem; }
+        .product-detail-wrap .breadcrumb-soft { margin-bottom: .75rem !important; }
+        .detail-layout {
+            grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+            gap: 1.25rem;
+        }
+        .detail-photo-card { aspect-ratio: 1; }
+        .detail-thumbs { margin-top: .55rem; }
+        .detail-thumb { width: 58px; height: 50px; }
+        .detail-summary { gap: .55rem !important; }
+        .detail-summary h1 { font-size: 1.65rem !important; }
+        .detail-summary .detail-desc { font-size: .82rem; line-height: 1.4; }
+        .detail-info-card.p-4 { padding: 0 !important; }
+        .detail-quick-actions { gap: .45rem; }
+        .detail-quick-action { height: 40px; padding: .4rem .45rem; font-size: .72rem; }
+        .choice-btn,
+        .compact-select-toggle { min-height: 42px; padding: .4rem .55rem; }
+        .size-choice,
+        .topping-choice { min-height: 48px; }
+        .product-preferences-panel { padding: .55rem .7rem !important; }
+        [data-topping-group] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .detail-action-row { grid-template-columns: 104px minmax(0, 1fr); gap: .45rem; }
+        .detail-action-content { grid-template-columns: minmax(0, 1fr) 38px; gap: .4rem; }
+        .detail-button-row { gap: .4rem; }
+        .product-detail-actions .qty-control { min-height: 42px; }
+        .qty-control button { width: 30px; height: 30px; }
+        .qty-control [data-qty-value] { width: 36px; font-size: .9rem; }
+        .detail-buy-btn,
+        .product-detail-actions .btn-primary {
+            min-height: 42px;
+            padding: .4rem .35rem;
+            font-size: .68rem;
+            white-space: nowrap;
+        }
+        .detail-favorite-btn,
+        .product-detail-actions .detail-favorite-btn {
+            width: 38px;
+            height: 42px;
+            min-width: 38px;
+            min-height: 42px;
+            font-size: .9rem;
+        }
+        .detail-related-grid > .col-sm-6 { width: 25%; }
+    }
+
     @media (max-width: 575.98px) {
         [data-topping-group] {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.35rem !important;
         }
 
         .persistent-size-panel,
@@ -939,9 +1006,21 @@
     }
 
     @media (max-width: 575.98px) {
+        .product-detail-wrap {
+            padding-top: 0.6rem;
+            padding-bottom: 1.75rem;
+        }
+
+        .product-detail-wrap .breadcrumb-soft {
+            margin-bottom: 0.75rem !important;
+            font-size: 0.72rem;
+        }
+
+        .detail-layout { gap: 1rem; }
+
         .detail-photo-card {
             border-radius: 10px;
-            aspect-ratio: 1 / 1;
+            aspect-ratio: 4 / 3;
         }
 
         .detail-photo-card img {
@@ -949,17 +1028,21 @@
         }
 
         .detail-thumb {
-            width: 68px;
-            height: 68px;
+            width: 54px;
+            height: 54px;
         }
 
         .related-card img {
-            height: 220px;
+            height: 130px;
         }
 
-        .detail-action-row,
-        .detail-button-row {
+        .detail-action-row {
             grid-template-columns: 1fr;
+        }
+
+        .detail-button-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.4rem;
         }
 
         .qty-control {
@@ -967,8 +1050,125 @@
         }
 
         .detail-quick-actions {
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.35rem;
+            margin-top: 0.1rem;
         }
+
+        .detail-quick-action {
+            height: 40px;
+            padding: 0.35rem 0.2rem;
+            gap: 0.25rem;
+            border-radius: 12px;
+            font-size: 0.68rem;
+            line-height: 1;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(22, 45, 39, 0.06);
+        }
+
+        .detail-quick-action i {
+            flex: 0 0 auto;
+            font-size: 0.95rem;
+        }
+
+        .persistent-size-panel,
+        .product-preferences-panel {
+            padding: 0.48rem 0.55rem !important;
+        }
+
+        .persistent-size-panel [data-size-group] {
+            gap: 0.25rem !important;
+            padding: 0.25rem;
+            border-radius: 12px;
+        }
+
+        .persistent-size-panel .option-label,
+        .product-preferences-panel .option-label {
+            margin-bottom: 0.25rem !important;
+            font-size: 0.7rem;
+        }
+
+        .size-choice {
+            min-height: 40px;
+            padding: 0.3rem 0.15rem;
+            border-radius: 9px;
+            font-size: 0.72rem;
+            line-height: 1;
+        }
+
+        .size-choice small {
+            margin-top: 0.12rem;
+            font-size: 0.58rem;
+            line-height: 1.05;
+            white-space: nowrap;
+        }
+
+        .product-preferences-panel > .row.option-block {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.4rem;
+            margin: 0 0 0.45rem;
+        }
+
+        .product-preferences-panel > .row.option-block > [class*="col-"] {
+            width: auto;
+            min-width: 0;
+            padding: 0;
+        }
+
+        .compact-select-toggle {
+            min-height: 40px;
+            padding: 0.35rem 0.5rem;
+            gap: 0.25rem;
+            border-radius: 10px;
+        }
+
+        .compact-select-value {
+            overflow: hidden;
+            font-size: 0.72rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .compact-select-toggle i {
+            flex: 0 0 auto;
+            font-size: 0.72rem;
+        }
+
+        .compact-select-option {
+            padding: 0.55rem 0.6rem;
+            font-size: 0.75rem;
+        }
+
+        .topping-choice {
+            min-height: 42px;
+            padding: 0.35rem 0.45rem;
+            gap: 0.35rem;
+            font-size: 0.68rem;
+        }
+
+        .topping-choice::before { width: 14px; height: 14px; }
+        .topping-choice small { font-size: 0.58rem; white-space: nowrap; }
+
+        .qty-control {
+            min-height: 42px;
+            padding: 0.3rem 0.55rem;
+        }
+        .qty-control button { width: 30px; height: 30px; }
+        .detail-buy-btn,
+        .product-detail-actions .btn-primary { min-height: 42px; font-size: 0.72rem; }
+        .detail-buy-btn i { margin-right: 0.25rem !important; }
+
+        .detail-related-grid {
+            --bs-gutter-x: 0.6rem;
+            --bs-gutter-y: 0.6rem;
+        }
+        .detail-related-grid > .col-sm-6 { width: 50%; }
+        .related-card .card-body { min-height: 88px; padding: 0.6rem 2.7rem 0.6rem 0.6rem; }
+        .related-card .card-body .h5 { font-size: 0.76rem; }
+        .related-add-form { right: 0.5rem; bottom: 0.5rem; }
+        .related-add-btn { width: 34px; height: 34px; }
+        .related-add-btn i { font-size: 0.9rem; }
     }
 </style>
 
@@ -990,26 +1190,18 @@
                 ? $product->gallery_images
                 : ($product->gallery_images ?? []);
 
-                if (count($detailGalleryImages) < 4) {
-                    $generatedGallery = $uiGetProductGallery(
-                        $product->sku ?? null,
-                        $detailCategory,
-                        $product->name,
-                        4,
-                        $detailGalleryImages[0] ?? $product->image_url ?? $product->image ?? null
-                    );
+                $detailGalleryImages = collect($detailGalleryImages)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
 
-                    $detailGalleryImages = collect($detailGalleryImages)
-                        ->merge($generatedGallery)
-                        ->filter()
-                        ->unique()
-                        ->take(4)
-                        ->values()
-                        ->all();
+                $detailMainImage = $detailGalleryImages[0]
+                        ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
+                if (empty($detailGalleryImages)) {
+                    $detailGalleryImages = [$detailMainImage];
                 }
 
-                    $detailMainImage = $detailGalleryImages[0]
-                        ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
                     $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
                     $productNameLower = mb_strtolower($product->name ?? '');
                     $categoryLower = mb_strtolower($detailCategory ?? '');
@@ -1068,19 +1260,18 @@
                         </button>
                         @endif
                     </div>
-                    @if(count($detailGalleryImages) > 1)
                     <div class="detail-thumbs" aria-label="Ảnh sản phẩm">
                         @foreach($detailGalleryImages as $index => $image)
                         <button
                             type="button"
                             class="detail-thumb {{ $index === 0 ? 'active' : '' }}"
                             data-detail-thumb="{{ $image }}"
+                            aria-pressed="{{ $index === 0 ? 'true' : 'false' }}"
                             aria-label="Xem ảnh {{ $index + 1 }}">
                             <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
                         </button>
                         @endforeach
                     </div>
-                    @endif
                 </div>
             </div>
 
@@ -1107,13 +1298,13 @@
 
                     @if($product instanceof \App\Models\Product && $product->availabilityAt($branch) === true)
                     <div class="detail-quick-actions" aria-label="Tiện ích đặt hàng">
-                        <a href="{{ route('group-orders.create') }}" class="detail-quick-action">
+                        <a href="{{ route('group-orders.create') }}" class="detail-quick-action" aria-label="Đặt đơn nhóm">
                             <i class="bi bi-people"></i>
-                            <span>Đặt đơn nhóm</span>
+                            <span>Đơn nhóm</span>
                         </a>
-                        <button type="submit" name="buy_now" value="1" form="productOrderForm" class="detail-quick-action" title="Chọn thời gian nhận ở bước thanh toán">
+                        <button type="submit" name="buy_now" value="1" form="productOrderForm" class="detail-quick-action" title="Chọn thời gian nhận ở bước thanh toán" aria-label="Đặt giao sau">
                             <i class="bi bi-calendar2-check"></i>
-                            <span>Đặt giao sau</span>
+                            <span>Giao sau</span>
                         </button>
                         <button type="button" class="detail-quick-action" data-share-product data-share-title="{{ $product->name }}" data-share-url="{{ route('products.show', $product->slug) }}">
                             <i class="bi bi-share"></i>
@@ -1124,7 +1315,7 @@
 
                     <div class="option-card persistent-size-panel">
                         <div class="option-block mb-0">
-                            <label class="option-label d-block mb-3">Chọn kích cỡ</label>
+                            <label class="option-label d-block mb-3">Kích cỡ</label>
                             <div class="d-flex flex-wrap gap-2" data-size-group>
                                 @php
                                     $basePrice = (int) ($product->price ?? 0);
@@ -1188,11 +1379,19 @@
                                 </div>
                             </form>
                             @auth
-                            <form action="{{ route('favorites.toggle', $product) }}" method="POST">
+                            <form action="{{ route('favorites.toggle', $product) }}" method="POST" data-detail-favorite-form>
                                 @csrf
-                                <button type="submit" class="btn btn-outline-danger detail-favorite-btn" aria-label="Lưu món yêu thích" title="Lưu món yêu thích">
-                                    <i class="bi bi-heart"></i>
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-danger detail-favorite-btn {{ $isFavorite ? 'is-active' : '' }}"
+                                    aria-label="{{ $isFavorite ? 'Bỏ khỏi món yêu thích' : 'Thêm vào món yêu thích' }}"
+                                    aria-pressed="{{ $isFavorite ? 'true' : 'false' }}"
+                                    title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}"
+                                    data-detail-favorite-button
+                                >
+                                    <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
                                 </button>
+                                <span class="visually-hidden" aria-live="polite" data-detail-favorite-status></span>
                             </form>
                             @endauth
                         </div>
@@ -1211,7 +1410,7 @@
                                     <button type="button" class="compact-select-toggle">
                                         <span class="compact-select-text">
                                             <span class="compact-select-title">Mức đường</span>
-                                            <span class="compact-select-value" data-compact-label>100% (Tiêu chuẩn)</span>
+                                            <span class="compact-select-value" data-compact-label>100%</span>
                                         </span>
                                         <i class="bi bi-chevron-down"></i>
                                     </button>
@@ -1220,7 +1419,7 @@
                                         <button type="button" class="compact-select-option" data-value="30">30%</button>
                                         <button type="button" class="compact-select-option" data-value="50">50%</button>
                                         <button type="button" class="compact-select-option" data-value="70">70%</button>
-                                        <button type="button" class="compact-select-option active" data-value="100">100% (Tiêu chuẩn)</button>
+                                        <button type="button" class="compact-select-option active" data-value="100">100%</button>
                                     </div>
                                 </div>
                             </div>
@@ -1230,14 +1429,14 @@
                                     <button type="button" class="compact-select-toggle">
                                         <span class="compact-select-text">
                                             <span class="compact-select-title">Mức đá</span>
-                                            <span class="compact-select-value" data-compact-label>100% (Tiêu chuẩn)</span>
+                                            <span class="compact-select-value" data-compact-label>100%</span>
                                         </span>
                                         <i class="bi bi-chevron-down"></i>
                                     </button>
                                     <div class="compact-select-menu">
                                         <button type="button" class="compact-select-option" data-value="0">Không đá</button>
                                         <button type="button" class="compact-select-option" data-value="50">Ít đá</button>
-                                        <button type="button" class="compact-select-option active" data-value="100">100% (Tiêu chuẩn)</button>
+                                        <button type="button" class="compact-select-option active" data-value="100">100%</button>
                                     </div>
                                 </div>
                             </div>
@@ -1417,7 +1616,7 @@
             </div>
         </section>
 
-        <section class="mt-5 pt-4">
+        <section class="mt-5 pt-4 detail-related-section">
             <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
                 <div>
                     <h2 class="section-title h2 mb-2">Sản phẩm liên quan</h2>
@@ -1426,7 +1625,7 @@
                 <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Xem tất cả</a>
             </div>
 
-            <div class="row g-4">
+            <div class="row g-4 detail-related-grid">
                 @forelse($relatedProducts as $item)
                 <div class="col-sm-6 col-lg-3">
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
@@ -1776,6 +1975,56 @@
 
         const shareButton = document.querySelector('[data-share-product]');
 
+        const favoriteForm = document.querySelector('[data-detail-favorite-form]');
+
+        if (favoriteForm) {
+            const favoriteButton = favoriteForm.querySelector('[data-detail-favorite-button]');
+            const favoriteIcon = favoriteButton?.querySelector('i');
+            const favoriteStatus = favoriteForm.querySelector('[data-detail-favorite-status]');
+
+            favoriteForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+
+                if (!favoriteButton || favoriteButton.classList.contains('is-loading')) return;
+
+                favoriteButton.classList.add('is-loading');
+                favoriteButton.disabled = true;
+
+                try {
+                    const response = await fetch(favoriteForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new FormData(favoriteForm),
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok || typeof result.favorited !== 'boolean') {
+                        throw new Error('favorite_failed');
+                    }
+
+                    const favorited = result.favorited;
+                    const label = favorited ? 'Bỏ khỏi món yêu thích' : 'Thêm vào món yêu thích';
+
+                    favoriteButton.classList.toggle('is-active', favorited);
+                    favoriteButton.setAttribute('aria-pressed', favorited ? 'true' : 'false');
+                    favoriteButton.setAttribute('aria-label', label);
+                    favoriteButton.title = favorited ? 'Bỏ yêu thích' : 'Yêu thích';
+                    if (favoriteIcon) favoriteIcon.className = `bi ${favorited ? 'bi-heart-fill' : 'bi-heart'}`;
+                    if (favoriteStatus) favoriteStatus.textContent = favorited
+                        ? 'Đã thêm vào món yêu thích.'
+                        : 'Đã bỏ khỏi món yêu thích.';
+                } catch (error) {
+                    if (favoriteStatus) favoriteStatus.textContent = 'Không thể cập nhật món yêu thích. Vui lòng thử lại.';
+                } finally {
+                    favoriteButton.classList.remove('is-loading');
+                    favoriteButton.disabled = false;
+                }
+            });
+        }
+
         if (shareButton) {
             shareButton.addEventListener('click', async function () {
                 const label = shareButton.querySelector('[data-share-label]');
@@ -1867,10 +2116,12 @@
 
             thumbs.forEach(function(item) {
                 item.classList.remove('active');
+                item.setAttribute('aria-pressed', 'false');
             });
 
             const activeThumb = thumbs[activeImageIndex];
             activeThumb.classList.add('active');
+            activeThumb.setAttribute('aria-pressed', 'true');
             mainImage.classList.add('is-changing');
 
             if (galleryTransitionTimer) {

@@ -8,11 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('orders') || ! Schema::hasColumn('orders', 'status')) {
-            return;
-        }
-
-        if (DB::getDriverName() !== 'mysql') {
+        if (! Schema::hasTable('orders')
+            || ! Schema::hasColumn('orders', 'status')
+            || DB::getDriverName() !== 'mysql') {
             return;
         }
 
@@ -40,7 +38,7 @@ return new class extends Migration
 
         if ($unsupportedStatuses->isNotEmpty()) {
             throw new RuntimeException(
-                'Cannot constrain orders.status because unsupported values exist: '
+                'Cannot expand orders.status because unsupported values exist: '
                 .$unsupportedStatuses->map(fn ($status) => var_export($status, true))->implode(', ')
             );
         }
@@ -54,16 +52,34 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (! Schema::hasTable('orders') || ! Schema::hasColumn('orders', 'status')) {
+        if (! Schema::hasTable('orders')
+            || ! Schema::hasColumn('orders', 'status')
+            || DB::getDriverName() !== 'mysql') {
             return;
         }
 
-        if (DB::getDriverName() !== 'mysql') {
-            return;
-        }
+        // Không để rollback làm mất các đơn VNPay đang chờ thanh toán.
+        DB::table('orders')
+            ->where('status', 'awaiting_payment')
+            ->update(['status' => 'pending']);
+
+        $statuses = [
+            'awaiting_email_confirmation',
+            'pending',
+            'confirmed',
+            'preparing',
+            'ready_for_delivery',
+            'shipper_picked_up',
+            'delivering',
+            'delivered',
+            'ready_for_pickup',
+            'completed',
+            'cancelled',
+        ];
+        $enum = implode("','", $statuses);
 
         DB::statement(
-            "ALTER TABLE orders MODIFY status VARCHAR(30) NOT NULL DEFAULT 'pending'"
+            "ALTER TABLE orders MODIFY status ENUM('{$enum}') NOT NULL DEFAULT 'pending'"
         );
     }
 };

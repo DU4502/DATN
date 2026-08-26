@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Support\OrderStatus;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
     use HasFactory;
+
+    public const ISSUE_REPORT_WINDOW_HOURS = 2;
 
     /**
      * The attributes that are mass assignable.
@@ -117,6 +120,27 @@ class Order extends Model
     public function issueReports()
     {
         return $this->hasMany(OrderIssueReport::class, 'order_id');
+    }
+
+    /**
+     * Khách chỉ được tạo yêu cầu hỗ trợ trong 2 giờ kể từ lúc đơn hoàn tất.
+     */
+    public function canSubmitIssueReport(?CarbonInterface $at = null): bool
+    {
+        if (OrderStatus::normalize((string) $this->status) !== OrderStatus::COMPLETED) {
+            return false;
+        }
+
+        $completedAt = $this->status_changed_at ?? $this->updated_at;
+        if (! $completedAt) {
+            return false;
+        }
+
+        $checkedAt = $at ?? now();
+        $deadline = $completedAt->copy()->addHours(self::ISSUE_REPORT_WINDOW_HOURS);
+
+        return $checkedAt->greaterThanOrEqualTo($completedAt)
+            && $checkedAt->lessThan($deadline);
     }
 
     public function reviews()

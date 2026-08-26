@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class ChatHelper
 {
+    /** Đưa yêu cầu hỗ trợ đơn vào đúng cuộc trò chuyện của khách với chi nhánh. */
     public static function notifyOrderIssue(OrderIssueReport $issue): void
     {
         $issue->loadMissing(['order.branch', 'user']);
@@ -35,6 +36,11 @@ class ChatHelper
                 'order_id' => $order->id,
                 'subject' => 'Hỗ trợ đơn '.$order->displayCode(),
                 'status' => 'open',
+            ]);
+        } else {
+            $conversation->update([
+                'order_id' => $order->id,
+                'subject' => 'Hỗ trợ đơn '.$order->displayCode(),
             ]);
         }
 
@@ -64,11 +70,11 @@ class ChatHelper
         }
     }
 
+    /** Gửi cập nhật phương án hỗ trợ từ nhân viên vào chính cuộc trò chuyện của khách. */
     public static function notifyOrderIssueStatus(OrderIssueReport $issue, User $staff): void
     {
         $issue->loadMissing('order');
         $order = $issue->order;
-
         if (! $order?->branch_id) {
             return;
         }
@@ -79,17 +85,11 @@ class ChatHelper
             ->where('status', 'open')
             ->latest('last_message_at')
             ->first();
-
         if (! $conversation) {
             return;
         }
 
-        $labels = [
-            'open' => 'Đang chờ xử lý',
-            'processing' => 'Đang xử lý',
-            'resolved' => 'Hoàn tất',
-            'rejected' => 'Không được chấp nhận',
-        ];
+        $labels = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'];
         $content = "[CẬP NHẬT HỖ TRỢ ĐƠN {$order->displayCode()}]"
             ."\nTrạng thái: ".($labels[$issue->status] ?? $issue->status)
             .($issue->resolution_value ? "\nPhương án: {$issue->resolution_value}" : '')
@@ -101,7 +101,6 @@ class ChatHelper
         ]);
         $conversation->update(['last_message_at' => now()]);
         $message->load(['sender', 'displayAsSender']);
-
         try {
             broadcast(new MessageSent($message))->toOthers();
         } catch (\Throwable) {

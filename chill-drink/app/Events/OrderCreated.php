@@ -25,11 +25,9 @@ class OrderCreated implements ShouldBroadcastNow
             ? (int) $this->order->branch_id
             : null;
 
-        $channels = [new PrivateChannel('admin-notifications')];
-
-        if ($branchId) {
-            $channels[] = new PrivateChannel('admin-notifications.'.$branchId);
-        }
+        $channels = $branchId
+            ? [new PrivateChannel('admin-notifications.'.$branchId)]
+            : [new PrivateChannel('admin-notifications')];
 
         return $channels;
     }

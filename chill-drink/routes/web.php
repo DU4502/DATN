@@ -42,7 +42,6 @@ use App\Http\Controllers\Client\OrderIssueReportController as ClientOrderIssueRe
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OrderDeliveryChatController;
 use App\Http\Controllers\OrderShipmentIncidentController;
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -386,8 +385,6 @@ Route::post('/register/guest-convert', [GuestConvertController::class, 'store'])
 Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
 Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name('vnpay.payment');
 
-Broadcast::routes(['middleware' => ['web', 'auth']]);
-
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('verified')->name('checkout.index');
@@ -399,6 +396,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/group-orders/join/{code}', [GroupOrderController::class, 'show'])->name('group-orders.show');
     Route::post('/group-orders/join/{code}/presence', [GroupOrderController::class, 'presence'])->name('group-orders.presence');
+    Route::get('/group-orders/join/{code}/state', [GroupOrderController::class, 'state'])->name('group-orders.state');
     Route::post('/group-orders/join/{code}/leave', [GroupOrderController::class, 'leave'])->name('group-orders.leave');
     Route::post('/group-orders/join/{code}/leave-room', [GroupOrderController::class, 'leaveRoom'])->name('group-orders.leave-room');
     Route::get('/group-orders/join/{code}/messages', [GroupOrderController::class, 'messages'])->name('group-orders.messages');
@@ -407,12 +405,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
+    Route::patch('/group-orders/join/{code}/items/{item}/decrement', [GroupOrderController::class, 'decrementItem'])->name('group-orders.items.decrement');
     Route::delete('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'removeItem'])->name('group-orders.items.destroy');
     Route::get('/group-orders', [GroupOrderController::class, 'index'])->name('group-orders.index');
     Route::get('/group-orders/create', [GroupOrderController::class, 'create'])->name('group-orders.create');
     Route::post('/group-orders', [GroupOrderController::class, 'store'])->name('group-orders.store');
     Route::post('/group-orders/{code}/close', [GroupOrderController::class, 'close'])->name('group-orders.close');
     Route::post('/group-orders/{code}/cancel', [GroupOrderController::class, 'cancel'])->name('group-orders.cancel');
+    Route::post('/group-orders/pending-checkout/resume', [GroupOrderController::class, 'resumePendingCheckout'])->name('group-orders.pending-checkout.resume');
     Route::post('/group-orders/{code}/resume', [GroupOrderController::class, 'resume'])->name('group-orders.resume');
     Route::get('/favorites', [QuickOrderController::class, 'favorites'])->name('favorites.index');
     Route::post('/favorites/{product}', [QuickOrderController::class, 'toggleFavorite'])->name('favorites.toggle');
@@ -444,7 +444,6 @@ Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->
     Route::post('/{conversation}/reply', [AdminChatController::class, 'reply'])->name('reply');
     Route::patch('/{conversation}/close', [AdminChatController::class, 'close'])->name('close');
 });
-
 
 /*
 |--------------------------------------------------------------------------
@@ -494,6 +493,7 @@ Route::middleware('auth')->group(function () {
     Route::redirect('/profile/orders', '/orders')->name('profile.orders');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile/data-export', [ProfileController::class, 'exportData'])->name('profile.data-export');
     
     // Address Book Management
     Route::get('/profile/addresses', [\App\Http\Controllers\Client\ProfileAddressController::class, 'index'])->name('profile.addresses.index');
@@ -508,6 +508,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/loyalty-points/redeem/{voucher}', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'redeemVoucher'])->name('loyalty.redeem-voucher');
     });
 });
+
+Route::view('/dieu-khoan', 'legal.page', ['page' => 'terms'])->name('legal.terms');
+Route::view('/doi-tra', 'legal.page', ['page' => 'returns'])->name('legal.returns');
+Route::view('/quyen-rieng-tu', 'legal.page', ['page' => 'privacy'])->name('legal.privacy');
 
 /*
 |--------------------------------------------------------------------------
@@ -561,6 +565,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSu
         Route::get('/shipper-incidents', [ShipperIncidentController::class, 'index'])->name('shipper-incidents.index');
         Route::get('/shipper-incidents/feed', [ShipperIncidentController::class, 'feed'])->name('shipper-incidents.feed');
         Route::get('/order-issues', [AdminOrderIssueReportController::class, 'index'])->name('order-issues.index');
+        Route::get('/order-issues-pending/count', [AdminOrderIssueReportController::class, 'pendingCount'])->name('order-issues.pending-count');
         Route::patch('/order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
         Route::get('/order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
         Route::get('/cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
@@ -630,6 +635,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
     Route::get('shipper-incidents', [ShipperIncidentController::class, 'index'])->name('shipper-incidents.index');
     Route::get('shipper-incidents/feed', [ShipperIncidentController::class, 'feed'])->name('shipper-incidents.feed');
     Route::get('order-issues', [AdminOrderIssueReportController::class, 'index'])->name('order-issues.index');
+    Route::get('order-issues-pending/count', [AdminOrderIssueReportController::class, 'pendingCount'])->name('order-issues.pending-count');
     Route::patch('order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
     Route::get('order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
     Route::get('cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');

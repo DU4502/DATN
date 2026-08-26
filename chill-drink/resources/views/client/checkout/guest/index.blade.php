@@ -88,6 +88,30 @@
         border-bottom: 0;
     }
 
+    .guest-summary-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        width: 100%;
+        min-height: 40px;
+        margin-top: 0.45rem;
+        border: 1px solid rgba(13, 147, 115, 0.24);
+        border-radius: 12px;
+        color: #067a5f;
+        background: #ecfdf5;
+        font-size: 0.82rem;
+        font-weight: 800;
+    }
+
+    .guest-summary-toggle i {
+        transition: transform 0.18s ease;
+    }
+
+    .guest-summary-toggle[aria-expanded="true"] i {
+        transform: rotate(180deg);
+    }
+
     .guest-item-thumb {
         width: 38px;
         height: 38px;
@@ -178,6 +202,233 @@
         .guest-summary {
             position: static;
         }
+    }
+
+    @media (max-width: 767.98px) {
+        .guest-checkout-page {
+            padding: .75rem 0 1.75rem;
+        }
+
+        .guest-checkout-page .container {
+            --bs-gutter-x: 1rem;
+        }
+
+        .guest-checkout-page .display-6 {
+            font-size: 1.5rem;
+        }
+
+        .guest-checkout-page > .container > .d-flex.mb-4 {
+            margin-bottom: .7rem !important;
+        }
+
+        .guest-step {
+            gap: .35rem;
+            font-size: .75rem;
+        }
+
+        .guest-step-dot {
+            width: 8px;
+            height: 8px;
+        }
+
+        .guest-checkout-page .row.g-4 {
+            --bs-gutter-y: .8rem;
+        }
+
+        .guest-panel,
+        .guest-summary {
+            padding: .85rem !important;
+            border-radius: 14px;
+        }
+
+        .guest-panel .row.g-3 {
+            --bs-gutter-x: .65rem;
+            --bs-gutter-y: .6rem;
+            margin-bottom: .75rem !important;
+        }
+
+        .guest-panel .mb-4,
+        .guest-panel .mb-3 {
+            margin-bottom: .7rem !important;
+        }
+
+        .guest-checkout-page .form-label {
+            margin-bottom: .22rem;
+            font-size: .78rem;
+        }
+
+        .guest-input {
+            min-height: 40px;
+            padding: .45rem .7rem;
+            border-radius: 11px;
+            font-size: .86rem;
+        }
+
+        .guest-panel .form-text,
+        .guest-panel .invalid-feedback {
+            margin-top: .2rem;
+            font-size: .68rem;
+            line-height: 1.35;
+        }
+
+        .delivery-toggle .btn {
+            min-height: 42px;
+            padding: .4rem .25rem;
+            font-size: .75rem;
+            line-height: 1.25;
+        }
+
+        .location-search-btn,
+        .location-refresh-btn {
+            min-width: 40px;
+            padding: .4rem .55rem;
+            border-radius: 11px;
+        }
+
+        .guest-branch-section {
+            padding-top: .1rem;
+        }
+
+        .guest-branch-section > .d-flex:first-child {
+            gap: .6rem !important;
+            margin-bottom: .55rem !important;
+        }
+
+        .guest-branch-section-icon {
+            width: 34px;
+            height: 34px;
+            flex-basis: 34px;
+            font-size: .8rem;
+        }
+
+        .guest-branch-section h2 {
+            margin: 0 !important;
+            font-size: .95rem !important;
+            line-height: 1.25;
+        }
+
+        .guest-branch-section h2 + p {
+            display: none;
+        }
+
+        [data-find-nearest-branch] {
+            padding: .35rem .55rem;
+            font-size: .68rem;
+        }
+
+        .guest-panel textarea.guest-input {
+            min-height: 66px;
+        }
+
+        .guest-summary::before {
+            height: 4px;
+            margin: -.85rem -.85rem .65rem;
+        }
+
+        .guest-summary > .d-flex.mb-3 {
+            margin-bottom: .55rem !important;
+        }
+
+        .guest-summary .section-kicker {
+            margin-bottom: .1rem !important;
+            font-size: .64rem;
+        }
+
+        .guest-summary h2 {
+            font-size: 1rem !important;
+        }
+
+        .guest-summary-badge {
+            padding: .3rem .5rem;
+            font-size: .68rem;
+        }
+
+        .guest-summary > .mb-3 {
+            margin-bottom: .45rem !important;
+        }
+
+        .guest-summary-item {
+            padding: .45rem 0;
+            font-size: .8rem;
+        }
+
+        .guest-summary-item .d-flex {
+            gap: .5rem !important;
+        }
+
+        .guest-item-thumb {
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
+        }
+
+        .guest-summary-line {
+            padding: .38rem 0;
+            font-size: .78rem;
+        }
+
+        .guest-summary-total {
+            margin-top: .5rem;
+            padding: .65rem .7rem;
+            border-radius: 12px;
+            font-size: .75rem;
+        }
+
+        .guest-summary-total .amount {
+            font-size: 1rem;
+        }
+
+        .guest-summary-status {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .4rem;
+            margin-top: .5rem;
+        }
+
+        .guest-summary-status-row {
+            gap: .4rem;
+            padding: .5rem;
+            border-radius: 10px;
+            font-size: .72rem;
+        }
+
+        .guest-summary-status-row span {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            line-height: 1.3;
+        }
+
+        .guest-summary-note {
+            margin-top: .5rem;
+            padding: .55rem;
+            border-radius: 10px;
+            font-size: .7rem;
+        }
+
+        .guest-address-modal .modal-content {
+            border-radius: 14px;
+        }
+
+        .guest-address-modal .modal-header,
+        .guest-address-modal .modal-body {
+            padding: .8rem !important;
+        }
+
+        .guest-address-map {
+            height: min(42vh, 260px);
+            border-radius: 12px;
+        }
+    }
+
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        .guest-checkout-page > .container > .row > .col-lg-7 { width: 58.333333%; }
+        .guest-checkout-page > .container > .row > .col-lg-5 { width: 41.666667%; }
+        .guest-checkout-page .row.g-4 { --bs-gutter-x: 1rem; }
+        .guest-panel,
+        .guest-summary { padding: 1.25rem !important; border-radius: 18px; }
+        .guest-summary::before { margin: -1.25rem -1.25rem .8rem; }
+        .guest-summary-status-row { padding: .55rem; }
     }
 
     .guest-step {
@@ -578,9 +829,9 @@
                         </span>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-3" data-guest-summary-list>
                         @foreach($cart as $item)
-                            <div class="guest-summary-item d-flex justify-content-between gap-3">
+                            <div class="guest-summary-item d-flex justify-content-between gap-3 {{ $loop->index >= 3 ? 'd-none' : '' }}" data-guest-summary-item>
                                 <div class="d-flex gap-3">
                                     <span class="guest-item-thumb"><i class="bi bi-cup-straw"></i></span>
                                     <div>
@@ -593,6 +844,14 @@
                                 <strong class="text-nowrap">{{ number_format(($item['price'] ?? 0) * ($item['quantity'] ?? 1), 0, ',', '.') }}đ</strong>
                             </div>
                         @endforeach
+                        <button type="button"
+                                class="guest-summary-toggle {{ count($cart) <= 3 ? 'd-none' : '' }}"
+                                data-guest-summary-toggle
+                                data-expanded="false"
+                                aria-expanded="false">
+                            <span data-guest-summary-toggle-label>Xem thêm {{ max(0, count($cart) - 3) }} món</span>
+                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </button>
                     </div>
 
                     <div class="guest-summary-line">
@@ -678,6 +937,26 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const guestSummaryList = document.querySelector('[data-guest-summary-list]');
+        const guestSummaryToggle = document.querySelector('[data-guest-summary-toggle]');
+        const syncGuestSummaryItems = () => {
+            if (!guestSummaryList || !guestSummaryToggle) return;
+            const items = Array.from(guestSummaryList.querySelectorAll('[data-guest-summary-item]'));
+            const extraCount = Math.max(0, items.length - 3);
+            const expanded = guestSummaryToggle.dataset.expanded === 'true' && extraCount > 0;
+            items.forEach((item, index) => item.classList.toggle('d-none', !expanded && index >= 3));
+            guestSummaryToggle.classList.toggle('d-none', extraCount === 0);
+            guestSummaryToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            const label = guestSummaryToggle.querySelector('[data-guest-summary-toggle-label]');
+            if (label) label.textContent = expanded ? 'Thu gọn' : `Xem thêm ${extraCount} món`;
+        };
+
+        guestSummaryToggle?.addEventListener('click', () => {
+            guestSummaryToggle.dataset.expanded = guestSummaryToggle.dataset.expanded === 'true' ? 'false' : 'true';
+            syncGuestSummaryItems();
+        });
+        syncGuestSummaryItems();
+
         const checkoutRoot = document.querySelector('[data-guest-checkout]');
         const deliveryFields = document.querySelector('[data-delivery-fields]');
         const pickupFields = document.querySelector('[data-pickup-fields]');

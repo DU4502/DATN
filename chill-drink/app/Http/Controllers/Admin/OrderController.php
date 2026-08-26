@@ -57,6 +57,10 @@ class OrderController extends Controller
             ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
+            // Giao dịch VNPay chưa hoàn tất chưa phải là đơn cần xử lý.
+            ->whereNot(function ($query) {
+                $query->where('payment_method', 'vnpay')->where('payment_status', '!=', 'paid');
+            })
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword = $filters['q'];
 

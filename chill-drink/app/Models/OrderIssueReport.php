@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 
 class OrderIssueReport extends Model
@@ -37,5 +38,10 @@ class OrderIssueReport extends Model
     public function handler()
     {
         return $this->belongsTo(User::class, 'handled_by');
+    }
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class, 'voucher_coupon_id');
     }
 }

@@ -140,6 +140,71 @@ class CheckoutBranchSelectionTest extends TestCase
             ->assertSessionHasErrors('branch_id');
     }
 
+    public function test_checkout_without_phone_keeps_button_actionable_and_rejects_fake_fallback_phone(): void
+    {
+        $user = User::create([
+            'name' => 'Chủ đơn nhóm thiếu liên hệ',
+            'email' => 'group-owner-missing-phone@example.com',
+            'password' => Hash::make('password'),
+            'role_id' => 1,
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+
+        $branch = Branch::create([
+            'name' => 'Chi nhánh đơn nhóm',
+            'code' => 'GROUP-CHECKOUT',
+            'status' => true,
+        ]);
+
+        $category = Category::create([
+            'name' => 'Danh mục đơn nhóm',
+            'slug' => 'danh-muc-don-nhom',
+            'status' => true,
+        ]);
+
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Món đơn nhóm',
+            'slug' => 'mon-don-nhom',
+            'price' => 25000,
+            'stock' => 10,
+            'status' => true,
+        ]);
+
+        $cart = [
+            'group-1-1' => [
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'price' => 25000,
+                'quantity' => 1,
+                'size' => 'M',
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->withSession(['cart' => $cart])
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('id="placeOrderButton"', false)
+            ->assertDontSee('id="placeOrderButton" disabled', false)
+            ->assertSee('Vui lòng cập nhật địa chỉ nhận hàng và số điện thoại trước khi đặt hàng.');
+
+        $this->actingAs($user)
+            ->withSession(['cart' => $cart])
+            ->from(route('checkout.index'))
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'fulfillment_type' => 'pickup',
+                'branch_id' => $branch->id,
+            ])
+            ->assertRedirect(route('checkout.index'))
+            ->assertSessionHasErrors('shipping_phone_ui');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
     public function test_checkout_rejects_delivery_branch_outside_15_km(): void
     {
         $this->fakeRoutingDistance(20000);
@@ -194,7 +259,7 @@ class CheckoutBranchSelectionTest extends TestCase
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
                 'shipping_method_ui' => 'standard',
-                'shipping_address_ui' => 'Hà Nội',
+                'shipping_address_ui' => '123 Tràng Tiền',
                 'shipping_area_ui' => 'Hà Nội',
                 'shipping_phone_ui' => '0912345678',
                 'fulfillment_type' => 'delivery',

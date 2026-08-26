@@ -26,6 +26,138 @@ $paymentLabels = $paymentLabels ?? [
         box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.12), 0 14px 34px rgba(79, 183, 168, 0.12);
     }
 
+    .customer-cancel-modal .modal-dialog {
+        width: min(640px, calc(100vw - 2rem)) !important;
+        max-width: 640px !important;
+        margin: 1rem auto !important;
+    }
+
+    .customer-cancel-modal .modal-content {
+        max-height: calc(100dvh - 2rem);
+        overflow: hidden;
+        border: 0;
+        border-radius: 20px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, .22);
+    }
+
+    .customer-cancel-modal .modal-header {
+        min-height: 66px;
+        padding: .9rem 1.15rem;
+        border-bottom: 1px solid #e8eeec;
+    }
+
+    .customer-cancel-modal .modal-title {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        font-size: 1.05rem;
+    }
+
+    .customer-cancel-modal .modal-title-icon {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        border-radius: 10px;
+        color: #dc3545;
+        background: #fff0f1;
+    }
+
+    .customer-cancel-modal .modal-body {
+        padding: 1.15rem;
+        overflow-y: auto;
+    }
+
+    .customer-cancel-modal .cancel-warning {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        gap: .75rem;
+        margin-bottom: 1rem;
+        padding: .85rem;
+        border: 1px solid #f4d276;
+        border-radius: 14px;
+        color: #694b00;
+        background: #fff8dc;
+    }
+
+    .customer-cancel-modal .cancel-warning-icon {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: rgba(180, 125, 0, .10);
+        font-size: 1rem;
+    }
+
+    .customer-cancel-modal .cancel-warning strong { font-size: .82rem; }
+    .customer-cancel-modal .cancel-warning small { display: block; margin-top: .15rem; font-size: .72rem; line-height: 1.45; }
+
+    .customer-cancel-modal .cancel-reason-label {
+        margin-bottom: .45rem;
+        font-size: .8rem;
+        font-weight: 750;
+    }
+
+    .customer-cancel-modal .cancel-reason-input {
+        min-height: 108px;
+        max-height: 180px;
+        padding: .75rem .85rem;
+        border-color: #dbe7e4;
+        border-radius: 13px;
+        resize: vertical;
+        font-size: .86rem;
+    }
+
+    .customer-cancel-modal .cancel-reason-input:focus {
+        border-color: #0d9373;
+        box-shadow: 0 0 0 .2rem rgba(13, 147, 115, .11);
+    }
+
+    .customer-cancel-modal .form-text { margin-top: .4rem; font-size: .7rem; }
+
+    .customer-cancel-modal .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: .55rem;
+        padding: .8rem 1.15rem;
+        border-top: 1px solid #e8eeec;
+        background: #fbfdfc;
+    }
+
+    .customer-cancel-modal .modal-footer .btn {
+        min-height: 42px;
+        margin: 0;
+        padding: .5rem 1rem;
+        border-radius: 12px;
+        font-size: .78rem;
+        font-weight: 750;
+    }
+
+    @media (max-width: 575.98px) {
+        .customer-cancel-modal .modal-dialog {
+            width: calc(100vw - 1rem) !important;
+            max-width: calc(100vw - 1rem) !important;
+            margin: .5rem auto !important;
+        }
+
+        .customer-cancel-modal .modal-content {
+            max-height: calc(100dvh - 1rem);
+            border-radius: 16px;
+        }
+
+        .customer-cancel-modal .modal-header,
+        .customer-cancel-modal .modal-body,
+        .customer-cancel-modal .modal-footer { padding: .75rem !important; }
+        .customer-cancel-modal .modal-title { font-size: .9rem; }
+        .customer-cancel-modal .cancel-warning { grid-template-columns: 30px minmax(0, 1fr); padding: .7rem; }
+        .customer-cancel-modal .cancel-warning-icon { width: 30px; height: 30px; }
+        .customer-cancel-modal .cancel-reason-input { min-height: 94px; }
+        .customer-cancel-modal .modal-footer { display: grid; grid-template-columns: 1fr 1.35fr; }
+        .customer-cancel-modal .modal-footer .btn { width: 100%; padding-inline: .5rem; }
+    }
+
     .order-card-header {
         display: flex;
         flex-wrap: wrap;
@@ -634,6 +766,14 @@ $paymentLabels = $paymentLabels ?? [
                         @csrf
                         <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
                     </form>
+                    @php
+                        $hasIssueReport = (int) ($order->issue_reports_count ?? 0) > 0;
+                    @endphp
+                    @if($hasIssueReport || $order->canSubmitIssueReport())
+                        <a href="{{ route('orders.issues.create', $order) }}" class="btn btn-sm btn-outline-secondary w-100">
+                            <i class="bi bi-headset me-1"></i>{{ $hasIssueReport ? 'Theo dõi hỗ trợ' : 'Báo vấn đề đơn' }}
+                        </a>
+                    @endif
                     
                     <button
                         type="button"
@@ -773,7 +913,9 @@ $paymentLabels = $paymentLabels ?? [
                                     <div>
                                         <div class="order-detail-label">Topping</div>
                                         @foreach($detailToppings as $toppingLine)
-                                            @php($detailToppingLineTotal = max(0, (int) ($toppingLine->price ?? 0)) * $detailQuantity)
+                                            @php
+                                                $detailToppingLineTotal = max(0, (int) ($toppingLine->price ?? 0)) * $detailQuantity;
+                                            @endphp
                                             <div class="order-detail-row">
                                                 <span>
                                                     + {{ $toppingLine->topping?->name ?? 'Topping' }}
@@ -822,35 +964,36 @@ $paymentLabels = $paymentLabels ?? [
 </div>
 
 <!-- Modal Hủy đơn hàng (Customer) -->
-<div class="modal fade" id="customerCancelOrderModal" tabindex="-1" aria-labelledby="customerCancelOrderModalLabel" aria-hidden="true">
+<div class="modal fade customer-cancel-modal" id="customerCancelOrderModal" tabindex="-1" aria-labelledby="customerCancelOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);">
-            <div class="modal-header" style="border-bottom: 1px solid #e9ecef;">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h5 class="modal-title fw-bold" id="customerCancelOrderModalLabel">
-                    <i class="bi bi-x-circle text-danger me-2"></i>Xác nhận hủy đơn hàng
+                    <span class="modal-title-icon"><i class="bi bi-x-lg"></i></span>
+                    <span>Xác nhận hủy đơn hàng</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="customerCancelOrderForm" method="POST">
                 @csrf
-                <div class="modal-body p-4">
-                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" style="border-radius: 12px;">
-                        <i class="bi bi-info-circle-fill" style="font-size: 1.2rem;"></i>
-                        <div class="flex-grow-1">
-                            <div class="fw-semibold mb-1">Lưu ý quan trọng:</div>
+                <div class="modal-body">
+                    <div class="cancel-warning">
+                        <span class="cancel-warning-icon"><i class="bi bi-info-circle-fill"></i></span>
+                        <div>
+                            <strong>Lưu ý quan trọng</strong>
                             <small>Bạn chỉ có thể hủy đơn hàng khi đơn đang ở trạng thái <strong>"Chờ xác nhận"</strong>. Sau khi quán xác nhận, đơn hàng không thể hủy.</small>
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="customerCancellationReason" class="form-label fw-semibold">Lý do hủy đơn <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="customerCancellationReason" name="cancellation_reason" rows="4" placeholder="Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng..." required style="border-radius: 12px;"></textarea>
+                    <div>
+                        <label for="customerCancellationReason" class="form-label cancel-reason-label">Lý do hủy đơn <span class="text-danger">*</span></label>
+                        <textarea class="form-control cancel-reason-input" id="customerCancellationReason" name="cancellation_reason" rows="3" placeholder="Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng..." required></textarea>
                         <div class="form-text">Lý do của bạn giúp chúng tôi cải thiện dịch vụ tốt hơn.</div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid #e9ecef;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 12px;">Đóng</button>
-                    <button type="submit" class="btn btn-danger" style="border-radius: 12px;">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-danger">
                         <i class="bi bi-x-circle me-1"></i>Xác nhận hủy
                     </button>
                 </div>

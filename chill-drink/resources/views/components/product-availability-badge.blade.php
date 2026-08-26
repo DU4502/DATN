@@ -17,10 +17,13 @@
     data-availability-badge
 >
     @if($availability === true)
-        Còn hàng tại Chi nhánh {{ $branchName }}
+        <span class="availability-label-full">Còn hàng tại Chi nhánh {{ $branchName }}</span>
+        <span class="availability-label-compact d-none">Còn hàng</span>
     @elseif($availability === false)
-        Hết hàng tại Chi nhánh {{ $branchName }}
+        <span class="availability-label-full">Hết hàng tại Chi nhánh {{ $branchName }}</span>
+        <span class="availability-label-compact d-none">Hết hàng</span>
     @else
-        Chưa phục vụ tại Chi nhánh {{ $branchName }}
+        <span class="availability-label-full">Chưa phục vụ tại Chi nhánh {{ $branchName }}</span>
+        <span class="availability-label-compact d-none">Chưa phục vụ</span>
     @endif
 </span>

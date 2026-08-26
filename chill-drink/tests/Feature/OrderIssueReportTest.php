@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Models\OrderIssueReport;
 use App\Models\User;
+use App\Notifications\OrderIssueReportCreatedNotification;
 use App\Support\OrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -39,7 +40,13 @@ class OrderIssueReportTest extends TestCase
 
     public function test_customer_creates_issue_with_text_and_multiple_evidence_files(): void
     {
-        [$customer, $order] = $this->createCustomerOrder('ISSUE-CREATE');
+        [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-CREATE');
+        $branchAdmin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+        $superAdmin = User::factory()->create(['role_id' => 3, 'branch_id' => null]);
+        $otherBranchAdmin = User::factory()->create([
+            'role_id' => 2,
+            'branch_id' => $this->createBranch('ISSUE-NOTIFY-OTHER')->id,
+        ]);
 
         $this->actingAs($customer)
             ->post(route('orders.issues.store', $order), $this->validIssuePayload())
@@ -53,6 +60,40 @@ class OrderIssueReportTest extends TestCase
         Storage::disk('local')->assertExists($report->evidence_files[0]['path']);
         Storage::disk('local')->assertExists($report->evidence_files[1]['path']);
         $this->assertDatabaseHas('conversations', ['user_id' => $customer->id, 'order_id' => $order->id]);
+        Notification::assertSentTo([$customer, $branchAdmin, $superAdmin], OrderIssueReportCreatedNotification::class);
+        Notification::assertNotSentTo($otherBranchAdmin, OrderIssueReportCreatedNotification::class);
+    }
+
+    public function test_pending_issue_badge_and_feed_are_scoped_to_admin_branch(): void
+    {
+        [$firstCustomer, $firstOrder, $firstBranch] = $this->createCustomerOrder('ISSUE-BADGE-A');
+        [$secondCustomer, $secondOrder] = $this->createCustomerOrder('ISSUE-BADGE-B');
+        $this->createIssue($firstOrder, $firstCustomer);
+        $this->createIssue($secondOrder, $secondCustomer);
+        $this->createIssue($firstOrder, $firstCustomer, [
+            'status' => 'resolved',
+            'resolved_at' => now(),
+            'resolution_type' => 'other',
+        ]);
+        $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $firstBranch->id]);
+        $superAdmin = User::factory()->create(['role_id' => 3, 'branch_id' => null]);
+
+        $this->actingAs($admin)
+            ->getJson(route('admin.order-issues.pending-count'))
+            ->assertOk()
+            ->assertJsonPath('count', 1)
+            ->assertJsonPath('message', 'Khách '.$firstCustomer->name.' vừa gửi yêu cầu cho đơn ISSUE-BADGE-A.');
+
+        $this->actingAs($admin)
+            ->get(route('admin.order-issues.index'))
+            ->assertOk()
+            ->assertSee('id="sidebar-order-issue-badge"', false)
+            ->assertSee('>1</span>', false);
+
+        $this->actingAs($superAdmin)
+            ->getJson(route('admin.order-issues.pending-count'))
+            ->assertOk()
+            ->assertJsonPath('count', 2);
     }
 
     public function test_customer_and_guest_cannot_report_an_order_they_do_not_own(): void
@@ -84,7 +125,7 @@ class OrderIssueReportTest extends TestCase
 
         [, $oldOrder] = $this->createCustomerOrder('ISSUE-OLD', [
             'user_id' => $customer->id,
-            'status_changed_at' => now()->subDay(),
+            'status_changed_at' => now()->subHours(2),
         ]);
 
         $this->actingAs($customer)
@@ -93,6 +134,23 @@ class OrderIssueReportTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseCount('order_issue_reports', 0);
+    }
+
+    public function test_completed_order_can_be_reported_before_the_two_hour_deadline(): void
+    {
+        [$customer, $order] = $this->createCustomerOrder('ISSUE-WITHIN-WINDOW', [
+            'status_changed_at' => now()->subMinutes(119),
+        ]);
+
+        $this->actingAs($customer)
+            ->post(route('orders.issues.store', $order), $this->validIssuePayload())
+            ->assertRedirect(route('orders.issues.create', $order))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('order_issue_reports', [
+            'order_id' => $order->id,
+            'user_id' => $customer->id,
+        ]);
     }
 
     public function test_duplicate_active_issue_is_rejected(): void
@@ -161,6 +219,28 @@ class OrderIssueReportTest extends TestCase
         $this->assertSame('open', $issue->fresh()->status);
     }
 
+    public function test_rejected_issue_is_rendered_as_a_detailed_read_only_result(): void
+    {
+        [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-REJECTED');
+        $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+        $this->createIssue($order, $customer, [
+            'status' => 'rejected',
+            'resolution_value' => 'Hình ảnh chưa chứng minh được sản phẩm bị lỗi.',
+            'admin_note' => 'Vui lòng cung cấp hình ảnh rõ tem và toàn bộ ly trong lần yêu cầu tiếp theo.',
+            'handled_by' => $admin->id,
+            'rejected_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.order-issues.index'))
+            ->assertOk()
+            ->assertSee('Yêu cầu đã bị từ chối')
+            ->assertSee('Hình ảnh chưa chứng minh được sản phẩm bị lỗi.')
+            ->assertSee('Phản hồi gửi khách:')
+            ->assertSee('Vui lòng cung cấp hình ảnh rõ tem và toàn bộ ly trong lần yêu cầu tiếp theo.')
+            ->assertDontSee('Lưu phương án');
+    }
+
     public function test_resolution_voucher_is_created_once(): void
     {
         [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-VOUCHER');
@@ -177,6 +257,14 @@ class OrderIssueReportTest extends TestCase
         $this->assertDatabaseCount('coupons', 1);
         $this->assertDatabaseCount('user_vouchers', 1);
         $this->assertDatabaseHas('user_vouchers', ['user_id' => $customer->id, 'coupon_id' => $voucherId]);
+
+        $voucherCode = \App\Models\Voucher::findOrFail($voucherId)->code;
+        $this->actingAs($admin)
+            ->get(route('admin.order-issues.index'))
+            ->assertOk()
+            ->assertSee('Đã hoàn tất hỗ trợ')
+            ->assertSee($voucherCode)
+            ->assertDontSee('Lưu phương án');
     }
 
     public function test_customer_confirmation_cannot_bypass_resolution_workflow(): void
