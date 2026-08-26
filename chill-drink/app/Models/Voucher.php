@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Voucher extends Model
 {
@@ -121,5 +122,13 @@ class Voucher extends Model
         return number_format((int) $this->used_count, 0, ',', '.')
             . '/'
             . ($limit > 0 ? number_format($limit, 0, ',', '.') : '∞');
+    }
+
+    /**
+     * Voucher bồi hoàn từ khiếu nại là tài sản riêng của người được cấp.
+     */
+    public function isPersonalSupportVoucher(): bool
+    {
+        return Str::startsWith(Str::upper((string) $this->code), 'HT');
     }
 }

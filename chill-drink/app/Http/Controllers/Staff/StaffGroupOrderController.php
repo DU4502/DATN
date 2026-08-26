@@ -72,48 +72,19 @@ class StaffGroupOrderController extends Controller
     }
 
     /**
-     * Nhân viên có thể đổi trạng thái đơn nhóm (closed → ordered, cancelled)
+     * Endpoint cũ được giữ để chặn an toàn các request thủ công từ giao diện cũ.
      */
     public function updateStatus(Request $request, GroupOrder $groupOrder)
     {
-        $request->validate([
-            'status' => ['required', 'in:open,closed,ordered,cancelled'],
-        ]);
-
         $user = auth()->user();
 
         if (!$user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
             abort(403, 'Bạn không có quyền cập nhật đơn nhóm này.');
         }
 
-        $allowedTransitions = [
-            'open'    => ['closed', 'cancelled'],
-            'closed'  => ['ordered', 'cancelled'],
-            'ordered' => [],
-        ];
-
-        $currentStatus = $groupOrder->status;
-        $newStatus     = $request->status;
-
-        if (!in_array($newStatus, $allowedTransitions[$currentStatus] ?? [], true)) {
-            return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này.');
-        }
-
-        $data = [
-            'status'            => $newStatus,
-            'status_changed_at' => now(),
-            'status_changed_by' => $user->id,
-        ];
-
-        if ($newStatus === 'cancelled') {
-            $data['cancelled_at'] = now();
-        }
-        if ($newStatus === 'closed') {
-            $data['locked_at'] = now();
-        }
-
-        $groupOrder->update($data);
-
-        return redirect()->back()->with('success', 'Đã cập nhật trạng thái đơn nhóm.');
+        return redirect()->back()->with(
+            'error',
+            'Trạng thái đơn nhóm do hệ thống và kết quả thanh toán quyết định; nhân viên không thể sửa thủ công.'
+        );
     }
 }

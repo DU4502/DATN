@@ -1,6 +1,7 @@
 @extends('layouts.client')
 
 @section('title', $result === 'success' ? 'Đặt hàng thành công' : 'Kết quả thanh toán')
+@section('hide-client-chatbox', '1')
 
 @section('content')
 @php

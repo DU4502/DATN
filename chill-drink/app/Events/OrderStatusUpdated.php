@@ -24,11 +24,9 @@ class OrderStatusUpdated implements ShouldBroadcastNow
         $branchId = is_numeric($this->order->branch_id)
             ? (int) $this->order->branch_id
             : null;
-        $channels = [new PrivateChannel('admin-notifications')];
-
-        if ($branchId) {
-            $channels[] = new PrivateChannel('admin-notifications.'.$branchId);
-        }
+        $channels = $branchId
+            ? [new PrivateChannel('admin-notifications.'.$branchId)]
+            : [new PrivateChannel('admin-notifications')];
 
         if ($this->order->user_id) {
             $channels[] = new PrivateChannel('user.'.$this->order->user_id);

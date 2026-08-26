@@ -25,6 +25,40 @@
         white-space: nowrap;
         pointer-events: none;
     }
+
+    @media (max-width: 575.98px) {
+        .client-chatbox {
+            right: max(0.5rem, env(safe-area-inset-right)) !important;
+            bottom: max(0.75rem, env(safe-area-inset-bottom)) !important;
+        }
+
+        .client-chatbox > button:first-of-type {
+            width: 46px !important;
+            height: 46px !important;
+        }
+
+        .client-chatbox > button:first-of-type svg {
+            width: 22px !important;
+            height: 22px !important;
+        }
+
+        .client-chatbox-menu,
+        .client-chatbox-panel {
+            right: max(0.75rem, env(safe-area-inset-right)) !important;
+            left: max(0.75rem, env(safe-area-inset-left)) !important;
+            width: auto !important;
+        }
+
+        .client-chatbox-menu {
+            bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
+        }
+
+        .client-chatbox-panel {
+            bottom: calc(4.75rem + env(safe-area-inset-bottom)) !important;
+            height: min(540px, calc(100dvh - 5.75rem - env(safe-area-inset-top) - env(safe-area-inset-bottom))) !important;
+            border-radius: 16px !important;
+        }
+    }
 </style>
 
 <div
@@ -71,8 +105,8 @@
         showScrollToLatest: false,
         supportIssue: null,
         confirmChangeBranch: false,
-        groupOrderCode: @json(request()->routeIs('group-orders.show') && isset($group) ? $group->code : null),
-        groupBranchId: @json(request()->routeIs('group-orders.show') && isset($group) ? $group->branch_id : null),
+        groupOrderCode: {{ json_encode(request()->routeIs('group-orders.show') && isset($group) ? $group->code : null) }},
+        groupBranchId: {{ json_encode(request()->routeIs('group-orders.show') && isset($group) ? $group->branch_id : null) }},
 
         get hasUserSentMessage() {
             return this.messages.some(m => Number(m.sender_id) === Number(this.currentUserId));
@@ -746,7 +780,7 @@
         },
     }"
     x-show="!isLoggedIn || isCustomer || groupChatAvailable"
-    class="fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;">
+    class="client-chatbox fixed bottom-6 right-6 z-50" style="position: fixed; right: 1.5rem; bottom: 1.5rem; z-index: 1050;">
     <!-- Floating Toggle Button (Always visible at bottom right, z-index 1060 above modal window) -->
     <button
         type="button"
@@ -774,7 +808,7 @@
         x-show="menuOpen && !groupChatOpen"
         x-cloak
         @click.away="menuOpen = false"
-        class="rounded-2xl shadow-2xl p-2 border space-y-1 transition-all duration-200"
+        class="client-chatbox-menu rounded-2xl shadow-2xl p-2 border space-y-1 transition-all duration-200"
         style="position: fixed; right: 1.5rem; bottom: 6.25rem; width: min(320px, calc(100vw - 2rem)); background: #ffffff; border-color: var(--c-border); z-index: 1061;">
         <button
             type="button"
@@ -823,7 +857,7 @@
     <div
         x-show="isOpen && !groupChatOpen"
         x-cloak
-        class="rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300 relative"
+        class="client-chatbox-panel rounded-2xl shadow-2xl flex flex-col overflow-hidden border transition-all duration-300 relative"
         style="position: fixed; right: 1.5rem; bottom: 6.25rem; width: min(380px, calc(100vw - 2rem)); height: min(540px, calc(100vh - 8rem)); background: #ffffff; border-color: var(--c-border); z-index: 1055;">
 
         <!-- Custom Confirm Change Branch Overlay -->

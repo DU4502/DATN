@@ -31,8 +31,12 @@ class GroupOrderController extends Controller
         return view('client.group-orders.index', compact('groups'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        if ($response = $this->blockNewGroupWhileCheckoutPending($request)) {
+            return $response;
+        }
+
         $branches = Branch::query()
             ->where('status', true)
             ->orderBy('name')
@@ -45,6 +49,10 @@ class GroupOrderController extends Controller
 
     public function store(Request $request)
     {
+        if ($response = $this->blockNewGroupWhileCheckoutPending($request)) {
+            return $response;
+        }
+
         $minimumClosingTime = now()->addMinutes(5)->format('Y-m-d H:i:s');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -682,6 +690,47 @@ class GroupOrderController extends Controller
     {
         if (session()->has('personal_cart_backup')) session()->put('cart', session()->pull('personal_cart_backup'));
         session()->forget(['group_cart_keys', 'checkout_group_order_id', 'group_branch_id']);
+    }
+
+    private function blockNewGroupWhileCheckoutPending(Request $request)
+    {
+        if (! auth()->check()) {
+            return null;
+        }
+
+        $sessionGroupId = (int) session('checkout_group_order_id', 0);
+        $pendingGroup = GroupOrder::query()
+            ->where('owner_id', auth()->id())
+            ->where('status', 'closed')
+            ->where(function ($query) {
+                $query->whereNull('order_id')
+                    ->orWhereHas('order', fn ($orders) => $orders
+                        ->where('payment_method', 'vnpay')
+                        ->whereIn('payment_status', ['pending', 'failed'])
+                        ->whereIn('status', [\App\Support\OrderStatus::AWAITING_PAYMENT, \App\Support\OrderStatus::PENDING]));
+            })
+            ->where('locked_at', '>=', now()->subMinutes(15))
+            ->when($sessionGroupId > 0, fn ($query) => $query->orderByRaw('id = ? desc', [$sessionGroupId]))
+            ->latest('locked_at')
+            ->first();
+
+        if (! $pendingGroup) {
+            return null;
+        }
+
+        $message = 'Bạn đang có đơn nhóm "'.$pendingGroup->name.'" chờ thanh toán. Hãy hoàn tất hoặc hủy đơn này trước khi tạo phòng mới.';
+        $redirectUrl = $sessionGroupId === (int) $pendingGroup->id
+            ? route('checkout.index')
+            : route('group-orders.index');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => $message,
+                'redirect_url' => $redirectUrl,
+            ], 422);
+        }
+
+        return redirect()->to($redirectUrl)->with('error', $message);
     }
 
     private function currentPrice(Product $product, string $size, array $toppings): int

@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ config('app.name', 'Chill Drink') }} - @yield('title', 'Đồ Uống Online')</title>
@@ -57,7 +57,19 @@
             box-sizing: border-box;
         }
 
+        html {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: clip;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
         body {
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+            overflow-x: clip;
             font-family: var(--font-sans);
             color: var(--c-ink);
             background: var(--c-bg);
@@ -66,6 +78,54 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
+        }
+
+        img,
+        svg,
+        video,
+        canvas {
+            max-width: 100%;
+        }
+
+        main,
+        .container,
+        .container-fluid,
+        .row,
+        [class*="col-"] {
+            min-width: 0;
+        }
+
+        :where(h1, h2, h3, h4, h5, h6, p, a, button, label, td, th) {
+            overflow-wrap: break-word;
+        }
+
+        .table-responsive {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .modal-dialog {
+            max-width: calc(100vw - 1.5rem);
+        }
+
+        .modal-content {
+            max-height: calc(100dvh - 1.5rem);
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .modal-body {
+            min-width: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .modal-footer {
+            flex-wrap: wrap;
         }
 
         body,
@@ -380,7 +440,7 @@
         .active-group-return.is-checkout { color: #92400e; border-color: #f6c76d; background: #fff8e8; }
         .active-group-return.is-checkout:hover { color: #78350f; background: #ffefc7; }
 
-        @media (min-width: 768px) {
+        @media (min-width: 1200px) {
             #clientNavbar.navbar-collapse {
                 display: flex !important;
                 flex-basis: auto;
@@ -390,7 +450,7 @@
             }
         }
 
-        @media (max-width: 767.98px) {
+        @media (max-width: 1199.98px) {
             #clientNavbar.navbar-collapse:not(.show) {
                 display: none !important;
             }
@@ -1011,6 +1071,288 @@
             margin-top: 2rem;
         }
 
+        .checkout-return-bar {
+            position: fixed;
+            right: 50%;
+            bottom: 1rem;
+            z-index: 1045;
+            display: flex;
+            align-items: center;
+            gap: .8rem;
+            width: min(520px, calc(100vw - 2rem));
+            padding: .65rem .7rem .65rem 1rem;
+            border: 1px solid rgba(255,255,255,.28);
+            border-radius: 18px;
+            color: #fff;
+            background: rgba(5, 77, 64, .96);
+            box-shadow: 0 16px 42px rgba(5, 57, 48, .28);
+            backdrop-filter: blur(14px);
+            transform: translateX(50%);
+        }
+
+        .checkout-return-bar__copy {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .checkout-return-bar__copy > strong,
+        .checkout-return-bar__copy > span {
+            display: block;
+        }
+
+        .checkout-return-bar__copy > strong { font-size: .82rem; }
+        .checkout-return-bar__copy > span { color: rgba(255,255,255,.72); font-size: .7rem; }
+
+        .checkout-return-bar__button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .45rem;
+            min-height: 42px;
+            padding: .55rem .9rem;
+            border-radius: 12px;
+            color: #06735f;
+            background: #fff;
+            font-size: .76rem;
+            font-weight: 850;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .checkout-return-bar__button:hover { color: #044f42; background: #e8fff8; }
+
+        body:has(.checkout-return-bar) .client-chatbox {
+            bottom: 6.2rem !important;
+        }
+
+        @media (max-width: 575.98px) {
+            .checkout-return-bar {
+                bottom: max(.5rem, env(safe-area-inset-bottom));
+                gap: .55rem;
+                width: calc(100vw - 1rem);
+                padding: .5rem .5rem .5rem .7rem;
+                border-radius: 14px;
+            }
+
+            .checkout-return-bar__copy > strong { font-size: .72rem; }
+            .checkout-return-bar__copy > span { font-size: .62rem; }
+            .checkout-return-bar__button { min-height: 38px; padding: .45rem .65rem; font-size: .68rem; }
+            body:has(.checkout-return-bar) .client-chatbox { bottom: 5.2rem !important; }
+        }
+
+        /* Footer responsive: giữ nguyên giao diện desktop từ 992px trở lên. */
+        @media (max-width: 991.98px) {
+            .site-footer {
+                margin-top: 2rem !important;
+                background:
+                    radial-gradient(circle at 100% 0, rgba(13, 147, 115, 0.10), transparent 34%),
+                    linear-gradient(180deg, #ffffff 0%, #f5fbf9 100%);
+                border-top-color: rgba(13, 147, 115, 0.16);
+            }
+
+            .site-footer .container {
+                padding-top: 2rem !important;
+                padding-bottom: calc(1.75rem + env(safe-area-inset-bottom)) !important;
+            }
+
+            .site-footer .row {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1rem !important;
+                margin: 0;
+            }
+
+            .site-footer .row > [class*="col-"] {
+                width: auto;
+                max-width: none;
+                padding: 0;
+            }
+
+            .site-footer .row > :first-child,
+            .site-footer .row > :last-child {
+                grid-column: 1 / -1;
+            }
+
+            .site-footer .row > :first-child {
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 0.85rem 1rem;
+                padding: 1rem;
+                border: 1px solid rgba(13, 147, 115, 0.14);
+                border-radius: 18px;
+                background: rgba(230, 247, 242, 0.72);
+            }
+
+            .site-footer .row > :first-child > .d-flex:first-child {
+                grid-column: 1;
+                margin-bottom: 0 !important;
+            }
+
+            .site-footer .row > :first-child > p {
+                grid-column: 2;
+                max-width: none !important;
+                margin-bottom: 0 !important;
+                line-height: 1.55;
+            }
+
+            .site-footer .row > :first-child > .d-flex:last-child {
+                grid-column: 3;
+            }
+
+            .site-footer .row > :nth-child(2),
+            .site-footer .row > :nth-child(3),
+            .site-footer .row > :last-child {
+                padding: 1rem;
+                border: 1px solid var(--c-border);
+                border-radius: 16px;
+                background: rgba(255, 255, 255, 0.86);
+                box-shadow: 0 8px 24px rgba(9, 61, 51, 0.04);
+            }
+
+            .site-footer .footer-heading {
+                margin-bottom: 0.7rem;
+                color: var(--c-primary-dark);
+            }
+
+            .site-footer .footer-link {
+                font-size: 0.82rem;
+                line-height: 1.35;
+            }
+
+            .site-footer .footer-bottom {
+                margin-top: 1rem;
+                padding-top: 1rem;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .site-footer {
+                border-radius: 20px 20px 0 0;
+            }
+
+            .site-footer .container {
+                padding-top: 1rem !important;
+                padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+            }
+
+            .site-footer .row {
+                gap: 0.7rem !important;
+            }
+
+            .site-footer .row > :first-child {
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 0.65rem;
+                padding: 0.85rem;
+                border-radius: 15px;
+            }
+
+            .site-footer .row > :first-child > .d-flex:first-child {
+                grid-column: 1;
+            }
+
+            .site-footer .row > :first-child > .d-flex:first-child .brand-mark {
+                width: 42px;
+                height: 42px;
+                border-radius: 11px;
+            }
+
+            .site-footer .row > :first-child > .d-flex:first-child .brand-text {
+                font-size: 1.05rem;
+            }
+
+            .site-footer .row > :first-child > p {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                font-size: 0.76rem !important;
+                line-height: 1.5;
+            }
+
+            .site-footer .row > :first-child > .d-flex:last-child {
+                grid-column: 2;
+                grid-row: 1;
+                gap: 0.35rem !important;
+            }
+
+            .site-footer .footer-social-btn {
+                width: 32px;
+                height: 32px;
+                border-radius: 9px;
+                font-size: 0.86rem;
+            }
+
+            .site-footer .row > :nth-child(2),
+            .site-footer .row > :nth-child(3),
+            .site-footer .row > :last-child {
+                padding: 0.8rem;
+                border-radius: 14px;
+            }
+
+            .site-footer .footer-heading {
+                margin-bottom: 0.55rem;
+                font-size: 0.66rem;
+            }
+
+            .site-footer .row > :nth-child(2) .d-flex,
+            .site-footer .row > :nth-child(3) .d-flex {
+                gap: 0.45rem !important;
+            }
+
+            .site-footer .footer-link {
+                font-size: 0.75rem;
+                overflow-wrap: anywhere;
+            }
+
+            .site-footer .row > :last-child .d-flex {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.55rem !important;
+            }
+
+            .site-footer .row > :last-child .footer-link {
+                display: flex;
+                align-items: flex-start;
+                min-width: 0;
+            }
+
+            .site-footer .row > :last-child .footer-link:nth-child(2) {
+                word-break: break-word;
+            }
+
+            .site-footer .row > :last-child .footer-link:last-child {
+                grid-column: 1 / -1;
+            }
+
+            .site-footer .footer-bottom {
+                min-height: 58px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-top: 0.75rem;
+                padding: 0.8rem 3.6rem 0;
+            }
+
+            .site-footer .footer-bottom p {
+                font-size: 0.7rem !important;
+                line-height: 1.4;
+            }
+        }
+
+        @media (max-width: 374.98px) {
+            .site-footer .row > :first-child > .d-flex:last-child {
+                grid-column: 1 / -1;
+                grid-row: 3;
+            }
+
+            .site-footer .row > :last-child .d-flex {
+                grid-template-columns: 1fr;
+            }
+
+            .site-footer .row > :last-child .footer-link:last-child {
+                grid-column: auto;
+            }
+        }
+
         /* ─── Nav Actions ─── */
         .nav-actions .btn-outline-primary,
         .nav-actions .btn-primary {
@@ -1021,26 +1363,71 @@
         }
 
         /* ─── Responsive ─── */
-        @media (max-width: 991.98px) {
+        @media (max-width: 1199.98px) {
             .client-search {
                 width: 100%;
-                margin-top: 0.75rem;
+                margin-top: 0;
             }
 
             .navbar-collapse {
-                margin-top: 1rem;
-                padding-top: 1rem;
+                margin-top: 0.5rem;
+                padding-top: 0.5rem;
                 border-top: 1px solid var(--c-border);
+            }
+
+            #clientNavbar .navbar-nav {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 0.35rem;
+                width: 100%;
+            }
+
+            #clientNavbar .nav-link {
+                min-height: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0.4rem 0.35rem !important;
+                text-align: center;
+                line-height: 1.2;
             }
 
             .nav-actions {
                 width: 100%;
-                align-items: stretch !important;
+                display: grid !important;
+                grid-template-columns: 40px 40px repeat(2, minmax(0, 1fr));
+                align-items: center !important;
+                gap: 0.5rem !important;
             }
 
-            .nav-actions .btn:not(.cart-button),
+            .nav-actions > .client-search,
+            .nav-actions > .active-group-return,
+            .nav-actions > form:has(.active-group-return) {
+                grid-column: 1 / -1;
+            }
+
+            .nav-actions > .favorite-nav-button { grid-column: 1; }
+            .nav-actions > [data-cart-button] { grid-column: 2; }
+            .nav-actions > .notification-dropdown { grid-column: 3; }
+            .nav-actions > .profile-dropdown { grid-column: 4; }
+            .nav-actions > .nav-login-button { grid-column: 3; }
+            .nav-actions > .nav-register-button { grid-column: 4; }
+
+            .nav-actions:has(.profile-dropdown) {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+
             .nav-actions .dropdown {
+                width: auto;
+                min-width: 0;
+            }
+
+            .nav-actions .nav-login-button,
+            .nav-actions .nav-register-button {
                 width: 100%;
+                min-width: 0;
+                padding-inline: 0.45rem;
+                font-size: 0.78rem;
             }
 
             .notification-button {
@@ -1050,6 +1437,156 @@
             .nav-actions .dropdown .user-avatar {
                 margin-left: auto;
                 margin-right: auto;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            #clientNavbar .nav-link {
+                min-height: 36px;
+                font-size: 0.72rem;
+            }
+
+            .nav-actions {
+                margin-top: 0.4rem !important;
+                gap: 0.4rem !important;
+                position: relative;
+            }
+
+            .client-search .form-control {
+                min-height: 40px;
+                padding-block: 0.4rem;
+                font-size: 0.8rem;
+            }
+
+            .client-search .btn {
+                min-width: 70px;
+                min-height: 40px;
+                padding: 0.4rem 0.7rem !important;
+                font-size: 0.78rem;
+            }
+
+            .nav-actions .nav-login-button,
+            .nav-actions .nav-register-button {
+                min-height: 40px;
+                padding-inline: 0.15rem;
+                font-size: 0.68rem;
+                white-space: nowrap;
+            }
+
+            .notification-dropdown {
+                position: static;
+            }
+
+            .notification-dropdown .notification-menu {
+                top: 100% !important;
+                right: 0 !important;
+                left: 0 !important;
+                width: auto !important;
+                max-width: none;
+                margin-top: 0.4rem !important;
+                transform: none !important;
+                border-radius: 12px;
+            }
+
+            .notification-dropdown .notification-list {
+                max-height: min(330px, calc(100dvh - 370px));
+            }
+
+            body:has(.notification-menu.show) .client-chatbox {
+                opacity: 0;
+                pointer-events: none;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            body {
+                font-size: 14px;
+                line-height: 1.5;
+            }
+
+            .container,
+            .container-fluid {
+                --bs-gutter-x: 1.5rem;
+            }
+
+            main :where(h1, .h1) { font-size: clamp(1.45rem, 7vw, 1.8rem); line-height: 1.15; }
+            main :where(h2, .h2) { font-size: clamp(1.2rem, 5.5vw, 1.45rem); line-height: 1.2; }
+            main :where(h3, .h3, .h4) { font-size: 1.05rem; line-height: 1.25; }
+
+            main .py-5 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+            main .py-4 { padding-top: 1.1rem !important; padding-bottom: 1.1rem !important; }
+            main .my-5 { margin-top: 1.5rem !important; margin-bottom: 1.5rem !important; }
+            main .my-4 { margin-top: 1.1rem !important; margin-bottom: 1.1rem !important; }
+            main .p-5 { padding: 1.25rem !important; }
+            main .p-4 { padding: 1rem !important; }
+            main .p-3 { padding: 0.75rem !important; }
+            main .gap-4 { gap: 0.8rem !important; }
+            main .gap-3 { gap: 0.6rem !important; }
+            main .mb-5 { margin-bottom: 1.5rem !important; }
+            main .mb-4 { margin-bottom: 1rem !important; }
+            main .mt-5 { margin-top: 1.5rem !important; }
+            main .mt-4 { margin-top: 1rem !important; }
+
+            main :where(.card, [class$="-card"], [class*="-card "]) {
+                border-radius: 14px;
+            }
+
+            main :where(.btn, button, [role="button"]) {
+                max-width: 100%;
+            }
+
+            main .btn-lg {
+                min-height: 42px;
+                padding: 0.5rem 0.85rem;
+                font-size: 0.86rem;
+            }
+
+            main :where(.form-control, .form-select) {
+                min-height: 42px;
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+
+            [data-availability-badge] {
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            [data-availability-badge] .availability-label-full { display: none; }
+            [data-availability-badge] .availability-label-compact { display: inline !important; }
+
+            .modal-dialog {
+                width: calc(100vw - 2rem) !important;
+                max-width: calc(100vw - 2rem) !important;
+                margin: 0.75rem auto !important;
+            }
+
+            .modal-content {
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+            }
+
+            .modal-header,
+            .modal-body,
+            .modal-footer {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            input:not([type="checkbox"]):not([type="radio"]),
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+
+            #flashNotifications {
+                top: max(0.75rem, env(safe-area-inset-top)) !important;
+                right: 0.75rem !important;
+                left: 0.75rem !important;
+                width: auto !important;
+                max-width: none !important;
             }
         }
 
@@ -1235,7 +1772,7 @@
     </div>
 
     <header class="site-header sticky-top" id="siteHeader">
-        <nav class="navbar navbar-expand-md container py-2">
+        <nav class="navbar navbar-expand-xl container py-2">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
                 <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                 <span class="brand-text">Chill Drink</span>
@@ -1246,7 +1783,7 @@
             </button>
 
             <div class="collapse navbar-collapse flex-grow-1" id="clientNavbar">
-                <ul class="navbar-nav ms-lg-4 gap-lg-1">
+                <ul class="navbar-nav ms-xl-4 gap-xl-1">
                     <li class="nav-item">
                         <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Trang Chủ</a>
                     </li>
@@ -1254,12 +1791,16 @@
                         <a href="{{ route('products.index') }}" class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}">Sản Phẩm</a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('order-lookup.index') }}" class="nav-link {{ request()->routeIs('order-lookup.*') ? 'active' : '' }}">Tra Cứu Đơn Hàng</a>
+                        <a href="{{ route('order-lookup.index') }}" class="nav-link {{ request()->routeIs('order-lookup.*') ? 'active' : '' }}">
+                            <span class="d-none d-sm-inline">Tra Cứu Đơn Hàng</span>
+                            <span class="d-sm-none">Tra Cứu Đơn</span>
+                        </a>
                     </li>
                 </ul>
 
-                <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-lg-auto mt-3 mt-lg-0">
-                    @if(!empty($pendingCheckoutGroup) && !request()->routeIs('checkout.*'))
+                <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-xl-auto mt-2 mt-xl-0">
+                    @if(!empty($pendingCheckoutGroup))
+                        @if(!request()->routeIs('checkout.*'))
                         @php
                             $pendingPaymentExpiresAt = ($pendingCheckoutGroup->order?->created_at ?? $pendingCheckoutGroup->locked_at)?->copy()->addMinutes(15);
                         @endphp
@@ -1284,6 +1825,7 @@
                                     <span class="active-group-return__time" data-pending-payment-countdown>--:--</span>
                                 </button>
                             </form>
+                        @endif
                         @endif
                     @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
                         <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
@@ -1319,7 +1861,7 @@
                     $avatarClass = $avatarIsPreset ? 'avatar-' . $avatar : 'avatar-preset-mint';
                     $avatarUrl = $avatar && ! $avatarIsPreset ? asset('storage/' . $avatar) : null;
                     @endphp
-                    <div class="dropdown">
+                    <div class="dropdown notification-dropdown">
                         <button class="notification-button dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo đơn hàng" id="clientNotificationButton">
                             <i class="bi bi-bell" style="font-size: 1.05rem;"></i>
                             @if(Auth::user()->unreadNotifications->count() > 0)
@@ -1395,7 +1937,7 @@
                         </div>
                     </div>
 
-                    <div class="dropdown text-center">
+                    <div class="dropdown profile-dropdown text-center">
                         <button class="user-avatar dropdown-toggle {{ $avatarClass }}" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản">
                             @if($avatarUrl)
                             <img src="{{ $avatarUrl }}" alt="{{ Auth::user()->name }}">
@@ -1422,8 +1964,8 @@
                         </ul>
                     </div>
                     @else
-                    <a href="{{ route('login') }}" class="btn btn-outline-primary {{ request()->routeIs('login') ? 'active' : '' }}">Đăng Nhập</a>
-                    <a href="{{ route('register') }}" class="btn btn-primary {{ request()->routeIs('register') ? 'active' : '' }}">Đăng Ký</a>
+                    <a href="{{ route('login') }}" class="nav-login-button btn btn-outline-primary {{ request()->routeIs('login') ? 'active' : '' }}">Đăng Nhập</a>
+                    <a href="{{ route('register') }}" class="nav-register-button btn btn-primary {{ request()->routeIs('register') ? 'active' : '' }}">Đăng Ký</a>
                     @endauth
                 </div>
             </div>
@@ -1433,6 +1975,22 @@
     <main style="min-height: {{ request()->routeIs('login', 'register', 'password.*', 'verification.*') ? 'calc(100dvh - 80px)' : '100vh' }}; overflow: {{ request()->routeIs('login', 'register', 'password.*', 'verification.*') ? 'hidden' : 'visible' }};">
         @yield('content')
     </main>
+
+    @if(request()->routeIs('products.*') && session('checkout_return_active'))
+        @php
+            $checkoutReturnQuantity = collect(session('cart', []))
+                ->sum(fn ($item) => max(1, (int) ($item['quantity'] ?? 1)));
+        @endphp
+        <div class="checkout-return-bar" role="region" aria-label="Quay lại thanh toán">
+            <div class="checkout-return-bar__copy">
+                <strong>Đang chọn thêm đồ uống</strong>
+                <span><span data-checkout-return-count>{{ $checkoutReturnQuantity }}</span> món trong giỏ · đơn hàng vẫn được giữ</span>
+            </div>
+            <a href="{{ route('checkout.index') }}" class="checkout-return-bar__button">
+                Thanh toán <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </a>
+        </div>
+    @endif
 
     @unless(request()->routeIs('login', 'register', 'password.*', 'verification.*'))
     <footer class="site-footer mt-5">
@@ -1495,7 +2053,9 @@
             && $currentMember;
     @endphp
     @if(!auth()->check() || auth()->user()?->isCustomer() || $isGroupOrderMember)
-        @include('components.chatbox')
+        @if(! View::hasSection('hide-client-chatbox'))
+            @include('components.chatbox')
+        @endif
     @endif
 
     @auth
@@ -1842,6 +2402,10 @@
                 badges.forEach((badge) => {
                     badge.textContent = data.count;
                     badge.classList.toggle('d-none', data.count < 1);
+                });
+
+                document.querySelectorAll('[data-checkout-return-count]').forEach((count) => {
+                    count.textContent = data.quantity_count ?? data.count;
                 });
 
                 if (isAddAction) {

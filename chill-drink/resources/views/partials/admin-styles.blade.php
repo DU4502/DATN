@@ -225,6 +225,19 @@ label, th, .badge { letter-spacing: -0.011em !important; }
     background: linear-gradient(135deg, #A7F3D0, var(--a-primary));
     color: #fff; font-weight: 700; font-size: 0.75rem;
     overflow: hidden; flex: 0 0 auto;
+    cursor: pointer;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--a-border);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.admin-avatar:hover, .admin-avatar[aria-expanded="true"] {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--a-primary-glow);
+}
+
+.admin-avatar:focus-visible {
+    outline: 3px solid var(--a-primary-glow);
+    outline-offset: 3px;
 }
 
 .admin-avatar img {

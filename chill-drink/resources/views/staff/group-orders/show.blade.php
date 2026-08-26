@@ -9,7 +9,6 @@
     $statusMap = ['open' => ['Đang mở', 'success'], 'closed' => ['Chờ thanh toán', 'warning'], 'ordered' => ['Đã đặt hàng', 'info'], 'cancelled' => ['Đã hủy', 'danger']];
     [$statusLabel, $statusColor] = $statusMap[$groupOrder->status] ?? [$groupOrder->status, 'secondary'];
     $changedBy = $groupOrder->status_changed_by ? \App\Models\User::find($groupOrder->status_changed_by) : null;
-    $allowedNext = ['open' => ['closed' => 'Đóng nhóm', 'cancelled' => 'Hủy đơn nhóm'], 'closed' => ['ordered' => 'Xác nhận đã đặt hàng', 'cancelled' => 'Hủy đơn nhóm']];
 @endphp
 <style>
     .admin-group-product { display:flex;align-items:center;gap:.85rem;min-width:280px; }
@@ -74,35 +73,6 @@
 @if($groupOrder->note)
 <div class="alert alert-light border mb-4">
     <i class="bi bi-chat-left-text me-2"></i>{{ $groupOrder->note }}
-</div>
-@endif
-
-<!-- Nút đổi trạng thái -->
-@if(isset($allowedNext[$groupOrder->status]) && count($allowedNext[$groupOrder->status]) > 0)
-<div class="admin-card p-4 mb-4">
-    <h5 class="fw-bold mb-3">Cập nhật trạng thái đơn nhóm</h5>
-    <div class="d-flex flex-wrap gap-3">
-        @foreach($allowedNext[$groupOrder->status] as $newStatus => $btnLabel)
-        <form action="{{ route('staff.group-orders.updateStatus', $groupOrder) }}" method="POST">
-            @csrf @method('PUT')
-            <input type="hidden" name="status" value="{{ $newStatus }}">
-            @if($newStatus === 'cancelled')
-                <button type="submit" class="btn btn-outline-danger"
-                        onclick="return confirm('Bạn có chắc muốn hủy đơn nhóm này?')">
-                    <i class="bi bi-x-circle me-2"></i>{{ $btnLabel }}
-                </button>
-            @elseif($newStatus === 'ordered')
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-check-circle me-2"></i>{{ $btnLabel }}
-                </button>
-            @else
-                <button type="submit" class="btn btn-primary" style="background:#00a870;border-color:#00a870;">
-                    <i class="bi bi-arrow-right-circle me-2"></i>{{ $btnLabel }}
-                </button>
-            @endif
-        </form>
-        @endforeach
-    </div>
 </div>
 @endif
 

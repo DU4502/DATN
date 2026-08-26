@@ -35,6 +35,9 @@
     );
     $shippingFee = $fulfillmentType === 'pickup' ? 0 : $shippingQuote['total_fee'];
     $availableVouchers = collect($availableVouchers ?? []);
+    $receivedVouchers = collect($receivedVouchers ?? []);
+    $ownedVoucherModels = $receivedVouchers->pluck('voucher')->filter();
+    $selectableVouchers = $availableVouchers->concat($ownedVoucherModels)->unique('id')->values();
     $loyaltyContext = $loyaltyContext ?? ['points' => 0];
     $selectedCheckoutAddress = collect($addressBook ?? [])->firstWhere('id', $selectedAddressId ?? 'primary');
     $selectedCheckoutPhone = trim((string) ($selectedCheckoutAddress['phone'] ?? $user->phone ?? ''));
@@ -56,8 +59,8 @@
     ]);
     $selectedVoucherCode = strtoupper(trim((string) old('voucher_code', '')));
     $selectedShippingVoucherCode = strtoupper(trim((string) old('shipping_voucher_code', '')));
-    $selectedVoucher = $availableVouchers->first(fn ($voucher) => ! $isShippingVoucher($voucher) && $voucher->code === $selectedVoucherCode && $canUseCheckoutVoucher($voucher));
-    $selectedShippingVoucher = $availableVouchers->first(fn ($voucher) => $isShippingVoucher($voucher) && $voucher->code === $selectedShippingVoucherCode && $canUseCheckoutVoucher($voucher));
+    $selectedVoucher = $selectableVouchers->first(fn ($voucher) => ! $isShippingVoucher($voucher) && $voucher->code === $selectedVoucherCode && $canUseCheckoutVoucher($voucher));
+    $selectedShippingVoucher = $selectableVouchers->first(fn ($voucher) => $isShippingVoucher($voucher) && $voucher->code === $selectedShippingVoucherCode && $canUseCheckoutVoucher($voucher));
     $orderDiscount = $selectedVoucher ? $selectedVoucher->discountFor((int) $total) : 0;
     $shippingDiscount = $selectedShippingVoucher ? min($shippingFee, $selectedShippingVoucher->discountFor((int) $total)) : 0;
     $discount = $orderDiscount + $shippingDiscount;
@@ -217,16 +220,16 @@
     }
 
     .checkout-item-img {
-        width: 64px;
-        height: 64px;
-        border-radius: 16px;
+        width: 54px;
+        height: 54px;
+        border-radius: 13px;
         object-fit: cover;
         background: var(--drink-soft);
         flex: 0 0 auto;
     }
-    .checkout-item-actions { display: flex; align-items: center; gap: .35rem; }
-    .checkout-item-actions button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--drink-border); border-radius: 50%; color: var(--drink-primary); background: #fff; }
-    .checkout-item-actions input { width: 34px; height: 28px; border: 1px solid var(--drink-border); border-radius: 999px; background: #fff; text-align: center; font-size: .9rem; font-weight: 700; color: var(--drink-ink); padding: 0 .15rem; }
+    .checkout-item-actions { display: flex; align-items: center; gap: .28rem; margin-top: .4rem !important; }
+    .checkout-item-actions button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--drink-border); border-radius: 50%; color: var(--drink-primary); background: #fff; font-size: .72rem; }
+    .checkout-item-actions input { width: 32px; height: 26px; border: 1px solid var(--drink-border); border-radius: 999px; background: #fff; text-align: center; font-size: .78rem; font-weight: 700; color: var(--drink-ink); padding: 0 .15rem; }
     .checkout-item-actions button:hover { background: var(--drink-soft); }
     .checkout-item-actions button:disabled { cursor: not-allowed; opacity: .4; }
     .checkout-item-actions button.is-remove { color: #dc3545; border-color: #f1c5cb; }
@@ -238,11 +241,11 @@
     .summary-card {
         position: sticky;
         top: 88px;
-        height: calc(100dvh - 112px);
-        max-height: calc(100dvh - 112px);
+        height: auto;
+        max-height: none;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        overflow: visible;
         border-color: rgba(0, 139, 122, 0.16);
         box-shadow: 0 24px 62px rgba(8, 42, 38, 0.09);
         z-index: 8;
@@ -250,36 +253,68 @@
 
     .summary-card-head {
         flex: 0 0 auto;
+        margin-bottom: .85rem !important;
+    }
+
+    .checkout-add-more {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        width: fit-content;
+        min-height: 34px;
+        margin-top: .35rem;
+        padding: .32rem .58rem;
+        border: 1px solid rgba(13, 147, 115, .22);
+        border-radius: 999px;
+        color: var(--drink-primary-dark);
+        background: var(--drink-soft);
+        font-size: .72rem;
+        font-weight: 800;
+        line-height: 1.15;
+        text-decoration: none;
+        transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
+    }
+
+    .checkout-add-more:hover {
+        border-color: var(--drink-primary);
+        color: #fff;
+        background: var(--drink-primary);
+        transform: translateY(-1px);
+    }
+
+    .checkout-add-more__icon {
+        display: grid;
+        place-items: center;
+        width: 21px;
+        height: 21px;
+        flex: 0 0 21px;
+        border-radius: 50%;
+        color: #fff;
+        background: var(--drink-primary);
+    }
+
+    .checkout-add-more:hover .checkout-add-more__icon {
+        color: var(--drink-primary);
+        background: #fff;
+    }
+
+    .checkout-add-more__arrow {
+        color: currentColor;
+        opacity: .68;
     }
 
     .summary-card-items {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        scrollbar-gutter: stable;
-        padding-right: 0.85rem;
+        flex: 0 0 auto;
+        min-height: auto;
+        overflow: visible;
+        scrollbar-gutter: auto;
+        padding-right: 0;
         margin-right: 0;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(18, 126, 112, 0.42) transparent;
     }
 
-    .summary-card-items::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .summary-card-items::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .summary-card-items::-webkit-scrollbar-thumb {
-        border-radius: 999px;
-        background: linear-gradient(180deg, rgba(18, 126, 112, 0.34), rgba(18, 126, 112, 0.62));
-        border: 2px solid rgba(255, 255, 255, 0.92);
-    }
-
-    .summary-card-items::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(180deg, rgba(18, 126, 112, 0.48), rgba(18, 126, 112, 0.78));
+    .summary-card-items .vstack {
+        gap: 0 !important;
+        margin-bottom: .75rem !important;
     }
 
     .summary-card-footer {
@@ -291,42 +326,82 @@
     }
 
     .summary-card .checkout-summary-item {
-        gap: 0.9rem !important;
+        gap: 0.65rem !important;
         align-items: flex-start !important;
-        padding-bottom: 0.95rem;
+        padding: .65rem 0;
         border-bottom: 1px solid #edf3f1;
+    }
+
+    .summary-card .checkout-summary-item:first-child { padding-top: .25rem; }
+
+    .checkout-summary-name {
+        overflow: hidden;
+        font-size: .82rem;
+        line-height: 1.25;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .summary-card .checkout-summary-item:last-child {
         border-bottom: 0;
-        padding-bottom: 0;
+        padding-bottom: .25rem;
+    }
+
+    .checkout-summary-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        width: 100%;
+        min-height: 34px;
+        margin-top: 0.15rem;
+        border: 1px solid rgba(13, 147, 115, 0.24);
+        border-radius: 12px;
+        color: var(--drink-primary-dark);
+        background: var(--drink-soft);
+        font-size: 0.72rem;
+        font-weight: 800;
+        transition: background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .checkout-summary-toggle:hover {
+        border-color: var(--drink-primary);
+        background: #dff5ef;
+    }
+
+    .checkout-summary-toggle i {
+        transition: transform 0.18s ease;
+    }
+
+    .checkout-summary-toggle[aria-expanded="true"] i {
+        transform: rotate(180deg);
     }
 
     .checkout-summary-meta {
-        margin-top: 0.15rem;
-        font-size: 0.83rem;
+        margin-top: 0.08rem;
+        font-size: 0.72rem;
         color: var(--drink-muted);
-        line-height: 1.45;
+        line-height: 1.35;
     }
 
     .checkout-summary-price-lines {
-        margin-top: 0.35rem;
-        font-size: 0.82rem;
-        line-height: 1.35;
+        margin-top: 0.18rem;
+        font-size: 0.7rem;
+        line-height: 1.3;
         color: var(--drink-muted);
     }
 
     .checkout-summary-unit-total {
-        margin-top: 0.15rem;
-        font-size: 0.9rem;
+        margin-top: 0.05rem;
+        font-size: 0.78rem;
         font-weight: 800;
         color: var(--drink-ink);
         white-space: nowrap;
     }
 
     .checkout-summary-grand-total {
-        margin-top: 0.18rem;
-        font-size: 1.02rem;
+        margin-top: 0.08rem;
+        font-size: 0.9rem;
         font-weight: 800;
         color: var(--drink-primary);
         white-space: nowrap;
@@ -335,6 +410,7 @@
     @media (max-width: 991.98px) {
         .summary-card {
             position: static;
+            height: auto;
             max-height: none;
             overflow: visible;
         }
@@ -349,13 +425,14 @@
     @media (min-width: 992px) {
         .checkout-page .col-lg-5 {
             position: relative;
+            align-self: stretch;
             min-height: 1px;
         }
 
         .summary-card {
-            position: fixed;
+            position: sticky;
             top: 88px;
-            width: auto;
+            width: 100%;
         }
     }
 
@@ -962,6 +1039,352 @@
     .pickup-fields.d-none {
         display: none !important;
     }
+
+    @media (max-width: 767.98px) {
+        .checkout-page {
+            padding: .75rem 0 1.75rem !important;
+        }
+
+        .checkout-page .container {
+            --bs-gutter-x: 1rem;
+        }
+
+        .checkout-page .row.g-4 {
+            --bs-gutter-y: .75rem;
+        }
+
+        .checkout-panel,
+        .checkout-voucher-panel,
+        .checkout-hero {
+            padding: .85rem !important;
+            margin-bottom: .75rem !important;
+            border-radius: 14px;
+        }
+
+        .checkout-panel > .d-flex.align-items-center.gap-3.mb-4,
+        .checkout-panel > .address-panel-head,
+        .checkout-voucher-panel .d-flex.gap-3 {
+            gap: .6rem !important;
+            margin-bottom: .65rem !important;
+        }
+
+        .checkout-step,
+        .checkout-hero .checkout-step,
+        .payment-icon,
+        .voucher-icon,
+        .shipping-auto-icon {
+            width: 34px;
+            height: 34px;
+            flex-basis: 34px;
+            border-radius: 10px;
+            font-size: .85rem;
+        }
+
+        .checkout-panel h2,
+        .checkout-voucher-panel h2 {
+            margin-bottom: .1rem !important;
+            font-size: .98rem !important;
+            line-height: 1.25;
+        }
+
+        .checkout-panel h2 + p,
+        .checkout-voucher-panel .voucher-selected-text {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 1;
+            font-size: .7rem;
+            line-height: 1.35;
+        }
+
+        .checkout-panel > .btn-group .btn {
+            min-height: 42px;
+            padding: .4rem .25rem;
+            font-size: .75rem;
+            line-height: 1.2;
+        }
+
+        .checkout-address-panel .address-panel-head {
+            padding: 0 !important;
+        }
+
+        .checkout-address-panel > .p-4 {
+            padding: .65rem 0 0 !important;
+        }
+
+        .selected-address-row {
+            gap: .5rem;
+            padding: .65rem !important;
+            border-radius: 11px;
+            font-size: .76rem;
+        }
+
+        .selected-address-row .address-selected-mark {
+            width: 26px;
+            height: 26px;
+            flex-basis: 26px;
+        }
+
+        .selected-address-row .address-line {
+            font-size: .7rem;
+            line-height: 1.35;
+        }
+
+        .checkout-input {
+            min-height: 40px;
+            padding: .45rem .7rem;
+            border-radius: 11px;
+            font-size: .84rem;
+        }
+
+        [data-find-nearest-branch] {
+            padding: .35rem .55rem;
+            font-size: .68rem;
+        }
+
+        .branch-select-note,
+        .checkout-panel .form-text,
+        .checkout-panel .invalid-feedback {
+            margin-top: .2rem;
+            font-size: .68rem;
+            line-height: 1.35;
+        }
+
+        .checkout-voucher-panel > .d-flex {
+            flex-wrap: nowrap !important;
+            gap: .45rem !important;
+        }
+
+        .checkout-voucher-panel > .d-flex > .d-flex {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .voucher-select-link {
+            flex: 0 0 auto;
+            font-size: .75rem;
+        }
+
+        .checkout-panel .row.g-3 {
+            --bs-gutter-x: .55rem;
+            --bs-gutter-y: .55rem;
+        }
+
+        .checkout-panel .payment-option,
+        .checkout-panel .delivery-choice {
+            font-size: .75rem;
+        }
+
+        .checkout-panel .payment-option .payment-card {
+            min-height: 82px;
+            gap: .45rem !important;
+            padding: .55rem !important;
+            border-radius: 11px;
+        }
+
+        .checkout-panel .payment-option .text-secondary,
+        .checkout-panel .delivery-choice .text-secondary {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            font-size: .65rem;
+            line-height: 1.3;
+        }
+
+        .checkout-panel .payment-option .col-md-6,
+        .checkout-panel .row.g-3 > .col-md-6 {
+            width: 50%;
+        }
+
+        .delivery-choice {
+            min-height: 76px;
+            padding: .6rem;
+            border-radius: 11px;
+        }
+
+        .scheduled-delivery-fields {
+            padding: .65rem;
+            border-radius: 11px;
+        }
+
+        .checkout-panel textarea.checkout-input {
+            min-height: 72px;
+        }
+
+        .summary-card {
+            height: auto;
+            max-height: none;
+            padding: .85rem !important;
+        }
+
+        .summary-card-head {
+            margin-bottom: .65rem !important;
+        }
+
+        .summary-card-head h2 {
+            font-size: 1rem !important;
+        }
+
+        .summary-card-head p,
+        .summary-card-head a:not(.checkout-add-more) {
+            font-size: .7rem !important;
+        }
+
+        .summary-card-items .vstack {
+            gap: .6rem !important;
+            margin-bottom: .65rem !important;
+        }
+
+        .summary-card .checkout-summary-item {
+            gap: .55rem !important;
+            padding-bottom: .6rem;
+        }
+
+        .checkout-item-img {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+        }
+
+        .checkout-summary-meta,
+        .checkout-summary-price-lines {
+            font-size: .68rem;
+            line-height: 1.3;
+        }
+
+        .checkout-summary-unit-total,
+        .checkout-summary-grand-total {
+            font-size: .78rem;
+        }
+
+        .summary-card-footer {
+            margin-top: .65rem;
+            padding-top: .65rem;
+        }
+
+        .summary-card-footer > .border-top {
+            padding-top: .65rem !important;
+        }
+
+        .summary-card-footer .d-flex.justify-content-between {
+            margin-bottom: .45rem !important;
+            font-size: .78rem;
+        }
+
+        .summary-card-footer .h4 {
+            margin-block: .65rem !important;
+            font-size: 1rem !important;
+        }
+
+        .summary-card-footer .mt-3 {
+            margin-top: .6rem !important;
+        }
+
+        .address-form-modal .modal-dialog {
+            height: calc(100dvh - 1rem);
+            margin: .5rem;
+        }
+
+        .address-modal .modal-header,
+        .address-modal .modal-body,
+        .address-modal .modal-footer {
+            padding: .8rem !important;
+        }
+
+        .address-modal-title {
+            font-size: 1.05rem;
+        }
+
+        .address-type-btn {
+            min-width: 0;
+            flex: 1 1 0;
+        }
+    }
+
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        .checkout-page > .container > form > .row > .col-lg-7 { width: 58.333333%; }
+        .checkout-page > .container > form > .row > .col-lg-5 { width: 41.666667%; }
+        .checkout-page > .container > form > .row { --bs-gutter-x: 1rem; }
+        .checkout-panel,
+        .checkout-voucher-panel { padding: 1.25rem !important; border-radius: 18px; }
+        .summary-card { height: auto; max-height: none; }
+    }
+
+    @media (max-width: 575.98px) {
+        .summary-card-head {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center !important;
+            gap: .6rem !important;
+        }
+
+        .summary-card-head .payment-icon {
+            width: 36px;
+            height: 36px;
+            flex-basis: 36px;
+        }
+
+        .checkout-add-more {
+            min-height: 36px;
+            margin-top: .35rem;
+            padding: .35rem .6rem;
+            font-size: .72rem;
+        }
+
+        .checkout-add-more__icon {
+            width: 22px;
+            height: 22px;
+            flex-basis: 22px;
+        }
+
+        .summary-card .checkout-summary-item {
+            display: grid !important;
+            grid-template-columns: 48px minmax(0, 1fr) auto;
+            align-items: start !important;
+            gap: .55rem !important;
+        }
+
+        .summary-card .checkout-summary-item > .flex-grow-1 {
+            min-width: 0;
+        }
+
+        .summary-card .checkout-summary-item > .text-end {
+            margin-left: 0 !important;
+        }
+
+        .checkout-summary-toggle {
+            min-height: 38px;
+            border-radius: 10px;
+            font-size: .72rem;
+        }
+    }
+
+    @media (max-width: 419.98px) {
+        .summary-card .checkout-summary-item {
+            grid-template-columns: 42px minmax(0, 1fr);
+        }
+
+        .summary-card .checkout-item-img {
+            width: 42px;
+            height: 42px;
+        }
+
+        .summary-card .checkout-summary-item > .text-end {
+            grid-column: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            text-align: left !important;
+        }
+
+        .checkout-summary-unit-total,
+        .checkout-summary-grand-total {
+            margin-top: 0;
+            font-size: .72rem;
+        }
+    }
 </style>
 
 <section class="checkout-page py-5">
@@ -1312,17 +1735,31 @@
                             <div class="min-w-0">
                                 <h2 class="h4 fw-bold mb-1">Đơn hàng của bạn</h2>
                                 <p class="text-secondary mb-0"><span data-checkout-item-count>{{ count($cart) }}</span> món trong giỏ</p>
-                                <a href="{{ route('products.index') }}" class="small fw-semibold text-primary text-decoration-none text-nowrap"><i class="bi bi-plus-circle me-1"></i>Thêm món khác</a>
+                                <a href="{{ $isGroupCheckout && $groupCheckoutGroup ? route('group-orders.show', $groupCheckoutGroup->code) : route('products.index', ['from' => 'checkout']) }}"
+                                   class="checkout-add-more"
+                                   aria-label="{{ $isGroupCheckout ? 'Quay lại phòng nhóm để thêm món' : 'Chọn thêm đồ uống vào đơn hàng' }}">
+                                    <span class="checkout-add-more__icon"><i class="bi bi-plus-lg" aria-hidden="true"></i></span>
+                                    <span>{{ $isGroupCheckout ? 'Thêm món nhóm' : 'Chọn thêm món' }}</span>
+                                    <i class="bi bi-arrow-right checkout-add-more__arrow" aria-hidden="true"></i>
+                                </a>
                             </div>
                             <span class="payment-icon"><i class="bi bi-receipt"></i></span>
                         </div>
 
                         <div class="summary-card-items">
-                            <div class="vstack gap-3 mb-4">
+                            <div class="vstack gap-3 mb-3" data-checkout-summary-list>
                                 @foreach($cart as $cartKey => $item)
-                                    @include('client.checkout._summary-item')
+                                    @include('client.checkout._summary-item', ['extra' => $loop->index >= 3])
                                 @endforeach
                             </div>
+                            <button type="button"
+                                    class="checkout-summary-toggle {{ count($cart) <= 3 ? 'd-none' : '' }}"
+                                    data-checkout-summary-toggle
+                                    data-expanded="false"
+                                    aria-expanded="false">
+                                <span data-checkout-summary-toggle-label>Xem thêm {{ max(0, count($cart) - 3) }} món</span>
+                                <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                            </button>
                         </div>
 
                         <div class="summary-card-footer">
@@ -1562,7 +1999,7 @@
                             @php
                                 $voucher = $userVoucher->voucher;
                                 if (!$voucher) continue;
-                                $isSupportVoucher = \Illuminate\Support\Str::startsWith(\Illuminate\Support\Str::upper((string) $voucher->code), 'HT');
+                                $isSupportVoucher = $voucher->isPersonalSupportVoucher();
                                 
                                 $voucherIsShipping = $isShippingVoucher($voucher);
                                 $voucherDiscount = $voucher->discountFor((int) $total);
@@ -1760,6 +2197,35 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const checkoutSummaryList = document.querySelector('[data-checkout-summary-list]');
+        const checkoutSummaryToggle = document.querySelector('[data-checkout-summary-toggle]');
+
+        function syncCheckoutSummaryItems() {
+            if (!checkoutSummaryList || !checkoutSummaryToggle) return;
+
+            const rows = Array.from(checkoutSummaryList.querySelectorAll('[data-checkout-item]'));
+            const extraCount = Math.max(0, rows.length - 3);
+            const expanded = checkoutSummaryToggle.dataset.expanded === 'true' && extraCount > 0;
+
+            rows.forEach((row, index) => {
+                row.classList.toggle('d-none', !expanded && index >= 3);
+            });
+
+            checkoutSummaryToggle.classList.toggle('d-none', extraCount === 0);
+            checkoutSummaryToggle.dataset.expanded = expanded ? 'true' : 'false';
+            checkoutSummaryToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            const label = checkoutSummaryToggle.querySelector('[data-checkout-summary-toggle-label]');
+            if (label) label.textContent = expanded ? 'Thu gọn' : `Xem thêm ${extraCount} món`;
+        }
+
+        checkoutSummaryToggle?.addEventListener('click', () => {
+            checkoutSummaryToggle.dataset.expanded = checkoutSummaryToggle.dataset.expanded === 'true' ? 'false' : 'true';
+            syncCheckoutSummaryItems();
+        });
+
+        window.syncCheckoutSummaryItems = syncCheckoutSummaryItems;
+        syncCheckoutSummaryItems();
+
         const shippingAddressInput = document.getElementById('shipping_address_ui');
         const shippingAreaInput = document.getElementById('shipping_area_ui');
         const shippingPhoneInput = document.getElementById('shipping_phone_ui');
@@ -1811,9 +2277,6 @@
         const summaryShippingFee = document.getElementById('summaryShippingFee');
         const summaryShippingDistance = document.getElementById('summaryShippingDistance');
         const summaryGrandTotal = document.getElementById('summaryGrandTotal');
-        const summaryColumn = document.querySelector('.checkout-page .col-lg-5');
-        const summaryCard = document.querySelector('.summary-card');
-        const summaryCardItems = document.querySelector('.summary-card-items');
         const branchSelectShell = document.querySelector('.branch-select-shell');
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
         const isGroupCheckout = @json($isGroupCheckout ?? false);
@@ -1830,57 +2293,6 @@
         const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
         const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
         const prepaidPaymentInput = document.querySelector('input[name="payment_method"][value="vnpay"]');
-
-        function syncSummaryCardDock() {
-            if (!summaryCard || !summaryColumn) {
-                return;
-            }
-
-            if (window.innerWidth < 992) {
-                summaryCard.style.removeProperty('position');
-                summaryCard.style.removeProperty('left');
-                summaryCard.style.removeProperty('width');
-                summaryCard.style.removeProperty('top');
-                return;
-            }
-
-            const columnRect = summaryColumn.getBoundingClientRect();
-            summaryCard.style.position = 'fixed';
-            summaryCard.style.left = `${Math.max(0, columnRect.left)}px`;
-            summaryCard.style.width = `${Math.max(0, columnRect.width)}px`;
-            summaryCard.style.top = '88px';
-        }
-
-        syncSummaryCardDock();
-        window.addEventListener('resize', syncSummaryCardDock);
-        window.addEventListener('load', syncSummaryCardDock);
-
-        if (summaryCard && summaryCardItems) {
-            summaryCard.addEventListener('wheel', function (event) {
-                if (!summaryCard.contains(event.target)) {
-                    return;
-                }
-
-                const maxScrollTop = Math.max(0, summaryCardItems.scrollHeight - summaryCardItems.clientHeight);
-                const currentScrollTop = summaryCardItems.scrollTop;
-                const scrollingDown = event.deltaY > 0;
-                const scrollingUp = event.deltaY < 0;
-                const atTop = currentScrollTop <= 0;
-                const atBottom = currentScrollTop >= maxScrollTop - 1;
-                const canScrollDown = scrollingDown && !atBottom;
-                const canScrollUp = scrollingUp && !atTop;
-
-                if (canScrollDown || canScrollUp) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    summaryCardItems.scrollTop = Math.min(maxScrollTop, Math.max(0, currentScrollTop + event.deltaY));
-                    return;
-                }
-
-                event.preventDefault();
-                event.stopPropagation();
-            }, { passive: false, capture: true });
-        }
 
         function syncScheduledPaymentRule() {
             const scheduledInput = document.querySelector('input[name="delivery_type"][value="scheduled"]');
@@ -2171,9 +2583,7 @@
         function applyCheckoutUpdate(payload, method, row, cartKey) {
             if (method === 'DELETE') {
                 row?.remove();
-                const visibleItems = document.querySelectorAll('[data-checkout-item]:not(.d-none)').length;
-                const hiddenItems = Array.from(document.querySelectorAll('[data-checkout-item].d-none'));
-                hiddenItems.slice(0, Math.max(0, 3 - visibleItems)).forEach((item) => item.classList.remove('d-none'));
+                window.syncCheckoutSummaryItems?.();
             } else {
                 const item = payload.items?.[cartKey];
                 if (row && item) {
@@ -3662,6 +4072,8 @@
                     showAddressHouseNumberWarning('Vui lòng cập nhật địa chỉ và xác nhận lại vị trí trên bản đồ cho đơn hàng này.', true);
                     addressListModal.show();
                 }
+            }
+
             if (!fulfillmentDeliveryInput?.checked || hasHouseNumber(shippingAddressInput?.value || '')) {
                 clearAddressHouseNumberWarning();
                 hideAddressHouseNumberWarning();

@@ -233,7 +233,33 @@
 
     @media (max-width: 767.98px) {
         .cart-page {
-            padding-top: 2rem;
+            padding: .85rem 0 2rem;
+        }
+
+        .cart-page .container {
+            --bs-gutter-x: 1rem;
+        }
+
+        .cart-page .cart-title {
+            font-size: 1.55rem;
+        }
+
+        .cart-page .section-kicker {
+            margin-bottom: .15rem !important;
+            font-size: .68rem;
+        }
+
+        .cart-page > .container > .mb-5 {
+            margin-bottom: .8rem !important;
+        }
+
+        .cart-top-actions {
+            min-height: 0;
+            margin-bottom: .65rem !important;
+        }
+
+        .cart-top-actions .btn {
+            padding-block: .25rem;
         }
 
         .cart-summary-sticky {
@@ -241,29 +267,229 @@
         }
 
         .cart-items-card {
-            border-radius: 22px;
-            max-height: 58vh;
+            border-radius: 14px;
+            max-height: none;
+            overflow: visible;
         }
 
         .cart-item-card {
             border-radius: 0;
+            padding: .75rem !important;
         }
 
         .cart-item-image {
-            width: 92px;
-            height: 92px;
+            width: 68px;
+            height: 68px;
         }
 
         .cart-select-toolbar {
-            align-items: flex-start;
-            flex-direction: column;
-            border-radius: 18px;
+            align-items: center;
+            flex-direction: row;
+            gap: .5rem;
+            padding: .65rem .7rem;
+            border-radius: 14px;
+            font-size: .78rem;
         }
 
         .cart-select-meta {
-            width: 100%;
-            justify-content: space-between;
+            width: auto;
+            margin-left: auto;
+            gap: .4rem;
         }
+
+        .cart-select-meta > .text-secondary {
+            display: none;
+        }
+
+        .cart-clear-all {
+            gap: .25rem;
+            padding: .42rem .6rem !important;
+            font-size: .75rem;
+        }
+
+        .cart-select-toolbar > label {
+            gap: .45rem !important;
+        }
+
+        .cart-item-layout {
+            display: grid !important;
+            grid-template-columns: 30px 68px minmax(0, 1fr);
+            align-items: center !important;
+            gap: .6rem !important;
+        }
+
+        .cart-select-check {
+            width: 30px;
+            height: 30px;
+        }
+
+        .cart-select-check .form-check-input {
+            width: .95rem;
+            height: .95rem;
+        }
+
+        .cart-item-info {
+            min-width: 0;
+        }
+
+        .cart-item-info h2 {
+            overflow: hidden;
+            margin-bottom: .15rem !important;
+            font-size: .95rem !important;
+            line-height: 1.25;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cart-item-info p {
+            overflow: hidden;
+            margin-bottom: .1rem !important;
+            font-size: .7rem !important;
+            line-height: 1.3;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cart-item-info > .fw-bold {
+            font-size: .85rem !important;
+        }
+
+        .cart-item-controls {
+            grid-column: 2 / -1;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between;
+            gap: .5rem !important;
+            padding-top: .1rem;
+        }
+
+        .cart-qty input {
+            width: 34px;
+            padding: .35rem .1rem;
+        }
+
+        .cart-qty button {
+            width: 30px;
+            height: 30px;
+        }
+
+        .cart-item-total {
+            gap: .35rem !important;
+        }
+
+        .cart-item-total strong {
+            font-size: .9rem !important;
+        }
+
+        .cart-remove {
+            width: 30px;
+            height: 30px;
+        }
+
+        .cart-summary-card {
+            padding: 1rem !important;
+            border-radius: 14px;
+        }
+
+        .cart-summary-card h2 {
+            margin-bottom: .8rem !important;
+        }
+
+        .cart-summary-card .d-flex.justify-content-between {
+            margin-bottom: .55rem !important;
+            font-size: .82rem;
+        }
+
+        .cart-summary-card .h4 {
+            margin-block: .8rem !important;
+            font-size: 1.05rem !important;
+        }
+
+        .cart-summary-card .mt-4 {
+            margin-top: .75rem !important;
+        }
+
+        .cart-page .row.g-5 {
+            --bs-gutter-y: .8rem;
+        }
+
+        .cart-suggestions {
+            margin-top: 1.5rem !important;
+            padding-top: 0 !important;
+        }
+
+        .cart-suggestions .section-title {
+            margin-bottom: .75rem !important;
+            font-size: 1.3rem !important;
+        }
+
+        .cart-suggestions .row {
+            --bs-gutter-x: .65rem;
+            --bs-gutter-y: .65rem;
+        }
+
+        .cart-recommend-card {
+            border-radius: 12px;
+        }
+
+        .recommend-image {
+            border-radius: 12px 12px 0 0;
+        }
+
+        .cart-recommend-card > .p-3 {
+            min-height: 78px;
+            padding: .55rem 2.35rem .55rem .55rem !important;
+        }
+
+        .cart-recommend-card h3 {
+            overflow: hidden;
+            font-size: .82rem !important;
+            line-height: 1.25;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cart-recommend-card p {
+            font-size: .78rem;
+        }
+
+        .cart-recommend-actions {
+            top: .45rem;
+            right: .4rem;
+            bottom: .45rem;
+        }
+
+        .cart-recommend-action {
+            width: 30px;
+            height: 30px;
+        }
+
+        .cart-recommend-action i {
+            font-size: .85rem;
+        }
+    }
+
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        .cart-page { padding: 1.5rem 0 3rem; }
+        .cart-page > .container > .row > .col-lg-8 { width: 66.666667%; }
+        .cart-page > .container > .row > .col-lg-4 { width: 33.333333%; }
+        .cart-page .row.g-5 { --bs-gutter-x: 1rem; }
+        .cart-items-card,
+        .cart-select-toolbar,
+        .cart-summary-card { border-radius: 16px; }
+        .cart-item-card { padding: 1rem !important; }
+        .cart-item-image { width: 76px; height: 76px; }
+        .cart-item-layout { gap: .8rem !important; }
+        .cart-item-info h2 { font-size: 1rem !important; }
+        .cart-item-controls { gap: .65rem !important; }
+        .cart-summary-card { padding: 1rem !important; }
+        .cart-summary-card h2 { margin-bottom: 1rem !important; }
+        .cart-summary-card .d-flex.justify-content-between { gap: .5rem; font-size: .78rem; }
+        .cart-suggestions { margin-top: 2rem !important; padding-top: 0 !important; }
+        .cart-suggestions .col-6 { width: 25%; }
+        .cart-suggestions .row { --bs-gutter-x: .75rem; }
+        .cart-recommend-card > .p-3 { min-height: 90px; padding-right: 3rem !important; }
+        .cart-recommend-action { width: 34px; height: 34px; }
     }
 </style>
 
@@ -315,7 +541,7 @@
                             @endphp
 
                             <div class="cart-item-card p-3 p-md-4" data-cart-row data-cart-key="{{ $id }}" data-cart-subtotal-value="{{ $subtotal }}">
-                                <div class="d-flex flex-column flex-md-row align-items-md-center gap-3 gap-md-4">
+                                <div class="cart-item-layout d-flex flex-column flex-md-row align-items-md-center gap-3 gap-md-4">
                                     <label class="cart-select-check" aria-label="Chọn {{ $item['name'] }}">
                                         <input class="form-check-input" type="checkbox" name="items[]" value="{{ $id }}" checked data-cart-select-item>
                                     </label>
@@ -330,7 +556,7 @@
                                         :width="400"
                                     />
 
-                                    <div class="flex-grow-1">
+                                    <div class="cart-item-info flex-grow-1">
                                         <h2 class="h4 fw-bold mb-1">{{ $item['name'] }}</h2>
                                         <p class="text-secondary small mb-1">
                                             {{ $item['size_label'] ?? 'Kích cỡ M' }}
@@ -349,7 +575,7 @@
                                         <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
                                     </div>
 
-                                    <div class="d-flex flex-column align-items-md-end gap-3">
+                                    <div class="cart-item-controls d-flex flex-column align-items-md-end gap-3">
                                         <form action="{{ route('cart.update', $id) }}" method="POST" class="cart-qty" data-ajax-cart data-cart-qty-form>
                                             @csrf
                                             @method('PATCH')
@@ -358,7 +584,7 @@
                                             <button type="button" data-cart-qty-plus aria-label="Tăng số lượng">+</button>
                                         </form>
 
-                                        <div class="d-flex align-items-center gap-3">
+                                        <div class="cart-item-total d-flex align-items-center gap-3">
                                             <strong class="h5 text-primary mb-0" data-cart-subtotal="{{ $id }}">{{ number_format($subtotal, 0, ',', '.') }}đ</strong>
                                             <form action="{{ route('cart.remove', $id) }}" method="POST" data-ajax-cart data-cart-remove="true">
                                                 @csrf
@@ -428,11 +654,11 @@
             </div>
 
             @if(isset($suggestions) && $suggestions->isNotEmpty())
-                <section class="mt-5 pt-5">
+                <section class="cart-suggestions mt-5 pt-5">
                     <h2 class="section-title h1 mb-4">Gợi ý thêm</h2>
                     <div class="row g-4">
                         @foreach($suggestions->take(4) as $product)
-                            <div class="col-sm-6 col-lg-3">
+                            <div class="col-6 col-lg-3">
                                 <div class="cart-recommend-wrap">
                                 <div class="cart-recommend-actions">
                                     @auth

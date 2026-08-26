@@ -121,19 +121,6 @@
                         <div class="d-flex gap-2 justify-content-center align-items-center">
                             <a href="{{ route('staff.group-orders.show', $group) }}" class="btn btn-sm btn-outline-primary">Chi tiết</a>
 
-                            @if(in_array($group->status, ['open', 'closed']))
-                            <form action="{{ route('staff.group-orders.updateStatus', $group) }}" method="POST" class="mb-0">
-                                @csrf @method('PUT')
-                                @if($group->status === 'open')
-                                    <input type="hidden" name="status" value="cancelled">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('Hủy đơn nhóm này?')">Hủy</button>
-                                @elseif($group->status === 'closed')
-                                    <input type="hidden" name="status" value="ordered">
-                                    <button type="submit" class="btn btn-sm btn-success">Xác nhận đặt</button>
-                                @endif
-                            </form>
-                            @endif
                         </div>
                     </td>
                 </tr>

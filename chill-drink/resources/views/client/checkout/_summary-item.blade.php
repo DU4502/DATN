@@ -11,12 +11,13 @@
 <div class="d-flex gap-3 align-items-start checkout-summary-item {{ !empty($extra) ? 'd-none' : '' }}" data-checkout-item="{{ $cartKey }}" @if(!empty($extra)) data-checkout-extra-item @endif>
     <img src="{{ $item['image'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80' }}" alt="{{ $item['name'] }}" class="checkout-item-img">
     <div class="flex-grow-1 min-w-0">
-        <div class="fw-bold">{{ $item['name'] }}</div>
+        <div class="checkout-summary-name fw-bold">{{ $item['name'] }}</div>
         <div class="checkout-summary-meta">
             {{ $item['size_label'] ?? 'Kích cỡ M' }} · Số lượng: <span data-checkout-item-quantity-text>{{ $quantity }}</span>
         </div>
+        @if($sizeExtra > 0 || $toppings->isNotEmpty())
         <div class="checkout-summary-price-lines">
-            @if($basePrice > 0)
+            @if($basePrice > 0 && ($sizeExtra > 0 || $toppings->isNotEmpty()))
                 <div>Giá gốc: <span class="text-dark fw-semibold">{{ number_format($basePrice, 0, ',', '.') }}đ</span></div>
             @endif
             @if($sizeExtra > 0)
@@ -35,6 +36,7 @@
                 @endif
             @endif
         </div>
+        @endif
         <div class="checkout-summary-meta">
             Đường {{ $item['sugar_level'] ?? 100 }}% · Đá {{ $item['ice_level'] ?? 100 }}%
         </div>

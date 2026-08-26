@@ -66,6 +66,39 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertDatabaseHas('group_orders', ['owner_id' => $owner->id, 'name' => 'Phòng mới', 'status' => 'open']);
     }
 
+    public function test_customer_cannot_create_another_group_while_group_checkout_is_pending(): void
+    {
+        $owner = User::factory()->create();
+        $branch = $this->activeBranch();
+        $pending = GroupOrder::create([
+            'owner_id' => $owner->id,
+            'branch_id' => $branch->id,
+            'name' => 'Phòng đang thanh toán',
+            'code' => 'PENDING1',
+            'status' => 'closed',
+            'locked_at' => now(),
+            'closes_at' => now()->addMinutes(30),
+        ]);
+
+        $this->actingAs($owner)
+            ->withSession(['checkout_group_order_id' => $pending->id])
+            ->get(route('group-orders.create'))
+            ->assertRedirect(route('checkout.index'))
+            ->assertSessionHas('error');
+
+        $this->actingAs($owner)
+            ->withSession(['checkout_group_order_id' => $pending->id])
+            ->post(route('group-orders.store'), [
+                'name' => 'Phòng không được tạo song song',
+                'branch_id' => $branch->id,
+                'closes_at' => now()->addHour()->format('Y-m-d H:i:s'),
+            ])
+            ->assertRedirect(route('checkout.index'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseMissing('group_orders', ['name' => 'Phòng không được tạo song song']);
+    }
+
     public function test_group_order_cannot_close_less_than_five_minutes_after_creation(): void
     {
         $owner = User::factory()->create();
@@ -335,7 +368,7 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertDatabaseHas('group_orders', ['id' => $group->id]);
         $group->refresh();
         $this->assertNotNull($group->order_id);
-        $this->assertSame('ordered', $group->status);
+        $this->assertSame('closed', $group->status);
         $this->assertSame('awaiting_payment', $group->order->status);
         $this->assertTrue($group->order->scheduled_at->equalTo($scheduledAt));
         $this->assertSame($personalCart, session('cart'));
@@ -380,6 +413,27 @@ class QuickOrderFeaturesTest extends TestCase
         ])->assertSessionHasErrors('payment_method');
 
         $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_admin_cannot_manually_mark_an_unpaid_group_as_ordered(): void
+    {
+        [$group] = $this->openGroup();
+        $branch = $this->activeBranch();
+        $group->update(['branch_id' => $branch->id, 'status' => 'closed', 'locked_at' => now()]);
+        $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.group-orders.show', $group))
+            ->assertOk()
+            ->assertDontSee('name="status"', false);
+
+        $this->actingAs($admin)
+            ->from(route('admin.group-orders.show', $group))
+            ->put(route('admin.group-orders.updateStatus', $group), ['status' => 'ordered'])
+            ->assertRedirect(route('admin.group-orders.show', $group))
+            ->assertSessionHas('error');
+
+        $this->assertSame('closed', $group->fresh()->status);
     }
 
     public function test_customer_in_open_group_cannot_add_personal_cart_item(): void
@@ -457,7 +511,7 @@ class QuickOrderFeaturesTest extends TestCase
             ->assertSee('data-vue-group-chat', false)
             ->assertSee('Trò chuyện trong đơn nhóm')
             ->assertSee('Hỗ trợ khách hàng')
-            ->assertSee('groupOrderCode: "'.$group->code.'"', false)
+            ->assertSee('groupOrderCode: &quot;'.$group->code.'&quot;', false)
             ->assertSee('groupBranchId: '.$group->branch_id, false);
 
         $chat = $this->getJson(route('chat.index', ['group_order_code' => $group->code]))

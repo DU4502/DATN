@@ -41,7 +41,6 @@ use App\Http\Controllers\Client\OrderIssueReportController as ClientOrderIssueRe
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\OrderDeliveryChatController;
 use App\Http\Controllers\OrderShipmentIncidentController;
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -385,8 +384,6 @@ Route::post('/register/guest-convert', [GuestConvertController::class, 'store'])
 Route::get('/checkout/success/{order}', [CheckoutController::class, 'success'])->name('checkout.success');
 Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name('vnpay.payment');
 
-Broadcast::routes(['middleware' => ['web', 'auth']]);
-
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('verified')->name('checkout.index');
@@ -567,6 +564,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSu
         Route::get('/shipper-incidents', [ShipperIncidentController::class, 'index'])->name('shipper-incidents.index');
         Route::get('/shipper-incidents/feed', [ShipperIncidentController::class, 'feed'])->name('shipper-incidents.feed');
         Route::get('/order-issues', [AdminOrderIssueReportController::class, 'index'])->name('order-issues.index');
+        Route::get('/order-issues-pending/count', [AdminOrderIssueReportController::class, 'pendingCount'])->name('order-issues.pending-count');
         Route::patch('/order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
         Route::get('/order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
         Route::get('/cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
@@ -636,6 +634,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
     Route::get('shipper-incidents', [ShipperIncidentController::class, 'index'])->name('shipper-incidents.index');
     Route::get('shipper-incidents/feed', [ShipperIncidentController::class, 'feed'])->name('shipper-incidents.feed');
     Route::get('order-issues', [AdminOrderIssueReportController::class, 'index'])->name('order-issues.index');
+    Route::get('order-issues-pending/count', [AdminOrderIssueReportController::class, 'pendingCount'])->name('order-issues.pending-count');
     Route::patch('order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
     Route::get('order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
     Route::get('cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');

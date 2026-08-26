@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\User;
+use App\Models\UserVoucher;
 use App\Models\Voucher;
 use App\Support\ShippingFee;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,6 +65,35 @@ class CheckoutVoucherTest extends TestCase
             ->assertSee('VNPay')
             ->assertDontSee('Chuyển khoản ngân hàng')
             ->assertDontSee('Ví Momo');
+    }
+
+    public function test_checkout_summary_shows_three_items_before_expanding(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $cart = [];
+
+        foreach (range(1, 4) as $index) {
+            $cart['cart-'.$index] = [
+                'product_id' => $product->id,
+                'product_size_id' => $productSize->id,
+                'name' => $product->name.' '.$index,
+                'price' => 100000,
+                'quantity' => 1,
+                'size' => 'M',
+            ];
+        }
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['cart' => $cart])
+            ->get(route('checkout.index'));
+
+        $response->assertOk();
+        $response->assertSee('Xem thêm 1 món');
+        $response->assertSee('data-checkout-summary-toggle', false);
+        $this->assertSame(4, substr_count($response->getContent(), 'data-checkout-item="'));
+        $this->assertSame(1, substr_count($response->getContent(), 'data-checkout-extra-item'));
     }
 
     public function test_checkout_rejects_removed_payment_methods(): void
@@ -237,6 +267,71 @@ class CheckoutVoucherTest extends TestCase
         $response->assertSee('MIN200');
         $response->assertDontSee('Voucher này đang là giao diện demo');
         $response->assertDontSee('SHIP15');
+    }
+
+    public function test_issue_support_voucher_is_only_visible_to_its_owner(): void
+    {
+        $owner = $this->customer();
+        $otherCustomer = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $voucher = Voucher::factory()->create([
+            'code' => 'HT000123-OWNER',
+            'type' => Voucher::TYPE_FIXED,
+            'value' => 95000,
+            'min_order' => 0,
+            'usage_limit' => 1,
+            'used_count' => 0,
+            'status' => true,
+            'starts_at' => now()->subMinute(),
+            'expires_at' => now()->addDays(30),
+        ]);
+        UserVoucher::create([
+            'user_id' => $owner->id,
+            'coupon_id' => $voucher->id,
+            'code' => $voucher->code,
+            'is_used' => false,
+            'expires_at' => $voucher->expires_at,
+            'redeemed_at' => now(),
+        ]);
+        $cart = [
+            'cart-1' => [
+                'product_id' => $product->id,
+                'product_size_id' => $productSize->id,
+                'name' => $product->name,
+                'price' => 100000,
+                'quantity' => 1,
+                'size' => 'M',
+            ],
+        ];
+
+        $this->actingAs($owner)
+            ->withSession(['cart' => $cart])
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee($voucher->code)
+            ->assertSee('HỖ TRỢ ĐƠN HÀNG');
+
+        $this->actingAs($otherCustomer)
+            ->withSession(['cart' => $cart])
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertDontSee($voucher->code);
+
+        $this->actingAs($otherCustomer)
+            ->withSession(['cart' => $cart])
+            ->from(route('checkout.index'))
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
+                'fulfillment_type' => 'pickup',
+                'branch_id' => $this->activeBranch()->id,
+                'voucher_code' => $voucher->code,
+            ])
+            ->assertRedirect(route('checkout.index'))
+            ->assertSessionHas('error', 'Voucher hỗ trợ này không thuộc tài khoản của bạn.');
+
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_customer_can_apply_valid_voucher_during_checkout(): void

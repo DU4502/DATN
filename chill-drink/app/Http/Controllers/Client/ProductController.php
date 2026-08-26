@@ -21,6 +21,10 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
+        if ($request->query('from') === 'checkout') {
+            session()->put('checkout_return_active', true);
+        }
+
         $branch = app(ProductAvailabilityService::class)->currentBranch();
         $query = Product::query()->with([
             'category',
@@ -303,8 +307,9 @@ class ProductController extends Controller
                 'message' => 'Sản phẩm demo chưa hỗ trợ đánh giá.',
                 'remaining_reviews' => 0,
             ];
+            $isFavorite = false;
 
-            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState', 'branch'));
+            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState', 'branch', 'isFavorite'));
         }
 
         // Get related products
@@ -323,6 +328,12 @@ class ProductController extends Controller
                 'message' => 'Tính năng đánh giá chưa sẵn sàng.',
                 'remaining_reviews' => 0,
             ];
+        $isFavorite = $request->user()
+            ? Favorite::query()
+                ->where('user_id', $request->user()->id)
+                ->where('product_id', $product->id)
+                ->exists()
+            : false;
 
         return view('client.products.show', compact(
             'product',
@@ -330,7 +341,8 @@ class ProductController extends Controller
             'approvedReviews',
             'reviewSummary',
             'reviewFormState',
-            'branch'
+            'branch',
+            'isFavorite'
         ));
     }
 

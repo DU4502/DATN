@@ -7,6 +7,7 @@ use App\Models\Order;
 final class OrderStatus
 {
     // Trạng thái chung
+    public const AWAITING_PAYMENT = 'awaiting_payment'; // Chờ hoàn tất thanh toán online
     public const PENDING = 'pending';              // Chờ xác nhận
     public const CONFIRMED = 'confirmed';          // Đã xác nhận
     public const PREPARING = 'preparing';          // Đang pha chế
@@ -67,6 +68,7 @@ final class OrderStatus
     public static function labels(): array
     {
         return [
+            self::AWAITING_PAYMENT => 'Chờ thanh toán',
             self::AWAITING_EMAIL_CONFIRMATION => 'Chờ xác nhận email',
             self::PENDING => 'Chờ xác nhận',
             self::CONFIRMED => 'Đã xác nhận',
@@ -106,6 +108,7 @@ final class OrderStatus
     public static function customerMessages(): array
     {
         return [
+            self::AWAITING_PAYMENT => 'Đơn hàng đang chờ bạn hoàn tất thanh toán',
             self::PENDING => 'Đơn hàng của bạn đang chờ quán xác nhận',
             self::CONFIRMED => 'Quán đã nhận đơn và sẽ bắt đầu pha chế',
             self::PREPARING => 'Quán đang pha chế đồ uống của bạn',
@@ -125,6 +128,7 @@ final class OrderStatus
     public static function icons(): array
     {
         return [
+            self::AWAITING_PAYMENT => '💳',
             self::PENDING => '⏳',
             self::CONFIRMED => '✅',
             self::PREPARING => '👨‍🍳',
@@ -144,7 +148,7 @@ final class OrderStatus
     public static function adminLabels(): array
     {
         $all = self::labels();
-        unset($all[self::AWAITING_EMAIL_CONFIRMATION]);
+        unset($all[self::AWAITING_PAYMENT], $all[self::AWAITING_EMAIL_CONFIRMATION]);
 
         return $all;
     }
@@ -544,6 +548,7 @@ final class OrderStatus
     public static function userBadgeStyles(): array
     {
         return [
+            self::AWAITING_PAYMENT => ['label' => 'Chờ thanh toán', 'class' => 'order-status-pending'],
             self::PENDING => ['label' => 'Chờ xác nhận', 'class' => 'order-status-pending'],
             self::CONFIRMED => ['label' => 'Đã xác nhận', 'class' => 'order-status-confirmed'],
             self::PREPARING => ['label' => 'Đang pha chế', 'class' => 'order-status-preparing'],
@@ -560,6 +565,7 @@ final class OrderStatus
     public static function notificationType(string $status): string
     {
         return match (self::normalize($status)) {
+            self::AWAITING_PAYMENT => 'order_awaiting_payment',
             self::PENDING => 'order_pending',
             self::CONFIRMED => 'order_confirmed',
             self::PREPARING => 'order_preparing',
@@ -577,6 +583,7 @@ final class OrderStatus
     public static function notificationIcon(string $status): string
     {
         return match (self::normalize($status)) {
+            self::AWAITING_PAYMENT => 'bi-credit-card',
             self::PENDING => 'bi-hourglass-split',
             self::CONFIRMED => 'bi-check-circle',
             self::PREPARING => 'bi-cup-hot',

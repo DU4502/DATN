@@ -72,10 +72,6 @@ class GroupOrderController extends Controller
 
     public function updateStatus(Request $request, GroupOrder $groupOrder)
     {
-        $request->validate([
-            'status' => ['required', 'in:open,closed,ordered,cancelled'],
-        ]);
-
         $user = auth()->user();
         if (!$user->isSuperAdmin()) {
             if (!$user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
@@ -83,36 +79,10 @@ class GroupOrderController extends Controller
             }
         }
 
-        $allowedTransitions = [
-            'open' => ['closed', 'cancelled'],
-            'closed' => ['ordered', 'cancelled'],
-            'ordered' => [],
-            'cancelled' => [],
-        ];
-
-        // Admin thường đi đúng state-machine; Super Admin được override mọi
-        // trạng thái hợp lệ của đơn nhóm, kể cả quay ngược để sửa dữ liệu vận hành.
-        if (! $user->isSuperAdmin()
-            && ! in_array($request->status, $allowedTransitions[$groupOrder->status] ?? [], true)) {
-            return redirect()->back()->with('error', 'Không thể chuyển sang trạng thái này.');
-        }
-
-        $data = [
-            'status' => $request->status,
-            'status_changed_at' => now(),
-            'status_changed_by' => $user->id,
-        ];
-
-        if ($request->status === 'cancelled') {
-            $data['cancelled_at'] = now();
-        }
-        if ($request->status === 'closed') {
-            $data['locked_at'] = now();
-        }
-
-        $groupOrder->update($data);
-
-        return redirect()->back()->with('success', 'Đã cập nhật trạng thái đơn nhóm thành công.');
+        return redirect()->back()->with(
+            'error',
+            'Trạng thái đơn nhóm được hệ thống cập nhật theo thao tác của khách và kết quả thanh toán; quản trị viên không thể sửa thủ công.'
+        );
     }
 
     /**

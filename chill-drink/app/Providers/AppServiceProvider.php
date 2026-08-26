@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Models\GroupOrder;
+use App\Models\OrderIssueReport;
+use App\Support\OrderStatus;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
@@ -59,16 +61,15 @@ class AppServiceProvider extends ServiceProvider
                     ->where('owner_id', auth()->id())
                     ->where('locked_at', '>=', now()->subMinutes(15))
                     ->where(function ($query) {
-                        $query->where(function ($pending) {
-                            $pending->where('status', 'closed')->whereNull('order_id');
-                        })->orWhere(function ($payment) {
-                            $payment->where('status', 'ordered')
-                                ->whereHas('order', fn ($order) => $order
-                                    ->where('payment_method', 'vnpay')
-                                    ->whereIn('payment_status', ['pending', 'failed'])
-                                    ->whereIn('status', ['awaiting_payment', 'pending'])
-                                    ->where('created_at', '>=', now()->subMinutes(15)));
-                        });
+                        $query->where('status', 'closed')
+                            ->where(function ($pending) {
+                                $pending->whereNull('order_id')
+                                    ->orWhereHas('order', fn ($order) => $order
+                                        ->where('payment_method', 'vnpay')
+                                        ->whereIn('payment_status', ['pending', 'failed'])
+                                        ->whereIn('status', [OrderStatus::AWAITING_PAYMENT, OrderStatus::PENDING])
+                                        ->where('created_at', '>=', now()->subMinutes(15)));
+                            });
                     })
                     ->when(session()->has('checkout_group_order_id'), function ($query) {
                         $query->orderByRaw('id = ? desc', [(int) session('checkout_group_order_id')]);
@@ -91,6 +92,26 @@ class AppServiceProvider extends ServiceProvider
                 : null;
 
             $view->with(compact('activeOwnedGroup', 'pendingCheckoutGroup'));
+        });
+
+        View::composer(['layouts.admin', 'layouts.super-admin'], function ($view) {
+            $user = auth()->user();
+            if (! $user) {
+                return;
+            }
+
+            $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
+                ? $user->adminWorkspaceBranchId()
+                : ($user->isSuperAdmin() ? null : $user->branch_id);
+            $pendingOrderIssueCount = OrderIssueReport::query()
+                ->where('status', 'open')
+                ->when($branchId !== null, fn ($query) => $query->whereHas(
+                    'order',
+                    fn ($orders) => $orders->where('branch_id', $branchId)
+                ))
+                ->count();
+
+            $view->with('pendingOrderIssueCount', $pendingOrderIssueCount);
         });
 
         // Super Admin dùng chung layout ở nhiều controller khác nhau (Đơn hàng, Sự cố, Nhân viên...).

@@ -253,6 +253,7 @@ class ProfileController extends Controller
                 'orderItems.productSize.size',
                 'orderItems.toppingLines.topping',
             ])
+            ->withCount('issueReports')
             ->latest()
             ->take(15)
             ->get()

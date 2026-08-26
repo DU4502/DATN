@@ -950,8 +950,29 @@
     }
     @media (max-width: 575.98px) {
         .sa-stats, .sa-security-grid, .sa-permissions { grid-template-columns: 1fr; }
+        .sa-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+        .sa-kpi-card { min-height: 0; padding: 0.8rem; }
+        .sa-kpi-value { font-size: 1.25rem; }
         .sa-chart-bars { gap: 0.25rem; }
         .sa-chart-value { font-size: 0.65rem; }
+        .legacy-analytics-filter-plain .legacy-analytics-presets {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.12rem;
+            width: 100%;
+            overflow: visible;
+        }
+        .legacy-analytics-filter-plain .legacy-analytics-period-btn {
+            min-width: 0;
+            padding: 0.34rem 0.15rem;
+            font-size: 0.62rem;
+            white-space: nowrap;
+        }
+        .legacy-analytics-actions.legacy-analytics-actions--compact {
+            width: 100%;
+            margin-left: 0;
+            justify-content: flex-end;
+        }
     }
 </style>
 

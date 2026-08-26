@@ -82,6 +82,24 @@
         .auth-container { padding: 1rem 0; }
         .auth-card .p-4.p-md-5 { padding: 1.5rem !important; }
     }
+
+    @media (max-width: 575.98px) {
+        .auth-page { min-height: calc(100dvh - 64px); padding: 0.5rem 0; }
+        .auth-container { padding: 0.35rem 0; }
+        .auth-card { border-radius: 16px; }
+        .auth-card .p-4.p-md-5 { padding: 1rem !important; }
+        .auth-header { margin-bottom: 0.7rem; }
+        .auth-logo { width: 44px; height: 44px; margin-bottom: 0.5rem; }
+        .auth-logo img { width: 30px; height: 30px; }
+        .auth-header p { margin-bottom: 0.4rem; font-size: 0.8rem; }
+        .auth-form-stack .form-floating.mb-3,
+        .auth-form-stack .form-floating.mb-4 { margin-bottom: 0.55rem !important; }
+        .auth-form-stack .d-flex.justify-content-between.align-items-center.mb-4 { margin-bottom: 0.6rem !important; }
+        .btn-auth-submit { height: 42px; }
+        .auth-divider { margin: 0.65rem 0; }
+        .auth-social-stack { gap: 0.45rem !important; margin-bottom: 0.55rem !important; }
+        .social-btn { height: 40px; font-size: 0.82rem; }
+    }
 </style>
 
 <section class="auth-page">

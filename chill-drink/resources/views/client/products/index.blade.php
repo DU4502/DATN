@@ -425,6 +425,10 @@
         overflow: visible;
     }
 
+    .filter-panel__mobile-toggle {
+        display: none;
+    }
+
     .filter-title {
         color: var(--drink-primary);
         font-size: 0.78rem;
@@ -951,11 +955,53 @@
             width: 90px;
         }
 
-        .category-list {
+        .filter-panel {
+            padding: 0.75rem !important;
+            overflow: hidden;
+        }
+
+        .filter-panel__heading {
+            display: none;
+        }
+
+        .filter-panel__mobile-toggle {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-height: 44px;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid var(--drink-border);
+            border-radius: 12px;
+            color: var(--drink-primary-dark);
+            background: var(--c-primary-light, #e6f7f2);
+            font-size: 0.9rem;
+            font-weight: 800;
+        }
+
+        .filter-panel__mobile-toggle i {
+            transition: transform 0.2s ease;
+        }
+
+        .filter-panel__body {
+            display: none;
+            padding-top: 0.8rem;
+        }
+
+        .filter-panel.is-open .filter-panel__body {
+            display: block;
+        }
+
+        .filter-panel.is-open .filter-panel__mobile-toggle > i {
+            transform: rotate(180deg);
+        }
+
+        .category-list {
+            display: flex !important;
             gap: 0.65rem;
             overflow-x: auto;
             padding-bottom: 0.25rem;
+            scrollbar-width: thin;
         }
 
         .category-chip {
@@ -966,12 +1012,84 @@
             padding: 0.55rem 0.75rem;
         }
 
+        .category-chip.active {
+            border-color: var(--drink-primary);
+            background: var(--c-primary-light, #e6f7f2) !important;
+        }
+
         .category-radio { display: none; }
 
         .shop-grid-head {
             align-items: flex-start;
             flex-direction: column;
         }
+    }
+
+    @media (max-width: 575.98px) {
+        .shop-page { padding-top: 1rem; padding-bottom: 2.5rem; }
+        .shop-main-top { gap: 0.8rem; margin-bottom: 1rem; }
+        .shop-hero { min-height: 0; padding: 1.1rem; gap: 0.8rem; border-radius: 18px; }
+        .shop-vouchers, .filter-panel, .promo-panel { border-radius: 14px; }
+        .shop-sidebar { gap: 0.75rem !important; }
+        .shop-sidebar > .d-grid { margin-bottom: 0 !important; }
+        .shop-sidebar > .d-grid .btn { min-height: 42px; padding-block: 0.48rem; font-size: 0.9rem; }
+        .filter-panel__body { padding-top: 0.65rem; }
+        .filter-panel .filter-title { margin-bottom: 0.45rem !important; font-size: 0.68rem; }
+        .filter-panel__body > .border-top { margin-top: 0.75rem !important; padding-top: 0.75rem !important; }
+        .category-list { gap: 0.4rem !important; }
+        .category-chip { min-height: 34px; padding: 0.38rem 0.65rem; font-size: 0.76rem; }
+        .shop-grid-head { gap: 0.55rem; margin-bottom: 0.8rem; }
+
+        .shop-products-grid {
+            --bs-gutter-x: 0.6rem;
+            --bs-gutter-y: 0.6rem;
+        }
+        .shop-products-grid > .col-sm-6 { width: 50%; }
+        .shop-product-card { padding: 0.5rem; border-radius: 12px; }
+        .shop-product-image { margin-bottom: 0.45rem !important; aspect-ratio: 1; border-radius: 10px; }
+        .shop-product-image img, .shop-product-image .product-image { padding: 0.3rem; }
+        .product-favorite-btn { top: 0.75rem; right: 0.75rem; width: 32px; height: 32px; }
+        .product-favorite-btn i { font-size: 0.86rem; }
+        .product-tag {
+            top: 0.35rem; left: 0.35rem; max-width: calc(100% - 2.4rem);
+            overflow: hidden; padding: 0.16rem 0.35rem; font-size: 0.52rem;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+        .shop-product-meta { display: block; }
+        .shop-product-title { min-height: 2.15rem; font-size: 0.82rem; line-height: 1.25; }
+        .product-rating-mini, .shop-product-sku, .shop-product-desc { display: none; }
+        .shop-product-price { justify-content: flex-start; margin: 0.35rem 0 0.45rem !important; }
+        .shop-product-price .h5 { font-size: 0.9rem; }
+        .shop-product-card > .mb-2 { margin-bottom: 0.4rem !important; }
+        .shop-product-actions { gap: 0.35rem !important; }
+        .product-detail-btn { min-height: 34px; font-size: 0.68rem; }
+        .product-cart-btn { width: 34px; height: 34px; border-radius: 10px; }
+        .product-cart-btn i { font-size: 0.85rem !important; }
+
+        .quick-add-modal .modal-header { padding: 0.85rem 0.9rem 0.45rem; }
+        .quick-add-modal .modal-body { padding: 0 0.9rem 0.9rem; }
+        .quick-product-summary { padding: 0.6rem; }
+        .quick-add-thumb { width: 58px; height: 58px; border-radius: 12px; }
+        .quick-section { margin-top: 0.6rem; padding-top: 0.6rem; }
+        .quick-section-label { margin-bottom: 0.45rem; }
+        .quick-size-grid { gap: 0.35rem; }
+        .quick-choice { min-height: 40px; padding: 0.4rem; }
+        .quick-levels-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+        .quick-topping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
+        .quick-actions { grid-template-columns: auto minmax(0, 1fr); gap: 0.5rem; }
+        .quick-submit { min-height: 44px; }
+    }
+
+    @media (min-width: 576px) and (max-width: 991.98px) {
+        .shop-page { padding-block: 1.25rem 2.5rem; }
+        .shop-products-grid { --bs-gutter-x: .8rem; --bs-gutter-y: .8rem; }
+        .shop-products-grid > .col-sm-6 { width: 33.333333%; }
+        .shop-product-card { padding: .7rem; border-radius: 14px; }
+        .shop-product-image { aspect-ratio: 1; border-radius: 11px; }
+        .shop-product-card h3 { font-size: .92rem !important; }
+        .shop-product-card .product-desc { display: none; }
+        .shop-product-card .product-cart-btn { min-height: 38px; padding-inline: .55rem; font-size: .72rem; }
+        .shop-product-card .add-round { width: 36px !important; height: 36px !important; }
     }
 </style>
 
@@ -984,9 +1102,16 @@
                         <a href="{{ route('products.index') }}" class="btn btn-warning btn-lg rounded-pill text-white">Sản phẩm mới</a>
                     </div>
                     <div class="filter-panel p-4">
-                        <h2 class="h5 fw-bold mb-4">
+                        <h2 class="filter-panel__heading h5 fw-bold mb-4">
                             Bộ lọc
                         </h2>
+
+                        <button type="button" class="filter-panel__mobile-toggle" aria-expanded="false" aria-controls="productFilterBody">
+                            <span><i class="bi bi-sliders me-2"></i>Bộ lọc sản phẩm</span>
+                            <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                        </button>
+
+                        <div class="filter-panel__body" id="productFilterBody">
 
                         <h3 class="filter-title mb-3">Danh mục</h3>
                         <div class="category-list d-grid gap-2">
@@ -1072,6 +1197,7 @@
                                     </div>
                                 </div>
                             </form>
+                        </div>
                         </div>
                     </div>
 
@@ -1190,7 +1316,7 @@
                     </div>
                 @endif
 
-                <div class="row g-4">
+                <div class="row g-4 shop-products-grid">
                     @forelse($products as $product)
                         <div class="col-sm-6 col-xl-4">
                             <article class="shop-product-card">
@@ -1350,7 +1476,7 @@
 
                 <div class="modal-body">
                     <div class="quick-product-summary">
-                        <img src="" alt="" class="quick-add-thumb" data-quick-image>
+                        <img src="{{ $uiPlaceholderImage('Sản phẩm', 'Đồ uống') }}" alt="Ảnh sản phẩm" class="quick-add-thumb" data-quick-image>
                         <div>
                             <div class="fw-bold fs-4" data-quick-name></div>
                             <div class="text-primary fw-bold" data-quick-price></div>
@@ -1410,6 +1536,16 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.filter-panel').forEach((panel) => {
+            const toggle = panel.querySelector('.filter-panel__mobile-toggle');
+            if (!toggle) return;
+
+            toggle.addEventListener('click', () => {
+                const isOpen = panel.classList.toggle('is-open');
+                toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        });
+
         document.querySelectorAll('[data-favorite-form]').forEach((favoriteForm) => {
             favoriteForm.addEventListener('submit', async (event) => {
                 event.preventDefault();

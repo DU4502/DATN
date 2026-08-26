@@ -8,6 +8,7 @@ use App\Models\UserVoucher;
 use App\Models\Voucher;
 use App\Notifications\OrderIssueReportStatusNotification;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -17,9 +18,32 @@ use Illuminate\View\View;
 
 class OrderIssueReportController extends Controller
 {
+    public function pendingCount(Request $request): JsonResponse
+    {
+        $query = OrderIssueReport::query()->where('status', 'open');
+        $user = $request->user();
+        $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
+            ? $user->adminWorkspaceBranchId()
+            : ($user->isSuperAdmin() ? null : $user->branch_id);
+
+        if ($branchId !== null) {
+            $query->whereHas('order', fn ($orders) => $orders->where('branch_id', $branchId));
+        }
+
+        $latest = (clone $query)->with(['order:id,order_code', 'user:id,name'])->latest()->first();
+
+        return response()->json([
+            'count' => (clone $query)->count(),
+            'latest_id' => $latest?->id,
+            'message' => $latest
+                ? 'Khách '.($latest->user?->name ?? 'hàng').' vừa gửi yêu cầu cho đơn '.($latest->order?->order_code ?? '#'.$latest->order_id).'.'
+                : null,
+        ]);
+    }
+
     public function index(Request $request): View
     {
-        $query = OrderIssueReport::with(['order.branch', 'order.orderItems.product', 'order.orderItems.productSize', 'user', 'handler'])->latest();
+        $query = OrderIssueReport::with(['order.branch', 'order.orderItems.product', 'order.orderItems.productSize', 'user', 'handler', 'voucher'])->latest();
         $user = $request->user();
         $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
             ? $user->adminWorkspaceBranchId()

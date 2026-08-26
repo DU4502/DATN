@@ -23,7 +23,9 @@ use App\Services\ProductAvailabilityService;
 use App\Support\ShippingFee;
 use App\Support\AddressLearning;
 use App\Support\OrderDistancePolicy;
+use App\Support\OrderStatus;
 use App\Support\ProductSizePrice;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +44,8 @@ class CheckoutController extends Controller
      */
     public function index(Request $request)
     {
+        session()->forget('checkout_return_active');
+
         $hadGroupCheckoutSession = session()->has('checkout_group_order_id');
         $groupCheckout = $this->groupCheckoutContext();
         if ($hadGroupCheckoutSession && ! $groupCheckout) {
@@ -88,6 +92,7 @@ class CheckoutController extends Controller
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $isGroupCheckout = (bool) $groupCheckout;
+        $groupCheckoutGroup = $groupCheckout['group'] ?? null;
         $groupCheckoutBranch = $groupCheckout['branch'] ?? null;
         $branches = Branch::where('status', true)
             ->orderBy('name')
@@ -168,7 +173,8 @@ class CheckoutController extends Controller
             ->latest('created_at')
             ->get()
             ->filter(fn (Voucher $voucher) => $voucher->isActiveNow()
-                && $voucher->hasRemainingUses())
+                && $voucher->hasRemainingUses()
+                && ! $voucher->isPersonalSupportVoucher())
             ->values();
 
         // Get user's received vouchers (vouchers they have claimed)
@@ -176,6 +182,9 @@ class CheckoutController extends Controller
         if (auth()->check()) {
             $receivedVouchers = \App\Models\UserVoucher::where('user_id', auth()->id())
                 ->where('is_used', false)
+                ->where(function ($query) use ($now) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
+                })
                 ->with('voucher')
                 ->get()
                 ->filter(function ($userVoucher) {
@@ -183,13 +192,15 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->map(fn ($uv) => $uv->voucher)
                 ->values();
         } else {
             // For guest users
             $guestIdentifier = session()->getId();
             $receivedVouchers = \App\Models\UserVoucher::where('guest_identifier', $guestIdentifier)
                 ->where('is_used', false)
+                ->where(function ($query) use ($now) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>=', $now);
+                })
                 ->with('voucher')
                 ->get()
                 ->filter(function ($userVoucher) {
@@ -197,7 +208,6 @@ class CheckoutController extends Controller
                         && $userVoucher->voucher->isActiveNow() 
                         && $userVoucher->voucher->hasRemainingUses();
                 })
-                ->map(fn ($uv) => $uv->voucher)
                 ->values();
         }
 
@@ -217,6 +227,7 @@ class CheckoutController extends Controller
             'userLatitude',
             'userLongitude',
             'isGroupCheckout',
+            'groupCheckoutGroup',
             'groupCheckoutBranch'
         ));
     }
@@ -424,7 +435,9 @@ class CheckoutController extends Controller
                 'fulfillment_type' => $fulfillmentType,
                 'branch_id'      => $branchId,
                 // VNPay chỉ trở thành đơn chính thức sau callback thanh toán thành công.
-                'status'         => $request->payment_method === 'vnpay' ? 'awaiting_payment' : 'pending',
+                'status'         => $request->payment_method === 'vnpay'
+                    ? OrderStatus::AWAITING_PAYMENT
+                    : OrderStatus::PENDING,
                 'note'           => $note,
                 'delivery_type'  => $request->input('delivery_type', 'now'),
                 'scheduled_delivery_time' => $request->input('delivery_type') === 'scheduled' ? $request->date('scheduled_delivery_time') : null,
@@ -493,7 +506,11 @@ class CheckoutController extends Controller
             app(AddressLearning::class)->recordOrderSubmitted($order);
 
             if ($groupOrderId) {
-                $groupOrder->update(['order_id' => $order->id, 'status' => 'ordered']);
+                $groupOrder->update([
+                    'order_id' => $order->id,
+                    // COD đã tạo đơn hợp lệ; VNPay chỉ hoàn tất sau callback thành công.
+                    'status' => $order->payment_method === 'vnpay' ? 'closed' : 'ordered',
+                ]);
                 $completedGroupOrder = $groupOrder->fresh();
                 $groupMemberUserIds = $completedGroupOrder->members()
                     ->whereNotNull('user_id')
@@ -525,7 +542,9 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            if ($completedGroupOrder && $groupMemberUserIds->isNotEmpty()) {
+            if ($completedGroupOrder
+                && $order->payment_method !== 'vnpay'
+                && $groupMemberUserIds->isNotEmpty()) {
                 \App\Models\User::query()
                     ->whereIn('id', $groupMemberUserIds)
                     ->get()
@@ -561,9 +580,13 @@ class CheckoutController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
-            $message = $e instanceof \RuntimeException
-                ? $e->getMessage()
-                : 'Có lỗi xảy ra, vui lòng thử lại!';
+            // Không đưa câu SQL và cấu trúc cơ sở dữ liệu ra giao diện khách hàng.
+            // Chi tiết kỹ thuật vẫn được giữ trong log để quản trị viên xử lý.
+            $message = $e instanceof QueryException
+                ? 'Không thể tạo đơn hàng lúc này. Vui lòng tải lại trang và thử lại.'
+                : ($e instanceof \RuntimeException
+                    ? $e->getMessage()
+                    : 'Có lỗi xảy ra, vui lòng thử lại!');
 
             return redirect()->back()->withInput()->with('error', $message);
         }
@@ -997,10 +1020,13 @@ class CheckoutController extends Controller
             throw new \RuntimeException('Mã voucher đã hết lượt sử dụng.');
         }
 
-        if (Str::startsWith(Str::upper((string) $voucher->code), 'HT')) {
+        if ($voucher->isPersonalSupportVoucher()) {
             $ownedVoucher = UserVoucher::query()
                 ->where('coupon_id', $voucher->id)
                 ->where('is_used', false)
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>=', now());
+                })
                 ->when(
                     auth()->check(),
                     fn ($query) => $query->where('user_id', auth()->id()),

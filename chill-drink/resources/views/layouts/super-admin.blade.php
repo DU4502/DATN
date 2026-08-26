@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Quản trị cấp cao - {{ config('app.name', 'Chill Drink') }}</title>
 
@@ -427,6 +427,9 @@
             .root-content { margin-left: 0; }
             .root-mobile-toggle { display: inline-flex; }
             .root-topbar-search { width: min(100%, 360px); }
+            .root-topbar { flex-wrap: wrap; }
+            .root-topbar-left { flex: 1 1 320px; min-width: 0; }
+            .root-topbar-right { flex: 0 0 auto; margin-left: auto; }
             .root-sidebar-backdrop {
                 position: fixed;
                 inset: 0;
@@ -438,10 +441,25 @@
         }
 
         @media (max-width: 575.98px) {
-            .root-topbar { padding: 0 1rem; }
-            .root-topbar-search { width: 100%; margin-left: 0; }
+            .root-topbar {
+                min-height: 0;
+                display: grid;
+                grid-template-columns: 42px minmax(0, 1fr) auto;
+                align-items: center;
+                padding: 0.7rem 0.75rem;
+                gap: 0.55rem;
+            }
+            .root-topbar-left { display: contents; }
+            .root-mobile-toggle { grid-column: 1; grid-row: 1; }
+            .root-topbar-right { grid-column: 3; grid-row: 1; gap: 0.35rem; margin-left: 0; }
+            .root-topbar-search { grid-column: 1 / -1; grid-row: 2; width: 100%; margin-left: 0; }
+            .root-topbar-search input { min-height: 40px; padding-block: 0.4rem; }
+            .root-topbar-btn { width: 40px; height: 40px; }
+            .root-user-button { min-height: 40px; padding: 0; gap: 0.25rem; }
+            .root-sidebar { width: min(300px, calc(100vw - 2.5rem)); }
+            .root-dropdown { max-width: calc(100vw - 1.5rem); }
             .root-page { padding: 1.05rem 0.9rem 1.6rem; }
-            .root-live, .root-breadcrumb span { display: none; }
+            .root-live, .root-breadcrumb { display: none; }
             .root-footer { align-items: flex-start; flex-direction: column; padding: 0.85rem 0.9rem; }
         }
     </style>
@@ -467,7 +485,7 @@
                     @endphp
                     <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
-                <a href="{{ route('admin.order-issues.index') }}" class="root-nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ</a>
+                <a href="{{ route('admin.order-issues.index') }}" class="root-nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ <span id="sidebar-order-issue-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size:.72rem;{{ ($pendingOrderIssueCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ min(99, $pendingOrderIssueCount ?? 0) }}</span></a>
 
                 <p class="root-nav-label">Quản lý cửa hàng</p>
                 <a href="{{ route('admin.super-admin.manage.vouchers.index') }}" class="root-nav-link {{ request()->routeIs('admin.super-admin.manage.vouchers.*', 'admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
@@ -771,6 +789,7 @@
             }, 5000);
         })();
     </script>
+    @include('partials.order-issue-notification-badge')
     @stack('scripts')
 </body>
 </html>

@@ -384,21 +384,50 @@
 
     @media (max-width: 575.98px) {
         .register-page {
-            padding: 0.5rem;
+            padding: 0.4rem;
+            align-items: flex-start;
+        }
+
+        .register-shell {
+            width: 100%;
+            gap: 0.55rem;
+            border-radius: 14px;
+        }
+
+        .register-hero {
+            min-height: 0;
+            padding: 0.85rem 1rem;
+            border-radius: 14px;
+        }
+
+        .register-hero h1 {
+            margin-bottom: 0.35rem;
+            font-size: 1.2rem;
+        }
+
+        .register-hero p {
+            margin-bottom: 0;
+            font-size: 0.76rem;
+            line-height: 1.4;
+        }
+
+        .register-hero__badge,
+        .register-illustration {
+            display: none;
         }
 
         .register-card__body {
-            padding: 1.35rem;
+            padding: 0.9rem;
         }
+
+        .register-card h2 { margin-bottom: 0.65rem; font-size: 1.15rem; }
+        .register-form-stack { gap: 0.5rem; }
+        .register-divider { margin: 0.65rem 0; }
+        .register-login { margin-top: 0.45rem; }
 
         .contact-row,
         .code-row {
             grid-template-columns: 1fr;
-        }
-
-        .register-illustration {
-            width: 100%;
-            transform: scale(0.88);
         }
     }
 </style>
