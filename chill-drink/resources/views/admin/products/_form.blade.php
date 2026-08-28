@@ -225,6 +225,18 @@ $storedGalleryImages = collect(json_decode($product->getRawOriginal('gallery_ima
                     </div>
                 </div>
 
+                <div class="mb-3">
+                    <label for="serving_temperature" class="form-label small fw-bold">Nhiệt độ phục vụ</label>
+                    <select class="form-select rounded-3 @error('serving_temperature') is-invalid @enderror"
+                        id="serving_temperature" name="serving_temperature">
+                        <option value="" @selected(old('serving_temperature', $product->serving_temperature) === null || old('serving_temperature', $product->serving_temperature) === '')>-- Chưa thiết lập --</option>
+                        <option value="hot" @selected(old('serving_temperature', $product->serving_temperature) === 'hot')>Nóng</option>
+                        <option value="cold" @selected(old('serving_temperature', $product->serving_temperature) === 'cold')>Lạnh</option>
+                        <option value="both" @selected(old('serving_temperature', $product->serving_temperature) === 'both')>Cả nóng và lạnh</option>
+                    </select>
+                    @error('serving_temperature') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
                 <div>
                     <label for="description" class="form-label small fw-bold">Mô tả ngắn</label>
                     <textarea class="form-control rounded-3 @error('description') is-invalid @enderror"

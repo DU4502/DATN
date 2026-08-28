@@ -113,7 +113,10 @@
             position: absolute; inset: 0;
             display: grid; grid-template-columns: 45% 55%;
             transition: 0.5s;
+            pointer-events: none;
         }
+
+        .item:nth-child(2) { pointer-events: auto; }
 
         /* Particles */
         .particles {
@@ -190,6 +193,7 @@
 
         .content .btn-group {
             display: flex; gap: 15px; flex-wrap: wrap;
+            position: relative; z-index: 25;
             transform: translateY(40px); filter: blur(15px);
             transition: var(--transition-speed) 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
@@ -226,7 +230,7 @@
         /* Image Gallery section */
         .image-gallery {
             position: relative; display: flex; align-items: center; justify-content: center;
-            overflow: visible; z-index: 20;
+            overflow: visible; z-index: 20; pointer-events: none;
         }
 
         .product-img {
@@ -468,6 +472,7 @@
 
             const onPointerDown = (event) => {
                 if (event.pointerType === 'mouse' && event.button !== 0) return;
+                if (event.target.closest('a, button, input, select, textarea, [role="button"]')) return;
                 pointerStartX = event.clientX;
                 sliderEl.setPointerCapture(event.pointerId);
             };

@@ -27,6 +27,7 @@ class Product extends Model
         'gallery_images',
         'price',
         'description',
+        'serving_temperature',
         'status',
     ];
 
@@ -115,7 +116,7 @@ class Product extends Model
     public function sizes()
     {
         return $this->belongsToMany(Size::class, 'product_sizes', 'product_id', 'size_id')
-                    ->withPivot('price');
+            ->withPivot('price');
     }
 
     public function productSizes()

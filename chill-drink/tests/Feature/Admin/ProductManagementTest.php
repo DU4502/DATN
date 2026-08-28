@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Models\Category;
 use App\Models\Branch;
 use App\Models\BranchProductStatus;
+use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -164,6 +164,178 @@ class ProductManagementTest extends TestCase
         $this->assertNotNull($product);
         $this->assertSame($category->id, $product->category_id);
         $response->assertRedirect(route('admin.products.index'));
+    }
+
+    public function test_admin_can_create_products_with_supported_serving_temperatures_and_null(): void
+    {
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Nhiệt độ phục vụ',
+            'slug' => 'nhiet-do-phuc-vu',
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.super-admin.manage.products.create'))
+            ->assertOk()
+            ->assertSee('Nhiệt độ phục vụ')
+            ->assertSee('value="hot"', false)
+            ->assertSee('value="cold"', false)
+            ->assertSee('value="both"', false);
+
+        foreach (['hot', 'cold', 'both', null] as $index => $temperature) {
+            $name = 'Sản phẩm nhiệt độ '.$index;
+
+            $this->actingAs($admin)
+                ->post(route('admin.products.store'), [
+                    'category_id' => $category->id,
+                    'name' => $name,
+                    'price' => 39000,
+                    'status' => '1',
+                    'serving_temperature' => $temperature,
+                ])
+                ->assertRedirect(route('admin.products.index'));
+
+            $this->assertDatabaseHas('products', [
+                'name' => $name,
+                'serving_temperature' => $temperature,
+            ]);
+        }
+    }
+
+    public function test_product_validation_rejects_invalid_serving_temperatures(): void
+    {
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Nhiệt độ không hợp lệ',
+            'slug' => 'nhiet-do-khong-hop-le',
+            'status' => true,
+        ]);
+
+        foreach (['warm', 'iced', 'abc'] as $index => $temperature) {
+            $name = 'Sản phẩm nhiệt độ sai '.$index;
+
+            $this->actingAs($admin)
+                ->from(route('admin.products.create'))
+                ->post(route('admin.products.store'), [
+                    'category_id' => $category->id,
+                    'name' => $name,
+                    'price' => 39000,
+                    'status' => '1',
+                    'serving_temperature' => $temperature,
+                ])
+                ->assertRedirect(route('admin.products.create'))
+                ->assertSessionHasErrors('serving_temperature')
+                ->assertSessionHasInput('serving_temperature', $temperature);
+
+            $this->assertDatabaseMissing('products', ['name' => $name]);
+        }
+
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Sản phẩm update validation',
+            'slug' => 'san-pham-update-validation',
+            'price' => 39000,
+            'serving_temperature' => 'cold',
+            'status' => true,
+        ]);
+
+        foreach (['warm', 'iced', 'abc'] as $temperature) {
+            $this->actingAs($admin)
+                ->from(route('admin.super-admin.manage.products.edit', $product->id))
+                ->put(route('admin.products.update', $product->id), [
+                    'category_id' => $category->id,
+                    'name' => $product->name,
+                    'price' => 39000,
+                    'status' => '1',
+                    'serving_temperature' => $temperature,
+                ])
+                ->assertRedirect(route('admin.super-admin.manage.products.edit', $product->id))
+                ->assertSessionHasErrors('serving_temperature')
+                ->assertSessionHasInput('serving_temperature', $temperature);
+
+            $this->assertSame('cold', $product->fresh()->serving_temperature);
+        }
+    }
+
+    public function test_admin_can_preserve_and_change_product_serving_temperature(): void
+    {
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Cà Phê Nhiệt Độ',
+            'slug' => 'ca-phe-nhiet-do',
+            'status' => true,
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Cà Phê Hai Kiểu',
+            'slug' => 'ca-phe-hai-kieu',
+            'price' => 35000,
+            'serving_temperature' => 'hot',
+            'status' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.super-admin.manage.products.edit', $product->id))
+            ->assertOk()
+            ->assertSee('Nhiệt độ phục vụ')
+            ->assertSee('value="hot" selected', false);
+
+        $payload = [
+            'category_id' => $category->id,
+            'name' => $product->name,
+            'price' => 35000,
+            'status' => '1',
+            'serving_temperature' => 'hot',
+        ];
+
+        $this->actingAs($admin)
+            ->put(route('admin.products.update', $product->id), $payload)
+            ->assertRedirect(route('admin.products.index'));
+        $this->assertSame('hot', $product->fresh()->serving_temperature);
+
+        $this->actingAs($admin)
+            ->put(route('admin.products.update', $product->id), array_replace($payload, [
+                'serving_temperature' => 'both',
+            ]))
+            ->assertRedirect(route('admin.products.index'));
+        $this->assertSame('both', $product->fresh()->serving_temperature);
+    }
+
+    public function test_legacy_product_without_serving_temperature_remains_usable(): void
+    {
+        $admin = $this->admin();
+        $category = Category::create([
+            'name' => 'Sản phẩm cũ',
+            'slug' => 'san-pham-cu',
+            'status' => true,
+        ]);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Sản phẩm chưa gắn metadata',
+            'slug' => 'san-pham-chua-gan-metadata',
+            'price' => 30000,
+            'status' => true,
+        ]);
+
+        $this->assertNull($product->serving_temperature);
+
+        $this->actingAs($admin)
+            ->get(route('admin.super-admin.manage.products.edit', $product->id))
+            ->assertOk()
+            ->assertSee('-- Chưa thiết lập --');
+
+        $this->actingAs($admin)
+            ->put(route('admin.products.update', $product->id), [
+                'category_id' => $category->id,
+                'name' => $product->name,
+                'price' => 30000,
+                'status' => '1',
+                'serving_temperature' => null,
+            ])
+            ->assertRedirect(route('admin.products.index'));
+
+        $this->assertNull($product->fresh()->serving_temperature);
     }
 
     public function test_admin_cannot_create_a_product_with_an_existing_generated_slug(): void

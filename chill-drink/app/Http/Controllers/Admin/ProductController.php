@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Size;
+use App\Models\Topping;
 use App\Services\ProductAvailabilityService;
 use App\Support\OrderStatus;
 use Illuminate\Http\Request;
@@ -33,7 +35,7 @@ class ProductController extends Controller
         $categories = Category::query()
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
-        $categoryIds = $categories->pluck('id')->map(fn($id) => (string) $id)->all();
+        $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
 
         $user = $request->user();
         $managedBranch = $user->isSuperAdmin() ? null : $user->branch;
@@ -55,8 +57,8 @@ class ProductController extends Controller
             ->when(in_array($filters['category'], $categoryIds, true), function ($query) use ($filters) {
                 $query->where('category_id', (int) $filters['category']);
             })
-            ->when($filters['status'] === 'active', fn($query) => $query->where('status', true))
-            ->when($filters['status'] === 'hidden', fn($query) => $query->where('status', false))
+            ->when($filters['status'] === 'active', fn ($query) => $query->where('status', true))
+            ->when($filters['status'] === 'hidden', fn ($query) => $query->where('status', false))
             ->when(in_array($filters['availability'], ['available', 'out_of_stock', 'unassigned'], true), function ($query) use ($filters, $managedBranch, $request) {
                 $branchId = $managedBranch?->id ?: (int) $request->query('branch_id');
 
@@ -66,6 +68,7 @@ class ProductController extends Controller
 
                 if ($filters['availability'] === 'unassigned') {
                     $query->whereDoesntHave('branchStatuses', fn ($statusQuery) => $statusQuery->where('branch_id', $branchId));
+
                     return;
                 }
 
@@ -89,10 +92,10 @@ class ProductController extends Controller
                 ->where('is_available', false))->count()
             : 0;
         $activeFiltersCount = collect($filters)
-            ->filter(fn($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
+            ->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
             ->count();
         $quickCategories = $categories
-            ->filter(fn($category) => in_array($category->name, ['Trà Sữa', 'Cà Phê', 'Nước Ép'], true))
+            ->filter(fn ($category) => in_array($category->name, ['Trà Sữa', 'Cà Phê', 'Nước Ép'], true))
             ->values();
 
         return view('admin.products.index', compact(
@@ -116,10 +119,10 @@ class ProductController extends Controller
         $categories = Category::orderBy('name')->get();
 
         foreach (['S', 'M', 'L'] as $s) {
-            \App\Models\Size::firstOrCreate(['name' => $s]);
+            Size::firstOrCreate(['name' => $s]);
         }
 
-        $allSizes = \App\Models\Size::all()->sortBy(function ($size) {
+        $allSizes = Size::all()->sortBy(function ($size) {
             return match (strtoupper(trim($size->name))) {
                 'S' => 1,
                 'M' => 2,
@@ -127,7 +130,7 @@ class ProductController extends Controller
                 default => 4
             };
         })->values();
-        $allToppings = \App\Models\Topping::where('status', true)->get();
+        $allToppings = Topping::where('status', true)->get();
         $branches = auth()->user()->isSuperAdmin()
             ? Branch::query()->where('status', true)->orderBy('name')->get()
             : Branch::query()->whereKey(auth()->user()->branch_id)->where('status', true)->get();
@@ -158,6 +161,7 @@ class ProductController extends Controller
             'gallery_images.*' => 'nullable|file|mimes:jpeg,jpg,png,webp,gif,svg|max:10240',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
+            'serving_temperature' => ['nullable', Rule::in(['hot', 'cold', 'both'])],
             'status' => 'nullable|boolean',
             'branch_statuses' => ['nullable', 'array'],
             'branch_statuses.*' => ['required', 'boolean'],
@@ -173,6 +177,7 @@ class ProductController extends Controller
             'slug' => $validated['slug'],
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
+            'serving_temperature' => $validated['serving_temperature'] ?? null,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -245,10 +250,10 @@ class ProductController extends Controller
         $categories = Category::orderBy('name')->get();
 
         foreach (['S', 'M', 'L'] as $s) {
-            \App\Models\Size::firstOrCreate(['name' => $s]);
+            Size::firstOrCreate(['name' => $s]);
         }
 
-        $allSizes = \App\Models\Size::all()->sortBy(function ($size) {
+        $allSizes = Size::all()->sortBy(function ($size) {
             return match (strtoupper(trim($size->name))) {
                 'S' => 1,
                 'M' => 2,
@@ -256,7 +261,7 @@ class ProductController extends Controller
                 default => 4
             };
         })->values();
-        $allToppings = \App\Models\Topping::all();
+        $allToppings = Topping::all();
         $selectedSizes = $product->sizes()->pluck('product_sizes.price', 'sizes.id')->toArray();
         $selectedToppings = $product->toppings()->pluck('toppings.id')->toArray();
         $branches = auth()->user()->isSuperAdmin()
@@ -296,6 +301,7 @@ class ProductController extends Controller
             'remove_gallery_images.*' => 'string',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
+            'serving_temperature' => ['nullable', Rule::in(['hot', 'cold', 'both'])],
             'status' => 'nullable|boolean',
             'branch_statuses' => ['nullable', 'array'],
             'branch_statuses.*' => ['required', 'boolean'],
@@ -311,6 +317,7 @@ class ProductController extends Controller
             'slug' => $validated['slug'],
             'price' => $validated['price'],
             'description' => $validated['description'] ?? null,
+            'serving_temperature' => $validated['serving_temperature'] ?? null,
             'status' => $validated['status'] ?? true,
         ];
 
@@ -397,7 +404,7 @@ class ProductController extends Controller
         $categories = Category::query()
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
-        $categoryIds = $categories->pluck('id')->map(fn($id) => (string) $id)->all();
+        $categoryIds = $categories->pluck('id')->map(fn ($id) => (string) $id)->all();
 
         $productsQuery = Product::onlyTrashed()
             ->with('category')
@@ -420,7 +427,7 @@ class ProductController extends Controller
         $products = $productsQuery->paginate(12)->withQueryString();
         $totalProducts = Product::onlyTrashed()->count();
         $activeFiltersCount = collect($filters)
-            ->filter(fn($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
+            ->filter(fn ($value, $key) => $value !== '' && ! ($key === 'sort' && $value === 'latest'))
             ->count();
 
         return view('admin.products.trash', compact(
@@ -476,7 +483,7 @@ class ProductController extends Controller
 
         return collect($request->file('gallery_images'))
             ->filter()
-            ->map(fn($file) => $file->store('products/gallery', 'public'))
+            ->map(fn ($file) => $file->store('products/gallery', 'public'))
             ->values()
             ->all();
     }
@@ -498,7 +505,7 @@ class ProductController extends Controller
         return array_filter(array_merge(
             request()->only(['q', 'category', 'status', 'availability', 'branch_id', 'sort']),
             $page > 1 ? ['page' => $page] : []
-        ), fn($value) => $value !== null && $value !== '');
+        ), fn ($value) => $value !== null && $value !== '');
     }
 
     private function applyProductSearchKeyword($query, string $keyword): void
@@ -513,21 +520,21 @@ class ProductController extends Controller
 
         $query->where(function ($builder) use ($keyword, $priceKeyword) {
             $builder
-                ->where('name', 'like', '%' . $keyword . '%')
-                ->orWhere('slug', 'like', '%' . $keyword . '%')
-                ->orWhere('description', 'like', '%' . $keyword . '%')
+                ->where('name', 'like', '%'.$keyword.'%')
+                ->orWhere('slug', 'like', '%'.$keyword.'%')
+                ->orWhere('description', 'like', '%'.$keyword.'%')
                 ->orWhereHas('category', function ($categoryQuery) use ($keyword) {
-                    $categoryQuery->where('name', 'like', '%' . $keyword . '%');
+                    $categoryQuery->where('name', 'like', '%'.$keyword.'%');
                 });
 
             if (Schema::hasColumn('products', 'sku')) {
-                $builder->orWhere('sku', 'like', '%' . $keyword . '%');
+                $builder->orWhere('sku', 'like', '%'.$keyword.'%');
             }
 
             if ($priceKeyword !== '') {
                 $builder->orWhereRaw(
                     "REPLACE(REPLACE(CAST(price AS CHAR), '.', ''), ',', '') LIKE ?",
-                    ['%' . $priceKeyword . '%']
+                    ['%'.$priceKeyword.'%']
                 );
             }
         });
@@ -563,8 +570,8 @@ class ProductController extends Controller
 
     private function validateSizePrices(Request $request): ?string
     {
-        $sizeM = \App\Models\Size::where('name', 'M')->first();
-        $sizeL = \App\Models\Size::where('name', 'L')->first();
+        $sizeM = Size::where('name', 'M')->first();
+        $sizeL = Size::where('name', 'L')->first();
 
         $sizesInput = $request->input('sizes', []);
         $sizePricesInput = $request->input('size_prices', []);
@@ -575,7 +582,8 @@ class ProductController extends Controller
 
             if ($priceL <= $priceM) {
                 $minL = $priceM + 1000;
-                return 'Giá cộng thêm của Size L (' . number_format($priceL, 0, ',', '.') . 'đ) phải lớn hơn giá cộng thêm của Size M (' . number_format($priceM, 0, ',', '.') . 'đ) tối thiểu 1.000đ (tối thiểu ' . number_format($minL, 0, ',', '.') . 'đ).';
+
+                return 'Giá cộng thêm của Size L ('.number_format($priceL, 0, ',', '.').'đ) phải lớn hơn giá cộng thêm của Size M ('.number_format($priceM, 0, ',', '.').'đ) tối thiểu 1.000đ (tối thiểu '.number_format($minL, 0, ',', '.').'đ).';
             }
         }
 
@@ -605,7 +613,7 @@ class ProductController extends Controller
     private function syncProductSizes(Product $product, Request $request): void
     {
         $sizeData = [];
-        $sizeS = \App\Models\Size::where('name', 'S')->first();
+        $sizeS = Size::where('name', 'S')->first();
         if ($sizeS) {
             $sizeData[$sizeS->id] = ['price' => 0];
         }

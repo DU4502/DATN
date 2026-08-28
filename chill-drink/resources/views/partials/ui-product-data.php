@@ -117,11 +117,6 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
         $uiProductImagesByName[$item['name']] = $url;
     }
 
-    $uiHomeFeaturedSkus = [
-        'CD-TS-001', 'CD-CF-001', 'CD-ST-001', 'CD-NE-001',
-        'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
-    ];
-
     $uiDefaultImage = $uiCategoryImages['Soda'];
 
     $uiResizeImage = static function (string $url, int $width = 700): string {
@@ -214,7 +209,6 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
 
     view()->share([
         'uiDisplaySkus' => $uiDisplaySkus,
-        'uiHomeFeaturedSkus' => $uiHomeFeaturedSkus,
         'uiCategoryImages' => $uiCategoryImages,
         'uiCategoryImagePools' => $uiCategoryImagePools,
         'uiProductImageUrls' => $uiProductImageUrls,
@@ -230,7 +224,6 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
 
 return collect(view()->getShared())->only([
     'uiDisplaySkus',
-    'uiHomeFeaturedSkus',
     'uiCategoryImages',
     'uiCategoryImagePools',
     'uiProductImageUrls',

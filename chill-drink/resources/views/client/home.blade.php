@@ -5,6 +5,10 @@
 @section('content')
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
 <style>
+    html {
+        scroll-behavior: smooth;
+    }
+
     /* ─── Home Page ─── */
     .home-page {
         --home-section-py: clamp(4rem, 8vw, 6.5rem);
@@ -491,6 +495,7 @@
     .home-featured {
         padding: var(--home-section-py) 0;
         background: #fff;
+        scroll-margin-top: 4.5rem;
     }
 
     .home-product-grid {
@@ -1200,6 +1205,12 @@
         .home-cta__visual { min-height: 150px; }
         .home-cta__content { padding: 1rem; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+        html {
+            scroll-behavior: auto;
+        }
+    }
 </style>
 
 <div class="home-page">
@@ -1242,6 +1253,142 @@
             </div>
         </div>
     </div>
+
++    @php
+        $homeRecommendations = $recommendationResult['recommendations'] ?? collect();
+        $homeRecommendationMode = $recommendationResult['mode'] ?? 'empty';
+        $homeRecommendationWeather = $recommendationResult['weather'] ?? null;
+        $homeRecommendationIcon = 'bi-fire';
+        $homeRecommendationTemperature = null;
+        if ($homeRecommendationMode === 'weather' && $homeRecommendationWeather) {
+            $temperature = round($homeRecommendationWeather->temperatureC, 1);
+            $temperatureDecimals = $temperature === (float) (int) $temperature ? 0 : 1;
+            $homeRecommendationTemperature = number_format($temperature, $temperatureDecimals, '.', '');
+            $homeRecommendationIcon = match (true) {
+                $homeRecommendationWeather->isRaining => 'bi-cloud-rain',
+                $temperature >= 35 => 'bi-brightness-high',
+                $temperature < 20 => 'bi-cloud',
+                default => 'bi-cloud-sun',
+            };
+        }
+    @endphp
+    @if($homeRecommendations->isNotEmpty())
+    {{-- Featured Products --}}
+    <section id="featured-products" class="home-featured">
+        <div class="container">
+            <div class="home-section-head home-section-head--center">
+                <div>
+                    <p class="section-kicker mb-2">
+                        {{ $homeRecommendationMode === 'weather' ? 'Theo thời tiết tại chi nhánh' : 'Đang được yêu thích' }}
+                    </p>
+                    <h2 class="section-title h1 mb-0">
+                        <i class="bi {{ $homeRecommendationIcon }}" aria-hidden="true"></i>
+                        Gợi ý hôm nay
+                    </h2>
+                    <p class="home-section-head__desc">
+                        @if($homeRecommendationMode === 'weather' && $homeRecommendationWeather)
+                            <strong>{{ $homeRecommendationTemperature }}°C</strong>
+                            · {{ $recommendationResult['message'] }}
+                        @else
+                            {{ $recommendationResult['message'] }}
+                        @endif
+                    </p>
+                </div>
+            </div>
+
+            <div class="home-product-grid">
+                @foreach($homeRecommendations as $recommendation)
+                    @php
+                        $product = $recommendation['product'];
+                        $reviewCount = (int) ($product->reviews_count ?? 0);
+                        $rating = $reviewCount > 0 ? round((float) ($product->reviews_avg_rating ?? 0), 1) : 0;
+                        $isAvailableAtCurrentBranch = $product->availabilityAt($branch) === true;
+                    @endphp
+                    <article class="home-product">
+                        <div class="home-product__img">
+                            <span class="home-product__tag">{{ $product->category?->name ?? 'Đồ uống' }}</span>
+                            @auth
+                                @php
+                                    $isFavorite = $favoriteProductIds->contains($product->id);
+                                @endphp
+                                <form class="home-product__favorite-form" method="POST" action="{{ route('favorites.toggle', $product) }}" data-home-favorite-form>
+                                    @csrf
+                                    <button type="submit" class="home-product__favorite {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-home-favorite-button>
+                                        <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
+                                    </button>
+                                </form>
+                            @else
+                                <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
+                                    <i class="bi bi-heart" aria-hidden="true"></i>
+                                </a>
+                            @endauth
+                            <a href="{{ route('products.show', $product->slug) }}">
+                                <x-product-image
+                                    :src="$product->image_url"
+                                    :sku="$product->sku ?? null"
+                                    :name="$product->name"
+                                    :alt="$product->name"
+                                    :category="$product->category?->name"
+                                />
+                            </a>
+                            <div class="product-image-cart-form">
+                                <button
+                                    type="button"
+                                    class="product-cart-btn {{ $isAvailableAtCurrentBranch ? '' : 'disabled' }}"
+                                    aria-label="Chọn tùy chọn cho {{ $product->name }}"
+                                    data-home-quick-add
+                                    data-action="{{ route('cart.add', $product->id) }}"
+                                    data-name="{{ $product->name }}"
+                                    data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
+                                    data-base-price="{{ (float) $product->price }}"
+                                    data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
+                                    data-image="{{ $product->image_url }}"
+                                    data-product-availability="{{ $product->id }}"
+                                    data-branch-id="{{ $branch?->id }}"
+                                    data-product-action
+                                    @disabled(! $isAvailableAtCurrentBranch)
+                                >
+                                    <i class="bi {{ $isAvailableAtCurrentBranch ? 'bi-cart-plus' : 'bi-cart-x' }}" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="home-product__body">
+                            <x-product-availability-badge :product="$product" :branch="$branch" class="mb-2" />
+                            <div class="home-product__rating">
+                                @if($reviewCount > 0)
+                                    @for($star = 1; $star <= 5; $star++)
+                                        <i class="bi {{ $rating >= $star ? 'bi-star-fill' : ($rating >= $star - 0.5 ? 'bi-star-half' : 'bi-star') }}"></i>
+                                    @endfor
+                                    <span>({{ number_format($rating, 1) }} · {{ $reviewCount }})</span>
+                                @else
+                                    <i class="bi bi-star text-secondary"></i>
+                                    <span>Chưa có đánh giá</span>
+                                @endif
+                            </div>
+                            <h3 class="home-product__name">
+                                <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                            </h3>
+                            @if(!empty($product->sku))
+                                <p class="home-product__sku">{{ $product->sku }}</p>
+                            @else
+                                <p class="home-product__sku">&nbsp;</p>
+                            @endif
+                            <div class="home-product__footer">
+                                <span class="home-product__price">{{ number_format($product->price, 0, ',', '.') }}đ</span>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            <div class="home-featured__cta">
+                <a href="{{ route('products.index') }}" class="btn btn-primary btn-lg px-5 rounded-pill">
+                    Xem toàn bộ menu <i class="bi bi-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+    @endif
 
     {{-- Categories --}}
     <section class="home-discover">
@@ -1360,174 +1507,6 @@
                         </a>
                     @endforeach
                 @endforelse
-            </div>
-        </div>
-    </section>
-
-    {{-- Featured Products --}}
-    <section id="featured-products" class="home-featured">
-        <div class="container">
-            <div class="home-section-head home-section-head--center">
-                <div>
-                    <p class="section-kicker mb-2">Bán chạy nhất</p>
-                    <h2 class="section-title h1 mb-0">Gợi ý hôm nay</h2>
-                    <p class="home-section-head__desc">Những món được yêu thích nhất — tươi mát, chuẩn vị, giao tận tay trong 30 phút.</p>
-                </div>
-            </div>
-
-            <div class="home-product-grid">
-                @php
-                    $homeFeaturedSkus = $uiHomeFeaturedSkus ?? [
-                        'CD-TS-001', 'CD-CF-001', 'CD-ST-001', 'CD-NE-001',
-                        'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
-                    ];
-                    $homeHasSkuColumn = \Illuminate\Support\Facades\Schema::hasColumn('products', 'sku');
-                    $homeHasReviewsTable = \Illuminate\Support\Facades\Schema::hasTable('reviews');
-                    $homeProductQuery = \App\Models\Product::with('category')
-                        ->when($homeHasReviewsTable, fn ($query) => $query->withAvg('reviews', 'rating')->withCount('reviews'));
-                    $homeFeaturedProducts = $homeHasSkuColumn
-                        ? (clone $homeProductQuery)
-                            ->whereIn('sku', $homeFeaturedSkus)
-                            ->get()
-                            ->sortBy(fn ($product) => array_search($product->sku, $homeFeaturedSkus, true))
-                            ->values()
-                        : (clone $homeProductQuery)
-                            ->where('status', true)
-                            ->latest()
-                            ->limit(8)
-                            ->get();
-                @endphp
-                @forelse($homeFeaturedProducts as $product)
-                    @php
-                        $reviewCount = (int) ($product->reviews_count ?? 0);
-                        $rating = $reviewCount > 0 ? round((float) ($product->reviews_avg_rating ?? 0), 1) : 0;
-                    @endphp
-                    <article class="home-product">
-                        <div class="home-product__img">
-                            <span class="home-product__tag">{{ $product->category->name }}</span>
-                            @auth
-                                @php($isFavorite = $favoriteProductIds->contains($product->id))
-                                <form class="home-product__favorite-form" method="POST" action="{{ route('favorites.toggle', $product) }}" data-home-favorite-form>
-                                    @csrf
-                                    <button type="submit" class="home-product__favorite {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-home-favorite-button>
-                                        <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
-                                    </button>
-                                </form>
-                            @else
-                                <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
-                                    <i class="bi bi-heart" aria-hidden="true"></i>
-                                </a>
-                            @endauth
-                            <a href="{{ route('products.show', $product->slug) }}">
-                                <x-product-image
-                                    :src="$product->image_url"
-                                    :sku="$product->sku ?? null"
-                                    :name="$product->name"
-                                    :alt="$product->name"
-                                    :category="$product->category?->name"
-                                />
-                            </a>
-                            <div class="product-image-cart-form">
-                                <button
-                                    type="button"
-                                    class="product-cart-btn {{ $product->availabilityAt($branch) === true ? '' : 'disabled' }}"
-                                    aria-label="Chọn tùy chọn cho {{ $product->name }}"
-                                    data-home-quick-add
-                                    data-action="{{ route('cart.add', $product->id) }}"
-                                    data-name="{{ $product->name }}"
-                                    data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
-                                    data-base-price="{{ (float) $product->price }}"
-                                    data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
-                                    data-image="{{ $product->image_url }}"
-                                    data-product-availability="{{ $product->id }}"
-                                    data-branch-id="{{ $branch?->id }}"
-                                    data-product-action
-                                    @disabled($product->availabilityAt($branch) !== true)
-                                >
-                                    <i class="bi {{ $product->availabilityAt($branch) === true ? 'bi-cart-plus' : 'bi-cart-x' }}" aria-hidden="true"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="home-product__body">
-                            <x-product-availability-badge :product="$product" :branch="$branch" class="mb-2" />
-                            <div class="home-product__rating">
-                                @if($reviewCount > 0)
-                                    @for($star = 1; $star <= 5; $star++)
-                                        <i class="bi {{ $rating >= $star ? 'bi-star-fill' : ($rating >= $star - 0.5 ? 'bi-star-half' : 'bi-star') }}"></i>
-                                    @endfor
-                                    <span>({{ number_format($rating, 1) }} · {{ $reviewCount }})</span>
-                                @else
-                                    <i class="bi bi-star text-secondary"></i>
-                                    <span>Chưa có đánh giá</span>
-                                @endif
-                            </div>
-                            <h3 class="home-product__name">
-                                <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
-                            </h3>
-                            @if(!empty($product->sku))
-                                <p class="home-product__sku">{{ $product->sku }}</p>
-                            @else
-                                <p class="home-product__sku">&nbsp;</p>
-                            @endif
-                            <div class="home-product__footer">
-                                <span class="home-product__price">{{ number_format($product->price, 0, ',', '.') }}đ</span>
-                            </div>
-                        </div>
-                    </article>
-                @empty
-                    @foreach([
-                        ['Matcha Latte', '45.000đ', asset('images/matcha.png'), 'Trà', 'matcha-latte-da'],
-                        ['Trà Dâu Dứa', '38.000đ', asset('images/products/tra-dau.jpg'), 'Trái cây', 'tropical-frost'],
-                        ['Bạc Xỉu Đá', '29.000đ', asset('images/products/bac-xiu-da.jpg'), 'Cà phê', 'ca-phe-sua-da'],
-                        ['Nước Chanh Bạc Hà', '35.000đ', asset('images/products/soda-chanh-day.jpg'), 'Giải khát', 'citrus-sunset'],
-                    ] as $item)
-                        <article class="home-product">
-                            <div class="home-product__img">
-                                <span class="home-product__tag">{{ $item[3] }}</span>
-                                <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
-                                    <i class="bi bi-heart" aria-hidden="true"></i>
-                                </a>
-                                <a href="{{ route('products.show', $item[4]) }}">
-                                    <img src="{{ $item[2] }}" alt="{{ $item[0] }}" loading="lazy">
-                                </a>
-                                <div class="product-image-cart-form">
-                                    <button
-                                        type="button"
-                                        class="product-cart-btn"
-                                        aria-label="Chọn tùy chọn cho {{ $item[0] }}"
-                                        data-home-quick-add
-                                        data-action="{{ route('cart.add', 'demo-' . $item[4]) }}"
-                                        data-name="{{ $item[0] }}"
-                                        data-price="{{ $item[1] }}"
-                                        data-base-price="{{ preg_replace('/\D/', '', $item[1]) }}"
-                                        data-image="{{ $item[2] }}"
-                                    >
-                                        <i class="bi bi-cart-plus" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="home-product__body">
-                                <div class="home-product__rating">
-                                    <i class="bi bi-star text-secondary"></i>
-                                    <span>Chưa có đánh giá</span>
-                                </div>
-                                <h3 class="home-product__name">
-                                    <a href="{{ route('products.show', $item[4]) }}">{{ $item[0] }}</a>
-                                </h3>
-                                <p class="home-product__sku">&nbsp;</p>
-                                <div class="home-product__footer">
-                                    <span class="home-product__price">{{ $item[1] }}</span>
-                                </div>
-                            </div>
-                        </article>
-                    @endforeach
-                @endforelse
-            </div>
-
-            <div class="home-featured__cta">
-                <a href="{{ route('products.index') }}" class="btn btn-primary btn-lg px-5 rounded-pill">
-                    Xem toàn bộ menu <i class="bi bi-arrow-right ms-2"></i>
-                </a>
             </div>
         </div>
     </section>

@@ -74,6 +74,15 @@ return [
         'navigation_exclude' => env('ROUTING_NAVIGATION_EXCLUDE', 'motorway'),
     ],
 
+    'weather' => [
+        'provider' => env('WEATHER_PROVIDER', 'weatherapi'),
+        'key' => env('WEATHER_API_KEY'),
+        'cache_minutes' => (int) env('WEATHER_CACHE_MINUTES', 15),
+        'timeout' => (int) env('WEATHER_TIMEOUT_SECONDS', 5),
+        'demo_mode' => env('WEATHER_DEMO_MODE', false),
+        'demo_scenario' => env('WEATHER_DEMO_SCENARIO', 'normal'),
+    ],
+
     'navigation_tts' => [
         // Một voice Piper cố định chạy local trên server. Không cần API key/cloud.
         'enabled' => env('NAV_TTS_ENABLED', true),
@@ -102,7 +111,7 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/auth/google/callback'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', rtrim((string) env('APP_URL', 'http://127.0.0.1:8000'), '/').'/auth/google/callback'),
         'stateless' => env('GOOGLE_STATELESS', false),
     ],
 

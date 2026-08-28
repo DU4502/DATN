@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
-
-use App\Models\Product;
+use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Favorite;
-use App\Models\Branch;
-use App\Support\OrderDistancePolicy;
+use App\Models\Product;
+use App\Services\DrinkRecommendationService;
 use App\Services\ProductAvailabilityService;
+use App\Support\OrderDistancePolicy;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -17,16 +17,18 @@ class HomeController extends Controller
     /**
      * Display homepage
      */
-    public function index()
+    public function index(DrinkRecommendationService $recommendationService)
     {
         $branch = app(ProductAvailabilityService::class)->currentBranch();
-
-        // Get featured products
-        $featuredProducts = Product::where('status', true)
-            ->with(['branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
-            ->latest()
-            ->take(8)
-            ->get();
+        $recommendationResult = $branch
+            ? $recommendationService->forBranch($branch)
+            : [
+                'weather' => null,
+                'weather_available' => false,
+                'mode' => 'empty',
+                'recommendations' => collect(),
+            ];
+        $recommendationResult['message'] = $this->recommendationMessage($recommendationResult);
 
         // Get all categories (include soft-deleted, hide only after force delete)
         $categories = Category::withTrashed()->orderBy('name')->get();
@@ -57,13 +59,33 @@ class HomeController extends Controller
         $slides = $branch ? $branch->slides()->where('is_active', true)->get() : collect();
 
         return view('client.home', compact(
-            'featuredProducts',
+            'recommendationResult',
             'categories',
             'discoverProducts',
             'favoriteProductIds',
             'slides',
             'branch'
         ));
+    }
+
+    private function recommendationMessage(array $result): ?string
+    {
+        if (($result['mode'] ?? null) === 'popularity_fallback') {
+            return 'Những món đang được yêu thích tại chi nhánh này.';
+        }
+
+        $weather = $result['weather'] ?? null;
+        if (($result['mode'] ?? null) !== 'weather' || ! $weather) {
+            return null;
+        }
+
+        return match (true) {
+            $weather->isRaining => 'Trời đang mưa, Chill Drink đã chọn một vài món phù hợp cho bạn.',
+            $weather->temperatureC >= 35 => 'Hôm nay khá nóng! Thử một món mát lạnh nhé.',
+            $weather->temperatureC >= 30 => 'Thời tiết khá nóng, đây là vài gợi ý phù hợp.',
+            $weather->temperatureC < 20 => 'Hôm nay khá mát, Chill Drink đã chọn một vài món phù hợp cho bạn.',
+            default => 'Thời tiết hôm nay khá dễ chịu, đây là vài gợi ý dành cho bạn.',
+        };
     }
 
     public function selectNearestBranch(Request $request)
@@ -76,7 +98,7 @@ class HomeController extends Controller
         $latitude = (float) $validated['latitude'];
         $longitude = (float) $validated['longitude'];
 
-        $branches = \App\Models\Branch::availableForLocation()->get();
+        $branches = Branch::availableForLocation()->get();
 
         if ($branches->isEmpty()) {
             return response()->json([
@@ -105,14 +127,14 @@ class HomeController extends Controller
             $oldBranchId = session('nearest_branch_id');
             session([
                 'nearest_branch_id' => $nearestBranch->id,
-                'user_lat'          => $latitude,
-                'user_lng'          => $longitude,
+                'user_lat' => $latitude,
+                'user_lng' => $longitude,
             ]);
 
             // Lưu tọa độ vào DB nếu user đã đăng nhập
             if (auth()->check()) {
                 auth()->user()->updateQuietly([
-                    'latitude'  => $latitude,
+                    'latitude' => $latitude,
                     'longitude' => $longitude,
                 ]);
             }
@@ -121,7 +143,7 @@ class HomeController extends Controller
                 'success' => true,
                 'changed' => $oldBranchId != $nearestBranch->id,
                 'branch' => [
-                    'id'   => $nearestBranch->id,
+                    'id' => $nearestBranch->id,
                     'name' => $nearestBranch->name,
                 ],
             ]);
