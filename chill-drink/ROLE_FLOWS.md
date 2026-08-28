@@ -6,7 +6,7 @@ Tài liệu này mô tả chi tiết toàn bộ các luồng nghiệp vụ hiệ
 
 ## 🔑 Tổng Quan Về Vai Trò & Phân Quyền
 
-Hệ thống bao gồm 4 vai trò chính được định nghĩa trong bảng `roles` (xem [AuthAccountSeeder.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/database/seeders/AuthAccountSeeder.php)):
+Hệ thống bao gồm 4 vai trò chính được định nghĩa trong bảng `roles` (xem [AuthAccountSeeder.php](database/seeders/AuthAccountSeeder.php)):
 
 | ID | Tên Vai Trò | Loại Người Dùng | Middleware Áp Dụng | Mô Tả |
 |:---|:---|:---|:---|:---|
@@ -17,10 +17,10 @@ Hệ thống bao gồm 4 vai trò chính được định nghĩa trong bảng `r
 | **4** | **CSKH** | Nhân viên Chăm sóc khách hàng | `auth`, `cskh` | Nhân viên hỗ trợ chat trực tuyến, phản hồi thắc mắc và CSKH thời gian thực. |
 
 ### Cơ chế Middleware bảo vệ:
-- [AdminMiddleware.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Middleware/AdminMiddleware.php) (`admin`): Kiểm tra người dùng đã đăng nhập và có `role_id` là `2` hoặc `3` (`isAdmin()`). Nếu không, chuyển hướng về trang chủ với thông báo lỗi.
-- [SuperAdminMiddleware.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Middleware/SuperAdminMiddleware.php) (`superadmin`): Kiểm tra người dùng đã đăng nhập và có `role_id` là `3` (`isSuperAdmin()`). Nếu không, chuyển hướng về trang Dashboard của Admin với thông báo lỗi.
-- [CskhMiddleware.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Middleware/CskhMiddleware.php) (`cskh`): Kiểm tra người dùng có quyền CSKH (role 4), Admin (role 2) hoặc Super Admin (role 3). Nếu không, chặn truy cập.
-- Đăng ký alias tại [app.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/bootstrap/app.php).
+- [AdminMiddleware.php](app/Http/Middleware/AdminMiddleware.php) (`admin`): Kiểm tra người dùng đã đăng nhập và có `role_id` là `2` hoặc `3` (`isAdmin()`). Nếu không, chuyển hướng về trang chủ với thông báo lỗi.
+- [SuperAdminMiddleware.php](app/Http/Middleware/SuperAdminMiddleware.php) (`superadmin`): Kiểm tra người dùng đã đăng nhập và có `role_id` là `3` (`isSuperAdmin()`). Nếu không, chuyển hướng về trang Dashboard của Admin với thông báo lỗi.
+- [CskhMiddleware.php](app/Http/Middleware/CskhMiddleware.php) (`cskh`): Kiểm tra người dùng có quyền CSKH (role 4), Admin (role 2) hoặc Super Admin (role 3). Nếu không, chặn truy cập.
+- Đăng ký alias tại [app.php](bootstrap/app.php).
 
 ---
 
@@ -52,11 +52,11 @@ graph TD
   - Topping hiển thị động dựa trên danh mục sản phẩm (Matcha, trà sữa, cà phê, soda...).
   - Tính toán điểm đánh giá trung bình từ các review đã được duyệt (`status = true`).
 - **Files liên quan**:
-  - Controller: [HomeController.php@index](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/HomeController.php), [ProductController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/ProductController.php) (phương thức `index`, `show`)
-  - Model: [Product.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Product.php), [Category.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Category.php)
-  - Support: [ProductCatalog.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/ProductCatalog.php)
-  - View: [index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/products/index.blade.php), [show.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/products/show.blade.php)
-  - Routes: `home`, `products.index`, `products.show` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [HomeController.php@index](app/Http/Controllers/Client/HomeController.php), [ProductController.php](app/Http/Controllers/Client/ProductController.php) (phương thức `index`, `show`)
+  - Model: [Product.php](app/Models/Product.php), [Category.php](app/Models/Category.php)
+  - Support: [ProductCatalog.php](app/Support/ProductCatalog.php)
+  - View: [index.blade.php](resources/views/client/products/index.blade.php), [show.blade.php](resources/views/client/products/show.blade.php)
+  - Routes: `home`, `products.index`, `products.show` trong [web.php](routes/web.php)
 
 ### 1.2 Giỏ hàng (Session-based)
 - **Mô tả**: Thêm sản phẩm vào giỏ với tùy chọn tùy chỉnh (Size, lượng đường, lượng đá, topping đi kèm, số lượng, ghi chú). Cập nhật số lượng hoặc xóa sản phẩm khỏi giỏ hàng.
@@ -65,9 +65,9 @@ graph TD
   - Phí chênh lệch Size: Size S (+0đ), Size M (+5.000đ), Size L (+10.000đ).
   - Phí topping cộng trực tiếp vào giá sản phẩm trong giỏ.
 - **Files liên quan**:
-  - Controller: [CartController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/CartController.php) (các phương thức `index`, `add`, `update`, `remove`, `clear`)
-  - View: [cart/index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/cart/index.blade.php)
-  - Routes: `cart.index`, `cart.add`, `cart.update`, `cart.remove`, `cart.clear` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [CartController.php](app/Http/Controllers/Client/CartController.php) (các phương thức `index`, `add`, `update`, `remove`, `clear`)
+  - View: [cart/index.blade.php](resources/views/client/cart/index.blade.php)
+  - Routes: `cart.index`, `cart.add`, `cart.update`, `cart.remove`, `cart.clear` trong [web.php](routes/web.php)
 
 ### 1.3 Đặt hàng không đăng nhập (Guest Checkout)
 - **Mô tả**: Tiến hành thanh toán mà không cần tài khoản. Người dùng nhập tên, số điện thoại, email và lựa chọn hình thức:
@@ -80,24 +80,24 @@ graph TD
   - Sinh token xác nhận có thời hạn 15 phút (`confirmation_token_expires_at`).
   - Gửi email xác thực đến hòm thư của khách.
 - **Files liên quan**:
-  - Controller: [GuestCheckoutController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/GuestCheckoutController.php) (các phương thức `index`, `storeInfo`, `payment`, `process`)
-  - Mailer: [GuestOrderEmailConfirmationMail.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Mail/GuestOrderEmailConfirmationMail.php)
-  - Support: [ShippingFee.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/ShippingFee.php)
-  - View: [guest/index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/checkout/guest/index.blade.php), [guest/payment.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/checkout/guest/payment.blade.php), [guest/pending-confirmation.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/checkout/guest/pending-confirmation.blade.php)
-  - Routes: `checkout.guest.index`, `checkout.guest.info.store`, `checkout.guest.payment`, `checkout.guest.process`, `checkout.guest.pending-confirmation` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [GuestCheckoutController.php](app/Http/Controllers/Client/GuestCheckoutController.php) (các phương thức `index`, `storeInfo`, `payment`, `process`)
+  - Mailer: [GuestOrderEmailConfirmationMail.php](app/Mail/GuestOrderEmailConfirmationMail.php)
+  - Support: [ShippingFee.php](app/Support/ShippingFee.php)
+  - View: [guest/index.blade.php](resources/views/client/checkout/guest/index.blade.php), [guest/payment.blade.php](resources/views/client/checkout/guest/payment.blade.php), [guest/pending-confirmation.blade.php](resources/views/client/checkout/guest/pending-confirmation.blade.php)
+  - Routes: `checkout.guest.index`, `checkout.guest.info.store`, `checkout.guest.payment`, `checkout.guest.process`, `checkout.guest.pending-confirmation` trong [web.php](routes/web.php)
 
 ### 1.4 Xác nhận đơn hàng qua Email
 - **Mô tả**: Khách hàng mở email và bấm vào liên kết xác nhận.
 - **Quy tắc nghiệp vụ**:
   - Nếu token xác nhận khớp và chưa hết hạn: Trạng thái đơn hàng chuyển sang `pending` (chờ xử lý), xóa token xác nhận để tránh dùng lại.
-  - Gửi tín hiệu thông báo thời gian thực cho Admin chi nhánh qua [RealtimeOrderNotifier.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/RealtimeOrderNotifier.php) để chuẩn bị đồ uống.
+  - Gửi tín hiệu thông báo thời gian thực cho Admin chi nhánh qua [RealtimeOrderNotifier.php](app/Support/RealtimeOrderNotifier.php) để chuẩn bị đồ uống.
   - Lưu trạng thái cho phép thiết bị của khách xem đơn hàng đó vào session (`guest_order_tokens`).
   - Nếu token hết hạn (quá 15 phút): Đơn hàng tự động bị hủy và thông báo cho người dùng liên kết không còn hiệu lực.
 - **Files liên quan**:
-  - Controller: [GuestCheckoutController.php@confirmEmail](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/GuestCheckoutController.php)
-  - Support: [GuestOrderAccess.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/GuestOrderAccess.php), [RealtimeOrderNotifier.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/RealtimeOrderNotifier.php)
-  - View: [guest/confirm-email-result.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/checkout/guest/confirm-email-result.blade.php)
-  - Route: `checkout.guest.confirm-email` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [GuestCheckoutController.php@confirmEmail](app/Http/Controllers/Client/GuestCheckoutController.php)
+  - Support: [GuestOrderAccess.php](app/Support/GuestOrderAccess.php), [RealtimeOrderNotifier.php](app/Support/RealtimeOrderNotifier.php)
+  - View: [guest/confirm-email-result.blade.php](resources/views/client/checkout/guest/confirm-email-result.blade.php)
+  - Route: `checkout.guest.confirm-email` trong [web.php](routes/web.php)
 
 ### 1.5 Theo dõi đơn hàng của khách vãng lai
 - **Mô tả**: Xem trạng thái và thông tin tiến độ đơn hàng theo thời gian thực (Đang pha chế, Đang giao, Đã giao...).
@@ -105,10 +105,10 @@ graph TD
   - Vì khách vãng lai không có tài khoản, hệ thống sử dụng **Signed URL** bảo mật (đường dẫn có chữ ký số mã hóa của Laravel) để xác thực quyền truy cập trang theo dõi.
   - Phải có middleware `signed` bảo vệ hoặc session chứa token phù hợp (`GuestOrderAccess::canView`).
 - **Files liên quan**:
-  - Controller: [GuestCheckoutController.php@track](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/GuestCheckoutController.php)
-  - Support: [GuestOrderAccess.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/GuestOrderAccess.php)
-  - View: [checkout/success.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/checkout/success.blade.php) (Dùng chung giao diện tracking)
-  - Route: `checkout.guest.track` (được bảo vệ bởi middleware `signed`) trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [GuestCheckoutController.php@track](app/Http/Controllers/Client/GuestCheckoutController.php)
+  - Support: [GuestOrderAccess.php](app/Support/GuestOrderAccess.php)
+  - View: [checkout/success.blade.php](resources/views/client/checkout/success.blade.php) (Dùng chung giao diện tracking)
+  - Route: `checkout.guest.track` (được bảo vệ bởi middleware `signed`) trong [web.php](routes/web.php)
 
 ### 1.6 Chuyển đổi tài khoản Khách sang Thành viên (Guest-to-Member)
 - **Mô tả**: Sau khi khách vãng lai hoàn thành đặt đơn thành công, hệ thống hiển thị tùy chọn cho phép khách đăng ký nhanh tài khoản thành viên bằng cách chỉ cần thiết lập mật khẩu cho email đã dùng đặt hàng.
@@ -117,15 +117,15 @@ graph TD
   - Tự động liên kết đơn hàng khách vừa đặt vào tài khoản thành viên mới (`user_id = $new_user_id`).
   - Cộng điểm thưởng tích lũy (loyalty points) từ đơn hàng vừa đặt vào tài khoản thành viên mới tạo.
 - **Files liên quan**:
-  - Controller: [GuestConvertController.php@store](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Auth/GuestConvertController.php)
-  - Model: [User.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/User.php)
-  - Route: `register.guest-convert` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [GuestConvertController.php@store](app/Http/Controllers/Auth/GuestConvertController.php)
+  - Model: [User.php](app/Models/User.php)
+  - Route: `register.guest-convert` trong [web.php](routes/web.php)
 
 ### 1.7 Nhận và áp dụng Voucher dành cho Khách
 - **Mô tả**: Khách chưa đăng nhập vẫn có thể nhập mã voucher và nhận voucher (lưu trữ theo Session ID hoặc `guest_identifier` làm khóa định danh tạm thời).
 - **Files liên quan**:
-  - Controller: [VoucherController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Api/VoucherController.php) (các phương thức `receive`, `getReceived`, `markAsUsed`)
-  - Routes: `api.vouchers.receive`, `api.vouchers.received`, `api.vouchers.mark-used` trong [api.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/api.php)
+  - Controller: [VoucherController.php](app/Http/Controllers/Api/VoucherController.php) (các phương thức `receive`, `getReceived`, `markAsUsed`)
+  - Routes: `api.vouchers.receive`, `api.vouchers.received`, `api.vouchers.mark-used` trong [api.php](routes/api.php)
 
 ### 1.8 Luồng thanh toán trực tuyến qua cổng VNPay
 - **Mô tả**: Cho phép khách hàng hoặc khách vãng lai thanh toán hóa đơn bằng tài khoản ngân hàng hoặc ví điện tử qua cổng VNPay.
@@ -135,24 +135,24 @@ graph TD
   - **Trang Callback phản hồi (Return)**: Khách hàng thanh toán xong được chuyển hướng về `/vnpay/return`. Hệ thống kiểm tra chữ ký chữ số, so khớp số tiền thực thu với hóa đơn gốc, và cập nhật trạng thái `payment_status = 'paid'` & `status = 'in_progress'` nếu thành công.
   - **Webhook hậu đài (IPN)**: API chạy ngầm `/vnpay/ipn` được gọi bởi máy chủ VNPay để đảm bảo cập nhật trạng thái thanh toán ngay cả khi khách hàng đóng trình duyệt. Hệ thống sử dụng khóa hàng dữ liệu (`lockForUpdate()`) trong Database để tránh tình trạng cập nhật trạng thái trùng lặp (Race Condition).
 - **Files liên quan**:
-  - Controller: [VnpayController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/VnpayController.php) (các phương thức `payment`, `return`, `ipn`)
-  - Routes: `vnpay.payment`, `vnpay.return`, `vnpay.ipn` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [VnpayController.php](app/Http/Controllers/Client/VnpayController.php) (các phương thức `payment`, `return`, `ipn`)
+  - Routes: `vnpay.payment`, `vnpay.return`, `vnpay.ipn` trong [web.php](routes/web.php)
 
 ### 1.9 Hệ thống định vị GPS & tự động tính phí vận chuyển
 - **Mô tả**: Tự động tính toán khoảng cách địa lý và đưa ra gợi ý chi nhánh gần nhất và phí ship tương ứng.
 - **Quy tắc nghiệp vụ**:
-  - Sử dụng công thức toán học **Haversine** trong [Branch.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Branch.php) để tính khoảng cách đường chim bay giữa tọa độ GPS của người dùng và chi nhánh.
+  - Sử dụng công thức toán học **Haversine** trong [Branch.php](app/Models/Branch.php) để tính khoảng cách đường chim bay giữa tọa độ GPS của người dùng và chi nhánh.
   - API `/api/branches/nearest` trả về chi nhánh hoạt động gần nhất.
   - API `/api/branches` trả về danh sách toàn bộ các chi nhánh hoạt động, sắp xếp tăng dần theo khoảng cách (km).
-  - Lớp [ShippingFee.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/ShippingFee.php) quy định phí vận chuyển theo khoảng cách:
+  - Lớp [ShippingFee.php](app/Support/ShippingFee.php) quy định phí vận chuyển theo khoảng cách:
     - 0 - 2 km: 10.000đ | 2 - 5 km: 15.000đ | 5 - 8 km: 22.000đ | 8 - 12 km: 30.000đ | 12 - 15 km: 40.000đ | 15 - 20 km: 50.000đ.
     - Phương thức giao hàng Giao Nhanh (`fast`) cộng thêm phụ phí 8.000đ so với Giao Tiêu Chuẩn (`standard`).
   - Nếu không có quyền truy cập tọa độ GPS, hệ thống sử dụng bộ từ khóa địa chỉ (`keywords` như "hoàn kiếm", "cầu giấy"...) để ước lượng khoảng cách tương đối.
 - **Files liên quan**:
-  - Controller: [NearestBranchController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Api/NearestBranchController.php) (các phương thức `nearest`, `list`)
-  - Model: [Branch.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Branch.php) (phương thức `distanceTo`, scope `availableForLocation`)
-  - Support: [ShippingFee.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/ShippingFee.php)
-  - Routes: `api.branches.nearest`, `api.branches.list` trong [api.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/api.php)
+  - Controller: [NearestBranchController.php](app/Http/Controllers/Api/NearestBranchController.php) (các phương thức `nearest`, `list`)
+  - Model: [Branch.php](app/Models/Branch.php) (phương thức `distanceTo`, scope `availableForLocation`)
+  - Support: [ShippingFee.php](app/Support/ShippingFee.php)
+  - Routes: `api.branches.nearest`, `api.branches.list` trong [api.php](routes/api.php)
 
 ---
 
@@ -174,8 +174,8 @@ graph TD
 ### 2.1 Đăng ký / Đăng nhập / Xác thực tài khoản
 - **Mô tả**: Người dùng có thể đăng ký tài khoản mới, đăng nhập bằng email/mật khẩu, đăng nhập thông qua mạng xã hội (Google, Facebook), xác thực email và khôi phục mật khẩu khi quên.
 - **Files liên quan**:
-  - Controller: [RegisteredUserController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Auth/RegisteredUserController.php), [AuthenticatedSessionController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Auth/AuthenticatedSessionController.php), [GoogleController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Auth/GoogleController.php), [FacebookController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Auth/FacebookController.php)
-  - Routes: Định nghĩa đầy đủ trong [auth.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/auth.php)
+  - Controller: [RegisteredUserController.php](app/Http/Controllers/Auth/RegisteredUserController.php), [AuthenticatedSessionController.php](app/Http/Controllers/Auth/AuthenticatedSessionController.php), [GoogleController.php](app/Http/Controllers/Auth/GoogleController.php), [FacebookController.php](app/Http/Controllers/Auth/FacebookController.php)
+  - Routes: Định nghĩa đầy đủ trong [auth.php](routes/auth.php)
 
 ### 2.2 Quản lý Hồ sơ & Sổ địa chỉ (Address Book)
 - **Mô tả**: Thay đổi thông tin cá nhân, cập nhật ảnh đại diện (avatar), thay đổi mật khẩu và quản lý danh sách địa chỉ giao hàng cá nhân.
@@ -183,10 +183,10 @@ graph TD
   - Có thể lưu nhiều địa chỉ (Ví dụ: Nhà riêng, Công ty, Trường học).
   - Có tùy chọn đặt một địa chỉ làm mặc định (`is_default`). Khi đặt mặc định, hệ thống tự động đồng bộ thông tin địa chỉ này lên thông tin chính của User (`name`, `phone`, `address`, `area`).
 - **Files liên quan**:
-  - Controller: [ProfileController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/ProfileController.php), [AddressController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/AddressController.php)
-  - Model: [Address.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Address.php)
-  - View: [profile/edit.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/profile/edit.blade.php)
-  - Routes: `profile.edit`, `profile.update`, `profile.destroy` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [ProfileController.php](app/Http/Controllers/ProfileController.php), [AddressController.php](app/Http/Controllers/Client/AddressController.php)
+  - Model: [Address.php](app/Models/Address.php)
+  - View: [profile/edit.blade.php](resources/views/profile/edit.blade.php)
+  - Routes: `profile.edit`, `profile.update`, `profile.destroy` trong [web.php](routes/web.php)
 
 ### 2.3 Đặt hàng cá nhân & Áp dụng Voucher (Member Checkout)
 - **Mô tả**: Thực hiện thanh toán giỏ hàng hiện tại của thành viên.
@@ -196,9 +196,9 @@ graph TD
   - Có thể áp dụng các mã giảm giá (Voucher) đã lưu trong ví tài khoản để giảm tiền trực tiếp hoặc giảm phí ship.
   - Sau khi đặt hàng thành công, hệ thống tự động tính toán và tích lũy điểm thưởng dựa trên tổng giá trị đơn hàng (Loyalty Points).
 - **Files liên quan**:
-  - Controller: [CheckoutController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/CheckoutController.php) (các phương thức `index`, `process`, `storeAddress`, `updateAddress`, `updatePrimaryAddress`)
-  - Model: [Voucher.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Voucher.php), [UserVoucher.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/UserVoucher.php)
-  - Routes: `checkout.index`, `checkout.process`, `checkout.addresses.store` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [CheckoutController.php](app/Http/Controllers/Client/CheckoutController.php) (các phương thức `index`, `process`, `storeAddress`, `updateAddress`, `updatePrimaryAddress`)
+  - Model: [Voucher.php](app/Models/Voucher.php), [UserVoucher.php](app/Models/UserVoucher.php)
+  - Routes: `checkout.index`, `checkout.process`, `checkout.addresses.store` trong [web.php](routes/web.php)
 
 ### 2.4 Lịch sử mua hàng & Đặt lại đơn hàng nhanh (Reorder)
 - **Mô tả**: Xem danh sách các đơn hàng đã đặt, chi tiết từng đơn hàng kèm trạng thái. Cung cấp tính năng:
@@ -208,9 +208,9 @@ graph TD
   - Giá của các món khi đặt lại sẽ được tự động cập nhật theo giá bán hiện hành của hệ thống, không giữ giá cũ của đơn hàng lịch sử.
   - Hệ thống ghi lại lịch sử thao tác này trong bảng `reorder_history`.
 - **Files liên quan**:
-  - Controller: [QuickOrderController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/QuickOrderController.php) (các phương thức `reorderOrder`, `reorderItem`)
-  - View: [profile/orders.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/profile/orders.blade.php)
-  - Routes: `orders.reorder`, `orders.items.reorder` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [QuickOrderController.php](app/Http/Controllers/Client/QuickOrderController.php) (các phương thức `reorderOrder`, `reorderItem`)
+  - View: [profile/orders.blade.php](resources/views/profile/orders.blade.php)
+  - Routes: `orders.reorder`, `orders.items.reorder` trong [web.php](routes/web.php)
 
 ### 2.5 Thiết lập vị giác & Sản phẩm yêu thích (Favorites & Taste Profile)
 - **Mô tả**:
@@ -219,10 +219,10 @@ graph TD
 - **Quy tắc nghiệp vụ**:
   - Khi người dùng mở trang chi tiết sản phẩm đã được lưu cấu hình vị giác, hệ thống sẽ tự động tick chọn sẵn các tùy chọn (đường, đá, size, topping) theo cấu hình người dùng đã lưu trước đó.
 - **Files liên quan**:
-  - Controller: [QuickOrderController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/QuickOrderController.php) (các phương thức `favorites`, `toggleFavorite`, `saveTaste`)
-  - Model: [Favorite.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Favorite.php), [TasteProfile.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/TasteProfile.php)
-  - View: [favorites/index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/favorites/index.blade.php)
-  - Routes: `favorites.index`, `favorites.toggle`, `taste-profiles.store` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [QuickOrderController.php](app/Http/Controllers/Client/QuickOrderController.php) (các phương thức `favorites`, `toggleFavorite`, `saveTaste`)
+  - Model: [Favorite.php](app/Models/Favorite.php), [TasteProfile.php](app/Models/TasteProfile.php)
+  - View: [favorites/index.blade.php](resources/views/client/favorites/index.blade.php)
+  - Routes: `favorites.index`, `favorites.toggle`, `taste-profiles.store` trong [web.php](routes/web.php)
 
 ### 2.6 Đặt hàng nhóm (Group Order)
 - **Mô tả**: Cho phép một nhóm người dùng (ví dụ: đồng nghiệp trong văn phòng) cùng chọn món chung vào một đơn hàng duy nhất để tiết kiệm phí vận chuyển.
@@ -234,19 +234,19 @@ graph TD
   5. **Chốt đơn & Gom giỏ**: Chỉ Trưởng nhóm mới có quyền bấm "Chốt đơn nhóm". Khi chốt, hệ thống khóa không cho thêm món, lưu trạng thái đơn nhóm thành `closed`, sao lưu giỏ hàng cá nhân của trưởng nhóm, sau đó nạp toàn bộ món của tất cả thành viên vào giỏ hàng của trưởng nhóm.
   6. **Thanh toán**: Trưởng nhóm thực hiện các bước thanh toán (nhập địa chỉ, áp voucher, chọn thanh toán COD/VNPay) như một đơn hàng bình thường. Sau khi thanh toán thành công, đơn nhóm chuyển sang trạng thái `ordered` và liên kết với mã đơn hàng thật.
 - **Files liên quan**:
-  - Controller: [GroupOrderController.php (Client)](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/GroupOrderController.php)
-  - Model: [GroupOrder.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/GroupOrder.php), [GroupOrderItem.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/GroupOrderItem.php), [GroupOrderMember.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/GroupOrderMember.php)
-  - View: [group-orders/index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/group-orders/index.blade.php), [group-orders/create.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/group-orders/create.blade.php), [group-orders/show.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/client/group-orders/show.blade.php)
-  - Routes: `group-orders.index`, `group-orders.create`, `group-orders.store`, `group-orders.show`, `group-orders.join`, `group-orders.items.store`, `group-orders.items.increment`, `group-orders.items.destroy`, `group-orders.close`, `group-orders.cancel`, `group-orders.resume` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [GroupOrderController.php (Client)](app/Http/Controllers/Client/GroupOrderController.php)
+  - Model: [GroupOrder.php](app/Models/GroupOrder.php), [GroupOrderItem.php](app/Models/GroupOrderItem.php), [GroupOrderMember.php](app/Models/GroupOrderMember.php)
+  - View: [group-orders/index.blade.php](resources/views/client/group-orders/index.blade.php), [group-orders/create.blade.php](resources/views/client/group-orders/create.blade.php), [group-orders/show.blade.php](resources/views/client/group-orders/show.blade.php)
+  - Routes: `group-orders.index`, `group-orders.create`, `group-orders.store`, `group-orders.show`, `group-orders.join`, `group-orders.items.store`, `group-orders.items.increment`, `group-orders.items.destroy`, `group-orders.close`, `group-orders.cancel`, `group-orders.resume` trong [web.php](routes/web.php)
 
 ### 2.7 Viết đánh giá sản phẩm (Product Reviews)
 - **Mô tả**: Sau khi nhận được sản phẩm từ đơn hàng hoàn thành, khách hàng có thể viết nhận xét và đánh giá sao (1-5 sao) cho sản phẩm đó.
 - **Quy tắc nghiệp vụ**:
   - Chỉ thành viên đã mua sản phẩm đó mới được viết đánh giá để đảm bảo tính khách quan.
 - **Files liên quan**:
-  - Controller: [ProductReviewController.php@store](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/ProductReviewController.php)
-  - Model: [Review.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Review.php)
-  - Route: `products.reviews.store` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [ProductReviewController.php@store](app/Http/Controllers/Client/ProductReviewController.php)
+  - Model: [Review.php](app/Models/Review.php)
+  - Route: `products.reviews.store` trong [web.php](routes/web.php)
 
 ### 2.8 Luồng chat hỗ trợ trực tuyến (CSKH Chatbox)
 - **Mô tả**: Khách hàng thành viên có thể mở widget chatbox trực tiếp ở phía dưới góc màn hình giao diện Client để nhắn tin, gửi ảnh/file hỗ trợ tới nhân viên CSKH.
@@ -256,12 +256,12 @@ graph TD
   - Hỗ trợ gửi tin nhắn văn bản và đính kèm file (file dung lượng tối đa 10MB, lưu trong thư mục `chat-attachments` trên disk public).
   - Tải danh sách tin nhắn lịch sử và hiển thị theo thời gian thực (real-time) bằng Event Broadcast `MessageSent` qua Laravel Reverb.
 - **Files liên quan**:
-  - Controller: [ChatController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Client/ChatController.php) (các phương thức `getOrCreateConversation`, `messages`, `send`)
-  - Event: [MessageSent.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Events/MessageSent.php)
-  - Resource: [MessageResource.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Resources/MessageResource.php)
-  - View Component: [chatbox.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/components/chatbox.blade.php)
-  - Model: [Conversation.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Conversation.php), [Message.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Message.php)
-  - Routes: `chat.index`, `chat.messages`, `chat.send` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [ChatController.php](app/Http/Controllers/Client/ChatController.php) (các phương thức `getOrCreateConversation`, `messages`, `send`)
+  - Event: [MessageSent.php](app/Events/MessageSent.php)
+  - Resource: [MessageResource.php](app/Http/Resources/MessageResource.php)
+  - View Component: [chatbox.blade.php](resources/views/components/chatbox.blade.php)
+  - Model: [Conversation.php](app/Models/Conversation.php), [Message.php](app/Models/Message.php)
+  - Routes: `chat.index`, `chat.messages`, `chat.send` trong [web.php](routes/web.php)
 
 ---
 
@@ -285,22 +285,22 @@ graph TD
   - Dữ liệu hiển thị tự động lọc theo `branch_id` của tài khoản Admin đăng nhập (`resolveDashboardScope`).
   - Hỗ trợ lọc nhanh theo các khoảng thời gian: Hôm nay, Tuần này, Tháng này, Năm nay.
 - **Files liên quan**:
-  - Controller: [DashboardController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/DashboardController.php) (các phương thức `index`, `data`)
-  - View: [admin/dashboard.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/dashboard.blade.php)
-  - Routes: `admin.dashboard`, `admin.admin.dashboard.data` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [DashboardController.php](app/Http/Controllers/Admin/DashboardController.php) (các phương thức `index`, `data`)
+  - View: [admin/dashboard.blade.php](resources/views/admin/dashboard.blade.php)
+  - Routes: `admin.dashboard`, `admin.admin.dashboard.data` trong [web.php](routes/web.php)
 
 ### 3.2 Quản lý Đơn hàng chi nhánh
 - **Mô tả**: Xem danh sách đơn hàng được phân bổ về chi nhánh, tìm kiếm và lọc đơn hàng theo nhiều tiêu chí. Cập nhật trạng thái xử lý đơn hàng.
 - **Quy tắc nghiệp vụ**:
   - Tự động giới hạn đơn hàng thuộc chi nhánh của Admin thông qua phương thức `applyBranchScope`.
-  - Quy trình trạng thái đơn hàng (sử dụng [OrderStatus.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/OrderStatus.php)):
+  - Quy trình trạng thái đơn hàng (sử dụng [OrderStatus.php](app/Support/OrderStatus.php)):
     - `pending` (Chờ duyệt) ➔ `confirmed` (Đã xác nhận) ➔ `preparing` (Đang chuẩn bị đồ) ➔ `shipping` (Đang giao hàng) ➔ `completed` (Đã hoàn thành) / `cancelled` (Đã hủy).
   - Khi cập nhật trạng thái, hệ thống gửi thông báo thời gian thực đến khách hàng qua Pusher/Echo và Notification trong cơ sở dữ liệu (`RealtimeOrderNotifier::orderStatusUpdated`).
 - **Files liên quan**:
-  - Controller: [OrderController.php (Admin)](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/OrderController.php) (các phương thức `index`, `updateStatus`, `recent`)
-  - Support: [OrderStatus.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/OrderStatus.php), [RealtimeOrderNotifier.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Support/RealtimeOrderNotifier.php)
-  - View: [admin/orders/index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/orders/index.blade.php)
-  - Routes: `admin.orders.index`, `admin.orders.recent`, `admin.orders.updateStatus` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [OrderController.php (Admin)](app/Http/Controllers/Admin/OrderController.php) (các phương thức `index`, `updateStatus`, `recent`)
+  - Support: [OrderStatus.php](app/Support/OrderStatus.php), [RealtimeOrderNotifier.php](app/Support/RealtimeOrderNotifier.php)
+  - View: [admin/orders/index.blade.php](resources/views/admin/orders/index.blade.php)
+  - Routes: `admin.orders.index`, `admin.orders.recent`, `admin.orders.updateStatus` trong [web.php](routes/web.php)
 
 ### 3.3 Quản lý Sản phẩm & Danh mục (Products & Categories CRUD)
 - **Mô tả**: Quản lý danh sách sản phẩm và các danh mục đồ uống của chi nhánh.
@@ -308,20 +308,20 @@ graph TD
   - Tạo mới, sửa thông tin sản phẩm (Tên, mã SKU, mô tả, ảnh minh họa, giá cơ bản, số lượng tồn kho, trạng thái bật/tắt bán).
   - Cấu hình các topping được phép đi kèm với sản phẩm đó.
 - **Files liên quan**:
-  - Controller: [ProductController.php (Admin)](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/ProductController.php), [CategoryController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/CategoryController.php)
-  - Model: [Product.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Product.php), [Category.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Category.php)
+  - Controller: [ProductController.php (Admin)](app/Http/Controllers/Admin/ProductController.php), [CategoryController.php](app/Http/Controllers/Admin/CategoryController.php)
+  - Model: [Product.php](app/Models/Product.php), [Category.php](app/Models/Category.php)
   - View: Tương ứng trong `resources/views/admin/products/` và `resources/views/admin/categories/`
-  - Routes: `admin.products.*`, `admin.categories.*` (đăng ký dạng resource) trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Routes: `admin.products.*`, `admin.categories.*` (đăng ký dạng resource) trong [web.php](routes/web.php)
 
 ### 3.4 Quản lý Mã giảm giá (Vouchers CRUD)
 - **Mô tả**: Tạo và kiểm soát các chương trình khuyến mãi bằng mã voucher.
 - **Quy tắc nghiệp vụ**:
   - Cấu hình các thông số: Loại giảm giá (Giảm theo số tiền cố định hoặc theo % đơn hàng), giá trị giảm, mức giảm tối đa (đối với giảm %), số lượng mã phát hành, số tiền đơn hàng tối thiểu để áp dụng, thời gian bắt đầu và kết thúc có hiệu lực.
 - **Files liên quan**:
-  - Controller: [VoucherController.php (Admin)](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/VoucherController.php)
-  - Model: [Voucher.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Voucher.php)
+  - Controller: [VoucherController.php (Admin)](app/Http/Controllers/Admin/VoucherController.php)
+  - Model: [Voucher.php](app/Models/Voucher.php)
   - View: Tương ứng trong `resources/views/admin/vouchers/`
-  - Routes: `admin.vouchers.*` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Routes: `admin.vouchers.*` trong [web.php](routes/web.php)
 
 ### 3.5 Giám sát Đơn hàng nhóm & Đánh giá & Người dùng
 - **Mô tả**: 
@@ -329,9 +329,9 @@ graph TD
   - Xem danh sách feedback/reviews từ khách hàng về chất lượng đồ uống để nâng cao dịch vụ.
   - Xem danh sách khách hàng của hệ thống và thực hiện khóa/mở khóa tài khoản khách hàng khi cần thiết.
 - **Files liên quan**:
-  - Controller: [GroupOrderController.php (Admin)](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/GroupOrderController.php), [ReviewController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/ReviewController.php), [UserController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/UserController.php)
+  - Controller: [GroupOrderController.php (Admin)](app/Http/Controllers/Admin/GroupOrderController.php), [ReviewController.php](app/Http/Controllers/Admin/ReviewController.php), [UserController.php](app/Http/Controllers/Admin/UserController.php)
   - Views: `resources/views/admin/reviews/index.blade.php`, `resources/views/admin/users/`
-  - Routes: `admin.group-orders.*`, `admin.reviews.index`, `admin.users.*` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Routes: `admin.group-orders.*`, `admin.reviews.index`, `admin.users.*` trong [web.php](routes/web.php)
 
 ---
 
@@ -356,9 +356,9 @@ graph TD
   - Hỗ trợ đổi vai trò người dùng (`updateRole`), nâng cấp người dùng thường thành Admin, hoặc hạ cấp Admin xuống người dùng thường.
   - **Quy tắc bảo vệ**: Không được phép tự thay đổi vai trò của tài khoản đang đăng nhập hiện tại. Không được phép hạ cấp hoặc khóa tài khoản Super Admin duy nhất còn hoạt động trong hệ thống.
 - **Files liên quan**:
-  - Controller: [SuperAdminController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/SuperAdminController.php) (các phương thức `storeAdmin`, `updateBranch`, `updateRole`)
-  - View: [admin/super-admin.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/super-admin.blade.php)
-  - Routes: `admin.super-admin.admins.store`, `admin.super-admin.update-branch`, `admin.super-admin.update-role` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [SuperAdminController.php](app/Http/Controllers/Admin/SuperAdminController.php) (các phương thức `storeAdmin`, `updateBranch`, `updateRole`)
+  - View: [admin/super-admin.blade.php](resources/views/admin/super-admin.blade.php)
+  - Routes: `admin.super-admin.admins.store`, `admin.super-admin.update-branch`, `admin.super-admin.update-role` trong [web.php](routes/web.php)
 
 ### 4.2 Quản lý mạng lưới chi nhánh (Branch Management)
 - **Mô tả**: Quản lý danh sách toàn bộ các cửa hàng/chi nhánh đồ uống thuộc hệ thống Chill Drink.
@@ -368,10 +368,10 @@ graph TD
   - Thay đổi trạng thái hoạt động của chi nhánh (Kích hoạt/Vô hiệu hóa). Chi nhánh bị vô hiệu hóa sẽ không hiển thị trên danh sách chọn chi nhánh ở trang checkout của khách hàng.
   - **Quy tắc bảo vệ**: Không cho phép xóa vật lý (Hard Delete) chi nhánh khỏi cơ sở dữ liệu (`destroy` sẽ redirect kèm lỗi) để bảo toàn tính toàn vẹn dữ liệu đơn hàng lịch sử. Chỉ cho phép tạm ngưng hoạt động bằng cách đổi trạng thái.
 - **Files liên quan**:
-  - Controller: [BranchController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/BranchController.php) (các phương thức `store`, `update`, `toggleStatus`, `destroy`)
-  - Model: [Branch.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Branch.php)
-  - View: [location-picker.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/partials/location-picker.blade.php) (Giao diện bản đồ chọn tọa độ)
-  - Routes: `admin.branches.store`, `admin.branches.update`, `admin.branches.toggle-status`, `admin.branches.destroy` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [BranchController.php](app/Http/Controllers/Admin/BranchController.php) (các phương thức `store`, `update`, `toggleStatus`, `destroy`)
+  - Model: [Branch.php](app/Models/Branch.php)
+  - View: [location-picker.blade.php](resources/views/admin/partials/location-picker.blade.php) (Giao diện bản đồ chọn tọa độ)
+  - Routes: `admin.branches.store`, `admin.branches.update`, `admin.branches.toggle-status`, `admin.branches.destroy` trong [web.php](routes/web.php)
 
 ### 4.3 Giám sát Nhật ký hệ thống & Bảo mật & Sức khỏe hệ thống
 - **Mô tả**: Xem tổng quan trạng thái sức khỏe kỹ thuật của hệ thống.
@@ -380,10 +380,10 @@ graph TD
   - Xem chỉ số bảo mật: Số lần đăng nhập sai trong ngày, số Admin đang bị khóa, số yêu cầu khôi phục mật khẩu đang chờ.
   - Xem sức khỏe hệ thống: Trạng thái kết nối Database (Online / Offline), dung lượng lưu trữ trống trên máy chủ, Driver Cache và Mail đang hoạt động.
 - **Files liên quan**:
-  - Controller: [SuperAdminController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/SuperAdminController.php) (các phương thức `systemHealth`, `securityStats`, `loginHistoryByAdmin`)
-  - Model: [SystemLog.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/SystemLog.php)
-  - View: [admin/super-admin.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/super-admin.blade.php)
-  - Route: `admin.super-admin` (giao diện điều khiển chung) trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [SuperAdminController.php](app/Http/Controllers/Admin/SuperAdminController.php) (các phương thức `systemHealth`, `securityStats`, `loginHistoryByAdmin`)
+  - Model: [SystemLog.php](app/Models/SystemLog.php)
+  - View: [admin/super-admin.blade.php](resources/views/admin/super-admin.blade.php)
+  - Route: `admin.super-admin` (giao diện điều khiển chung) trong [web.php](routes/web.php)
 
 ---
 
@@ -406,9 +406,9 @@ graph TD
   - Đối với nhân viên CSKH thông thường (role 4), hệ thống chỉ hiển thị những cuộc trò chuyện chưa có người phụ trách (`cskh_id = null`) hoặc những cuộc trò chuyện do chính nhân viên đó đang phụ trách.
   - Tự động đánh dấu tất cả các tin nhắn từ khách hàng trong phòng chat này là đã đọc (`is_read = true`) khi CSKH mở phòng chat.
 - **Files liên quan**:
-  - Controller: [AdminChatController.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/AdminChatController.php) (phương thức `index`, `show`, `messages`)
-  - View: [index.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/admin/chat/index.blade.php)
-  - Routes: `admin.chat.index`, `admin.chat.show`, `admin.chat.messages` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [AdminChatController.php](app/Http/Controllers/Admin/AdminChatController.php) (phương thức `index`, `show`, `messages`)
+  - View: [index.blade.php](resources/views/admin/chat/index.blade.php)
+  - Routes: `admin.chat.index`, `admin.chat.show`, `admin.chat.messages` trong [web.php](routes/web.php)
 
 ### 5.2 Nhắn tin phản hồi khách hàng
 - **Mô tả**: Nhập nội dung văn bản và nhấn gửi để trả lời khách hàng.
@@ -417,17 +417,17 @@ graph TD
   - Giao dịch tin nhắn được phát đi thời gian thực thông qua Broadcast Event `MessageSent` tới thiết bị khách hàng.
   - Hỗ trợ cơ chế đặc biệt cho Super Admin: Super Admin có quyền theo dõi cuộc trò chuyện (`canMonitorChat()`) và giả mạo/nhập vai (`canImpersonateInChat()`) gửi tin nhắn dưới danh nghĩa nhân viên khác (chi tiết lưu trong các trường `impersonated_by_id` và `display_as_sender_id`).
 - **Files liên quan**:
-  - Controller: [AdminChatController.php@reply](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/AdminChatController.php)
-  - Model: [Message.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/Message.php), [ChatTakeoverSession.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/ChatTakeoverSession.php), [ChatAuditLog.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Models/ChatAuditLog.php)
-  - Route: `admin.chat.reply` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [AdminChatController.php@reply](app/Http/Controllers/Admin/AdminChatController.php)
+  - Model: [Message.php](app/Models/Message.php), [ChatTakeoverSession.php](app/Models/ChatTakeoverSession.php), [ChatAuditLog.php](app/Models/ChatAuditLog.php)
+  - Route: `admin.chat.reply` trong [web.php](routes/web.php)
 
 ### 5.3 Đóng cuộc trò chuyện
 - **Mô tả**: Đóng cuộc hội thoại sau khi hoàn tất hỗ trợ khách hàng.
 - **Quy tắc nghiệp vụ**:
   - Cập nhật trạng thái `Conversation` thành `closed`. Khi đã đóng, không thành viên nào được phép gửi thêm tin nhắn trừ khi phòng chat được mở lại hoặc tạo phòng mới.
 - **Files liên quan**:
-  - Controller: [AdminChatController.php@close](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/app/Http/Controllers/Admin/AdminChatController.php)
-  - Route: `admin.chat.close` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
+  - Controller: [AdminChatController.php@close](app/Http/Controllers/Admin/AdminChatController.php)
+  - Route: `admin.chat.close` trong [web.php](routes/web.php)
 
 ### 5.4 Điều hướng & Cổng truy cập của Nhân viên CSKH
 - **Mô tả**: Tự động định tuyến và cung cấp cổng chuyển đổi giao diện cho Nhân viên CSKH khi thao tác ở Client.
@@ -435,8 +435,8 @@ graph TD
   - **Tự động chuyển hướng**: Khi đăng nhập thành công từ trang chủ hoặc truy cập đường dẫn chung `/dashboard`, nếu người dùng là CSKH (`isCskh()`), hệ thống sẽ tự động chuyển hướng (Redirect 302) trực tiếp về trang quản trị chat `/admin/chat`.
   - **Cổng chuyển đổi giao diện**: Hiển thị nút **"Quay lại trang quản lý"** trong dropdown tài khoản ở thanh menu chính (Header Client) cho toàn bộ nhân viên hệ thống (`isStaff()`, bao gồm Admin, Super Admin, và CSKH). Khi click, nhân viên CSKH sẽ được dẫn thẳng về giao diện chat CSKH `/admin/chat` mà không bị lẫn lộn với giao diện của khách hàng.
 - **Files liên quan**:
-  - Route: Route `/dashboard` trong [web.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/routes/web.php)
-  - View Layout: [client.blade.php](file:///c:/xampp/htdocs/php01/du%20an%201%200000/DU_AN_1/DATN/chill-drink/resources/views/layouts/client.blade.php)
+  - Route: Route `/dashboard` trong [web.php](routes/web.php)
+  - View Layout: [client.blade.php](resources/views/layouts/client.blade.php)
 
 ---
 

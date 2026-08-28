@@ -15,6 +15,22 @@ This guide walks you through a complete end-to-end test of the Branch Statistics
 
 ## Test Flow
 
+### STEP 0: Run Diagnostic (Optional)
+
+Use the diagnostic script to verify the required tables, models, controllers,
+routes, and views before creating E2E data:
+
+```bash
+php artisan tinker
+> include 'tests/diagnose_branch_stats.php'
+```
+
+Expected output:
+
+```text
+ALL CHECKS PASSED - System is ready!
+```
+
 ### STEP 1: Run SQL Test Script
 **File**: `tests/branch_stats_sql_test.sql`
 
@@ -28,7 +44,7 @@ This guide walks you through a complete end-to-end test of the Branch Statistics
 
 **Option B: Using MySQL CLI**
 ```bash
-cd c:\xampp\htdocs\DATN\DATN\chill-drink
+cd chill-drink
 mysql -u root -p[password] [database_name] < tests/branch_stats_sql_test.sql
 ```
 
