@@ -24,11 +24,6 @@
         <div class="ship-stat-value">{{ (int) ($activeOrders ?? 0) }}</div>
         <div class="ship-stat-note">Đơn còn trong chuyến</div>
     </div>
-    <div class="ship-stat-card" style="grid-column:1/-1">
-        <div class="ship-stat-top"><span class="ship-stat-label">Tiền COD phải nộp công ty</span><span class="ship-stat-icon orange"><i class="fa-solid fa-sack-dollar"></i></span></div>
-        <div class="ship-stat-value" style="color:#c86815">{{ number_format((int) ($codDue ?? 0)) }}đ</div>
-        <div class="ship-stat-note">{{ (int) ($codDueOrderCount ?? 0) }} đơn COD chưa đối soát · đây không phải thu nhập</div>
-    </div>
 </div>
 
 @if(!empty($bundleTrip))

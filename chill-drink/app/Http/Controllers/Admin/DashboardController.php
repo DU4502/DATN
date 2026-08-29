@@ -1281,17 +1281,6 @@ class DashboardController extends Controller
         $query = $this->applyBranchScope($query);
 
         if (Schema::hasColumn('orders', 'status')) {
-            $query->where('status', '!=', 'cancelled');
-        }
-
-        if (Schema::hasColumn('orders', 'payment_status') && Schema::hasColumn('orders', 'status')) {
-            $query->where(function ($builder) {
-                $builder->where('payment_status', 'paid')
-                    ->orWhere('status', 'completed');
-            });
-        } elseif (Schema::hasColumn('orders', 'payment_status')) {
-            $query->where('payment_status', 'paid');
-        } elseif (Schema::hasColumn('orders', 'status')) {
             $query->where('status', 'completed');
         }
 

@@ -15,7 +15,6 @@ use App\Http\Controllers\Admin\ToppingController;
 use App\Http\Controllers\Admin\BranchSlideController;
 use App\Http\Controllers\Admin\StaffManagementController;
 use App\Http\Controllers\Admin\ShipperIncidentController;
-use App\Http\Controllers\Admin\ShipperCodSettlementController;
 use App\Http\Controllers\Admin\OrderIssueReportController as AdminOrderIssueReportController;
 use App\Http\Middleware\KeepSuperAdminContext;
 use App\Http\Controllers\Admin\ProductAvailabilityController;
@@ -174,7 +173,7 @@ Route::middleware(['auth', 'shipper'])
             'confirmHandover'
         ])->name('orders.handover');
 
-        // Xác nhận đã giao cho khách (đơn sang delivered, chưa completed)
+        // Shipper giao xong: hoàn tất đơn và ghi nhận doanh thu ngay.
         Route::post('/orders/{id}/complete', [
             ShipController::class,
             'completeOrder'
@@ -568,11 +567,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSu
         Route::get('/order-issues-pending/count', [AdminOrderIssueReportController::class, 'pendingCount'])->name('order-issues.pending-count');
         Route::patch('/order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
         Route::get('/order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
-        Route::get('/cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
-        Route::post('/cod-settlements/pin/send-code', [ShipperCodSettlementController::class, 'sendPin'])->name('cod-settlements.pin.send');
-        Route::post('/cod-settlements/pin/save', [ShipperCodSettlementController::class, 'savePin'])->name('cod-settlements.pin.save');
-        Route::post('/cod-settlements/shipper/{shipper}/confirm', [ShipperCodSettlementController::class, 'confirm'])->name('cod-settlements.confirm');
-
         Route::get('/group-orders', [AdminGroupOrderController::class, 'index'])->name('group-orders.index');
         Route::get('/group-orders/{groupOrder}', [AdminGroupOrderController::class, 'show'])->name('group-orders.show');
 
@@ -638,10 +632,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
     Route::get('order-issues-pending/count', [AdminOrderIssueReportController::class, 'pendingCount'])->name('order-issues.pending-count');
     Route::patch('order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
     Route::get('order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
-    Route::get('cod-settlements', [ShipperCodSettlementController::class, 'index'])->name('cod-settlements.index');
-    Route::post('cod-settlements/pin/send-code', [ShipperCodSettlementController::class, 'sendPin'])->name('cod-settlements.pin.send');
-    Route::post('cod-settlements/pin/save', [ShipperCodSettlementController::class, 'savePin'])->name('cod-settlements.pin.save');
-    Route::post('cod-settlements/shipper/{shipper}/confirm', [ShipperCodSettlementController::class, 'confirm'])->name('cod-settlements.confirm');
     Route::resource('group-orders', AdminGroupOrderController::class)->only(['index', 'show']);
     Route::put('group-orders/{groupOrder}/status', [AdminGroupOrderController::class, 'updateStatus'])->name('group-orders.updateStatus');
 

@@ -27,10 +27,6 @@ class ShipperHomeBranchService
         'shipper_accepted',
     ];
 
-    public function __construct(private readonly ShipperCodService $cod)
-    {
-    }
-
     public function homeBranchId(Shipper|User $subject): ?int
     {
         $user = $subject instanceof Shipper ? $subject->user : $subject;
@@ -82,10 +78,6 @@ class ShipperHomeBranchService
             if ($hasBundle) {
                 return ['allowed' => false, 'reason' => 'Shipper còn chuyến ghép đang hoạt động.'];
             }
-        }
-
-        if (Schema::hasTable('shipper_cod_receivables') && $this->cod->pendingAmount($shipper) > 0) {
-            return ['allowed' => false, 'reason' => 'Shipper còn tiền COD phải nộp. Hãy đối soát COD trước khi chuyển chi nhánh.'];
         }
 
         return ['allowed' => true, 'reason' => null];

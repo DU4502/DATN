@@ -86,16 +86,6 @@ class Shipper extends Model
         return $this->belongsTo(Branch::class, 'returning_to_branch_id');
     }
 
-    public function codReceivables()
-    {
-        return $this->hasMany(ShipperCodReceivable::class);
-    }
-
-    public function codSettlements()
-    {
-        return $this->hasMany(ShipperCodSettlement::class);
-    }
-
     public function isReturning(): bool
     {
         return ! empty($this->returning_to_branch_id);

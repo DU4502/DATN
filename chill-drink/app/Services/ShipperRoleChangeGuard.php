@@ -22,10 +22,6 @@ class ShipperRoleChangeGuard
         'cancelled',
     ];
 
-    public function __construct(private readonly ShipperCodService $cod)
-    {
-    }
-
     public function assertCanLeaveRole(User $user): void
     {
         $shipper = Shipper::query()
@@ -36,8 +32,6 @@ class ShipperRoleChangeGuard
         if (! $shipper) {
             return;
         }
-
-        $this->cod->syncHistoricalReceivablesForShipper($shipper);
 
         $activeOrders = Order::query()
             ->where('shipper_id', $shipper->id)
@@ -58,10 +52,9 @@ class ShipperRoleChangeGuard
                 ->count()
             : 0;
 
-        $pendingCod = $this->pendingCodCount($shipper);
         $busy = $shipper->status === 'busy';
 
-        if (! $busy && $activeOrders === 0 && $activeShipments === 0 && $activeTrips === 0 && $pendingCod === 0) {
+        if (! $busy && $activeOrders === 0 && $activeShipments === 0 && $activeTrips === 0) {
             return;
         }
 
@@ -78,36 +71,9 @@ class ShipperRoleChangeGuard
         if ($activeTrips > 0) {
             $reasons[] = $activeTrips.' chuyến ghép đang hoạt động';
         }
-        if ($pendingCod > 0) {
-            $reasons[] = $pendingCod.' khoản COD chưa đối soát';
-        }
-
         throw new RuntimeException(
-            'Không thể thay đổi vai trò vì Shipper vẫn còn nhiệm vụ giao hàng hoặc nghĩa vụ COD chưa hoàn tất: '
+            'Không thể thay đổi vai trò vì Shipper vẫn còn nhiệm vụ giao hàng chưa hoàn tất: '
             .implode(', ', $reasons).'.'
         );
-    }
-
-    private function pendingCodCount(Shipper $shipper): int
-    {
-        if (! Schema::hasTable('shipper_cod_receivables')) {
-            return 0;
-        }
-
-        $query = DB::table('shipper_cod_receivables as receivables')
-            ->where('receivables.shipper_id', $shipper->id)
-            ->where('receivables.amount', '>', 0);
-
-        if (! Schema::hasTable('shipper_cod_settlements')) {
-            return $query->whereNull('receivables.settlement_id')->count();
-        }
-
-        return $query
-            ->leftJoin('shipper_cod_settlements as settlements', 'settlements.id', '=', 'receivables.settlement_id')
-            ->where(function ($builder) {
-                $builder->whereNull('receivables.settlement_id')
-                    ->orWhereNull('settlements.confirmed_at');
-            })
-            ->count();
     }
 }

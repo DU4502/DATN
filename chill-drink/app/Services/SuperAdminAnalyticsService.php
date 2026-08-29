@@ -52,28 +52,20 @@ class SuperAdminAnalyticsService
     private array $branchOrderAggregateCache = [];
 
     /**
-     * Dashboard hiện thống kê theo thời điểm đơn được tạo (`orders.created_at`),
-     * không phải thời điểm giao thành công hoặc thanh toán.
+     * Doanh thu chỉ được ghi nhận sau khi đơn đã hoàn tất. Trạng thái thanh toán
+     * riêng lẻ không làm doanh thu về sớm khi đơn vẫn đang được xử lý.
      */
     public function validSalesOrdersQuery(): Builder
     {
         return Order::query()
-            ->where('orders.status', '!=', 'cancelled')
-            ->where(function (Builder $query) {
-                $query->where('orders.payment_status', 'paid')
-                    ->orWhere('orders.status', 'completed');
-            });
+            ->where('orders.status', 'completed');
     }
 
     public function validSalesOrderItemsQuery(): Builder
     {
         return OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
-            ->where('orders.status', '!=', 'cancelled')
-            ->where(function ($query) {
-                $query->where('orders.payment_status', 'paid')
-                    ->orWhere('orders.status', 'completed');
-            });
+            ->where('orders.status', 'completed');
     }
 
     /**
@@ -1935,9 +1927,9 @@ class SuperAdminAnalyticsService
 
             $this->branchOrderAggregateCache[$cacheKey] = $query
                 ->selectRaw(
-                    'COALESCE(SUM(CASE WHEN orders.status != "cancelled" AND (orders.payment_status = "paid" OR orders.status = "completed") THEN orders.total ELSE 0 END), 0) as revenue, ' .
-                    'COALESCE(SUM(CASE WHEN orders.status != "cancelled" AND (orders.payment_status = "paid" OR orders.status = "completed") THEN 1 ELSE 0 END), 0) as valid_order_count, ' .
-                    'COUNT(DISTINCT CASE WHEN orders.status != "cancelled" AND (orders.payment_status = "paid" OR orders.status = "completed") AND orders.user_id IS NOT NULL THEN orders.user_id END) as unique_customer_count, ' .
+                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN orders.total ELSE 0 END), 0) as revenue, ' .
+                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as valid_order_count, ' .
+                    'COUNT(DISTINCT CASE WHEN orders.status = "completed" AND orders.user_id IS NOT NULL THEN orders.user_id END) as unique_customer_count, ' .
                     'COUNT(*) as total_created_order_count, ' .
                     'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as completed_order_count, ' .
                     'COALESCE(SUM(CASE WHEN orders.status = "cancelled" THEN 1 ELSE 0 END), 0) as cancelled_order_count'
@@ -2020,7 +2012,7 @@ SQL;
 
     private function validSalesPredicateSql(string $table = 'orders'): string
     {
-        return $table.'.status != "cancelled" AND ('.$table.'.payment_status = "paid" OR '.$table.'.status = "completed")';
+        return $table.'.status = "completed"';
     }
 
     private function comparisonStateSql(string $currentColumn, string $compareColumn): string
