@@ -84,7 +84,7 @@
             </form>
         @endif
         @if($currentMember)
-            <div class="mb-4" data-vue-group-chat
+            <div class="mb-4 group-chat-hide-launcher" data-vue-group-chat
                  data-group-id="{{ $group->id }}"
                  data-group-is-open="{{ $group->isOpen() ? '1' : '0' }}"
                  data-messages-url="{{ route('group-orders.messages', $group->code) }}"

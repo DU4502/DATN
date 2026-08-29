@@ -107,6 +107,7 @@
     .group-order-form { overflow: hidden; padding: 0 !important; }
     .group-chat-launcher { position: fixed; right: 28px; bottom: 100px; z-index: 1055; width: 58px; height: 58px; border: 3px solid #fff; border-radius: 50%; background: linear-gradient(135deg, #3857c8, #7048d7); color: #fff; box-shadow: 0 12px 32px rgba(63,75,180,.34); font-size: 1.35rem; transition: transform .2s ease; }
     .group-chat-launcher:hover { transform: translateY(-3px); }
+    .group-chat-hide-launcher .group-chat-launcher { display: none !important; }
     .group-chat-launcher-badge { position: absolute; top: -5px; right: -5px; min-width: 22px; height: 22px; padding: 0 5px; border: 2px solid #fff; border-radius: 999px; background: #dc3545; color: #fff; font-size: .7rem; font-weight: 800; line-height: 18px; }
     .group-chat-panel { position: fixed; right: 24px; bottom: 100px; z-index: 1070; width: min(376px, calc(100vw - 32px)); height: min(500px, calc(100vh - 124px)); overflow: hidden; border: 1px solid #dfe5f3 !important; border-radius: 20px !important; background: #fff; box-shadow: 0 20px 50px rgba(31,38,90,.24); display: flex; flex-direction: column; }
     .group-chat-head { min-height: 82px; padding: .9rem 1.1rem; display: flex; gap: .75rem; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #3857c8, #7048d7); color: #fff; }
