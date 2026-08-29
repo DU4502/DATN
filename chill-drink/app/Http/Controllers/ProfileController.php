@@ -153,13 +153,6 @@ class ProfileController extends Controller
         
         $order->save();
 
-        if ($order->payment_method === 'cod' && $order->shipper_id) {
-            $shipper = \App\Models\Shipper::query()->find($order->shipper_id);
-            if ($shipper) {
-                app(\App\Services\ShipperCodService::class)->recordCollection($order->fresh(), $shipper);
-            }
-        }
-        
         // Award loyalty points when customer confirms order
         $order->awardLoyaltyPoints();
 

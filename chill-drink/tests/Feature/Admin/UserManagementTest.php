@@ -7,8 +7,6 @@ use App\Models\DeliveryBundleTrip;
 use App\Models\Order;
 use App\Models\Shipment;
 use App\Models\Shipper;
-use App\Models\ShipperCodReceivable;
-use App\Models\ShipperCodSettlement;
 use App\Models\User;
 use App\Support\OrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -260,57 +258,14 @@ class UserManagementTest extends TestCase
         $this->assertSame(User::SHIPPER_ROLE_ID, (int) $shipperUser->fresh()->role_id);
     }
 
-    public function test_unsettled_cod_blocks_shipper_role_change_after_order_completion(): void
+    public function test_completed_cod_order_does_not_block_shipper_role_change(): void
     {
         $admin = $this->admin(['role_id' => 3]);
         [$shipperUser, $shipper, $branch] = $this->shipperAccount();
-        $order = $this->deliveryOrder($branch, $shipper, [
+        $this->deliveryOrder($branch, $shipper, [
             'status' => OrderStatus::COMPLETED,
             'payment_method' => 'cod',
             'payment_status' => 'paid',
-        ]);
-        ShipperCodReceivable::create([
-            'order_id' => $order->id,
-            'order_code' => $order->order_code,
-            'shipper_id' => $shipper->id,
-            'order_branch_id' => $branch->id,
-            'amount' => $order->total,
-            'collected_at' => now(),
-        ]);
-
-        $this->actingAs($admin)
-            ->put(route('admin.users.update', $shipperUser), ['role_id' => 1])
-            ->assertSessionHasErrors('role_id');
-
-        $this->assertSame(User::SHIPPER_ROLE_ID, (int) $shipperUser->fresh()->role_id);
-    }
-
-    public function test_settled_cod_does_not_block_shipper_role_change(): void
-    {
-        $admin = $this->admin(['role_id' => 3]);
-        [$shipperUser, $shipper, $branch] = $this->shipperAccount();
-        $order = $this->deliveryOrder($branch, $shipper, [
-            'status' => OrderStatus::COMPLETED,
-            'payment_method' => 'cod',
-            'payment_status' => 'paid',
-        ]);
-        $settlement = ShipperCodSettlement::create([
-            'shipper_id' => $shipper->id,
-            'branch_id' => $branch->id,
-            'amount' => $order->total,
-            'order_count' => 1,
-            'confirmed_by' => $admin->id,
-            'confirmed_at' => now(),
-        ]);
-        ShipperCodReceivable::create([
-            'order_id' => $order->id,
-            'order_code' => $order->order_code,
-            'shipper_id' => $shipper->id,
-            'order_branch_id' => $branch->id,
-            'amount' => $order->total,
-            'collected_at' => now(),
-            'settlement_id' => $settlement->id,
-            'settled_at' => now(),
         ]);
 
         $this->actingAs($admin)

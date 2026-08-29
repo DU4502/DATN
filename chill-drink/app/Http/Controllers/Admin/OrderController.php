@@ -54,7 +54,7 @@ class OrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             // Giao dịch VNPay chưa hoàn tất chưa phải là đơn cần xử lý.
@@ -168,7 +168,7 @@ class OrderController extends Controller
         }
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION);
 
         if ($afterId > 0 || $updatedAfter) {
@@ -215,7 +215,7 @@ class OrderController extends Controller
     public function pendingAlerts(Request $request): JsonResponse
     {
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'shipper.user', 'codReceivable.settlement', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
             ->where('status', OrderStatus::PENDING)
             ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
 
@@ -387,11 +387,6 @@ class OrderController extends Controller
             'payment_status' => $order->payment_status,
             'payment_method_label' => $this->paymentMethodLabel($order->payment_method),
             'payment_status_label' => $this->paymentStatusLabel($order->payment_status),
-            'cod_reconciliation' => $order->payment_method === 'cod' && $order->codReceivable ? [
-                'amount' => (int) $order->codReceivable->amount,
-                'is_settled' => (bool) $order->codReceivable->settlement_id,
-                'settled_at' => $order->codReceivable->settled_at?->format('d/m/Y H:i'),
-            ] : null,
             'shipping_address' => $order->getShippingAddress(),
             'shipper' => $shipperPayload,
             'delivered_at' => $order->delivered_at?->format('d/m/Y H:i:s'),
@@ -639,9 +634,6 @@ class OrderController extends Controller
                 $order->payment_status = 'paid';
                 $order->save();
 
-                if ($order->shipper_id && ($shipper = \App\Models\Shipper::query()->find($order->shipper_id))) {
-                    app(\App\Services\ShipperCodService::class)->recordCollection($order->fresh(), $shipper);
-                }
             }
 
             if ($newStatus === OrderStatus::COMPLETED && $oldStatus !== OrderStatus::COMPLETED) {

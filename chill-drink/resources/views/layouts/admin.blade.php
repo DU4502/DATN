@@ -44,7 +44,6 @@
                 <a href="{{ route('admin.categories.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
                 <a href="{{ route('admin.orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
                 <a href="{{ route('admin.shipper-incidents.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.shipper-incidents.*') ? 'active' : '' }}"><i class="bi bi-exclamation-triangle"></i> Sự cố giao vận</a>
-                <a href="{{ route('admin.cod-settlements.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.cod-settlements.*') ? 'active' : '' }}"><i class="bi bi-cash-coin"></i> Đối soát COD</a>
                 <a href="{{ route('admin.group-orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
                 <a href="{{ route('admin.reviews.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
                 <a href="{{ route('admin.users.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>

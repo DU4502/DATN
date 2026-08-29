@@ -62,9 +62,9 @@
         <div class="ship-stat-note">Giao thành công</div>
     </div>
     <div class="ship-stat-card">
-        <div class="ship-stat-top"><span class="ship-stat-label">Tiền phải nộp</span><span class="ship-stat-icon orange"><i class="fa-solid fa-sack-dollar"></i></span></div>
-        <div class="ship-stat-value" style="color:#c86815">{{ number_format((int) ($codDue ?? 0)) }}đ</div>
-        <div class="ship-stat-note">{{ (int) ($codDueOrderCount ?? 0) }} đơn COD chưa nộp</div>
+        <div class="ship-stat-top"><span class="ship-stat-label">Phí giao hàng</span><span class="ship-stat-icon"><i class="fa-solid fa-wallet"></i></span></div>
+        <div class="ship-stat-value">{{ number_format((int) ($income ?? 0)) }}đ</div>
+        <div class="ship-stat-note">Tổng phí từ đơn giao thành công</div>
     </div>
 </div>
 
@@ -75,16 +75,6 @@
     <a href="{{ route('shipper.history') }}" class="ship-quick-link"><i class="fa-solid fa-clock-rotate-left"></i><span>Lịch sử</span></a>
     <a href="{{ route('shipper.chats.index') }}" class="ship-quick-link"><i class="fa-solid fa-comments"></i><span>Chat</span></a>
 </div>
-
-@if(($codDue ?? 0) > 0)
-    <div class="ship-info-strip mt-3" style="background:linear-gradient(135deg,#fff7e9,#fff);border-color:#ffe0b8">
-        <div class="strip-icon" style="color:#c86815;background:#fff8ee"><i class="fa-solid fa-hand-holding-dollar"></i></div>
-        <div>
-            <b>COD đang giữ: {{ number_format((int)$codDue) }}đ</b>
-            <p>Đây là tiền của công ty, không phải thu nhập. Khi về home branch, nộp cho Admin để đối soát.</p>
-        </div>
-    </div>
-@endif
 
 @if(!empty($returnPlan))
     <div class="ship-info-strip mt-3">

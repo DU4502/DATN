@@ -37,7 +37,6 @@ class SuperAdminOrderOverrideService
         private readonly ShipperBundleService $bundles,
         private readonly ShipperReturnService $returns,
         private readonly ShipperDispatchService $dispatch,
-        private readonly ShipperCodService $cod,
     ) {
     }
 
@@ -155,15 +154,11 @@ class SuperAdminOrderOverrideService
                 $this->syncAssignedShipper($locked, $shipper, $newStatus, $actor);
             }
 
-            // Khi Super Admin thực hiện thay bước giao thành công của shipper, COD cũng phải
-            // được ghi nhận là tiền mặt shipper đang giữ hộ công ty. Service idempotent theo order_id.
+            // Giao thành công đồng nghĩa COD đã được thu và doanh thu được ghi nhận ngay.
             if (in_array($newStatus, [OrderStatus::DELIVERED, OrderStatus::COMPLETED], true)
                 && strtolower((string) $locked->payment_method) === 'cod') {
                 if (strtolower((string) $locked->payment_status) !== 'paid') {
                     $locked->forceFill(['payment_status' => 'paid'])->save();
-                }
-                if ($shipper) {
-                    $this->cod->recordCollection($locked->fresh(), $shipper);
                 }
             }
 

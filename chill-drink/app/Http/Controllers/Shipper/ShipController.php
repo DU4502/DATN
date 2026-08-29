@@ -194,17 +194,12 @@ class ShipController extends Controller
             ->count();
 
         $completedOrders = Order::where('shipper_id', $shipperInfo->id)
-            ->whereIn('status', [OrderStatus::DELIVERED, OrderStatus::COMPLETED])
+            ->where('status', OrderStatus::COMPLETED)
             ->count();
 
         $income = Order::where('shipper_id', $shipperInfo->id)
-            ->whereIn('status', [OrderStatus::DELIVERED, OrderStatus::COMPLETED])
+            ->where('status', OrderStatus::COMPLETED)
             ->sum('shipping_fee');
-
-        $codService = app(\App\Services\ShipperCodService::class);
-        $codDue = $codService->pendingAmount($shipperInfo);
-        $codDueOrderCount = $codService->pendingCount($shipperInfo);
-        $codPendingItems = $codService->pendingItems($shipperInfo, 5);
 
         $orders = $this->activeDeliveryOrderQuery($shipperInfo)
             ->latest('updated_at')
@@ -219,9 +214,6 @@ class ShipController extends Controller
             'shippingOrders',
             'completedOrders',
             'income',
-            'codDue',
-            'codDueOrderCount',
-            'codPendingItems',
             'shipperUser',
             'shipperInfo',
             'orders',
@@ -243,13 +235,10 @@ class ShipController extends Controller
         $bundleLabel = app(ShipperBundleService::class)->tripLabel($bundleTrip);
         $todayOrders = Order::where('shipper_id', $shipperInfo->id)->whereDate('updated_at', today())->count();
         $activeOrders = Order::where('shipper_id', $shipperInfo->id)->whereIn('status', self::ACTIVE_ORDER_STATUSES)->count();
-        $codService = app(\App\Services\ShipperCodService::class);
-        $codDue = $codService->pendingAmount($shipperInfo);
-        $codDueOrderCount = $codService->pendingCount($shipperInfo);
 
         return view('shipper.orders.index', compact(
             'orders', 'shipperInfo', 'pendingAcceptanceOrderIds', 'bundleTrip', 'bundleLabel',
-            'todayOrders', 'activeOrders', 'codDue', 'codDueOrderCount'
+            'todayOrders', 'activeOrders'
         ));
     }
 
@@ -1082,7 +1071,7 @@ class ShipController extends Controller
         $amountToCollect = max(0, (int) ($order->total ?? $order->total_price ?? 0));
 
         $orderValues = [
-            'status' => OrderStatus::DELIVERED,
+            'status' => OrderStatus::COMPLETED,
             'delivered_at' => now(),
             'status_changed_at' => now(),
             'status_changed_by' => auth()->id(),
@@ -1095,10 +1084,6 @@ class ShipController extends Controller
 
         $order->forceFill($orderValues)->save();
 
-        if ($requiresCodCollection) {
-            app(\App\Services\ShipperCodService::class)->recordCollection($order->fresh(), $shipper);
-        }
-
         $this->updateShipment($shipmentId, [
             'status' => 'delivered',
             'delivered_at' => now(),
@@ -1109,7 +1094,7 @@ class ShipController extends Controller
             $this->addShipmentHistory(
                 $shipmentId,
                 'cod_collected',
-                'Shipper xác nhận đã thu COD '.number_format($amountToCollect, 0, ',', '.').'đ từ khách khi giao hàng. Khoản này đã được ghi nhận vào tiền COD phải nộp về công ty.'
+                'Shipper xác nhận đã thu COD '.number_format($amountToCollect, 0, ',', '.').'đ từ khách khi giao hàng.'
             );
         }
 
@@ -1150,11 +1135,13 @@ class ShipController extends Controller
             );
         }
 
+        // Đơn hoàn tất ngay khi shipper giao xong; doanh thu và điểm thưởng được ghi nhận tức thời.
+        $order->awardLoyaltyPoints();
         RealtimeOrderNotifier::orderStatusUpdated($order);
 
         $deliveryMessage = $requiresCodCollection
-            ? 'Đã giao hàng và ghi nhận đã thu COD '.number_format($amountToCollect, 0, ',', '.').'đ. Tiền đã được cộng vào mục phải nộp về công ty.'
-            : 'Đã giao hàng. Đơn đã thanh toán trước.';
+            ? 'Đã giao hàng, hoàn thành đơn và ghi nhận đã thu COD '.number_format($amountToCollect, 0, ',', '.').'đ.'
+            : 'Đã giao hàng và hoàn thành đơn. Đơn đã thanh toán trước.';
 
         if (($returnPlan['status'] ?? null) === 'continue_bundle') {
             $autoStartedOrder = $this->autoStartDeliveryWhenDue($shipper);

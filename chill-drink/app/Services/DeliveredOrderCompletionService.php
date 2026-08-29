@@ -63,13 +63,6 @@ class DeliveredOrderCompletionService
                     continue;
                 }
 
-                if (strtolower((string) $order->payment_method) === 'cod' && $order->shipper_id) {
-                    $shipper = \App\Models\Shipper::query()->find($order->shipper_id);
-                    if ($shipper) {
-                        app(ShipperCodService::class)->recordCollection($order->fresh(), $shipper);
-                    }
-                }
-
                 // Hàm này đã tự chống cộng điểm hai lần bằng reference order.
                 $order->awardLoyaltyPoints();
                 RealtimeOrderNotifier::orderStatusUpdated($order);

@@ -556,15 +556,6 @@
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">{{ strtoupper(\App\Support\OrderStatus::label((string) $order->status)) }}</strong>
                                                     </div>
-                                                    @if($order->payment_method === 'cod' && $order->codReceivable)
-                                                        <div class="mt-2">
-                                                            @if($order->codReceivable->settlement_id)
-                                                                <span class="badge bg-success"><i class="bi bi-cash-coin me-1"></i>COD đã đối soát công ty</span>
-                                                            @else
-                                                                <span class="badge bg-warning text-dark"><i class="bi bi-wallet2 me-1"></i>Shipper đang giữ {{ number_format((int)$order->codReceivable->amount,0,',','.') }}đ COD</span>
-                                                            @endif
-                                                        </div>
-                                                    @endif
                                                     @if($order->status_changed_at)
                                                         @php
                                                             $changedByUser = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;

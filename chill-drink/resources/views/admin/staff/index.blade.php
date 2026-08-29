@@ -441,7 +441,7 @@
                                     <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
                                 @endforeach
                             </select>
-                            <div class="form-text">Đổi home branch chỉ có hiệu lực khi shipper không còn đơn/chuyến ghép/COD phải nộp.</div>
+                            <div class="form-text">Đổi home branch chỉ có hiệu lực khi shipper không còn đơn hoặc chuyến ghép đang hoạt động.</div>
                             @error('branch_id', $editBag)<div class="invalid-feedback">{{ $message }}</div>@enderror
                         @else
                             <input type="hidden" name="branch_id" value="{{ $staff->branch_id }}">
