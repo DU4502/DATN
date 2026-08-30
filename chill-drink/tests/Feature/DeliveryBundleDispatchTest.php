@@ -74,6 +74,52 @@ class DeliveryBundleDispatchTest extends TestCase
         $this->assertIsArray($decision->features_json);
     }
 
+    public function test_scheduled_order_is_not_dispatched_too_early(): void
+    {
+        Notification::fake();
+        $this->travelTo('2026-08-29 09:00:00');
+
+        $branch = $this->createBranch('DSP-SCHEDULED', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'SCHEDULED-SHIPPER', 'online');
+        $order = $this->createOrder($branch, 'DSP-SCHEDULED-1');
+        $order->update([
+            'delivery_type' => 'scheduled',
+            'scheduled_delivery_time' => now()->addHours(2),
+            'scheduled_at' => now()->addHours(2),
+        ]);
+
+        $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($order->fresh());
+
+        $this->assertSame('deferred', $result['status']);
+        $this->assertNull($order->fresh()->shipper_id);
+        $this->assertSame('online', $shipper->fresh()->status);
+        $this->assertDatabaseMissing('shipments', ['order_id' => $order->id]);
+
+        $this->travelBack();
+    }
+
+    public function test_scheduled_order_becomes_dispatchable_sixty_minutes_before_delivery(): void
+    {
+        Notification::fake();
+        $this->travelTo('2026-08-29 09:00:00');
+
+        $branch = $this->createBranch('DSP-SCHEDULED-DUE', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'SCHEDULED-DUE-SHIPPER', 'online');
+        $order = $this->createOrder($branch, 'DSP-SCHEDULED-DUE-1');
+        $order->update([
+            'delivery_type' => 'scheduled',
+            'fulfillment_type' => 'delivery',
+            'scheduled_delivery_time' => now()->addMinutes(60),
+            'scheduled_at' => now()->addMinutes(60),
+        ]);
+
+        $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($order->fresh());
+
+        $this->assertSame('assigned', $result['status']);
+        $this->assertSame($shipper->id, $order->fresh()->shipper_id);
+        $this->travelBack();
+    }
+
     public function test_staff_and_cross_branch_shipper_are_not_dispatch_candidates(): void
     {
         $orderBranch = $this->createBranch('DSP-B', 10.7769, 106.7009);

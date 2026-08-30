@@ -92,6 +92,7 @@ class CheckoutController extends Controller
         $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $isGroupCheckout = (bool) $groupCheckout;
+        $checkoutDeliveryType = session()->pull('checkout_delivery_type', 'now');
         $groupCheckoutGroup = $groupCheckout['group'] ?? null;
         $groupCheckoutBranch = $groupCheckout['branch'] ?? null;
         $branches = Branch::where('status', true)
@@ -228,7 +229,8 @@ class CheckoutController extends Controller
             'userLongitude',
             'isGroupCheckout',
             'groupCheckoutGroup',
-            'groupCheckoutBranch'
+            'groupCheckoutBranch',
+            'checkoutDeliveryType'
         ));
     }
 
@@ -308,7 +310,7 @@ class CheckoutController extends Controller
                 'nullable', 'date', 'required_if:delivery_type,scheduled',
                 function ($attribute, $value, $fail) use ($request) {
                     if ($request->input('delivery_type') !== 'scheduled') return;
-                    if ($message = ScheduledDelivery::validate($value)) $fail($message);
+                    if ($message = ScheduledDelivery::validate($value, (string) $request->input('fulfillment_type', 'delivery'))) $fail($message);
                 },
             ],
         ], [
@@ -334,16 +336,6 @@ class CheckoutController extends Controller
         ) {
             throw ValidationException::withMessages([
                 'shipping_address_ui' => 'Vui lòng cập nhật lại địa chỉ và xác nhận vị trí trên bản đồ cho đơn hàng này.',
-            ]);
-        }
-
-        if (
-            $request->input('fulfillment_type') === 'delivery'
-            && ! $this->hasHouseNumber($request->input('shipping_address_ui'))
-            && blank($request->input('note'))
-        ) {
-            throw ValidationException::withMessages([
-                'note' => 'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng để shipper dễ tìm.',
             ]);
         }
 

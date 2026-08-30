@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\AddressLearning;
+use App\Support\ScheduledDelivery;
 use App\Services\ShipperDispatchService;
 use App\Services\ShipperIncidentService;
 use App\Services\OrderCancellationService;
@@ -580,6 +581,15 @@ class OrderController extends Controller
                 ], 422);
             }
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
+        }
+
+        if ($newStatus === OrderStatus::PREPARING && ! ScheduledDelivery::canStartPreparation($order)) {
+            $message = ScheduledDelivery::preparationBlockedMessage($order);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return redirect()->back()->with('error', $message);
         }
 
         $dispatchResult = null;

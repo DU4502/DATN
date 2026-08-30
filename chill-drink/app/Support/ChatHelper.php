@@ -89,7 +89,7 @@ class ChatHelper
             return;
         }
 
-        $labels = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'];
+        $labels = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'awaiting_confirmation' => 'Chờ khách xác nhận', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'];
         $content = "[CẬP NHẬT HỖ TRỢ ĐƠN {$order->displayCode()}]"
             ."\nTrạng thái: ".($labels[$issue->status] ?? $issue->status)
             .($issue->resolution_value ? "\nPhương án: {$issue->resolution_value}" : '')

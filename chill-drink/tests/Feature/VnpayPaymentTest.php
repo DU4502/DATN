@@ -47,6 +47,26 @@ class VnpayPaymentTest extends TestCase
         );
     }
 
+    public function test_scheduled_payment_url_expires_before_store_operation_window(): void
+    {
+        $this->travelTo('2026-08-30 09:00:00');
+        $user = $this->customer();
+        $order = $this->vnpayOrder($user);
+        $order->update([
+            'status' => 'awaiting_payment',
+            'delivery_type' => 'scheduled',
+            'fulfillment_type' => 'delivery',
+            'scheduled_delivery_time' => now()->addHours(2),
+            'scheduled_at' => now()->addHours(2),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('vnpay.payment', $order));
+        parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $params);
+
+        $this->assertSame('20260830100000', $params['vnp_ExpireDate']);
+        $this->travelBack();
+    }
+
     public function test_user_cannot_pay_another_users_order(): void
     {
         $owner = $this->customer();
@@ -139,6 +159,84 @@ class VnpayPaymentTest extends TestCase
             'vnpay_transaction_id' => '14933728',
         ]);
         $this->assertSame('ordered', $groupOrder->fresh()->status);
+    }
+
+    public function test_vnpay_ipn_rejects_scheduled_order_after_payment_deadline(): void
+    {
+        $this->travelTo('2026-08-30 10:00:00');
+        $user = $this->customer();
+        $order = $this->vnpayOrder($user);
+        $order->update([
+            'status' => 'awaiting_payment',
+            'delivery_type' => 'scheduled',
+            'fulfillment_type' => 'delivery',
+            'scheduled_delivery_time' => now()->addMinutes(30),
+            'scheduled_at' => now()->addMinutes(30),
+        ]);
+        $params = $this->signedParams([
+            'vnp_Amount' => $order->total * 100,
+            'vnp_ResponseCode' => '00',
+            'vnp_TransactionNo' => '14933799',
+            'vnp_TransactionStatus' => '00',
+            'vnp_TxnRef' => "order_{$order->id}_1710000099",
+        ]);
+
+        $this->get(route('vnpay.ipn', $params))
+            ->assertExactJson([
+                'RspCode' => '02',
+                'Message' => 'Scheduled payment window expired',
+            ]);
+
+        $this->assertSame('pending', $order->fresh()->payment_status);
+        $this->assertSame('awaiting_payment', $order->fresh()->status);
+        $this->travelBack();
+    }
+
+    public function test_duplicate_vnpay_callback_is_idempotent(): void
+    {
+        $user = $this->customer();
+        $order = $this->vnpayOrder($user);
+        $params = $this->signedParams([
+            'vnp_Amount' => $order->total * 100,
+            'vnp_ResponseCode' => '00',
+            'vnp_TransactionNo' => '14933729',
+            'vnp_TransactionStatus' => '00',
+            'vnp_TxnRef' => "order_{$order->id}_1710000002",
+        ]);
+
+        $this->get(route('vnpay.ipn', $params))->assertJsonPath('RspCode', '00');
+        $this->get(route('vnpay.ipn', $params))->assertExactJson([
+            'RspCode' => '02',
+            'Message' => 'Order already confirmed',
+        ]);
+
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame('14933729', $order->fresh()->vnpay_transaction_id);
+    }
+
+    public function test_paid_guest_order_moves_to_the_correct_verification_state(): void
+    {
+        $phoneGuest = Order::create([
+            'guest_name' => 'Khách điện thoại',
+            'guest_phone' => '0900000001',
+            'subtotal' => 50000,
+            'shipping_fee' => 0,
+            'discount' => 0,
+            'total' => 50000,
+            'payment_method' => 'vnpay',
+            'payment_status' => 'pending',
+            'status' => 'awaiting_payment',
+        ]);
+        $params = $this->signedParams([
+            'vnp_Amount' => $phoneGuest->total * 100,
+            'vnp_ResponseCode' => '00',
+            'vnp_TransactionNo' => '14933730',
+            'vnp_TransactionStatus' => '00',
+            'vnp_TxnRef' => "order_{$phoneGuest->id}_1710000003",
+        ]);
+
+        $this->get(route('vnpay.ipn', $params))->assertJsonPath('RspCode', '00');
+        $this->assertSame('pending', $phoneGuest->fresh()->status);
     }
 
     private function signedParams(array $params): array

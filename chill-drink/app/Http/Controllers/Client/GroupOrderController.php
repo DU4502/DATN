@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\GroupOrder;
 use App\Events\GroupOrderGroupMessageSent;
+use App\Events\GroupOrderUpdated;
 use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderMessage;
@@ -14,6 +15,7 @@ use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -246,6 +248,7 @@ class GroupOrderController extends Controller
         });
 
         session()->forget("group_member_{$group->id}");
+        $this->broadcastGroupUpdated($group, 'member_left');
 
         return redirect()->route('group-orders.index')
             ->with('success', 'Bạn đã rời phòng. Món đã chọn và tin nhắn riêng liên quan của bạn đã được xóa; phòng vẫn tiếp tục cho các thành viên còn lại.');
@@ -319,8 +322,8 @@ class GroupOrderController extends Controller
     public function sendMessage(Request $request, string $code): JsonResponse
     {
         $group = GroupOrder::where('code', $code)->firstOrFail();
-        abort_if($group->status === 'cancelled', 422, 'Phòng đã hủy nên không thể gửi tin nhắn.');
-        abort_if($group->status === 'closed', 422, 'Phòng đã đóng nên không thể gửi tin nhắn mới.');
+        $group->closeIfExpired();
+        abort_unless($group->isOpen(), 422, 'Phòng đã đóng hoặc hết hạn nên không thể gửi tin nhắn mới.');
         $sender = $this->currentMember($group);
         $data = $request->validate([
             'content' => [
@@ -354,7 +357,17 @@ class GroupOrderController extends Controller
             'attachment_size' => $attachment?->getSize(),
         ])->load(['sender:id,name', 'recipient:id,name']);
 
-        broadcast(new GroupOrderGroupMessageSent($message))->toOthers();
+        try {
+            broadcast(new GroupOrderGroupMessageSent($message))->toOthers();
+        } catch (\Throwable $exception) {
+            // Tin đã được lưu; polling 500 ms ở client vẫn đồng bộ được. Không trả
+            // lỗi 500 khiến người dùng bấm gửi lại và tạo tin nhắn trùng khi Reverb tắt.
+            Log::warning('Không thể phát realtime tin nhắn đơn nhóm; client sẽ dùng polling.', [
+                'group_order_id' => $group->id,
+                'message_id' => $message->id,
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json(['message' => $this->messagePayload($message)], 201);
     }
@@ -418,6 +431,8 @@ class GroupOrderController extends Controller
 
         $member = DB::transaction(function () use ($group, $data) {
             $lockedGroup = GroupOrder::query()->lockForUpdate()->findOrFail($group->id);
+            $lockedGroup->closeIfExpired();
+            abort_unless($lockedGroup->isOpen(), 422, 'Đơn nhóm đã đóng hoặc hết hạn.');
             $existingMember = $lockedGroup->members()->where('user_id', auth()->id())->first();
 
             if ($existingMember) {
@@ -439,6 +454,7 @@ class GroupOrderController extends Controller
         });
 
         session(["group_member_{$group->id}" => $member->member_token]);
+        $this->broadcastGroupUpdated($group, 'member_joined');
 
         return back()->with('success', "Chào {$member->name}, bạn có thể chọn món rồi nhé!");
     }
@@ -489,6 +505,8 @@ class GroupOrderController extends Controller
             ]);
         });
 
+        $this->broadcastGroupUpdated(GroupOrder::where('code', $code)->firstOrFail(), 'item_added');
+
         return back()->with('success', 'Đã thêm món của bạn vào đơn nhóm.');
     }
 
@@ -503,6 +521,8 @@ class GroupOrderController extends Controller
             abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng.');
             $lockedItem->delete();
         });
+
+        $this->broadcastGroupUpdated(GroupOrder::where('code', $code)->firstOrFail(), 'item_removed');
 
         return back()->with('success', 'Đã xóa món khỏi đơn nhóm.');
     }
@@ -533,6 +553,8 @@ class GroupOrderController extends Controller
             $lockedItem->increment('quantity');
         });
 
+        $this->broadcastGroupUpdated(GroupOrder::where('code', $code)->firstOrFail(), 'item_quantity_changed');
+
         return back()->with('success', 'Đã thêm 1 phần của món này.');
     }
 
@@ -559,6 +581,8 @@ class GroupOrderController extends Controller
             $lockedItem->decrement('quantity');
         });
 
+        $this->broadcastGroupUpdated(GroupOrder::where('code', $code)->firstOrFail(), 'item_quantity_changed');
+
         return back()->with('success', 'Đã giảm 1 phần của món này.');
     }
 
@@ -584,6 +608,8 @@ class GroupOrderController extends Controller
         try {
             $group = DB::transaction(function () use ($group) {
                 $lockedGroup = GroupOrder::lockForUpdate()->findOrFail($group->id);
+                $lockedGroup->closeIfExpired();
+                abort_unless($lockedGroup->isOpen(), 422, 'Đơn nhóm đã được chốt, hủy hoặc hết hạn trước đó.');
                 $lockedGroup->load(['items.product.category', 'items.member']);
 
                 if ($lockedGroup->items->isEmpty()) {
@@ -611,8 +637,9 @@ class GroupOrderController extends Controller
         }
 
         $this->activateGroupCart($group);
+        $this->broadcastGroupUpdated($group, 'group_closed');
 
-        return redirect()->route('cart.index')->with('success', 'Đã gom toàn bộ món vào giỏ hàng chung.');
+        return redirect()->route('checkout.index')->with('success', 'Đơn nhóm đã chốt. Chi nhánh của phòng đã được giữ nguyên để thanh toán.');
     }
 
     private function currentMember(GroupOrder $group): GroupOrderMember
@@ -624,14 +651,44 @@ class GroupOrderController extends Controller
 
     public function cancel(string $code)
     {
-        DB::transaction(function () use ($code) {
+        $group = DB::transaction(function () use ($code) {
             $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
             abort_unless($group->owner_id === auth()->id(), 403);
             abort_if($group->order_id || ! in_array($group->status, ['open', 'closed'], true), 422, 'Đơn nhóm này không thể hủy.');
             $group->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+            return $group->fresh();
         });
+        $this->broadcastGroupUpdated($group, 'group_cancelled');
         $this->restorePersonalCart();
         return redirect()->route('group-orders.index')->with('success', 'Đã hủy đơn nhóm.');
+    }
+
+    public function editCheckout(string $code)
+    {
+        $group = DB::transaction(function () use ($code) {
+            $lockedGroup = GroupOrder::query()->where('code', $code)->lockForUpdate()->firstOrFail();
+
+            abort_unless((int) $lockedGroup->owner_id === (int) auth()->id(), 403);
+            abort_unless($lockedGroup->status === 'closed' && ! $lockedGroup->order_id, 422, 'Đơn nhóm không còn có thể thêm món.');
+
+            $lockedGroup->update([
+                'status' => 'open',
+                'locked_at' => null,
+                'closes_at' => now()->addMinutes(GroupOrder::ORDER_WINDOW_MINUTES),
+                'owner_last_seen_at' => now(),
+                'status_changed_at' => now(),
+                'status_changed_by' => auth()->id(),
+            ]);
+
+            return $lockedGroup->fresh();
+        });
+
+        $this->restorePersonalCart();
+        $this->broadcastGroupUpdated($group, 'group_reopened');
+
+        return redirect()
+            ->route('group-orders.show', $group->code)
+            ->with('success', 'Phòng đã được mở lại. Bạn có thể thêm món rồi chốt đơn để tiếp tục thanh toán.');
     }
 
     public function resume(string $code)
@@ -648,7 +705,7 @@ class GroupOrderController extends Controller
             return back()->with('error', 'Đơn nhóm không có món để thanh toán.');
         }
         $this->activateGroupCart($group);
-        return redirect()->route('cart.index')->with('success', 'Đã khôi phục giỏ hàng đơn nhóm.');
+        return redirect()->route('checkout.index')->with('success', 'Đã khôi phục đơn nhóm và giữ nguyên chi nhánh để thanh toán.');
     }
 
     /**
@@ -678,7 +735,7 @@ class GroupOrderController extends Controller
 
         $this->activateGroupCart($group);
 
-        return redirect()->route('cart.index')->with('success', 'Đã khôi phục giỏ hàng đơn nhóm.');
+        return redirect()->route('checkout.index')->with('success', 'Đã khôi phục đơn nhóm và giữ nguyên chi nhánh để thanh toán.');
     }
 
     private function restorePersonalCart(): void
@@ -732,6 +789,20 @@ class GroupOrderController extends Controller
     {
         $sizeExtra = ['S' => 0, 'M' => 5000, 'L' => 10000][$size] ?? 0;
         return max(0, (int) $product->price + $sizeExtra + (int) collect($toppings)->sum('price'));
+    }
+
+    private function broadcastGroupUpdated(GroupOrder $group, string $action): void
+    {
+        try {
+            broadcast(GroupOrderUpdated::fromGroup($group, $action))->toOthers();
+        } catch (\Throwable $exception) {
+            // Polling dự phòng vẫn đồng bộ phòng nếu dịch vụ realtime tạm dừng.
+            Log::warning('Không thể phát realtime thay đổi đơn nhóm; client sẽ dùng polling.', [
+                'group_order_id' => $group->id,
+                'action' => $action,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function toppingIdsForProduct(Product $product, $toppings)

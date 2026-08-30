@@ -7,6 +7,7 @@ use App\Models\Shipper;
 use App\Models\User;
 use App\Notifications\ShipperOrderAssignedNotification;
 use App\Support\OrderStatus;
+use App\Support\ScheduledDelivery;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -107,6 +108,16 @@ class ShipperDispatchService
                 $query->whereNull('fulfillment_type')->orWhere('fulfillment_type', 'delivery');
             })
             ->whereIn('status', self::DISPATCHABLE_UNASSIGNED_STATUSES)
+            ->where(function ($query) {
+                $dispatchBefore = now()->addMinutes(ScheduledDelivery::DELIVERY_OPERATION_MINUTES);
+                $query->where('delivery_type', '!=', 'scheduled')
+                    ->orWhereNull('delivery_type')
+                    ->orWhere('scheduled_delivery_time', '<=', $dispatchBefore)
+                    ->orWhere(function ($legacy) use ($dispatchBefore) {
+                        $legacy->whereNull('scheduled_delivery_time')
+                            ->where('scheduled_at', '<=', $dispatchBefore);
+                    });
+            })
             ->oldest('created_at')
             ->limit($scanLimit)
             ->get()
@@ -449,6 +460,18 @@ class ShipperDispatchService
                 'shipper' => Shipper::with('user')->find($order->shipper_id),
                 'message' => 'Đơn đã được gán shipper trước đó.',
             ];
+        }
+
+
+        if ($order->delivery_type === 'scheduled') {
+            $scheduledAt = $order->scheduled_delivery_time ?? $order->scheduled_at;
+            if (! $scheduledAt || $scheduledAt->gt(now()->addMinutes(ScheduledDelivery::DELIVERY_OPERATION_MINUTES))) {
+                return [
+                    'status' => 'deferred',
+                    'shipper' => null,
+                    'message' => 'Đơn giao sau chưa đến thời điểm điều phối shipper.',
+                ];
+            }
         }
 
         return null;

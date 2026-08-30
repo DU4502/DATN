@@ -452,6 +452,19 @@ const groupOrderRoom = {
                 }
             };
 
+            const groupId = Number(this.root.dataset.groupId || 0);
+            if (window.Echo && groupId > 0) {
+                const roomChannel = window.Echo.private('group-order.' + groupId);
+                roomChannel.listen('.group-order.updated', () => {
+                    refresh().then((updated) => {
+                        if (updated) this.captureRoomFingerprint();
+                    });
+                });
+                signal.addEventListener('abort', () => {
+                    roomChannel.stopListening('.group-order.updated');
+                }, { once: true });
+            }
+
             const checkForChanges = async () => {
                 if (document.hidden || this.isRefreshing || this.isCheckingState || this.isMutating) return;
                 const stateUrl = this.root.dataset.stateUrl;
@@ -486,7 +499,9 @@ const groupOrderRoom = {
             };
 
             this.captureRoomFingerprint();
-            this.stopTimers.push(createVisibleInterval(checkForChanges, 400, false));
+            // WebSocket là đường chính; polling 2,5 giây chỉ là dự phòng khi
+            // Reverb bị ngắt, tránh hai cửa sổ cùng dồn request HTML vào PHP.
+            this.stopTimers.push(createVisibleInterval(checkForChanges, 2500, false));
         },
         async copyLink(button) {
             const input = this.root.querySelector('#groupShareUrl');
@@ -687,7 +702,10 @@ const groupOrderChat = {
         scheduleSync(immediate = false) {
             window.clearTimeout(this.timer);
             if (document.hidden) return;
-            const delay = immediate ? 0 : 500;
+            // Echo delivers public group messages immediately. Keep polling only as a
+            // safety net (and for private messages) so two open tabs do not continuously
+            // compete for PHP/MySQL resources every 500 ms.
+            const delay = immediate ? 0 : (window.Echo ? 1500 : 800);
             this.timer = window.setTimeout(async () => {
                 try {
                     await this.loadMessages(false);

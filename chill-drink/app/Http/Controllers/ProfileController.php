@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\Order;
+use App\Models\OrderIssueReport;
+use App\Models\User;
+use App\Notifications\OrderIssueReportStatusNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -136,28 +140,64 @@ class ProfileController extends Controller
             abort(403, 'Bạn không có quyền xác nhận đơn hàng này.');
         }
 
-        // Only allow confirmation in DELIVERED status
-        if (OrderStatus::normalize((string) $order->status) !== OrderStatus::DELIVERED) {
-            return redirect()->back()->with('error', 'Chỉ có thể xác nhận đơn hàng khi đang ở trạng thái "Đã giao".');
-        }
+        $order = DB::transaction(function () use ($order, $user): ?Order {
+            $lockedOrder = Order::query()->lockForUpdate()->findOrFail($order->id);
+            abort_unless($lockedOrder->user_id === $user->id, 403);
 
-        // Update order status to completed
-        $order->status = OrderStatus::COMPLETED;
-        $order->status_changed_at = now();
-        $order->status_changed_by = $user->id;
-        
-        // Update payment status for COD orders
-        if ($order->payment_method === 'cod' && $order->payment_status !== 'paid') {
-            $order->payment_status = 'paid';
+            if (OrderStatus::normalize((string) $lockedOrder->status) !== OrderStatus::DELIVERED) {
+                return null;
+            }
+
+            $values = [
+                'status' => OrderStatus::COMPLETED,
+                'status_changed_at' => now(),
+                'status_changed_by' => $user->id,
+            ];
+
+            if ($lockedOrder->payment_method === 'cod' && $lockedOrder->payment_status !== 'paid') {
+                $values['payment_status'] = 'paid';
+            }
+
+            $lockedOrder->forceFill($values)->save();
+
+            if ($lockedOrder->support_issue_id) {
+                $supportIssue = OrderIssueReport::query()->lockForUpdate()->find($lockedOrder->support_issue_id);
+                if ($supportIssue
+                    && (int) $supportIssue->redelivery_order_id === (int) $lockedOrder->id
+                    && $supportIssue->status === 'awaiting_confirmation') {
+                    $supportIssue->update([
+                        'status' => 'resolved',
+                        'customer_confirmed_at' => now(),
+                        'resolved_at' => now(),
+                    ]);
+                }
+            }
+
+            return $lockedOrder->fresh();
+        }, 3);
+
+        if (! $order) {
+            return redirect()->back()->with('error', 'Đơn hàng đã được xác nhận hoặc không còn ở trạng thái "Đã giao".');
         }
-        
-        $order->save();
 
         // Award loyalty points when customer confirms order
-        $order->awardLoyaltyPoints();
+        if (! $order->support_issue_id) {
+            $order->awardLoyaltyPoints();
+        }
 
         // Send notification (through RealtimeOrderNotifier)
         \App\Support\RealtimeOrderNotifier::orderStatusUpdated($order);
+
+        if ($order->support_issue_id) {
+            $supportIssue = OrderIssueReport::with('order')->find($order->support_issue_id);
+            if ($supportIssue?->status === 'resolved') {
+                User::query()->whereIn('role_id', [2, 3, 4])->get()
+                    ->filter(fn (User $staff) => $staff->isSuperAdmin() || (int) $staff->branch_id === (int) $order->branch_id)
+                    ->each(fn (User $staff) => $staff->notify(new OrderIssueReportStatusNotification($supportIssue)));
+            }
+
+            return redirect()->back()->with('success', 'Bạn đã xác nhận nhận đơn giao bù. Yêu cầu hỗ trợ đã hoàn tất.');
+        }
 
         return redirect()->back()->with('success', 'Cảm ơn bạn đã xác nhận! Đơn hàng đã hoàn thành.');
     }

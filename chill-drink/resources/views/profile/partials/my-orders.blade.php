@@ -531,6 +531,7 @@ $paymentLabels = $paymentLabels ?? [
         <div class="order-card-header">
             <div>
                 <div class="fw-bold text-primary">{{ $order->displayCode() }}</div>
+                @if($order->support_issue_id)<span class="badge rounded-pill text-bg-info mt-1"><i class="bi bi-arrow-repeat me-1"></i>Đơn giao bù miễn phí</span>@endif
                 <div class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</div>
                 @if($order->scheduled_at)
                 <div class="small fw-semibold text-primary mt-1"><i class="bi bi-calendar-check me-1"></i>Nhận lúc {{ $order->scheduled_at->format('H:i · d/m/Y') }}</div>
@@ -742,7 +743,7 @@ $paymentLabels = $paymentLabels ?? [
             </div>
             <div class="text-end">
                 <div class="text-secondary small">Tổng thanh toán</div>
-                <div class="h5 fw-bold text-primary mb-0">{{ number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.') }}đ</div>
+                <div class="h5 fw-bold text-primary mb-0">{{ $order->support_issue_id ? 'Miễn phí' : number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.').'đ' }}</div>
                 
                 <div class="d-flex flex-column gap-2 mt-2">
                     <button

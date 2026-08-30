@@ -10,8 +10,8 @@ class OrderIssueReportStatusNotification extends Notification
     public function via(object $notifiable): array { return ['database']; }
     public function toArray(object $notifiable): array
     {
-        $labels = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'];
+        $labels = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'awaiting_confirmation' => 'Chờ bạn xác nhận', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'];
         $order = $this->report->order;
-        return ['type' => 'order_issue_status', 'title' => 'Cập nhật yêu cầu hỗ trợ', 'message' => 'Yêu cầu cho đơn '.($order->order_code ?? '#'.$order->id).' – '.($labels[$this->report->status] ?? $this->report->status), 'order_id' => $order->id, 'status' => $this->report->status, 'status_label' => $labels[$this->report->status] ?? $this->report->status];
+        return ['type' => 'order_issue_status', 'title' => 'Cập nhật yêu cầu hỗ trợ', 'message' => 'Yêu cầu cho đơn '.($order->order_code ?? '#'.$order->id).' – '.($labels[$this->report->status] ?? $this->report->status), 'order_id' => $order->id, 'issue_id' => $this->report->id, 'status' => $this->report->status, 'status_label' => $labels[$this->report->status] ?? $this->report->status];
     }
 }

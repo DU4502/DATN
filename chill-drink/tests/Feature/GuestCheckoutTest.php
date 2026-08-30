@@ -88,6 +88,44 @@ class GuestCheckoutTest extends TestCase
             ->assertSee('guest@example.com');
     }
 
+    public function test_guest_can_choose_scheduled_pickup_and_is_forced_to_vnpay(): void
+    {
+        $this->travelTo('2026-08-30 09:00:00');
+        [$product, $productSize] = $this->sellableProduct();
+        $branch = Branch::query()->firstOrCreate(
+            ['code' => 'GUEST-SCHEDULED'],
+            ['name' => 'Chi nhánh giao sau', 'address' => 'Thanh Hóa', 'status' => 1]
+        );
+        $cart = [
+            'scheduled-guest-item' => [
+                'product_id' => $product->id,
+                'product_size_id' => $productSize->id,
+                'name' => $product->name,
+                'price' => 100000,
+                'quantity' => 1,
+                'size' => 'M',
+            ],
+        ];
+
+        $this->withSession(['cart' => $cart])
+            ->post(route('checkout.guest.info.store'), [
+                'guest_name' => 'Khách đặt giao sau',
+                'guest_email' => 'scheduled-guest@example.com',
+                'verification_method' => 'email',
+                'fulfillment_type' => 'pickup',
+                'delivery_type' => 'scheduled',
+                'scheduled_delivery_time' => '2026-08-30 10:00:00',
+                'branch_id' => $branch->id,
+            ])
+            ->assertRedirect(route('checkout.guest.payment'));
+
+        $this->get(route('checkout.guest.payment'))
+            ->assertOk()
+            ->assertSee('Đơn đặt giao sau cần thanh toán trước')
+            ->assertSee('Không áp dụng cho đặt giao sau');
+        $this->travelBack();
+    }
+
     public function test_guest_can_checkout_with_verified_phone_without_email(): void
     {
         Mail::fake();

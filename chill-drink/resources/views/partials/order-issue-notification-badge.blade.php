@@ -3,8 +3,8 @@
     const badge = document.getElementById('sidebar-order-issue-badge');
     if (!badge) return;
 
-    const feedUrl = @json(route('admin.order-issues.pending-count'));
-    const issueUrl = @json(route('admin.order-issues.index'));
+    const feedUrl = @json(route(auth()->user()?->isCskh() ? 'admin.chat.order-issues.pending-count' : 'admin.order-issues.pending-count'));
+    const issueUrl = @json(route(auth()->user()?->isCskh() ? 'admin.chat.order-issues.index' : 'admin.order-issues.index'));
     let previousCount = Number(@json((int) ($pendingOrderIssueCount ?? 0)));
     let latestId = null;
     const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({

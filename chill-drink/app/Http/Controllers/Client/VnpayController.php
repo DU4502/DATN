@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Client;
 use App\Mail\GuestOrderEmailConfirmationMail;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
+use App\Support\OrderStatus;
+use App\Support\ScheduledDelivery;
 use App\Http\Controllers\Controller;
 use App\Models\GroupOrder;
 use App\Models\Order;
@@ -37,6 +39,23 @@ class VnpayController extends Controller
 
             return redirect()->route($redirectRoute, $order)
                 ->with('success', 'Đơn hàng này đã được thanh toán.');
+        }
+
+        if (! $this->canAcceptPayment($order)) {
+            $redirectRoute = auth()->check() ? 'orders.index' : 'checkout.success';
+
+            return redirect()->route($redirectRoute, $order)
+                ->with('error', 'Đơn hàng ở trạng thái hiện tại không thể mở lại thanh toán VNPay.');
+        }
+
+        if ($order->delivery_type === 'scheduled'
+            && ($message = ScheduledDelivery::validate(
+                $order->scheduled_delivery_time?->toDateTimeString() ?? $order->scheduled_at?->toDateTimeString(),
+                (string) ($order->fulfillment_type ?? 'delivery')
+            ))) {
+            $redirectRoute = auth()->check() ? 'orders.index' : 'checkout.success';
+
+            return redirect()->route($redirectRoute, $order)->with('error', $message.' Vui lòng đặt lại đơn giao sau.');
         }
 
         // Reset payment status to pending when retry
@@ -74,6 +93,10 @@ class VnpayController extends Controller
             'vnp_ReturnUrl' => config('services.vnpay.return_url'),
             'vnp_TxnRef' => "order_{$order->id}_".time(),
         ];
+
+        if ($order->delivery_type === 'scheduled' && ($paymentDeadline = ScheduledDelivery::paymentDeadline($order))) {
+            $inputData['vnp_ExpireDate'] = $paymentDeadline->format('YmdHis');
+        }
 
         $hashData = $this->hashData($inputData);
         $secureHash = hash_hmac('sha512', $hashData, (string) config('services.vnpay.hash_secret'));
@@ -117,11 +140,22 @@ class VnpayController extends Controller
         }
 
         if ($order->payment_status === 'paid') {
+            $this->completePaidGroupOrder($order);
+
             return $this->resultView(
                 $order,
                 'success',
                 'Cảm ơn bạn đã thanh toán',
                 'Đơn hàng đã được thanh toán thành công trước đó.'
+            );
+        }
+
+        if (! $this->canAcceptPayment($order)) {
+            return $this->resultView(
+                $order,
+                'error',
+                'Không thể xác nhận thanh toán',
+                'Đơn hàng đã kết thúc hoặc không còn ở trạng thái chờ thanh toán.'
             );
         }
 
@@ -135,24 +169,33 @@ class VnpayController extends Controller
         }
 
         if ($this->isSuccessful($request)) {
-            // For guest orders, keep awaiting_email_confirmation status until email is confirmed
-            // For regular orders, use standard PENDING status
-            $newStatus = $order->isGuest() ? $order->status : \App\Support\OrderStatus::PENDING;
-            
-            $order->update([
-                'payment_status' => 'paid',
-                'status' => $newStatus,
-                'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
-            ]);
+            if ($order->payment_status !== 'paid' && ScheduledDelivery::paymentWindowExpired($order)) {
+                return $this->resultView(
+                    $order,
+                    'error',
+                    'Thời gian thanh toán đã hết',
+                    'Đơn giao sau không còn đủ thời gian chuẩn bị và giao đúng hẹn. Vui lòng đặt lại với giờ nhận muộn hơn.'
+                );
+            }
+
+            [$order, $paymentRecorded] = $this->recordSuccessfulPayment($order->id, $request);
+            if ($order->payment_status !== 'paid') {
+                return $this->resultView(
+                    $order,
+                    'error',
+                    'Không thể xác nhận thanh toán',
+                    'Đơn hàng đã kết thúc trong lúc VNPay xử lý phản hồi. Vui lòng liên hệ hỗ trợ.'
+                );
+            }
             $this->completePaidGroupOrder($order);
 
-            // Send email confirmation for guest orders after successful payment
-            if ($order->isGuest()) {
+            // Chỉ tiến hành tác vụ phụ ở callback đầu tiên ghi nhận thanh toán.
+            // Return URL và IPN của VNPay có thể đến gần như cùng lúc.
+            if ($paymentRecorded && $order->isGuest() && $order->isAwaitingEmailConfirmation()) {
                 $this->sendGuestEmailConfirmation($order);
             }
 
-            // Only notify admin for non-guest orders or guest orders that have confirmed email
-            if (!$order->isGuest() || !$order->isAwaitingEmailConfirmation()) {
+            if ($paymentRecorded && (! $order->isGuest() || ! $order->isAwaitingEmailConfirmation())) {
                 RealtimeOrderNotifier::orderStatusUpdated($order);
                 RealtimeOrderNotifier::orderCreated($order);
             }
@@ -172,7 +215,10 @@ class VnpayController extends Controller
             );
         }
 
-        $order->update(['payment_status' => 'failed']);
+        Order::query()
+            ->whereKey($order->id)
+            ->where('payment_status', '!=', 'paid')
+            ->update(['payment_status' => 'failed']);
 
         return $this->resultView(
             $order->fresh(),
@@ -194,49 +240,88 @@ class VnpayController extends Controller
             return $this->ipnResponse('01', 'Order not found');
         }
 
-        return DB::transaction(function () use ($request, $orderId) {
-            $order = Order::query()->lockForUpdate()->find($orderId);
+        $order = Order::query()->find($orderId);
 
-            if (! $order || $order->payment_method !== 'vnpay') {
-                return $this->ipnResponse('01', 'Order not found');
+        if (! $order || $order->payment_method !== 'vnpay') {
+            return $this->ipnResponse('01', 'Order not found');
+        }
+
+        if ((int) $request->input('vnp_Amount') !== (int) $order->total * 100) {
+            return $this->ipnResponse('04', 'Invalid amount');
+        }
+
+        if ($order->payment_status !== 'paid' && ! $this->canAcceptPayment($order)) {
+            return $this->ipnResponse('02', 'Order is not payable');
+        }
+
+        if ($this->isSuccessful($request)) {
+            if ($order->payment_status !== 'paid' && ScheduledDelivery::paymentWindowExpired($order)) {
+                return $this->ipnResponse('02', 'Scheduled payment window expired');
             }
 
-            if ((int) $request->input('vnp_Amount') !== (int) $order->total * 100) {
-                return $this->ipnResponse('04', 'Invalid amount');
+            [$order, $paymentRecorded] = $this->recordSuccessfulPayment($order->id, $request);
+            if ($order->payment_status !== 'paid') {
+                return $this->ipnResponse('02', 'Order is not payable');
             }
+            $this->completePaidGroupOrder($order);
 
-            if ($order->payment_status === 'paid') {
+            if (! $paymentRecorded) {
                 return $this->ipnResponse('02', 'Order already confirmed');
             }
 
-            if ($this->isSuccessful($request)) {
-                // For guest orders, keep awaiting_email_confirmation status until email is confirmed
-                // For regular orders, use standard PENDING status
-                $newStatus = $order->isGuest() ? $order->status : \App\Support\OrderStatus::PENDING;
-                
-                $order->update([
-                    'payment_status' => 'paid',
-                    'status' => $newStatus,
-                    'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
-                ]);
-                $this->completePaidGroupOrder($order);
-
-                // Send email confirmation for guest orders after successful payment
-                if ($order->isGuest()) {
-                    $this->sendGuestEmailConfirmation($order);
-                }
-
-                // Only notify admin for non-guest orders or guest orders that have confirmed email
-                if (!$order->isGuest() || !$order->isAwaitingEmailConfirmation()) {
-                    RealtimeOrderNotifier::orderStatusUpdated($order);
-                    RealtimeOrderNotifier::orderCreated($order);
-                }
-            } else {
-                $order->update(['payment_status' => 'failed']);
+            if ($order->isGuest() && $order->isAwaitingEmailConfirmation()) {
+                $this->sendGuestEmailConfirmation($order);
             }
 
-            return $this->ipnResponse('00', 'Confirm Success');
-        });
+            if (! $order->isGuest() || ! $order->isAwaitingEmailConfirmation()) {
+                RealtimeOrderNotifier::orderStatusUpdated($order);
+                RealtimeOrderNotifier::orderCreated($order);
+            }
+        } else {
+            Order::query()
+                ->whereKey($order->id)
+                ->where('payment_status', '!=', 'paid')
+                ->update(['payment_status' => 'failed']);
+        }
+
+        return $this->ipnResponse('00', 'Confirm Success');
+    }
+
+    /**
+     * Ghi nhận thanh toán đúng một lần dù VNPay gọi đồng thời Return URL và IPN.
+     *
+     * @return array{0: Order, 1: bool} bool=true khi callback hiện tại là callback đầu tiên.
+     */
+    private function recordSuccessfulPayment(int $orderId, Request $request): array
+    {
+        return DB::transaction(function () use ($orderId, $request): array {
+            $order = Order::query()->lockForUpdate()->findOrFail($orderId);
+
+            if ($order->payment_status === 'paid') {
+                return [$order, false];
+            }
+
+            if (! $this->canAcceptPayment($order)) {
+                return [$order, false];
+            }
+
+            if (ScheduledDelivery::paymentWindowExpired($order)) {
+                return [$order, false];
+            }
+
+            $status = $order->isGuest() && filled($order->confirmation_token)
+                ? OrderStatus::AWAITING_EMAIL_CONFIRMATION
+                : OrderStatus::PENDING;
+
+            $order->forceFill([
+                'payment_status' => 'paid',
+                'status' => $status,
+                'vnpay_transaction_id' => $request->input('vnp_TransactionNo'),
+                'status_changed_at' => now(),
+            ])->save();
+
+            return [$order->fresh(), true];
+        }, 3);
     }
 
     private function isConfigured(): bool
@@ -247,6 +332,15 @@ class VnpayController extends Controller
             config('services.vnpay.url'),
             config('services.vnpay.return_url'),
         ])->every(fn ($value) => filled($value));
+    }
+
+    private function canAcceptPayment(Order $order): bool
+    {
+        return in_array(OrderStatus::normalize((string) $order->status), [
+            OrderStatus::AWAITING_PAYMENT,
+            OrderStatus::AWAITING_EMAIL_CONFIRMATION,
+            OrderStatus::PENDING,
+        ], true);
     }
 
     private function completePaidGroupOrder(Order $order): void

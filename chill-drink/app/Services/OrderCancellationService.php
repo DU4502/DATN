@@ -177,10 +177,42 @@ class OrderCancellationService
 
             // Đơn bị hủy thì trả lại lượt sử dụng voucher, bất kể hủy thủ công hay timeout.
             if ($locked->coupon_id) {
+                $usageExists = Schema::hasTable('user_coupon_usage')
+                    && DB::table('user_coupon_usage')->where('order_id', $locked->id)->exists();
+
                 Voucher::query()
                     ->whereKey($locked->coupon_id)
                     ->where('used_count', '>', 0)
                     ->decrement('used_count');
+
+                if ($locked->user_id && Schema::hasTable('user_vouchers')) {
+                    DB::table('user_vouchers')
+                        ->where('user_id', $locked->user_id)
+                        ->where('coupon_id', $locked->coupon_id)
+                        ->where('is_used', true)
+                        ->orderByDesc('used_at')
+                        ->limit(1)
+                        ->update([
+                            'is_used' => false,
+                            'used_at' => null,
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                if ($usageExists) {
+                    DB::table('user_coupon_usage')->where('order_id', $locked->id)->delete();
+                }
+
+                $voucher = Voucher::query()->find($locked->coupon_id);
+                if ($usageExists
+                    && $locked->user_id
+                    && $voucher?->is_redeemable
+                    && (int) $voucher->point_cost > 0
+                    && Schema::hasTable('loyalty_points')) {
+                    DB::table('loyalty_points')
+                        ->where('user_id', $locked->user_id)
+                        ->increment('total_points', (int) $voucher->point_cost);
+                }
             }
 
             if ($oldStatus === OrderStatus::COMPLETED) {

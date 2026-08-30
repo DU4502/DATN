@@ -258,8 +258,11 @@ class CartController extends Controller
             return response()->json($this->cartPayload('Đã thêm sản phẩm vào giỏ hàng!'));
         }
 
-        if ($request->boolean('buy_now')) {
+        $isScheduledIntent = $request->input('delivery_intent') === 'scheduled';
+        if ($request->boolean('buy_now') || $isScheduledIntent) {
             $route = auth()->check() ? 'checkout.index' : 'checkout.guest.index';
+
+            session()->put('checkout_delivery_type', $isScheduledIntent ? 'scheduled' : 'now');
 
             if (! auth()->check()) {
                 session(['guest_checkout_require_location' => true]);

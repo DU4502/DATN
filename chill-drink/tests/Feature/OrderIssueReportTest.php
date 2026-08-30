@@ -5,6 +5,10 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use App\Models\Order;
 use App\Models\OrderIssueReport;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Models\ProductSize;
+use App\Models\Size;
 use App\Models\User;
 use App\Notifications\OrderIssueReportCreatedNotification;
 use App\Support\OrderStatus;
@@ -42,6 +46,7 @@ class OrderIssueReportTest extends TestCase
     {
         [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-CREATE');
         $branchAdmin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+        $branchCskh = User::factory()->create(['role_id' => 4, 'branch_id' => $branch->id]);
         $superAdmin = User::factory()->create(['role_id' => 3, 'branch_id' => null]);
         $otherBranchAdmin = User::factory()->create([
             'role_id' => 2,
@@ -60,7 +65,7 @@ class OrderIssueReportTest extends TestCase
         Storage::disk('local')->assertExists($report->evidence_files[0]['path']);
         Storage::disk('local')->assertExists($report->evidence_files[1]['path']);
         $this->assertDatabaseHas('conversations', ['user_id' => $customer->id, 'order_id' => $order->id]);
-        Notification::assertSentTo([$customer, $branchAdmin, $superAdmin], OrderIssueReportCreatedNotification::class);
+        Notification::assertSentTo([$customer, $branchAdmin, $branchCskh, $superAdmin], OrderIssueReportCreatedNotification::class);
         Notification::assertNotSentTo($otherBranchAdmin, OrderIssueReportCreatedNotification::class);
     }
 
@@ -246,7 +251,7 @@ class OrderIssueReportTest extends TestCase
         [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-VOUCHER');
         $issue = $this->createIssue($order, $customer, ['status' => 'processing', 'processing_at' => now()]);
         $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
-        $payload = $this->adminPayload('resolved', 'voucher');
+        $payload = $this->adminPayload('awaiting_confirmation', 'voucher');
 
         $this->actingAs($admin)->patch(route('admin.order-issues.update', $issue), $payload)->assertRedirect();
         $voucherId = $issue->fresh()->voucher_coupon_id;
@@ -262,9 +267,59 @@ class OrderIssueReportTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.order-issues.index'))
             ->assertOk()
-            ->assertSee('Đã hoàn tất hỗ trợ')
+            ->assertSee('Chờ khách xác nhận')
             ->assertSee($voucherCode)
-            ->assertDontSee('Lưu phương án');
+            ->assertSee('Lưu phương án');
+    }
+
+    public function test_rejection_requires_a_clear_reason_and_clears_compensation_fields(): void
+    {
+        [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-REJECT-RULE');
+        $issue = $this->createIssue($order, $customer);
+        $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.order-issues.update', $issue), [
+                'status' => 'rejected',
+                'resolution_type' => 'voucher',
+                'resolution_value' => 'Không cấp',
+                'admin_note' => 'Ngắn',
+            ])
+            ->assertSessionHasErrors('admin_note');
+
+        $this->actingAs($admin)
+            ->patch(route('admin.order-issues.update', $issue), [
+                'status' => 'rejected',
+                'resolution_type' => 'voucher',
+                'resolution_value' => 'Không cấp',
+                'admin_note' => 'Hình ảnh không thể hiện đúng sản phẩm thuộc đơn hàng này.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $issue->refresh();
+        $this->assertSame('rejected', $issue->status);
+        $this->assertNull($issue->resolution_type);
+        $this->assertNull($issue->resolution_value);
+        $this->assertDatabaseCount('coupons', 0);
+    }
+
+    public function test_non_voucher_resolution_requires_specific_details(): void
+    {
+        [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-DETAIL-RULE');
+        $issue = $this->createIssue($order, $customer, ['status' => 'processing']);
+        $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.order-issues.update', $issue), [
+                'status' => 'awaiting_confirmation',
+                'resolution_type' => 'redelivery',
+                'resolution_value' => '',
+                'estimated_at' => now()->addHour()->format('Y-m-d H:i:s'),
+                'admin_note' => 'Đã xác minh yêu cầu của khách hàng.',
+            ])
+            ->assertSessionHasErrors('resolution_value');
+
+        $this->assertSame('processing', $issue->fresh()->status);
     }
 
     public function test_customer_confirmation_cannot_bypass_resolution_workflow(): void
@@ -277,12 +332,11 @@ class OrderIssueReportTest extends TestCase
             ->assertSessionHas('error');
         $this->assertSame('open', $issue->fresh()->status);
 
-        $resolvedAt = now()->subMinute();
         $issue->update([
-            'status' => 'resolved',
+            'status' => 'awaiting_confirmation',
             'resolution_type' => 'other',
             'resolution_value' => 'Đã hỗ trợ trực tiếp',
-            'resolved_at' => $resolvedAt,
+            'approved_at' => now()->subMinute(),
         ]);
 
         $this->actingAs($customer)
@@ -291,7 +345,78 @@ class OrderIssueReportTest extends TestCase
 
         $issue->refresh();
         $this->assertNotNull($issue->customer_confirmed_at);
-        $this->assertTrue($issue->resolved_at->equalTo($resolvedAt));
+        $this->assertSame('resolved', $issue->status);
+        $this->assertNotNull($issue->resolved_at);
+    }
+
+    public function test_cskh_can_process_only_issues_from_their_branch(): void
+    {
+        [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-CSKH');
+        $issue = $this->createIssue($order, $customer);
+        $cskh = User::factory()->create(['role_id' => 4, 'branch_id' => $branch->id]);
+        $otherCskh = User::factory()->create(['role_id' => 4, 'branch_id' => $this->createBranch('ISSUE-CSKH-OTHER')->id]);
+
+        $this->actingAs($cskh)
+            ->get(route('admin.chat.order-issues.index'))
+            ->assertOk()
+            ->assertSee('ISSUE-CSKH');
+
+        $this->actingAs($otherCskh)
+            ->patch(route('admin.chat.order-issues.update', $issue), $this->adminPayload('processing'))
+            ->assertForbidden();
+
+        $this->actingAs($cskh)
+            ->patch(route('admin.chat.order-issues.update', $issue), $this->adminPayload('processing'))
+            ->assertRedirect();
+
+        $this->assertSame($cskh->id, $issue->fresh()->handled_by);
+    }
+
+    public function test_redelivery_requires_a_future_estimate_before_customer_confirmation(): void
+    {
+        [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-REDELIVERY');
+        $issue = $this->createIssue($order, $customer, ['status' => 'processing']);
+        $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+        $product = Product::factory()->create();
+        $size = Size::create(['name' => 'M', 'multiplier' => 1]);
+        $productSize = ProductSize::create(['product_id' => $product->id, 'size_id' => $size->id, 'price' => 32000]);
+        $originalItem = OrderItem::create(['order_id' => $order->id, 'product_id' => $product->id, 'product_size_id' => $productSize->id, 'ice_level' => 100, 'sugar_level' => 100, 'quantity' => 2, 'unit_price' => 32000, 'total_price' => 64000]);
+
+        $payload = $this->adminPayload('awaiting_confirmation', 'redelivery');
+        $payload['redelivery_items'] = [$originalItem->id => 1];
+        $this->actingAs($admin)->patch(route('admin.order-issues.update', $issue), $payload)
+            ->assertSessionHasErrors('estimated_at');
+
+        $payload['estimated_at'] = now()->addHour()->format('Y-m-d H:i:s');
+        $this->actingAs($admin)->patch(route('admin.order-issues.update', $issue), $payload)
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $issue->refresh();
+        $this->assertSame('awaiting_confirmation', $issue->status);
+        $this->assertNotNull($issue->approved_at);
+        $this->assertNotNull($issue->remedy_started_at);
+        $this->assertNotNull($issue->estimated_at);
+        $this->assertNotNull($issue->redelivery_order_id);
+        $this->assertDatabaseHas('orders', ['id' => $issue->redelivery_order_id, 'support_issue_id' => $issue->id, 'total' => 0, 'payment_status' => 'paid']);
+        $this->assertDatabaseHas('order_items', ['order_id' => $issue->redelivery_order_id, 'product_id' => $product->id, 'quantity' => 1, 'total_price' => 0]);
+
+        $redeliveryOrder = Order::findOrFail($issue->redelivery_order_id);
+        $this->actingAs($customer)->get(route('orders.issues.create', $order))
+            ->assertOk()
+            ->assertSee($redeliveryOrder->displayCode())
+            ->assertSee('Theo dõi đơn giao bù');
+
+        $this->actingAs($customer)->post(route('orders.issues.confirm', [$order, $issue]))
+            ->assertSessionHas('error');
+        $this->assertSame('awaiting_confirmation', $issue->fresh()->status);
+
+        $redeliveryOrder->update(['status' => OrderStatus::DELIVERED]);
+        $this->actingAs($customer)->post(route('orders.confirm-received', $redeliveryOrder))
+            ->assertSessionHas('success');
+        $this->assertSame('resolved', $issue->fresh()->status);
+        $this->assertSame(OrderStatus::COMPLETED, $redeliveryOrder->fresh()->status);
+        $this->assertNotNull($issue->fresh()->customer_confirmed_at);
     }
 
     public function test_staff_and_shipper_cannot_access_admin_issue_routes(): void
