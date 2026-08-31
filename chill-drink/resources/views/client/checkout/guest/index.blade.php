@@ -6,6 +6,8 @@
 @php
     $guestInfo = $guestInfo ?? [];
     $deliveryType = old('fulfillment_type', $guestInfo['fulfillment_type'] ?? 'delivery');
+    $scheduledType = old('delivery_type', $guestInfo['delivery_type'] ?? 'now');
+    $scheduledLeadMinutes = \App\Support\ScheduledDelivery::minimumBookingLeadMinutes($deliveryType);
     $cartQuantity = collect($cart)->sum(fn ($item) => (int) ($item['quantity'] ?? 1));
 @endphp
 
@@ -48,8 +50,7 @@
     }
 
     .guest-summary {
-        position: sticky;
-        top: 105px;
+        position: static;
         overflow: hidden;
     }
 
@@ -748,7 +749,31 @@
                                 <input type="radio" class="btn-check" name="fulfillment_type" id="deliveryTypePickup" value="pickup" @checked($deliveryType === 'pickup')>
                                 <label class="btn btn-outline-primary" for="deliveryTypePickup"><i class="bi bi-shop me-1"></i>Lấy tại chi nhánh</label>
                             </div>
-                            <input type="hidden" name="delivery_type" value="now">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold d-block">Thời điểm nhận hàng *</label>
+                            <div class="btn-group delivery-toggle w-100" role="group">
+                                <input type="radio" class="btn-check" name="delivery_type" id="guestDeliveryNow" value="now" @checked($scheduledType === 'now')>
+                                <label class="btn btn-outline-primary" for="guestDeliveryNow"><i class="bi bi-lightning-charge me-1"></i>Giao ngay</label>
+                                <input type="radio" class="btn-check" name="delivery_type" id="guestDeliveryScheduled" value="scheduled" @checked($scheduledType === 'scheduled')>
+                                <label class="btn btn-outline-primary" for="guestDeliveryScheduled"><i class="bi bi-calendar2-check me-1"></i>Giao sau</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 {{ $scheduledType === 'scheduled' ? '' : 'd-none' }}" data-guest-scheduled-fields>
+                            <label for="scheduled_delivery_time" class="form-label fw-semibold">Ngày và giờ nhận hàng *</label>
+                            <input type="datetime-local"
+                                   id="scheduled_delivery_time"
+                                   name="scheduled_delivery_time"
+                                   min="{{ now()->addMinutes($scheduledLeadMinutes)->addMinute()->startOfMinute()->format('Y-m-d\TH:i') }}"
+                                   max="{{ today()->setTime(22, 0)->format('Y-m-d\TH:i') }}"
+                                   value="{{ old('scheduled_delivery_time', $guestInfo['scheduled_delivery_time'] ?? '') }}"
+                                   class="form-control guest-input @error('scheduled_delivery_time') is-invalid @enderror">
+                            @error('scheduled_delivery_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            <div class="form-text" data-guest-scheduled-rule>Đặt trước tối thiểu {{ $scheduledLeadMinutes }} phút · Chỉ áp dụng hôm nay trong giờ 07:00–22:00.</div>
+                            <label for="delivery_note" class="form-label fw-semibold mt-2">Ghi chú thời gian giao</label>
+                            <input id="delivery_note" name="delivery_note" maxlength="1000" value="{{ old('delivery_note', $guestInfo['delivery_note'] ?? '') }}" class="form-control guest-input" placeholder="Ví dụ: Giao đúng 10:30 giúp mình">
                         </div>
 
                         <div class="delivery-fields {{ $deliveryType === 'pickup' ? 'is-hidden' : '' }}" data-delivery-fields>
@@ -803,9 +828,7 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="note" class="form-label fw-semibold">
-                                Ghi chú giao hàng <span class="text-danger d-none" data-note-required-indicator>*</span>
-                            </label>
+                            <label for="note" class="form-label fw-semibold">Ghi chú giao hàng <span class="text-secondary fw-normal">(không bắt buộc)</span></label>
                             <textarea id="note" name="note" rows="2" class="form-control guest-input @error('note') is-invalid @enderror" placeholder="Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...">{{ old('note', $guestInfo['note'] ?? '') }}</textarea>
                             @error('note')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
@@ -962,6 +985,9 @@
         const pickupFields = document.querySelector('[data-pickup-fields]');
         const deliveryInput = document.getElementById('deliveryTypeDelivery');
         const pickupInput = document.getElementById('deliveryTypePickup');
+        const guestScheduledFields = document.querySelector('[data-guest-scheduled-fields]');
+        const guestScheduledInput = document.getElementById('scheduled_delivery_time');
+        const guestScheduledRule = document.querySelector('[data-guest-scheduled-rule]');
         const branchSelect = document.getElementById('branch_id');
         const branchSelectNote = document.querySelector('[data-branch-select-note]');
         const guestInfoForm = document.getElementById('guestInfoForm');
@@ -1131,24 +1157,6 @@
             if (!addressHouseNumberWarning || !deliveryInput?.checked) {
                 addressHouseNumberWarning?.classList.add('d-none');
                 syncNoteRequirement(false);
-                return;
-            }
-
-            const addressText = String(shippingAddressInput?.value || '').trim();
-            const noteValue = String(noteInput?.value || '').trim();
-
-            if (addressText && !hasHouseNumber(addressText)) {
-                syncNoteRequirement(true);
-                if (shouldScroll && !noteValue) {
-                    showAddressHouseNumberWarning(
-                        'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Hãy ghi mốc nhận hàng để shipper dễ tìm.',
-                        true
-                    );
-                    return;
-                }
-
-                addressHouseNumberWarning.classList.add('d-none');
-                addressHouseNumberWarning.textContent = '';
                 return;
             }
 
@@ -1543,6 +1551,26 @@
             if (addressInput) {
                 addressInput.required = !isPickup;
             }
+
+            syncScheduledMode();
+        }
+
+        function syncScheduledMode() {
+            const isScheduled = document.getElementById('guestDeliveryScheduled')?.checked;
+            const minimumLead = pickupInput?.checked
+                ? @json(\App\Support\ScheduledDelivery::minimumBookingLeadMinutes('pickup'))
+                : @json(\App\Support\ScheduledDelivery::minimumBookingLeadMinutes('delivery'));
+            guestScheduledFields?.classList.toggle('d-none', !isScheduled);
+            if (guestScheduledInput) {
+                guestScheduledInput.required = Boolean(isScheduled);
+                const earliest = new Date(Date.now() + minimumLead * 60 * 1000);
+                earliest.setSeconds(0, 0);
+                earliest.setMinutes(earliest.getMinutes() + 1);
+                guestScheduledInput.min = new Date(earliest.getTime() - earliest.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            }
+            if (guestScheduledRule) {
+                guestScheduledRule.textContent = `Đặt trước tối thiểu ${minimumLead} phút · Chỉ áp dụng hôm nay trong giờ 07:00–22:00.`;
+            }
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -1785,6 +1813,8 @@
                 requestCurrentLocation();
             }
         });
+        document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', syncScheduledMode));
+        syncScheduledMode();
         if (branchSelect) {
             const validateBranchSelect = () => {
                 branchSelect.setCustomValidity(branchSelect.value ? '' : 'Vui lòng chọn chi nhánh trong phạm vi không quá 15 km đường bộ');
@@ -1898,26 +1928,7 @@
                 return;
             }
 
-            if (deliveryInput?.checked && shippingAddressInput && !hasHouseNumber(shippingAddressInput.value)) {
-                const noteValue = String(noteInput?.value || '').trim();
-
-                if (!noteValue) {
-                    event.preventDefault();
-                    clearAddressHouseNumberWarning();
-                    if (noteInput) {
-                        noteInput.setCustomValidity('Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
-                        noteInput.classList.add('is-invalid');
-                        noteInput.placeholder = 'Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...';
-                        noteInput.focus();
-                        noteInput.reportValidity();
-                    }
-                    syncAddressHouseNumberNotice(true);
-                    return;
-                }
-
-                clearAddressHouseNumberWarning();
-                syncAddressHouseNumberNotice();
-            }
+            clearAddressHouseNumberWarning();
         });
         syncAddressHouseNumberNotice();
         syncGuestSummary();

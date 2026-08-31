@@ -20,6 +20,7 @@ class Order extends Model
      */
     protected $fillable = [
         'order_code',
+        'support_issue_id',
         'user_id',
         'guest_name',
         'guest_phone',
@@ -120,6 +121,11 @@ class Order extends Model
     public function issueReports()
     {
         return $this->hasMany(OrderIssueReport::class, 'order_id');
+    }
+
+    public function supportIssue()
+    {
+        return $this->belongsTo(OrderIssueReport::class, 'support_issue_id');
     }
 
     /**
@@ -290,6 +296,10 @@ class Order extends Model
     protected static function booted(): void
     {
         static::updating(function (Order $order) {
+            if ($order->isDirty('status') && ! $order->isDirty('status_changed_at')) {
+                $order->status_changed_at = now();
+            }
+
             if ($order->isDirty('status') && OrderStatus::normalize($order->status) === OrderStatus::DELIVERED && is_null($order->delivered_at)) {
                 $order->delivered_at = now();
             }

@@ -8,6 +8,7 @@ use App\Services\ShipperDispatchService;
 use App\Services\OrderCancellationService;
 use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
+use App\Support\ScheduledDelivery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -117,6 +118,10 @@ class StaffOrderController extends Controller
             $order->payment_method === 'vnpay' &&
             $order->payment_status !== 'paid') {
             return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
+        }
+
+        if ($newStatus === OrderStatus::PREPARING && ! ScheduledDelivery::canStartPreparation($order)) {
+            return redirect()->back()->with('error', ScheduledDelivery::preparationBlockedMessage($order));
         }
 
         $oldStatus = $order->status;

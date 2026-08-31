@@ -10,9 +10,12 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use App\Models\Size;
 use App\Models\User;
+use App\Models\UserVoucher;
+use App\Models\Voucher;
 use App\Services\OrderCancellationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class OrderCancellationTest extends TestCase
@@ -145,5 +148,54 @@ class OrderCancellationTest extends TestCase
             'status' => 'cancelled',
         ]);
         $this->assertDatabaseHas('products', ['id' => $product->id]);
+    }
+
+    public function test_cancelling_an_unpaid_order_restores_the_customers_voucher(): void
+    {
+        $branch = Branch::create([
+            'name' => 'Voucher Cancellation Branch',
+            'code' => 'VOUCHER-CANCEL',
+            'status' => true,
+        ]);
+        $customer = User::factory()->create();
+        $voucher = Voucher::factory()->create([
+            'used_count' => 1,
+            'usage_limit' => 1,
+            'is_redeemable' => false,
+        ]);
+        $ownedVoucher = UserVoucher::create([
+            'user_id' => $customer->id,
+            'coupon_id' => $voucher->id,
+            'code' => $voucher->code,
+            'is_used' => true,
+            'used_at' => now(),
+            'expires_at' => now()->addMonth(),
+        ]);
+        $order = Order::create([
+            'user_id' => $customer->id,
+            'branch_id' => $branch->id,
+            'coupon_id' => $voucher->id,
+            'subtotal' => 100000,
+            'shipping_fee' => 0,
+            'discount' => 20000,
+            'total' => 80000,
+            'payment_method' => 'vnpay',
+            'payment_status' => 'failed',
+            'status' => 'awaiting_payment',
+        ]);
+        DB::table('user_coupon_usage')->insert([
+            'user_id' => $customer->id,
+            'coupon_id' => $voucher->id,
+            'order_id' => $order->id,
+            'discount_amount' => 20000,
+            'used_at' => now(),
+        ]);
+
+        app(OrderCancellationService::class)->cancel($order, 'Hết thời gian thanh toán', null, true);
+
+        $this->assertSame(0, (int) $voucher->fresh()->used_count);
+        $this->assertFalse($ownedVoucher->fresh()->is_used);
+        $this->assertNull($ownedVoucher->fresh()->used_at);
+        $this->assertDatabaseMissing('user_coupon_usage', ['order_id' => $order->id]);
     }
 }

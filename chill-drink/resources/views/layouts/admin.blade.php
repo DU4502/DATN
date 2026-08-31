@@ -58,7 +58,7 @@
                     @endphp
                     <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
                 </a>
-                <a href="{{ route('admin.order-issues.index') }}" class="nav-link {{ request()->routeIs('admin.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ <span id="sidebar-order-issue-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size:.72rem;{{ ($pendingOrderIssueCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ min(99, $pendingOrderIssueCount ?? 0) }}</span></a>
+                <a href="{{ route($currentAdminUser?->isCskh() ? 'admin.chat.order-issues.index' : 'admin.order-issues.index') }}" class="nav-link {{ request()->routeIs('admin.order-issues.*', 'admin.chat.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ <span id="sidebar-order-issue-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size:.72rem;{{ ($pendingOrderIssueCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ min(99, $pendingOrderIssueCount ?? 0) }}</span></a>
             </nav>
 
             @if($adminPreviewMode)

@@ -269,7 +269,7 @@ class QuickOrderFeaturesTest extends TestCase
         $item = GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'M', 'quantity' => 1, 'unit_price' => 1, 'toppings' => []]);
 
-        $this->actingAs($owner)->post(route('group-orders.close', $group->code))->assertRedirect(route('cart.index'));
+        $this->actingAs($owner)->post(route('group-orders.close', $group->code))->assertRedirect(route('checkout.index'));
         $this->assertSame('closed', $group->fresh()->status);
         $this->assertSame(50000, $item->fresh()->unit_price);
         $this->post(route('group-orders.close', $group->code))->assertStatus(422);
@@ -338,11 +338,51 @@ class QuickOrderFeaturesTest extends TestCase
         $groupKey = 'group-'.$group->id.'-'.$item->id;
 
         $this->post(route('group-orders.resume', $group->code))
-            ->assertRedirect(route('cart.index'));
+            ->assertRedirect(route('checkout.index'));
 
         $this->assertSame($group->id, session('checkout_group_order_id'));
         $this->assertArrayHasKey($groupKey, session('cart'));
         $this->assertSame($personalCart, session('personal_cart_backup'));
+    }
+
+    public function test_owner_can_reopen_group_checkout_to_add_more_items(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        $member = GroupOrderMember::create([
+            'group_order_id' => $group->id,
+            'user_id' => $owner->id,
+            'name' => 'Chủ nhóm',
+            'member_token' => 'edit-checkout-owner',
+        ]);
+        $product = Product::factory()->create(['status' => true]);
+        GroupOrderItem::create([
+            'group_order_id' => $group->id,
+            'group_order_member_id' => $member->id,
+            'product_id' => $product->id,
+            'size' => 'S',
+            'quantity' => 1,
+            'unit_price' => (int) $product->price,
+        ]);
+        $personalCart = ['personal-before-edit' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
+
+        $this->actingAs($owner)
+            ->withSession(['cart' => $personalCart])
+            ->post(route('group-orders.close', $group->code))
+            ->assertRedirect(route('checkout.index'));
+
+        $this->post(route('group-orders.edit-checkout', $group->code))
+            ->assertRedirect(route('group-orders.show', $group->code));
+
+        $group->refresh();
+        $this->assertSame('open', $group->status);
+        $this->assertNull($group->locked_at);
+        $this->assertTrue($group->closes_at->isFuture());
+        $this->assertSame($personalCart, session('cart'));
+        $this->assertFalse(session()->has('checkout_group_order_id'));
+
+        $this->actingAs(User::factory()->create())
+            ->post(route('group-orders.edit-checkout', $group->code))
+            ->assertForbidden();
     }
 
     public function test_group_checkout_links_order_and_restores_personal_cart(): void
@@ -368,7 +408,7 @@ class QuickOrderFeaturesTest extends TestCase
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
             'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
-        $scheduledAt = now()->addHour()->startOfMinute();
+        $scheduledAt = now()->addHours(2)->startOfMinute();
 
         $this->actingAs($owner)->withSession(['cart' => $personalCart])->post(route('group-orders.close', $group->code));
         $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'closed']);
@@ -486,6 +526,30 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertDatabaseMissing('favorites', ['user_id' => $user->id, 'product_id' => $product->id]);
     }
 
+    public function test_product_scheduled_action_opens_checkout_in_scheduled_mode(): void
+    {
+        $user = User::factory()->create();
+        $branch = $this->activeBranch();
+        $product = Product::factory()->create(['status' => true]);
+        BranchProductStatus::query()->updateOrCreate(
+            ['branch_id' => $branch->id, 'product_id' => $product->id],
+            ['is_available' => true]
+        );
+
+        $this->actingAs($user)
+            ->withSession(['nearest_branch_id' => $branch->id])
+            ->post(route('cart.add', $product->id), [
+                'size' => 'S',
+                'sugar_level' => 100,
+                'ice_level' => 100,
+                'quantity' => 1,
+                'delivery_intent' => 'scheduled',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('scheduled', session('checkout_delivery_type'));
+    }
+
     public function test_group_members_can_use_group_and_private_chat(): void
     {
         Event::fake([GroupOrderGroupMessageSent::class]);
@@ -509,6 +573,31 @@ class QuickOrderFeaturesTest extends TestCase
         GroupOrderMember::create(['group_order_id' => $newGroup->id, 'user_id' => $otherUser->id, 'name' => 'Bạn A', 'member_token' => 'new-room-member']);
         $this->getJson(route('group-orders.messages', $newGroup->code))
             ->assertOk()->assertJsonPath('group_id', $newGroup->id)->assertJsonCount(0, 'messages');
+    }
+
+    public function test_group_chat_rejects_messages_after_room_expires_or_is_ordered(): void
+    {
+        [$group, $owner] = $this->openGroup();
+        GroupOrderMember::create([
+            'group_order_id' => $group->id,
+            'user_id' => $owner->id,
+            'name' => 'Chủ nhóm',
+            'member_token' => 'chat-state-owner',
+        ]);
+
+        $group->update(['closes_at' => now()->subSecond()]);
+
+        $this->actingAs($owner)
+            ->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Tin gửi quá hạn'])
+            ->assertStatus(422);
+        $this->assertSame('closed', $group->fresh()->status);
+        $this->assertDatabaseCount('group_order_messages', 0);
+
+        $group->update(['status' => 'ordered']);
+
+        $this->postJson(route('group-orders.messages.send', $group->code), ['content' => 'Tin gửi sau đặt hàng'])
+            ->assertStatus(422);
+        $this->assertDatabaseCount('group_order_messages', 0);
     }
 
     public function test_link_recipient_gets_group_and_branch_chat_like_the_owner(): void

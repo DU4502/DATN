@@ -239,8 +239,7 @@
     .scheduled-delivery-fields.is-visible { display: block; }
 
     .summary-card {
-        position: sticky;
-        top: 88px;
+        position: static;
         height: auto;
         max-height: none;
         display: flex;
@@ -248,7 +247,6 @@
         overflow: visible;
         border-color: rgba(0, 139, 122, 0.16);
         box-shadow: 0 24px 62px rgba(8, 42, 38, 0.09);
-        z-index: 8;
     }
 
     .summary-card-head {
@@ -497,6 +495,9 @@
         display: inline-flex;
         align-items: center;
         margin-top: 0.35rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
     }
 
     @media (max-width: 575.98px) {
@@ -543,8 +544,7 @@
         }
 
         .summary-card {
-            position: sticky;
-            top: 88px;
+            position: static;
             width: 100%;
         }
     }
@@ -625,20 +625,26 @@
     }
 
     .voucher-modal .modal-content {
+        max-height: min(760px, calc(100dvh - 2rem));
         border: 0;
         border-radius: 22px;
         overflow: hidden;
         box-shadow: 0 26px 70px rgba(8, 42, 38, 0.24);
     }
 
+    .voucher-modal .modal-dialog {
+        width: min(880px, calc(100vw - 2rem));
+        max-width: 880px;
+        margin: 1rem auto;
+    }
+
     .voucher-modal .modal-header,
     .voucher-modal .modal-footer {
-        padding: 1.4rem 1.8rem;
+        padding: .9rem 1.1rem;
     }
 
     .voucher-modal .modal-body {
-        padding: 1.2rem 1.8rem;
-        max-height: min(62vh, 560px);
+        padding: .85rem 1.1rem;
         overflow-y: auto;
         background: #f7fbfa;
         overscroll-behavior: contain;
@@ -687,23 +693,23 @@
 
     .voucher-search-box {
         background: #ffffff;
-        padding: 1rem;
+        padding: .7rem;
         border: 1px solid var(--drink-border);
         border-radius: 18px;
     }
 
     .voucher-search-box .form-control {
-        min-height: 46px;
-        border-radius: 14px;
+        min-height: 40px;
+        border-radius: 12px;
         background: #ffffff;
         border-color: var(--drink-border);
         box-shadow: none;
     }
 
     .voucher-apply-btn {
-        min-width: 116px;
-        min-height: 46px;
-        border-radius: 14px;
+        min-width: 104px;
+        min-height: 40px;
+        border-radius: 12px;
         background: var(--drink-primary);
         color: #ffffff;
         border-color: var(--drink-primary);
@@ -719,8 +725,8 @@
     .voucher-ticket {
         position: relative;
         display: flex;
-        min-height: 128px;
-        padding-right: 4rem;
+        min-height: 108px;
+        padding-right: 3.25rem;
         border: 1px solid rgba(0, 139, 122, 0.14);
         border-radius: 18px;
         background: #ffffff;
@@ -757,7 +763,7 @@
     .voucher-ticket::after {
         content: "";
         position: absolute;
-        left: 132px;
+        left: 104px;
         width: 16px;
         height: 16px;
         border-radius: 50%;
@@ -775,7 +781,7 @@
     }
 
     .voucher-ticket-brand {
-        width: 140px;
+        width: 112px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -788,19 +794,19 @@
     }
 
     .voucher-ticket-brand .brand-circle {
-        width: 58px;
-        height: 58px;
+        width: 46px;
+        height: 46px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.18);
-        font-size: 1.55rem;
+        font-size: 1.2rem;
     }
 
     .voucher-ticket-body {
         flex: 1;
-        padding: 1rem 1.25rem 1rem 1.1rem;
+        padding: .75rem 1rem .75rem .9rem;
         min-width: 0;
     }
 
@@ -1002,14 +1008,20 @@
         display: flex;
         flex-direction: column;
         border: 0;
-        border-radius: 4px;
+        border-radius: 20px;
         box-shadow: 0 22px 55px rgba(0, 0, 0, 0.22);
         overflow: hidden;
     }
 
+    .address-modal .modal-dialog {
+        width: min(760px, calc(100vw - 2rem));
+        max-width: 760px;
+        margin: 1rem auto;
+    }
+
     .address-modal .modal-header,
     .address-modal .modal-footer {
-        padding: 1.4rem 1.8rem;
+        padding: .9rem 1.1rem;
         flex: 0 0 auto;
     }
 
@@ -1022,7 +1034,7 @@
         justify-content: space-between;
         gap: 1rem;
         flex-shrink: 0;
-        min-height: 88px;
+        min-height: 64px;
         background: #ffffff;
         box-shadow: 0 -10px 24px rgba(8, 42, 38, 0.08);
     }
@@ -1030,7 +1042,7 @@
     .address-modal .modal-body {
         flex: 1 1 auto;
         min-height: 0;
-        padding: 1.2rem 1.8rem;
+        padding: .85rem 1.1rem;
         overflow-y: auto;
         overscroll-behavior: contain;
     }
@@ -1044,13 +1056,12 @@
     }
 
     .address-form-modal .modal-dialog {
-        height: calc(100vh - 2rem);
-        margin-top: 1rem;
-        margin-bottom: 1rem;
+        height: auto;
     }
 
     .address-form-modal .modal-content {
-        height: 100%;
+        height: auto;
+        max-height: min(780px, calc(100dvh - 2rem));
     }
 
     .address-form-modal .modal-footer .btn {
@@ -1062,6 +1073,71 @@
     }
 
     @media (max-width: 575.98px) {
+        .voucher-modal .modal-dialog,
+        .address-modal .modal-dialog {
+            width: calc(100vw - 1rem);
+            margin: .5rem auto;
+        }
+
+        .voucher-modal .modal-content,
+        .address-modal .modal-content,
+        .address-form-modal .modal-content {
+            max-height: calc(100dvh - 1rem);
+            border-radius: 16px;
+        }
+
+        .voucher-modal .modal-header,
+        .voucher-modal .modal-body,
+        .voucher-modal .modal-footer {
+            padding: .7rem .8rem;
+        }
+
+        .voucher-modal .modal-header .text-secondary {
+            display: none !important;
+        }
+
+        .voucher-modal .modal-footer {
+            gap: .5rem;
+        }
+
+        .voucher-modal .modal-footer .btn {
+            min-width: 0;
+            min-height: 40px;
+            padding: .5rem .75rem;
+            font-size: .78rem;
+        }
+
+        .voucher-search-box {
+            gap: .5rem !important;
+            padding: .6rem;
+        }
+
+        .voucher-ticket {
+            min-height: 98px;
+            padding-right: 2.6rem;
+        }
+
+        .voucher-ticket-brand {
+            width: 82px;
+            font-size: .72rem;
+        }
+
+        .voucher-ticket::before,
+        .voucher-ticket::after {
+            left: 74px;
+        }
+
+        .voucher-ticket-brand .brand-circle {
+            width: 38px;
+            height: 38px;
+            font-size: 1rem;
+        }
+
+        .voucher-ticket-body {
+            padding: .6rem .65rem;
+            font-size: .75rem;
+        }
+
         .address-modal .modal-footer {
             align-items: stretch;
             flex-direction: column-reverse;
@@ -1395,7 +1471,7 @@
         }
 
         .address-form-modal .modal-dialog {
-            height: calc(100dvh - 1rem);
+            height: auto;
             margin: .5rem;
         }
 
@@ -1765,7 +1841,8 @@
                         </div>
 
                         @php
-                            $deliveryType = old('delivery_type', 'now');
+                            $deliveryType = old('delivery_type', $checkoutDeliveryType ?? 'now');
+                            $scheduledLeadMinutes = \App\Support\ScheduledDelivery::minimumBookingLeadMinutes($fulfillmentType);
                             $selectedPaymentMethod = old('payment_method', $deliveryType === 'scheduled' ? 'vnpay' : 'cod');
                             if ($deliveryType === 'scheduled' && $selectedPaymentMethod === 'cod') {
                                 $selectedPaymentMethod = 'vnpay';
@@ -1820,15 +1897,13 @@
                         </div>
                         <div class="scheduled-delivery-fields {{ $deliveryType === 'scheduled' ? 'is-visible' : '' }} mb-3" data-scheduled-delivery-fields>
                             <label for="scheduled_delivery_time" class="form-label fw-semibold">Ngày và giờ nhận hàng</label>
-                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes(30)->format('Y-m-d\TH:i') }}" max="{{ today()->setTime(22, 0)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
+                            <input type="datetime-local" id="scheduled_delivery_time" name="scheduled_delivery_time" min="{{ now()->addMinutes($scheduledLeadMinutes)->addMinute()->startOfMinute()->format('Y-m-d\TH:i') }}" max="{{ today()->setTime(22, 0)->format('Y-m-d\TH:i') }}" value="{{ old('scheduled_delivery_time') }}" class="form-control checkout-input @error('scheduled_delivery_time') is-invalid @enderror">
                             @error('scheduled_delivery_time')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            <div class="form-text">Chuẩn bị tối thiểu 30 phút · Nhận trong giờ mở cửa 07:00–22:00 · Tối đa 7 ngày.</div>
+                            <div class="form-text" data-scheduled-rule-text>Đặt trước tối thiểu {{ $scheduledLeadMinutes }} phút · Nhận trong giờ mở cửa 07:00–22:00 · Chỉ áp dụng trong hôm nay.</div>
                             <label for="delivery_note" class="form-label fw-semibold mt-3">Ghi chú thời gian giao</label>
                             <input id="delivery_note" name="delivery_note" maxlength="1000" value="{{ old('delivery_note') }}" class="form-control checkout-input" placeholder="Ví dụ: Giao đúng 10:30 giúp mình">
                         </div>
-                        <label for="note" class="form-label fw-semibold">
-                            Ghi chú giao hàng <span class="text-danger d-none" data-note-required-indicator>*</span>
-                        </label>
+                        <label for="note" class="form-label fw-semibold">Ghi chú giao hàng <span class="text-secondary fw-normal">(không bắt buộc)</span></label>
                         <textarea
                             id="note"
                             name="note"
@@ -1850,11 +1925,20 @@
                                     <h2 class="h4 fw-bold mb-0">Đơn hàng của bạn</h2>
                                     <span class="summary-item-count"><span data-checkout-item-count>{{ count($cart) }}</span>&nbsp;món</span>
                                 </div>
-                                <a href="{{ $isGroupCheckout && $groupCheckoutGroup ? route('group-orders.show', $groupCheckoutGroup->code) : route('products.index', ['from' => 'checkout']) }}"
-                                   class="summary-add-more small fw-semibold text-primary text-decoration-none text-nowrap"
-                                   aria-label="{{ $isGroupCheckout ? 'Quay lại phòng nhóm để thêm món' : 'Chọn thêm đồ uống vào đơn hàng' }}">
-                                    <i class="bi bi-plus-circle me-1"></i>{{ $isGroupCheckout ? 'Thêm món nhóm' : 'Thêm món khác' }}
-                                </a>
+                                @if($isGroupCheckout && $groupCheckoutGroup)
+                                    <button type="submit"
+                                            form="groupCheckoutEditForm"
+                                            class="summary-add-more small fw-semibold text-primary text-nowrap"
+                                            aria-label="Mở lại phòng nhóm để thêm món">
+                                        <i class="bi bi-plus-circle me-1"></i>Thêm món nhóm
+                                    </button>
+                                @else
+                                    <a href="{{ route('products.index', ['from' => 'checkout']) }}"
+                                       class="summary-add-more small fw-semibold text-primary text-decoration-none text-nowrap"
+                                       aria-label="Chọn thêm đồ uống vào đơn hàng">
+                                        <i class="bi bi-plus-circle me-1"></i>Thêm món khác
+                                    </a>
+                                @endif
                             </div>
                             <span class="payment-icon"><i class="bi bi-receipt"></i></span>
                         </div>
@@ -1917,6 +2001,12 @@
         </form>
     </div>
 </section>
+
+@if($isGroupCheckout && $groupCheckoutGroup)
+    <form id="groupCheckoutEditForm" method="POST" action="{{ route('group-orders.edit-checkout', $groupCheckoutGroup->code) }}" class="d-none">
+        @csrf
+    </form>
+@endif
 
 <div class="modal fade address-modal" id="addressListModal" tabindex="-1" aria-labelledby="addressListTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -2404,6 +2494,8 @@
         const addressLookupEndpoint = @json(route('api.address-lookup'));
         const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
         const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
+        const scheduledDeliveryInput = document.getElementById('scheduled_delivery_time');
+        const scheduledRuleText = document.querySelector('[data-scheduled-rule-text]');
         const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
         const prepaidPaymentInput = document.querySelector('input[name="payment_method"][value="vnpay"]');
 
@@ -2422,9 +2514,25 @@
             if (isScheduled && codPaymentInput?.checked && prepaidPaymentInput) {
                 prepaidPaymentInput.checked = true;
             }
+
+            const fulfillment = document.querySelector('input[name="fulfillment_type"]:checked')?.value || 'delivery';
+            const minimumLead = fulfillment === 'pickup'
+                ? @json(\App\Support\ScheduledDelivery::minimumBookingLeadMinutes('pickup'))
+                : @json(\App\Support\ScheduledDelivery::minimumBookingLeadMinutes('delivery'));
+            if (scheduledDeliveryInput) {
+                const earliest = new Date(Date.now() + minimumLead * 60 * 1000);
+                earliest.setSeconds(0, 0);
+                earliest.setMinutes(earliest.getMinutes() + 1);
+                const localIso = new Date(earliest.getTime() - earliest.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                scheduledDeliveryInput.min = localIso;
+            }
+            if (scheduledRuleText) {
+                scheduledRuleText.textContent = `Đặt trước tối thiểu ${minimumLead} phút · Nhận trong giờ mở cửa 07:00–22:00 · Chỉ áp dụng trong hôm nay.`;
+            }
         }
 
         document.querySelectorAll('input[name="delivery_type"]').forEach(input => input.addEventListener('change', syncScheduledPaymentRule));
+        document.querySelectorAll('input[name="fulfillment_type"]').forEach(input => input.addEventListener('change', syncScheduledPaymentRule));
         syncScheduledPaymentRule();
 
         function hasHouseNumber(value) {
@@ -2484,23 +2592,6 @@
             if (!fulfillmentDeliveryInput?.checked) {
                 hideAddressHouseNumberWarning();
                 syncNoteRequirement(false);
-                return;
-            }
-
-            const addressText = String(shippingAddressInput?.value || selectedAddressText?.textContent || '').trim();
-            const noteValue = String(noteInput?.value || '').trim();
-
-            if (addressText && !hasHouseNumber(addressText)) {
-                syncNoteRequirement(true);
-                if (shouldScroll && !noteValue) {
-                    showAddressHouseNumberWarning(
-                        'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Hãy ghi mốc nhận hàng để shipper dễ tìm.',
-                        true
-                    );
-                    return;
-                }
-
-                hideAddressHouseNumberWarning();
                 return;
             }
 
@@ -4187,28 +4278,7 @@
                 }
             }
 
-            if (!fulfillmentDeliveryInput?.checked || hasHouseNumber(shippingAddressInput?.value || '')) {
-                clearAddressHouseNumberWarning();
-                hideAddressHouseNumberWarning();
-                return;
-            }
-
-            if (!String(noteInput?.value || '').trim()) {
-                event.preventDefault();
-                clearAddressHouseNumberWarning();
-                syncAddressHouseNumberNotice(true);
-                if (noteInput) {
-                    noteInput.setCustomValidity('Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng, ví dụ để phòng bảo vệ, gọi số khác hoặc mô tả địa chỉ cụ thể.');
-                    noteInput.classList.add('is-invalid');
-                    noteInput.placeholder = 'Ví dụ: để phòng bảo vệ, gọi số khác, gần cổng chợ, nhà màu xanh...';
-                    noteInput.focus();
-                    noteInput.reportValidity();
-                }
-                return;
-            }
-
             clearAddressHouseNumberWarning();
-            syncAddressHouseNumberNotice();
         });
 
         document.getElementById('saveEditedAddress')?.addEventListener('click', async function () {

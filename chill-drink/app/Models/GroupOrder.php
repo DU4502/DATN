@@ -37,9 +37,21 @@ class GroupOrder extends Model
             return false;
         }
 
-        $this->update(['status' => 'closed', 'locked_at' => now()]);
+        $closedAt = now();
+        $updated = static::query()
+            ->whereKey($this->getKey())
+            ->where('status', 'open')
+            ->where('closes_at', '<=', $closedAt)
+            ->update([
+                'status' => 'closed',
+                'locked_at' => $closedAt,
+                'status_changed_at' => $closedAt,
+                'updated_at' => $closedAt,
+            ]);
 
-        return true;
+        $this->refresh();
+
+        return $updated === 1;
     }
 
     public static function closeExpiredOrders(): int
@@ -47,6 +59,6 @@ class GroupOrder extends Model
         return static::query()
             ->where('status', 'open')
             ->where('closes_at', '<=', now())
-            ->update(['status' => 'closed', 'locked_at' => now()]);
+            ->update(['status' => 'closed', 'locked_at' => now(), 'status_changed_at' => now(), 'updated_at' => now()]);
     }
 }

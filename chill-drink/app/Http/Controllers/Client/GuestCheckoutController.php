@@ -73,6 +73,10 @@ class GuestCheckoutController extends CheckoutController
             'longitude' => $branch->longitude,
         ])->values()->all();
         $guestInfo = session('guest_checkout', []);
+        $checkoutDeliveryType = session()->pull('checkout_delivery_type');
+        if (in_array($checkoutDeliveryType, ['now', 'scheduled'], true)) {
+            $guestInfo['delivery_type'] = $checkoutDeliveryType;
+        }
         $shippingDistanceOptions = ShippingFee::distanceOptions();
         $shouldPromptLocation = $request->boolean('require_location')
             || (bool) session('guest_checkout_require_location');
@@ -142,7 +146,7 @@ class GuestCheckoutController extends CheckoutController
                 'nullable', 'date', 'required_if:delivery_type,scheduled',
                 function ($attribute, $value, $fail) use ($request) {
                     if ($request->input('delivery_type') !== 'scheduled') return;
-                    if ($message = ScheduledDelivery::validate($value)) $fail($message);
+                    if ($message = ScheduledDelivery::validate($value, (string) $request->input('fulfillment_type', 'delivery'))) $fail($message);
                 }
             ],
             'note' => ['nullable', 'string', 'max:500'],
@@ -193,16 +197,6 @@ class GuestCheckoutController extends CheckoutController
             }
         }
 
-        if (
-            ($validated['fulfillment_type'] ?? null) === 'delivery'
-            && ! $this->hasHouseNumber($validated['shipping_address_ui'] ?? '')
-            && blank($validated['note'] ?? null)
-        ) {
-            throw ValidationException::withMessages([
-                'note' => 'Yêu cầu ghi chú vì địa chỉ chưa ghi rõ số nhà/địa chỉ nhà. Vui lòng ghi mốc nhận hàng để shipper dễ tìm.',
-            ]);
-        }
-
         $this->validateOrderServiceRadius(
             $validated['fulfillment_type'],
             $validated['branch_id'],
@@ -229,6 +223,15 @@ class GuestCheckoutController extends CheckoutController
 
         if (empty($guestInfo['branch_id'])) {
             return redirect()->route('checkout.guest.index')->with('error', 'Vui lòng chọn chi nhánh để tiếp tục đặt hàng.');
+        }
+
+        if (($guestInfo['delivery_type'] ?? 'now') === 'scheduled') {
+            if ($message = ScheduledDelivery::validate(
+                $guestInfo['scheduled_delivery_time'] ?? null,
+                (string) ($guestInfo['fulfillment_type'] ?? 'delivery')
+            )) {
+                return redirect()->route('checkout.guest.index')->withInput()->with('error', $message);
+            }
         }
 
         $fullCart = session()->get('cart', []);
@@ -436,9 +439,12 @@ class GuestCheckoutController extends CheckoutController
                 'scheduled_at' => ($guestInfo['delivery_type'] ?? 'now') === 'scheduled' ? ($guestInfo['scheduled_delivery_time'] ?? null) : null,
                 'delivery_note' => $guestInfo['delivery_note'] ?? null,
                 'payment_method' => $request->payment_method,
-                'status'                         => $verificationMethod === 'email'
-                    ? OrderStatus::AWAITING_EMAIL_CONFIRMATION
-                    : OrderStatus::PENDING,
+                // Đơn VNPay chưa được đưa vào hàng xử lý trước khi callback báo đã trả tiền.
+                'status'                         => $request->payment_method === 'vnpay'
+                    ? OrderStatus::AWAITING_PAYMENT
+                    : ($verificationMethod === 'email'
+                        ? OrderStatus::AWAITING_EMAIL_CONFIRMATION
+                        : OrderStatus::PENDING),
                 'confirmation_token'             => $verificationMethod === 'email' ? Str::random(48) : null,
                 'confirmation_token_expires_at'  => $verificationMethod === 'email' ? now()->addMinutes(15) : null,
                 'note' => $note,

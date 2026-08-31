@@ -1302,7 +1302,7 @@
                             <i class="bi bi-people"></i>
                             <span>Đơn nhóm</span>
                         </a>
-                        <button type="submit" name="buy_now" value="1" form="productOrderForm" class="detail-quick-action" title="Chọn thời gian nhận ở bước thanh toán" aria-label="Đặt giao sau">
+                        <button type="submit" name="delivery_intent" value="scheduled" form="productOrderForm" class="detail-quick-action" title="Chọn thời gian nhận ở bước thanh toán" aria-label="Đặt giao sau">
                             <i class="bi bi-calendar2-check"></i>
                             <span>Giao sau</span>
                         </button>

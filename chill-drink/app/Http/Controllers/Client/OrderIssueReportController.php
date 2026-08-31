@@ -54,6 +54,12 @@ class OrderIssueReportController extends Controller
         $data = $request->validate([
             'type' => ['required', 'in:missing_item,wrong_item,quality_issue,other'],
             'description' => ['required', 'string', 'min:10', 'max:1500'],
+        ], [
+            'type.required' => 'Vui lòng chọn loại vấn đề cần hỗ trợ.',
+            'type.in' => 'Loại vấn đề đã chọn không hợp lệ.',
+            'description.required' => 'Vui lòng nhập mô tả chi tiết.',
+            'description.min' => 'Mô tả chi tiết phải có ít nhất 10 ký tự.',
+            'description.max' => 'Mô tả chi tiết không được vượt quá 1.500 ký tự.',
         ]);
 
         // Chỉ kiểm tra các tệp thực sự đã được chọn, nên 2 trong 3 ô ảnh là hợp lệ.
@@ -128,6 +134,7 @@ class OrderIssueReportController extends Controller
 
         $reports = $order->issueReports()
             ->where('user_id', $request->user()->id)
+            ->with('redeliveryOrder')
             ->latest()
             ->get();
 
@@ -145,6 +152,15 @@ class OrderIssueReportController extends Controller
                 'processing_at' => $report->processing_at?->format('d/m/Y H:i'),
                 'resolved_at' => $report->resolved_at?->format('d/m/Y H:i'),
                 'rejected_at' => $report->rejected_at?->format('d/m/Y H:i'),
+                'redelivery_order_id' => $report->redelivery_order_id,
+                'redelivery_order_code' => $report->redeliveryOrder?->displayCode(),
+                'redelivery_order_status' => $report->redeliveryOrder?->status,
+                'redelivery_order_status_label' => $report->redeliveryOrder ? OrderStatus::label((string) $report->redeliveryOrder->status) : null,
+                'display_status_label' => $report->resolution_type === 'redelivery'
+                    && $report->redeliveryOrder
+                    && OrderStatus::normalize((string) $report->redeliveryOrder->status) !== OrderStatus::COMPLETED
+                        ? 'Đang thực hiện giao bù'
+                        : null,
             ]),
         ]);
     }
@@ -157,15 +173,26 @@ class OrderIssueReportController extends Controller
             $lockedIssue = OrderIssueReport::query()->lockForUpdate()->findOrFail($issue->id);
             abort_unless($order->user_id === $request->user()->id && $lockedIssue->order_id === $order->id && $lockedIssue->user_id === $request->user()->id, 403);
 
-            if ($lockedIssue->status !== 'resolved' || blank($lockedIssue->resolution_type)) {
+            if ($lockedIssue->status !== 'awaiting_confirmation' || blank($lockedIssue->resolution_type)) {
                 return null;
+            }
+
+            if ($lockedIssue->resolution_type === 'redelivery') {
+                $redeliveryOrder = $lockedIssue->redeliveryOrder()->lockForUpdate()->first();
+                if (! $redeliveryOrder || OrderStatus::normalize((string) $redeliveryOrder->status) !== OrderStatus::COMPLETED) {
+                    return null;
+                }
             }
 
             if ($lockedIssue->customer_confirmed_at !== null) {
                 return false;
             }
 
-            $lockedIssue->update(['customer_confirmed_at' => now()]);
+            $lockedIssue->update([
+                'status' => 'resolved',
+                'customer_confirmed_at' => now(),
+                'resolved_at' => now(),
+            ]);
 
             return true;
         });

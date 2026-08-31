@@ -15,8 +15,8 @@
             @if($reports->isEmpty())
                 <form method="POST" action="{{ route('orders.issues.store', $order) }}" class="mt-4" enctype="multipart/form-data" data-evidence-form>
                     @csrf
-                    <div class="mb-3"><label class="form-label fw-semibold">Loại vấn đề</label><select name="type" class="form-select" required><option value="" disabled hidden @selected(!old('type'))>Chọn vấn đề</option><option value="missing_item" @selected(old('type') === 'missing_item')>Thiếu món</option><option value="wrong_item" @selected(old('type') === 'wrong_item')>Sai món</option><option value="quality_issue" @selected(old('type') === 'quality_issue')>Chất lượng đồ uống chưa tốt</option><option value="other" @selected(old('type') === 'other')>Vấn đề khác</option></select></div>
-                    <div class="mb-4"><label class="form-label fw-semibold">Mô tả chi tiết</label><textarea name="description" rows="5" class="form-control" required>{{ old('description') }}</textarea><div class="form-text">Tối thiểu 10 ký tự, tối đa 1.500 ký tự.</div></div>
+                    <div class="mb-3"><label class="form-label fw-semibold">Loại vấn đề</label><select name="type" class="form-select @error('type') is-invalid @enderror" required><option value="" disabled hidden @selected(!old('type'))>Chọn vấn đề</option><option value="missing_item" @selected(old('type') === 'missing_item')>Thiếu món</option><option value="wrong_item" @selected(old('type') === 'wrong_item')>Sai món</option><option value="quality_issue" @selected(old('type') === 'quality_issue')>Chất lượng đồ uống chưa tốt</option><option value="other" @selected(old('type') === 'other')>Vấn đề khác</option></select>@error('type')<div class="invalid-feedback">{{ $message }}</div>@enderror</div>
+                    <div class="mb-4"><label for="issue-description" class="form-label fw-semibold">Mô tả chi tiết</label><textarea id="issue-description" name="description" rows="5" minlength="10" maxlength="1500" class="form-control @error('description') is-invalid @enderror" required data-issue-description>{{ old('description') }}</textarea><div class="d-flex justify-content-between gap-3 mt-1"><div class="form-text mt-0" data-description-help>Tối thiểu 10 ký tự.</div><div class="form-text mt-0 text-nowrap"><span data-description-count>{{ mb_strlen(old('description', '')) }}</span>/1.500</div></div><div class="text-danger small mt-1 d-none" data-description-error></div>@error('description')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror</div>
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Ảnh bằng chứng <span class="text-danger">*</span> <span class="text-secondary fw-normal">(chọn ít nhất 2 ảnh, tối đa 3 ảnh)</span></label>
                         <div class="evidence-upload-grid">
@@ -51,8 +51,27 @@
                     const evidenceForm = document.querySelector('[data-evidence-form]');
                     const evidenceInputs = [...document.querySelectorAll('[data-evidence-input]')];
                     const evidenceError = document.querySelector('[data-evidence-error]');
+                    const descriptionInput = document.querySelector('[data-issue-description]');
+                    const descriptionCount = document.querySelector('[data-description-count]');
+                    const descriptionHelp = document.querySelector('[data-description-help]');
+                    const descriptionError = document.querySelector('[data-description-error]');
                     const selectedEvidenceCount = () => evidenceInputs.filter((input) => input.files?.length).length;
                     const refreshEvidenceError = () => evidenceError?.classList.toggle('d-none', selectedEvidenceCount() >= 2);
+                    const refreshDescription = (showError = false) => {
+                        const length = [...String(descriptionInput?.value || '').trim()].length;
+                        if (descriptionCount) descriptionCount.textContent = String(length);
+                        const missing = Math.max(0, 10 - length);
+                        if (descriptionHelp) descriptionHelp.textContent = missing > 0 ? `Cần nhập thêm ${missing} ký tự.` : 'Nội dung mô tả đã hợp lệ.';
+                        descriptionInput?.classList.toggle('is-invalid', showError && missing > 0);
+                        if (descriptionError) {
+                            descriptionError.textContent = missing > 0 ? `Mô tả chi tiết phải có ít nhất 10 ký tự (còn thiếu ${missing} ký tự).` : '';
+                            descriptionError.classList.toggle('d-none', !showError || missing === 0);
+                        }
+                        return missing === 0;
+                    };
+
+                    descriptionInput?.addEventListener('input', () => refreshDescription(true));
+                    refreshDescription(false);
 
                     evidenceInputs.forEach((input) => {
                         input.addEventListener('change', () => {
@@ -66,6 +85,12 @@
                         });
                     });
                     evidenceForm?.addEventListener('submit', (event) => {
+                        if (!refreshDescription(true)) {
+                            event.preventDefault();
+                            descriptionInput?.focus();
+                            descriptionInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            return;
+                        }
                         if (selectedEvidenceCount() >= 2) return;
                         event.preventDefault();
                         refreshEvidenceError();
@@ -79,7 +104,8 @@
                 @foreach($reports as $report)
                     @php
                         $level = match ($report->status) {
-                            'resolved' => 3,
+                            'resolved' => 4,
+                            'awaiting_confirmation' => 3,
                             'processing' => 2,
                             default => 1,
                         };
@@ -87,14 +113,22 @@
                         $steps = [
                             ['Tiếp nhận yêu cầu', 'Yêu cầu của bạn đã được gửi thành công.', 'bi-inbox', $report->received_at ?? $report->created_at],
                             ['Đang xử lý', 'Nhân viên đang kiểm tra và thực hiện phương án hỗ trợ.', 'bi-gear', $report->processing_at],
-                            ['Hoàn tất xử lý', 'Yêu cầu hỗ trợ đã được hoàn tất.', 'bi-check2-circle', $report->resolved_at],
+                            ['Chờ bạn xác nhận', 'Kiểm tra phương án hỗ trợ và xác nhận khi đã nhận đủ quyền lợi.', 'bi-person-check', $report->approved_at],
+                            ['Hoàn tất xử lý', 'Bạn đã xác nhận và yêu cầu hỗ trợ đã hoàn tất.', 'bi-check2-circle', $report->resolved_at],
                         ];
                     @endphp
                     <div class="rounded-4 p-3 p-md-4 mt-4 js-issue-card" data-issue-id="{{ $report->id }}" style="background:#f6fbf9;border:1px solid #dcefe8;">
-                        @php $statusTime = match ($report->status) {'processing' => $report->processing_at, 'resolved' => $report->resolved_at, 'rejected' => $report->rejected_at, default => $report->received_at ?? $report->created_at}; $statusLabel = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'][$report->status] ?? 'Đang chờ xử lý'; @endphp
+                        @php $statusTime = match ($report->status) {'processing' => $report->processing_at, 'awaiting_confirmation' => $report->approved_at, 'resolved' => $report->resolved_at, 'rejected' => $report->rejected_at, default => $report->received_at ?? $report->created_at}; $statusLabel = ['open' => 'Đang chờ xử lý', 'processing' => 'Đang xử lý', 'awaiting_confirmation' => 'Chờ bạn xác nhận', 'resolved' => 'Hoàn tất', 'rejected' => 'Không được chấp nhận'][$report->status] ?? 'Đang chờ xử lý'; @endphp
+                        @if($report->resolution_type === 'redelivery' && $report->redeliveryOrder && \App\Support\OrderStatus::normalize((string) $report->redeliveryOrder->status) !== \App\Support\OrderStatus::COMPLETED)@php($statusLabel = 'Đang thực hiện giao bù')@endif
                         <div class="d-flex justify-content-between gap-3 mb-3"><div><strong>{{ ucfirst(str_replace('_', ' ', $report->type)) }}</strong><div class="small text-secondary mt-1">Gửi lúc {{ $report->created_at->format('d/m/Y H:i') }}</div></div><div class="text-end"><span class="badge rounded-pill px-3 py-2 js-issue-status {{ $rejected ? 'text-bg-danger' : ($report->status === 'resolved' ? 'text-bg-success' : 'text-bg-warning') }}">{{ $statusLabel }}</span><div class="small text-secondary mt-2 js-issue-time {{ $statusTime ? '' : 'd-none' }}"><i class="bi bi-clock me-1"></i>Cập nhật lúc <span>{{ $statusTime?->format('d/m/Y H:i') }}</span></div></div></div>
                         <p class="mb-3"><i class="bi bi-chat-square-text text-primary me-1"></i>{{ $report->description }}</p>
                         <div class="alert alert-info mt-3 js-resolution {{ $report->resolution_type ? '' : 'd-none' }}"><strong><i class="bi bi-gift me-1"></i>Phương án hỗ trợ:</strong> <span class="js-resolution-type">{{ ['redelivery' => 'Giao bù / đổi đúng món', 'voucher' => 'Tặng voucher bù', 'other' => 'Phương án khác'][$report->resolution_type] ?? 'Phương án khác' }}</span><span class="js-resolution-value">{{ $report->resolution_value ? ' — '.$report->resolution_value : '' }}</span></div>
+                        @if($report->resolution_type === 'redelivery' && $report->estimated_at)<div class="alert alert-warning py-2"><i class="bi bi-truck me-1"></i>Dự kiến giao bù: <strong>{{ $report->estimated_at->format('d/m/Y H:i') }}</strong></div>@endif
+                        @if($report->redeliveryOrder)
+                            <div class="border rounded-4 bg-white p-3 mt-3 js-redelivery-order">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2"><div><div class="small text-secondary">Đơn giao bù miễn phí</div><strong>{{ $report->redeliveryOrder->displayCode() }}</strong><div class="small text-primary fw-semibold mt-1 js-redelivery-status">{{ \App\Support\OrderStatus::label((string) $report->redeliveryOrder->status) }}</div></div><a href="{{ route('orders.track', $report->redeliveryOrder) }}" class="btn btn-outline-primary btn-sm rounded-pill"><i class="bi bi-geo-alt me-1"></i>Theo dõi đơn giao bù</a></div>
+                            </div>
+                        @endif
                         @if($rejected)
                             <div class="alert alert-danger mb-0"><i class="bi bi-x-circle me-1"></i>Yêu cầu chưa được chấp nhận.@if($report->admin_note) {{ $report->admin_note }} @endif</div>
                         @else
@@ -106,6 +140,8 @@
                             @if($report->admin_note)
                                 <div class="alert alert-info mt-3 mb-0"><strong>Phản hồi từ nhân viên:</strong> {{ $report->admin_note }}</div>
                             @endif
+                            @php($canConfirmSupport = $report->status === 'awaiting_confirmation' && ($report->resolution_type !== 'redelivery' || \App\Support\OrderStatus::normalize((string) $report->redeliveryOrder?->status) === \App\Support\OrderStatus::COMPLETED))
+                            <form method="POST" action="{{ route('orders.issues.confirm', [$order, $report]) }}" class="mt-3 js-confirm-resolution {{ $canConfirmSupport ? '' : 'd-none' }}">@csrf<button class="btn btn-success rounded-pill px-4"><i class="bi bi-check2-circle me-1"></i>Xác nhận tôi đã nhận hỗ trợ</button><div class="small text-secondary mt-2">Chỉ xác nhận sau khi bạn đã nhận voucher, món giao bù hoặc phương án đã thỏa thuận.</div></form>
                         @endif
                     </div>
                 @endforeach
@@ -119,9 +155,9 @@
 @push('scripts')
 <script>
 (() => {
-    const labels = {open: 'Đang chờ xử lý', processing: 'Đang xử lý', resolved: 'Hoàn tất', rejected: 'Không được chấp nhận'};
-    const times = {processing: 'processing_at', resolved: 'resolved_at', rejected: 'rejected_at'};
-    const levels = {open: 1, processing: 2, resolved: 3};
+    const labels = {open: 'Đang chờ xử lý', processing: 'Đang xử lý', awaiting_confirmation: 'Chờ bạn xác nhận', resolved: 'Hoàn tất', rejected: 'Không được chấp nhận'};
+    const times = {processing: 'processing_at', awaiting_confirmation: 'approved_at', resolved: 'resolved_at', rejected: 'rejected_at'};
+    const levels = {open: 1, processing: 2, awaiting_confirmation: 3, resolved: 4};
     const resolutionLabels = {redelivery: 'Giao bù / đổi đúng món', voucher: 'Tặng voucher bù', other: 'Phương án khác'};
     const refreshIssues = async () => {
         try {
@@ -132,7 +168,7 @@
                 const card = document.querySelector(`.js-issue-card[data-issue-id="${report.id}"]`);
                 if (!card) return;
                 const badge = card.querySelector('.js-issue-status');
-                badge.textContent = labels[report.status] || labels.open;
+                badge.textContent = report.display_status_label || labels[report.status] || labels.open;
                 badge.className = `badge rounded-pill px-3 py-2 js-issue-status ${report.status === 'rejected' ? 'text-bg-danger' : (report.status === 'resolved' ? 'text-bg-success' : 'text-bg-warning')}`;
                 const time = report[times[report.status]] || '';
                 const timeBox = card.querySelector('.js-issue-time');
@@ -142,6 +178,10 @@
                 resolution.classList.toggle('d-none', !report.resolution_type);
                 resolution.querySelector('.js-resolution-type').textContent = resolutionLabels[report.resolution_type] || '';
                 resolution.querySelector('.js-resolution-value').textContent = report.resolution_value ? ` — ${report.resolution_value}` : '';
+                const canConfirm = report.status === 'awaiting_confirmation' && (report.resolution_type !== 'redelivery' || report.redelivery_order_status === 'completed');
+                card.querySelector('.js-confirm-resolution')?.classList.toggle('d-none', !canConfirm);
+                const redeliveryStatus = card.querySelector('.js-redelivery-status');
+                if (redeliveryStatus && report.redelivery_order_status_label) redeliveryStatus.textContent = report.redelivery_order_status_label;
                 if (report.status === 'rejected') return;
                 const level = levels[report.status] || 1;
                 card.querySelectorAll('.js-issue-step').forEach((step) => {
@@ -151,7 +191,7 @@
                     const circle = step.querySelector('span');
                     circle.className = `rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0 ${active ? 'bg-success text-white' : 'bg-light text-secondary'}`;
                     step.querySelector('strong').className = active ? 'text-dark' : 'text-secondary';
-                    step.querySelector('i').className = `bi ${completed ? 'bi-check-lg' : ['bi-inbox', 'bi-gear', 'bi-check2-circle'][stepNumber - 1]}`;
+                    step.querySelector('i').className = `bi ${completed ? 'bi-check-lg' : ['bi-inbox', 'bi-gear', 'bi-person-check', 'bi-check2-circle'][stepNumber - 1]}`;
                 });
             });
         } catch (_) {}

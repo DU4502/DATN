@@ -10,7 +10,7 @@ class OrderIssueReport extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['order_id', 'user_id', 'handled_by', 'type', 'description', 'evidence_path', 'evidence_name', 'evidence_files', 'status', 'resolution_type', 'resolution_value', 'voucher_coupon_id', 'estimated_at', 'admin_note', 'received_at', 'processing_at', 'resolved_at', 'rejected_at', 'approved_at', 'remedy_started_at', 'customer_confirmed_at', 'refund_requested_at'];
+    protected $fillable = ['order_id', 'user_id', 'handled_by', 'type', 'description', 'evidence_path', 'evidence_name', 'evidence_files', 'status', 'resolution_type', 'resolution_value', 'voucher_coupon_id', 'redelivery_order_id', 'estimated_at', 'admin_note', 'received_at', 'processing_at', 'resolved_at', 'rejected_at', 'approved_at', 'remedy_started_at', 'customer_confirmed_at', 'refund_requested_at'];
 
     protected $casts = [
         'evidence_files' => 'array',
@@ -43,5 +43,10 @@ class OrderIssueReport extends Model
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'voucher_coupon_id');
+    }
+
+    public function redeliveryOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'redelivery_order_id');
     }
 }

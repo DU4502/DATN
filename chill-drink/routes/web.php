@@ -411,6 +411,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/group-orders/create', [GroupOrderController::class, 'create'])->name('group-orders.create');
     Route::post('/group-orders', [GroupOrderController::class, 'store'])->name('group-orders.store');
     Route::post('/group-orders/{code}/close', [GroupOrderController::class, 'close'])->name('group-orders.close');
+    Route::post('/group-orders/{code}/edit-checkout', [GroupOrderController::class, 'editCheckout'])->name('group-orders.edit-checkout');
     Route::post('/group-orders/{code}/cancel', [GroupOrderController::class, 'cancel'])->name('group-orders.cancel');
     Route::post('/group-orders/pending-checkout/resume', [GroupOrderController::class, 'resumePendingCheckout'])->name('group-orders.pending-checkout.resume');
     Route::post('/group-orders/{code}/resume', [GroupOrderController::class, 'resume'])->name('group-orders.resume');
@@ -439,6 +440,10 @@ Route::prefix('admin/chat')->name('admin.chat.')->middleware(['auth', 'cskh'])->
     Route::get('/', [AdminChatController::class, 'index'])->name('index');
     Route::get('/conversations', [AdminChatController::class, 'conversationList'])->name('conversations');
     Route::get('/unread-count', [AdminChatController::class, 'unreadCount'])->name('unread-count');
+    Route::get('/order-issues', [AdminOrderIssueReportController::class, 'index'])->name('order-issues.index');
+    Route::get('/order-issues-pending/count', [AdminOrderIssueReportController::class, 'pendingCount'])->name('order-issues.pending-count');
+    Route::patch('/order-issues/{issue}', [AdminOrderIssueReportController::class, 'update'])->name('order-issues.update');
+    Route::get('/order-issues/{issue}/evidence', [AdminOrderIssueReportController::class, 'evidence'])->name('order-issues.evidence');
     Route::get('/{conversation}/messages', [AdminChatController::class, 'messages'])->name('messages');
     Route::get('/{conversation}', [AdminChatController::class, 'show'])->name('show');
     Route::post('/{conversation}/reply', [AdminChatController::class, 'reply'])->name('reply');
