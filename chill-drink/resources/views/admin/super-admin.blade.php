@@ -1130,7 +1130,7 @@
                     'comparison_label' => 'Không đối chiếu',
                 ];
             @endphp
-            <article class="sa-stat" data-business-kpi-card="{{ $kpi['key'] }}" style="min-height: 132px; @if($kpi['key'] === 'revenue') background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-color: rgba(13, 147, 115, 0.25); @endif">
+            <article class="sa-stat" tabindex="0" role="button" aria-label="Xem dữ liệu nguồn {{ $kpi['label'] }}" data-business-kpi-card="{{ $kpi['key'] }}" data-drilldown="{{ $kpi['key'] }}" style="min-height: 132px; @if($kpi['key'] === 'revenue') background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-color: rgba(13, 147, 115, 0.25); @endif">
                 <div class="sa-stat-top">
                     <span class="sa-stat-icon" style="width: 44px; height: 44px; @if($kpi['key'] === 'revenue') background: var(--sa-green); color: #fff; @endif">
                         <i class="bi {{ $kpi['icon'] }}"></i>
@@ -1236,7 +1236,7 @@
                                         $bucketRevenue = (int) ($bucket['revenue'] ?? 0);
                                         $barHeight = (int) ($bucket['height'] ?? 0);
                                     @endphp
-                                    <div class="sa-revenue-trend-col" title="{{ $bucket['label'] }}: {{ number_format($bucketRevenue, 0, ',', '.') }}đ doanh thu">
+                                    <div class="sa-revenue-trend-col" tabindex="0" role="button" data-drilldown="revenue" data-from="{{ $bucket['start']->format('Y-m-d H:i:s') }}" data-to="{{ $bucket['end']->format('Y-m-d H:i:s') }}" data-branch-id="{{ $quickTrendBranchId }}" title="{{ $bucket['label'] }}: Doanh thu {{ number_format($bucketRevenue, 0, ',', '.') }}đ — Nhấn để xem chi tiết">
                                         <div class="sa-revenue-trend-bar-wrap">
                                             <span class="sa-revenue-trend-bar {{ $bucketRevenue <= 0 ? 'is-zero' : '' }}" style="height: {{ $bucketRevenue > 0 ? $barHeight : 0 }}%;"></span>
                                         </div>
@@ -1292,6 +1292,11 @@
                         @foreach($topProducts as $topProduct)
                             <article
                                 class="legacy-top-products-row"
+                                tabindex="0"
+                                role="button"
+                                data-drilldown="product_sales"
+                                data-product-id="{{ $topProduct['product_id'] }}"
+                                data-branch-id="{{ $topProductBranchId }}"
                                 data-top-product-row
                                 data-top-product-rank="{{ $topProduct['rank'] }}"
                                 data-top-product-quantity="{{ (int) ($topProduct['total_quantity'] ?? 0) }}"
@@ -1559,6 +1564,12 @@
                 const col = document.createElement('div');
                 col.className = 'sa-revenue-trend-col';
                 col.title = `${bucket?.label || ''}: ${formatQuickTrendMoney(revenue)} doanh thu`;
+                col.tabIndex = 0;
+                col.setAttribute('role', 'button');
+                col.dataset.drilldown = 'revenue';
+                col.dataset.from = bucket?.start || '';
+                col.dataset.to = bucket?.end || '';
+                col.dataset.branchId = payload?.branch_id || '';
 
                 const wrap = document.createElement('div');
                 wrap.className = 'sa-revenue-trend-bar-wrap';
@@ -2577,6 +2588,15 @@ function normalizeLegacyAnalyticsForm(form) {
                 ? 'createBranchModal'
                 : (old('form_type') === 'branch-edit' && old('branch_modal_id') ? 'branchEditModal'.old('branch_modal_id') : null)));
 @endphp
+
+@php
+    $drilldownEndpoint = route('admin.super-admin.dashboard.drilldown');
+    $drilldownDefaults = [
+        'from' => $analyticsContext->currentStart?->format('Y-m-d H:i:s'),
+        'to' => $analyticsContext->currentEnd?->format('Y-m-d H:i:s'),
+    ];
+@endphp
+@include('admin.partials.dashboard-drilldown')
 
 @if($modalToOpen)
 <script>

@@ -173,6 +173,30 @@ class SuperAdminDashboardTest extends TestCase
             ->assertSee('Danh sách quản trị viên', false);
     }
 
+    public function test_quick_revenue_chart_json_keeps_each_bucket_drilldown_range(): void
+    {
+        $superAdmin = User::factory()->create([
+            'email' => User::SUPER_ADMIN_EMAIL,
+            'role_id' => 3,
+        ]);
+
+        foreach (['day', 'week', 'month', 'year'] as $period) {
+            $response = $this->actingAs($superAdmin)->getJson('/admin/super-admin?'.http_build_query([
+                'quick_trend_json' => 1,
+                'quick_trend_period' => $period,
+            ]), ['X-Requested-With' => 'XMLHttpRequest']);
+
+            $response->assertOk();
+            $buckets = collect($response->json('buckets'));
+            $this->assertNotEmpty($buckets);
+            $buckets->each(function (array $bucket): void {
+                $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', (string) ($bucket['start'] ?? ''));
+                $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', (string) ($bucket['end'] ?? ''));
+                $this->assertLessThanOrEqual($bucket['end'], $bucket['start']);
+            });
+        }
+    }
+
     public function test_super_admin_dashboard_query_count_does_not_scale_with_branch_count(): void
     {
         $superAdmin = User::factory()->create([

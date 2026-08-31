@@ -193,10 +193,10 @@
                                     $periodTotals = collect($branchTime['totals']['periods'] ?? [])->firstWhere('period_key', $period['key']) ?? [];
                                 @endphp
                                 @if($branchTimeIndicator === 'both')
-                                    <td class="sa-time-matrix-period-cell sa-time-matrix-period-revenue text-end">{{ number_format((int) ($periodTotals['revenue'] ?? 0), 0, ',', '.') }}đ</td>
-                                    <td class="sa-time-matrix-period-cell sa-time-matrix-period-orders text-end">{{ number_format((int) ($periodTotals['valid_order_count'] ?? 0)) }}</td>
+                                    <td tabindex="0" role="button" data-drilldown="revenue" data-from="{{ $period['start']->format('Y-m-d H:i:s') }}" data-to="{{ $period['end']->format('Y-m-d H:i:s') }}" class="sa-time-matrix-period-cell sa-time-matrix-period-revenue text-end">{{ number_format((int) ($periodTotals['revenue'] ?? 0), 0, ',', '.') }}đ</td>
+                                    <td tabindex="0" role="button" data-drilldown="orders" data-from="{{ $period['start']->format('Y-m-d H:i:s') }}" data-to="{{ $period['end']->format('Y-m-d H:i:s') }}" class="sa-time-matrix-period-cell sa-time-matrix-period-orders text-end">{{ number_format((int) ($periodTotals['valid_order_count'] ?? 0)) }}</td>
                                 @else
-                                    <td class="sa-time-matrix-period-cell sa-time-matrix-period-single text-end">
+                                    <td tabindex="0" role="button" data-drilldown="{{ $branchTimeIndicator === 'revenue' ? 'revenue' : 'orders' }}" data-from="{{ $period['start']->format('Y-m-d H:i:s') }}" data-to="{{ $period['end']->format('Y-m-d H:i:s') }}" class="sa-time-matrix-period-cell sa-time-matrix-period-single text-end">
                                         @if($branchTimeIndicator === 'revenue')
                                             {{ number_format((int) ($periodTotals['revenue'] ?? 0), 0, ',', '.') }}đ
                                         @else
@@ -231,10 +231,10 @@
                                         $bucket = $branchPeriods[$period['key']] ?? ['revenue' => 0, 'valid_order_count' => 0];
                                     @endphp
                                 @if($branchTimeIndicator === 'both')
-                                    <td class="text-end">{{ number_format((int) ($bucket['revenue'] ?? 0), 0, ',', '.') }}đ</td>
-                                    <td class="text-end">{{ number_format((int) ($bucket['valid_order_count'] ?? 0)) }}</td>
+                                    <td tabindex="0" role="button" data-drilldown="revenue" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $period['start']->format('Y-m-d H:i:s') }}" data-to="{{ $period['end']->format('Y-m-d H:i:s') }}" class="text-end">{{ number_format((int) ($bucket['revenue'] ?? 0), 0, ',', '.') }}đ</td>
+                                    <td tabindex="0" role="button" data-drilldown="orders" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $period['start']->format('Y-m-d H:i:s') }}" data-to="{{ $period['end']->format('Y-m-d H:i:s') }}" class="text-end">{{ number_format((int) ($bucket['valid_order_count'] ?? 0)) }}</td>
                                 @else
-                                    <td class="text-end">
+                                    <td tabindex="0" role="button" data-drilldown="{{ $branchTimeIndicator === 'revenue' ? 'revenue' : 'orders' }}" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $period['start']->format('Y-m-d H:i:s') }}" data-to="{{ $period['end']->format('Y-m-d H:i:s') }}" class="text-end">
                                         @if($branchTimeIndicator === 'revenue')
                                             {{ number_format((int) ($bucket['revenue'] ?? 0), 0, ',', '.') }}đ
                                         @else

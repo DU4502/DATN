@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\SimpleXlsxWriter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -73,7 +74,7 @@ class DashboardController extends Controller
                 'created_at' => optional($o->created_at)->format('d/m/Y H:i'),
                 'payment_method' => $o->payment_method ?? null,
                 'status' => $o->status ?? null,
-                'total' => (float) ($o->total_price ?? $o->total ?? 0),
+                'total' => (float) ($o->total ?? $o->total_price ?? 0),
             ];
         })->all();
 
@@ -116,7 +117,7 @@ class DashboardController extends Controller
         ];
 
         $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.Str::random(24).'.xlsx';
-        $writer = new SimpleXlsxWriter();
+        $writer = new SimpleXlsxWriter;
         $writer->write($path, $sheets);
 
         return response()->download($path, $fileName)->deleteFileAfterSend(true);
@@ -129,8 +130,7 @@ class DashboardController extends Controller
     private function gatherDashboardData(
         Request $request,
         array $periodContext
-    ): array
-    {
+    ): array {
         $selectedPeriod = (string) ($periodContext['period'] ?? 'week');
         $currentFrom = $periodContext['currentFrom'] instanceof Carbon ? $periodContext['currentFrom']->copy() : Carbon::now()->startOfWeek(Carbon::MONDAY);
         $currentTo = $periodContext['currentTo'] instanceof Carbon ? $periodContext['currentTo']->copy() : Carbon::now()->endOfWeek(Carbon::SUNDAY);
@@ -182,7 +182,7 @@ class DashboardController extends Controller
         $recentOrdersQuery = Order::with('user');
         // Apply branch scope
         $recentOrdersQuery = $this->applyBranchScope($recentOrdersQuery);
-        
+
         if (Schema::hasColumn('orders', 'created_at')) {
             $recentOrdersQuery->latest();
         } else {
@@ -560,7 +560,7 @@ class DashboardController extends Controller
             'year' => 'Năm nay',
             'custom' => $currentFrom->isSameDay($currentTo)
                 ? $currentFrom->format('d/m/Y')
-                : $currentFrom->format('d/m/Y') . ' - ' . $currentTo->format('d/m/Y'),
+                : $currentFrom->format('d/m/Y').' - '.$currentTo->format('d/m/Y'),
         };
 
         return [
@@ -599,7 +599,7 @@ class DashboardController extends Controller
 
     private function orderAmountColumn(): ?string
     {
-        foreach (['total_price', 'total', 'subtotal'] as $column) {
+        foreach (['total', 'total_price', 'subtotal'] as $column) {
             if (Schema::hasColumn('orders', $column)) {
                 return $column;
             }
@@ -622,7 +622,7 @@ class DashboardController extends Controller
         }
 
         $query = Order::query();
-        
+
         // Apply branch scope
         $query = $this->applyBranchScope($query);
 
@@ -649,7 +649,7 @@ class DashboardController extends Controller
         }
 
         $query = Order::query()->whereBetween('created_at', [$from, $to]);
-        
+
         // Apply branch scope
         $query = $this->applyBranchScope($query);
 
@@ -670,7 +670,7 @@ class DashboardController extends Controller
         }
 
         $query = Order::query();
-        
+
         // Apply branch scope
         $query = $this->applyBranchScope($query);
 
@@ -731,7 +731,7 @@ class DashboardController extends Controller
                 ...$period,
                 'range' => $period['from']->isSameDay($period['to'])
                     ? $period['from']->format('d/m/Y')
-                    : $period['from']->format('d/m/Y') . ' - ' . $period['to']->format('d/m/Y'),
+                    : $period['from']->format('d/m/Y').' - '.$period['to']->format('d/m/Y'),
                 'orders' => $this->orderCountFor($period['from'], $period['to']),
                 'revenue' => $this->revenueFor($period['from'], $period['to'], $amountColumn),
             ];
@@ -823,7 +823,7 @@ class DashboardController extends Controller
 
         $delta = $currentValue - $previousValue;
         $percent = abs(($delta / $previousValue) * 100);
-        $formattedPercent = number_format($percent, 1, ',', '.') . '%';
+        $formattedPercent = number_format($percent, 1, ',', '.').'%';
 
         if (abs($delta) < 0.00001) {
             return [
@@ -865,6 +865,7 @@ class DashboardController extends Controller
         $timeComparisonQuery = $this->dashboardTimeComparisonQuery($periods);
         $bucketMap = $this->dashboardTimeComparisonBuckets($periods, $timeComparisonQuery);
         $rows = $this->dashboardTimeComparisonRows($periods, $bucketMap);
+
         return [
             'period_type' => $selectedPeriod,
             'group' => $group,
@@ -984,7 +985,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}> $periods
+     * @param  array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}>  $periods
      */
     private function dashboardTimeComparisonQuery(array $periods)
     {
@@ -1023,8 +1024,8 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}> $periods
-     * @param array{orders:\Illuminate\Support\Collection,amount_column:?string,start:Carbon,end:Carbon}|\Illuminate\Support\Collection $queryData
+     * @param  array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}>  $periods
+     * @param  array{orders:Collection,amount_column:?string,start:Carbon,end:Carbon}|Collection  $queryData
      * @return array<string, array{revenue:float,valid_order_count:int}>
      */
     private function dashboardTimeComparisonBuckets(array $periods, array $queryData): array
@@ -1057,8 +1058,8 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}> $periods
-     * @param array<string, array{revenue:float,valid_order_count:int}> $bucketMap
+     * @param  array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}>  $periods
+     * @param  array<string, array{revenue:float,valid_order_count:int}>  $bucketMap
      */
     private function dashboardTimeComparisonRows(array $periods, array $bucketMap): array
     {
@@ -1083,7 +1084,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param array<string, array{revenue:float,valid_order_count:int}> $bucketMap
+     * @param  array<string, array{revenue:float,valid_order_count:int}>  $bucketMap
      * @return array{revenue:float,valid_order_count:int}
      */
     private function dashboardTimeComparisonPeriodSummary(array $period, array $bucketMap): array
@@ -1095,8 +1096,8 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}> $periods
-     * @param array<string, array{revenue:float,valid_order_count:int}> $bucketMap
+     * @param  array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}>  $periods
+     * @param  array<string, array{revenue:float,valid_order_count:int}>  $bucketMap
      */
     private function dashboardTimeComparisonLatestChange(array $periods, array $bucketMap, int $index): array
     {
@@ -1136,9 +1137,9 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool} $currentPeriod
-     * @param array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool} $previousPeriod
-     * @param array<string, array{revenue:float,valid_order_count:int}> $bucketMap
+     * @param  array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}  $currentPeriod
+     * @param  array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}  $previousPeriod
+     * @param  array<string, array{revenue:float,valid_order_count:int}>  $bucketMap
      * @return array{0:float,1:float,2:float,3:float}
      */
     private function dashboardTimeComparisonComparableValues(array $currentPeriod, array $previousPeriod, array $bucketMap): array
@@ -1208,7 +1209,7 @@ class DashboardController extends Controller
 
         return [
             'type' => $currentValue > $previousValue ? 'up' : 'down',
-            'label' => ($currentValue > $previousValue ? '↑ ' : '↓ ') . number_format(abs($percent), 1, ',', '.') . '%',
+            'label' => ($currentValue > $previousValue ? '↑ ' : '↓ ').number_format(abs($percent), 1, ',', '.').'%',
         ];
     }
 
@@ -1249,7 +1250,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * @param array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}> $periods
+     * @param  array<int, array{key:string,label:string,start:string,end:string,start_at:string,end_at:string,is_partial:bool}>  $periods
      */
     private function dashboardMatrixPeriodKey(Carbon $date, array $periods): string
     {
@@ -1409,7 +1410,7 @@ class DashboardController extends Controller
                 if ($slotEnd->greaterThan($limit)) {
                     $slotEnd = $limit->copy();
                 }
-                $slots[] = ['label' => 'T' . ($i + 2), 'from' => $slotStart, 'to' => $slotEnd];
+                $slots[] = ['label' => 'T'.($i + 2), 'from' => $slotStart, 'to' => $slotEnd];
             }
         } elseif ($period === 'month') {
             $cursor = $currentFrom->copy()->startOfMonth();
@@ -1452,7 +1453,7 @@ class DashboardController extends Controller
                     $slotEnd = $limit->copy();
                 }
 
-                $slots[] = ['label' => 'T' . $m, 'from' => $slotStart, 'to' => $slotEnd];
+                $slots[] = ['label' => 'T'.$m, 'from' => $slotStart, 'to' => $slotEnd];
             }
         }
 
@@ -1462,14 +1463,13 @@ class DashboardController extends Controller
 
             if ($metric === 'revenue') {
                 $value = $this->revenueBetween($slot['from'], $slot['to'], $amountColumn);
-                $tooltipValue = number_format($value, 0, ',', '.') . 'đ';
+                $tooltipValue = number_format($value, 0, ',', '.').'đ';
             } elseif ($metric === 'orders') {
                 $value = $this->orderCountFor($slot['from'], $slot['to']);
-                $tooltipValue = number_format($value, 0, ',', '.') . ' đơn';
+                $tooltipValue = number_format($value, 0, ',', '.').' đơn';
             } elseif ($metric === 'users') {
-                // New users don't need branch scope (global metric)
                 $value = $this->newUsersBetween($slot['from'], $slot['to']);
-                $tooltipValue = number_format($value, 0, ',', '.') . ' tài khoản';
+                $tooltipValue = number_format($value, 0, ',', '.').' tài khoản';
             }
 
             return [
@@ -1499,6 +1499,10 @@ class DashboardController extends Controller
 
         return User::customers()
             ->whereBetween('created_at', [$from, $to])
+            ->when($this->dashboardUseBranchScope, fn ($query) => $query->whereHas('orders', fn ($orders) => $orders
+                ->where('branch_id', $this->dashboardBranchId ?? -1)
+                ->where('status', 'completed')
+                ->whereBetween('created_at', [$from, $to])))
             ->count();
     }
 
@@ -1534,7 +1538,7 @@ class DashboardController extends Controller
         $salesQuery = DB::table('order_items')
             ->select(
                 'product_id',
-                DB::raw('SUM(' . $quantityColumn . ') as sold_qty'),
+                DB::raw('SUM('.$quantityColumn.') as sold_qty'),
                 DB::raw('SUM(COALESCE(total_price, 0)) as revenue')
             )
             ->whereNotNull('product_id');
@@ -1587,7 +1591,7 @@ class DashboardController extends Controller
                 return [
                     'id' => $product->id,
                     'name' => $product->name,
-                    'sku' => $product->sku ?? ('#' . $product->id),
+                    'sku' => $product->sku ?? ('#'.$product->id),
                     'image_url' => $product->image_url,
                     'sold_qty' => $currentQty,
                     'revenue' => $revenue,

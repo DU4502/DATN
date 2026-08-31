@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminChatController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\GroupOrderController as AdminGroupOrderController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DashboardDrilldownController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ReviewController;
@@ -520,6 +521,7 @@ Route::view('/quyen-rieng-tu', 'legal.page', ['page' => 'privacy'])->name('legal
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'superadmin', KeepSuperAdminContext::class])->group(function () {
     Route::get('/super-admin', [SuperAdminController::class, 'index'])->name('super-admin');
+    Route::get('/super-admin/dashboard/drilldown', DashboardDrilldownController::class)->name('super-admin.dashboard.drilldown');
     Route::post('/super-admin/admins', [SuperAdminController::class, 'storeAdmin'])->name('super-admin.admins.store');
     Route::post('/super-admin/staff', [SuperAdminController::class, 'storeStaff'])->name('super-admin.staff.store');
     Route::patch('/super-admin/admins/{user}/branch', [SuperAdminController::class, 'updateBranch'])->name('super-admin.update-branch');
@@ -597,6 +599,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin', KeepSuperAd
 
     // JSON endpoint for dashboard data (AJAX)
     Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('admin.dashboard.data');
+    Route::get('/dashboard/drilldown', DashboardDrilldownController::class)->name('dashboard.drilldown');
 
     // Voucher Management
     Route::resource('vouchers', VoucherController::class)->except(['show']);

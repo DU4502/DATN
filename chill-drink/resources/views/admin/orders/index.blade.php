@@ -1262,6 +1262,15 @@
             toggleDetailRow(toggleButton.dataset.toggleOrderDetail);
         });
 
+        const tracedOrderId = @json((int) request('trace_order'));
+        if (tracedOrderId > 0) {
+            const tracedRow = document.querySelector(`tr[data-order-id="${tracedOrderId}"]`);
+            if (tracedRow) {
+                toggleDetailRow(String(tracedOrderId));
+                requestAnimationFrame(() => tracedRow.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+            }
+        }
+
         document.addEventListener('change', function (event) {
             const statusSelect = event.target.closest('[data-order-status-select]');
             if (statusSelect) {

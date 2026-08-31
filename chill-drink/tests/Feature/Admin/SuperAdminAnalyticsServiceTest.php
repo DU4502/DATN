@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ProductSize;
+use App\Models\Review;
 use App\Models\Size;
 use App\Models\User;
 use App\Services\AnalyticsPeriodContext;
@@ -17,7 +18,6 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class SuperAdminAnalyticsServiceTest extends TestCase
@@ -648,10 +648,21 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $user = User::factory()->create();
         [$product, $productSize] = $this->createProductWithSize(['name' => 'Sản phẩm focus']);
 
-        $this->createProductSale($user, $branchA, $product, $productSize, 2, 20000, '2026-07-20 09:00:00');
-        $this->createProductSale($user, $branchB, $product, $productSize, 2, 40000, '2026-07-20 09:05:00');
+        $branchASale = $this->createProductSale($user, $branchA, $product, $productSize, 2, 20000, '2026-07-20 09:00:00');
+        $branchBSale = $this->createProductSale($user, $branchB, $product, $productSize, 2, 40000, '2026-07-20 09:05:00');
         $this->createProductSale($user, $branchA, $product, $productSize, 1, 10000, '2026-07-19 09:00:00');
         $this->createProductSale($user, $branchB, $product, $productSize, 2, 30000, '2026-07-19 09:05:00');
+        $cancelledOrder = $this->createOrder($user, $branchA, [
+            'status' => OrderStatus::CANCELLED,
+            'payment_status' => 'pending',
+            'total' => 90000,
+            'created_at' => CarbonImmutable::parse('2026-07-20 10:00:00', 'Asia/Ho_Chi_Minh'),
+        ]);
+        $this->createOrderItem($cancelledOrder, $product, $productSize, ['quantity' => 9, 'unit_price' => 10000, 'total_price' => 90000]);
+        Carbon::setTestNow(Carbon::parse('2026-07-20 12:00:00', 'Asia/Ho_Chi_Minh'));
+        Review::create(['user_id' => $user->id, 'product_id' => $product->id, 'order_id' => $branchASale->id, 'rating' => 5, 'comment' => 'Chi nhánh A', 'status' => true]);
+        Review::create(['user_id' => $user->id, 'product_id' => $product->id, 'order_id' => $branchBSale->id, 'rating' => 3, 'comment' => 'Chi nhánh B', 'status' => true]);
+        Carbon::setTestNow();
 
         $result = $service->productBranchPerformance($this->analyticsContext([
             'currentStart' => CarbonImmutable::parse('2026-07-20 00:00:00', 'Asia/Ho_Chi_Minh'),
@@ -682,6 +693,18 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $this->assertSame(20000, $rows[1]['total_revenue']);
         $this->assertSame(0, $rows[2]['total_quantity']);
         $this->assertSame(0, $rows[2]['total_revenue']);
+        $this->assertSame(1, $rows[0]['related_order_count']);
+        $this->assertSame(0, $rows[0]['cancelled_order_count']);
+        $this->assertSame(0.0, $rows[0]['cancellation_rate']);
+        $this->assertSame(1, $rows[0]['review_count']);
+        $this->assertSame(3.0, $rows[0]['average_rating']);
+        $this->assertSame(2, $rows[1]['related_order_count']);
+        $this->assertSame(1, $rows[1]['cancelled_order_count']);
+        $this->assertSame(50.0, $rows[1]['cancellation_rate']);
+        $this->assertSame(1, $rows[1]['review_count']);
+        $this->assertSame(5.0, $rows[1]['average_rating']);
+        $this->assertSame(0, $rows[2]['review_count']);
+        $this->assertNull($rows[2]['average_rating']);
         $this->assertSame(0.0, $rows[0]['quantity_change_percentage']);
         $this->assertSame(33.3, $rows[0]['revenue_change_percentage']);
         $this->assertSame(100.0, $rows[1]['quantity_change_percentage']);
@@ -972,11 +995,11 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         app(SuperAdminAnalyticsService::class)->productBranchPerformance($manyCompareContext, $product->id, ['sort_by' => 'quantity']);
         $manyCompareQueries = count($connection->getQueryLog());
 
-        $this->assertLessThanOrEqual(4, $smallNoCompareQueries);
-        $this->assertLessThanOrEqual(4, $manyNoCompareQueries);
+        $this->assertLessThanOrEqual(5, $smallNoCompareQueries);
+        $this->assertLessThanOrEqual(5, $manyNoCompareQueries);
         $this->assertSame($smallNoCompareQueries, $manyNoCompareQueries);
-        $this->assertLessThanOrEqual(5, $smallCompareQueries);
-        $this->assertLessThanOrEqual(5, $manyCompareQueries);
+        $this->assertLessThanOrEqual(6, $smallCompareQueries);
+        $this->assertLessThanOrEqual(6, $manyCompareQueries);
         $this->assertSame($smallCompareQueries, $manyCompareQueries);
     }
 
@@ -1242,7 +1265,7 @@ class SuperAdminAnalyticsServiceTest extends TestCase
         $firstQueries = count(DB::connection()->getQueryLog());
         DB::connection()->flushQueryLog();
 
-        $manyBranches = collect(range(1, 20))->map(function (int $index) use ($user): Branch {
+        $manyBranches = collect(range(1, 20))->map(function (int $index): Branch {
             return $this->createBranch([
                 'code' => 'B'.str_pad((string) $index, 3, '0', STR_PAD_LEFT),
                 'name' => 'Branch '.$index,

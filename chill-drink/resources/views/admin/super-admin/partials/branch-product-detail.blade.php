@@ -165,28 +165,28 @@
                     </div>
 
                     <div class="branch-product-summary-grid">
-                        <div class="branch-product-summary-card">
+                        <div class="branch-product-summary-card" tabindex="0" role="button" data-drilldown="revenue" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-summary-label">Doanh thu</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['revenue'] ?? 0), 0, ',', '.') }}đ</div>
                         </div>
-                        <div class="branch-product-summary-card">
+                        <div class="branch-product-summary-card" tabindex="0" role="button" data-drilldown="orders" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-summary-label">Đơn hợp lệ</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['valid_order_count'] ?? 0)) }}</div>
                         </div>
-                        <div class="branch-product-summary-card">
+                        <div class="branch-product-summary-card" tabindex="0" role="button" data-drilldown="customers" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-summary-label">Khách hàng thành viên</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['unique_customer_count'] ?? 0)) }}</div>
                             <div class="branch-product-summary-note">Bỏ qua đơn vãng lai</div>
                         </div>
-                        <div class="branch-product-summary-card">
+                        <div class="branch-product-summary-card" tabindex="0" role="button" data-drilldown="items_sold" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-summary-label">Sản phẩm bán ra</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['items_sold'] ?? 0)) }}</div>
                         </div>
-                        <div class="branch-product-summary-card">
+                        <div class="branch-product-summary-card" tabindex="0" role="button" data-drilldown="average_order_value" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-summary-label">Trung bình/đơn</div>
                             <div class="branch-product-summary-value">{{ number_format((int) ($summary['average_order_value'] ?? 0), 0, ',', '.') }}đ</div>
                         </div>
-                        <div class="branch-product-summary-card">
+                        <div class="branch-product-summary-card" tabindex="0" role="button" data-drilldown="cancellation_rate" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-summary-label">Tỷ lệ hủy</div>
                             <div class="branch-product-summary-value">{{ number_format((float) ($summary['cancellation_rate'] ?? 0), 1) }}%</div>
                             <div class="branch-product-summary-note">{{ number_format((int) ($summary['total_created_order_count'] ?? 0)) }} đơn đã tạo</div>
@@ -194,15 +194,15 @@
                     </div>
 
                     <div class="branch-product-mini-grid">
-                        <div class="branch-product-mini">
+                        <div class="branch-product-mini" tabindex="0" role="button" data-drilldown="total_orders" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-mini-label">Đơn đã tạo</div>
                             <div class="branch-product-mini-value">{{ number_format((int) ($summary['total_created_order_count'] ?? 0)) }}</div>
                         </div>
-                        <div class="branch-product-mini">
+                        <div class="branch-product-mini" tabindex="0" role="button" data-drilldown="completed_orders" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-mini-label">Hoàn thành</div>
                             <div class="branch-product-mini-value">{{ number_format((int) ($summary['completed_order_count'] ?? 0)) }}</div>
                         </div>
-                        <div class="branch-product-mini">
+                        <div class="branch-product-mini" tabindex="0" role="button" data-drilldown="cancelled_orders" data-branch-id="{{ $selectedBranchId }}">
                             <div class="branch-product-mini-label">Đơn hủy</div>
                             <div class="branch-product-mini-value">{{ number_format((int) ($summary['cancelled_order_count'] ?? 0)) }}</div>
                         </div>
@@ -220,7 +220,7 @@
                             @foreach($topProducts as $topProduct)
                                 @php
                                 @endphp
-                                <div class="branch-product-toprow">
+                                <div class="branch-product-toprow" tabindex="0" role="button" data-drilldown="product_sales" data-product-id="{{ $topProduct['product_id'] }}" data-branch-id="{{ $selectedBranchId }}">
                                     <div class="branch-product-toprank">{{ $topProduct['rank'] }}</div>
                                     <div class="branch-product-thumb">
                                         @if(! empty($topProduct['product_image_url']))

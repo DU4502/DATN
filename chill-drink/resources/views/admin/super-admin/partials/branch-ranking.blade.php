@@ -165,18 +165,18 @@
                                     @endif
                                 </div>
                             </td>
-                            <td style="font-weight:800; color:var(--sa-green); white-space:nowrap;">{{ number_format($branch['revenue'], 0, ',', '.') }}đ</td>
-                            <td style="font-weight:700; white-space:nowrap;">{{ number_format($branch['valid_order_count']) }}</td>
-                            <td style="font-weight:700; white-space:nowrap;">{{ number_format($branch['average_order_value'], 0, ',', '.') }}đ</td>
-                            <td style="font-weight:700; white-space:nowrap;">{{ number_format($branch['items_sold']) }}</td>
+                            <td tabindex="0" role="button" data-drilldown="revenue" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" title="Nhấn để xem dữ liệu chi tiết" style="font-weight:800; color:var(--sa-green); white-space:nowrap;">{{ number_format($branch['revenue'], 0, ',', '.') }}đ</td>
+                            <td tabindex="0" role="button" data-drilldown="orders" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" style="font-weight:700; white-space:nowrap;">{{ number_format($branch['valid_order_count']) }}</td>
+                            <td tabindex="0" role="button" data-drilldown="average_order_value" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" style="font-weight:700; white-space:nowrap;">{{ number_format($branch['average_order_value'], 0, ',', '.') }}đ</td>
+                            <td tabindex="0" role="button" data-drilldown="items_sold" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" style="font-weight:700; white-space:nowrap;">{{ number_format($branch['items_sold']) }}</td>
                             <td style="min-width: 200px;">
                                 <div style="font-weight:700; color:var(--sa-ink);">{{ $branch['top_product_name'] }}</div>
                                 <div style="color:var(--sa-muted); font-size:0.72rem; margin-top:0.15rem;">
                                     {{ number_format($branch['top_product_revenue'], 0, ',', '.') }}đ
                                 </div>
                             </td>
-                            <td style="font-weight:700; white-space:nowrap;">{{ number_format($branch['top_product_quantity']) }}</td>
-                            <td style="font-weight:800; white-space:nowrap; color:{{ $branch['cancellation_rate'] > 0 ? '#b91c1c' : 'var(--sa-muted)' }};">{{ number_format($branch['cancellation_rate'], 1) }}%</td>
+                            <td @if($branch['top_product_id']) tabindex="0" role="button" data-drilldown="product_sales" data-product-id="{{ $branch['top_product_id'] }}" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" title="Nhấn để xem dữ liệu sản phẩm bán chạy" @else aria-disabled="true" title="Chi nhánh chưa có sản phẩm bán ra trong kỳ này" @endif style="font-weight:700; white-space:nowrap;">{{ number_format($branch['top_product_quantity']) }}</td>
+                            <td tabindex="0" role="button" data-drilldown="cancellation_rate" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" title="Nhấn để xem cách tính và các đơn đã hủy" style="font-weight:800; white-space:nowrap; color:{{ $branch['cancellation_rate'] > 0 ? '#b91c1c' : 'var(--sa-muted)' }};">{{ number_format($branch['cancellation_rate'], 1) }}%</td>
                             <td>
                                 @if($branchStatusValue)
                                     <span class="sa-state sa-state-active" data-branch-status-badge="{{ $branch['branch_id'] }}"><i class="bi bi-check-circle"></i> Hoạt động</span>

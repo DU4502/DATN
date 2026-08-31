@@ -113,6 +113,12 @@ class SuperAdminController extends Controller
             $trendBuckets = collect($trend['buckets'] ?? [])->map(static function ($bucket): array {
                 return [
                     'label' => (string) ($bucket['label'] ?? ''),
+                    'start' => ($bucket['start'] ?? null) instanceof CarbonInterface
+                        ? $bucket['start']->format('Y-m-d H:i:s')
+                        : null,
+                    'end' => ($bucket['end'] ?? null) instanceof CarbonInterface
+                        ? $bucket['end']->format('Y-m-d H:i:s')
+                        : null,
                     'revenue' => (int) ($bucket['revenue'] ?? 0),
                     'valid_order_count' => (int) ($bucket['valid_order_count'] ?? 0),
                     'height' => (int) ($bucket['height'] ?? 0),

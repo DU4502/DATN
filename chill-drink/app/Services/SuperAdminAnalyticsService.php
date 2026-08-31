@@ -6,16 +6,16 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\User;
+use App\Models\Review;
 use App\Support\ProductImage;
 use Carbon\Carbon;
-use Carbon\CarbonInterface;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -27,24 +27,29 @@ class SuperAdminAnalyticsService
     private array $tableExistsCache = [];
 
     /**
-     * @var array<string, \App\Models\Product|null>
+     * @var array<string, Product|null>
      */
     private array $productMetadataCache = [];
 
     /**
-     * @var array<string, \Illuminate\Support\Collection<int, \App\Models\Branch>>
+     * @var array<string, Collection<int, Branch>>
      */
     private array $branchMetadataCache = [];
 
     /**
-     * @var array<string, \Illuminate\Support\Collection<int, object>>
+     * @var array<string, Collection<int, object>>
      */
     private array $branchProductAggregateCache = [];
 
     /**
-     * @var array<string, \Illuminate\Support\Collection<int, object>>
+     * @var array<string, Collection<int, object>>
      */
     private array $productBranchAggregateCache = [];
+
+    /**
+     * @var array<string, Collection<int, object>>
+     */
+    private array $productBranchReviewAggregateCache = [];
 
     /**
      * @var array<string, object>
@@ -69,7 +74,7 @@ class SuperAdminAnalyticsService
     }
 
     /**
-     * @param int|array<int>|null $branchScope
+     * @param  int|array<int>|null  $branchScope
      */
     public function applyBranchScope(Builder $query, int|array|null $branchScope, string $column = 'orders.branch_id'): Builder
     {
@@ -370,10 +375,14 @@ class SuperAdminAnalyticsService
             ? $this->productBranchAggregateRows($context->compareStart, $context->compareEnd, $productId, $scopeBranchIds)
                 ->keyBy(fn (object $row) => (int) $row->branch_id)
             : collect();
+        $reviewBranchTotals = $this->productBranchReviewAggregateRows($context->currentStart, $context->currentEnd, $productId, $scopeBranchIds)
+            ->keyBy(fn (object $row) => (int) $row->branch_id);
 
         $summaryTotalQuantity = (int) $currentBranchTotals->sum(fn (object $row) => (int) ($row->total_quantity ?? 0));
         $summaryTotalRevenue = (int) $currentBranchTotals->sum(fn (object $row) => (int) ($row->total_revenue ?? 0));
-        $summaryBranchesWithSales = $currentBranchTotals->count();
+        $summaryBranchesWithSales = $currentBranchTotals
+            ->filter(fn (object $row) => (int) ($row->total_quantity ?? 0) > 0)
+            ->count();
         $summaryCompareTotalQuantity = $context->hasComparison()
             ? (int) $compareBranchTotals->sum(fn (object $row) => (int) ($row->total_quantity ?? 0))
             : null;
@@ -381,11 +390,19 @@ class SuperAdminAnalyticsService
             ? (int) $compareBranchTotals->sum(fn (object $row) => (int) ($row->total_revenue ?? 0))
             : null;
 
-        $allBranchRows = $allBranches->map(function (Branch $branch) use ($currentBranchTotals, $compareBranchTotals, $context, $summaryTotalQuantity, $summaryTotalRevenue, $sortBy): array {
+        $allBranchRows = $allBranches->map(function (Branch $branch) use ($currentBranchTotals, $compareBranchTotals, $reviewBranchTotals, $context, $sortBy): array {
             $currentRow = $currentBranchTotals->get((int) $branch->id);
             $compareRow = $compareBranchTotals->get((int) $branch->id);
+            $reviewRow = $reviewBranchTotals->get((int) $branch->id);
             $currentQuantity = $currentRow !== null ? (int) ($currentRow->total_quantity ?? 0) : 0;
             $currentRevenue = $currentRow !== null ? (int) ($currentRow->total_revenue ?? 0) : 0;
+            $relatedOrderCount = $currentRow !== null ? (int) ($currentRow->related_order_count ?? 0) : 0;
+            $cancelledOrderCount = $currentRow !== null ? (int) ($currentRow->cancelled_order_count ?? 0) : 0;
+            $cancellationRate = $relatedOrderCount > 0
+                ? round(($cancelledOrderCount / $relatedOrderCount) * 100, 1)
+                : 0.0;
+            $reviewCount = $reviewRow !== null ? (int) ($reviewRow->review_count ?? 0) : 0;
+            $averageRating = $reviewCount > 0 ? round((float) ($reviewRow->average_rating ?? 0), 1) : null;
             $quantityComparison = $this->composeMetric(
                 $currentQuantity,
                 $context->hasComparison() ? ($compareRow !== null ? (int) ($compareRow->total_quantity ?? 0) : 0) : null,
@@ -404,12 +421,11 @@ class SuperAdminAnalyticsService
                 'branch_status' => (bool) $branch->status,
                 'total_quantity' => $currentQuantity,
                 'total_revenue' => $currentRevenue,
-                'quantity_share_percentage' => $summaryTotalQuantity > 0
-                    ? round(($currentQuantity / $summaryTotalQuantity) * 100, 1)
-                    : 0.0,
-                'revenue_share_percentage' => $summaryTotalRevenue > 0
-                    ? round(($currentRevenue / $summaryTotalRevenue) * 100, 1)
-                    : 0.0,
+                'related_order_count' => $relatedOrderCount,
+                'cancelled_order_count' => $cancelledOrderCount,
+                'cancellation_rate' => $cancellationRate,
+                'review_count' => $reviewCount,
+                'average_rating' => $averageRating,
                 'compare_quantity' => $quantityComparison['compare_value'],
                 'compare_revenue' => $revenueComparison['compare_value'],
                 'quantity_change_percentage' => $quantityComparison['percentage_change'],
@@ -465,8 +481,11 @@ class SuperAdminAnalyticsService
                     'branch_status' => (bool) $row['branch_status'],
                     'total_quantity' => (int) $row['total_quantity'],
                     'total_revenue' => (int) $row['total_revenue'],
-                    'quantity_share_percentage' => (float) $row['quantity_share_percentage'],
-                    'revenue_share_percentage' => (float) $row['revenue_share_percentage'],
+                    'related_order_count' => (int) $row['related_order_count'],
+                    'cancelled_order_count' => (int) $row['cancelled_order_count'],
+                    'cancellation_rate' => (float) $row['cancellation_rate'],
+                    'review_count' => (int) $row['review_count'],
+                    'average_rating' => $row['average_rating'] !== null ? (float) $row['average_rating'] : null,
                     'compare_quantity' => $row['compare_quantity'],
                     'compare_revenue' => $row['compare_revenue'],
                     'quantity_change_percentage' => $row['quantity_change_percentage'],
@@ -601,10 +620,10 @@ class SuperAdminAnalyticsService
                     ->selectRaw('COALESCE(compare_branch_metrics.revenue, 0) as compare_revenue')
                     ->selectRaw('COALESCE(compare_branch_metrics.valid_order_count, 0) as compare_order_count')
                     ->selectRaw('COALESCE(compare_item_metrics.items_sold, 0) as compare_items_sold')
-                    ->selectRaw($this->comparisonPercentageSql('current_branch_metrics.revenue', 'compare_branch_metrics.revenue'). ' as revenue_change_percentage')
-                    ->selectRaw($this->comparisonPercentageSql('current_branch_metrics.valid_order_count', 'compare_branch_metrics.valid_order_count'). ' as order_change_percentage')
-                    ->selectRaw($this->comparisonPercentageSql('current_product_summary.items_sold', 'compare_item_metrics.items_sold'). ' as items_change_percentage')
-                    ->selectRaw($this->comparisonStateSql('current_branch_metrics.revenue', 'compare_branch_metrics.revenue'). ' as change_state');
+                    ->selectRaw($this->comparisonPercentageSql('current_branch_metrics.revenue', 'compare_branch_metrics.revenue').' as revenue_change_percentage')
+                    ->selectRaw($this->comparisonPercentageSql('current_branch_metrics.valid_order_count', 'compare_branch_metrics.valid_order_count').' as order_change_percentage')
+                    ->selectRaw($this->comparisonPercentageSql('current_product_summary.items_sold', 'compare_item_metrics.items_sold').' as items_change_percentage')
+                    ->selectRaw($this->comparisonStateSql('current_branch_metrics.revenue', 'compare_branch_metrics.revenue').' as change_state');
             })
             ->when(! $context->hasComparison(), function (Builder $builder): void {
                 $builder
@@ -719,6 +738,8 @@ class SuperAdminAnalyticsService
 
         return [
             'paginator' => $paginator,
+            'current_start' => $currentStart?->format('Y-m-d H:i:s'),
+            'current_end' => $currentEnd?->format('Y-m-d H:i:s'),
             'period_label' => $periodLabel,
             'comparison_label' => $comparisonLabel,
             'search' => $search,
@@ -1138,7 +1159,7 @@ class SuperAdminAnalyticsService
     }
 
     /**
-     * @param Collection<int, object> $orders
+     * @param  Collection<int, object>  $orders
      * @return array{revenue: int, valid_order_count: int}
      */
     private function branchTimeComparisonWindowMetrics(Collection $orders, CarbonImmutable $start, CarbonImmutable $end, string $timezone): array
@@ -1405,7 +1426,7 @@ class SuperAdminAnalyticsService
             ],
             'top_products' => $topProductsRows
                 ->values()
-                ->map(function (object $row, int $index) use ($compareTopProducts, $sortBy, $currentItemRevenue, $currentItemsSold, $comparisonLabel): array {
+                ->map(function (object $row, int $index) use ($compareTopProducts, $currentItemRevenue, $currentItemsSold, $comparisonLabel): array {
                     $productId = (int) $row->product_id;
                     $productName = filled($row->product_name ?? null)
                         ? (string) $row->product_name
@@ -1590,12 +1611,12 @@ class SuperAdminAnalyticsService
 
         return $query
             ->selectRaw(
-                'orders.branch_id, ' .
-                'COALESCE(SUM(CASE WHEN '.$validSalesSql.' THEN orders.total ELSE 0 END), 0) as revenue, ' .
-                'COALESCE(SUM(CASE WHEN '.$validSalesSql.' THEN 1 ELSE 0 END), 0) as valid_order_count, ' .
-                'COUNT(DISTINCT CASE WHEN '.$validSalesSql.' AND orders.user_id IS NOT NULL THEN orders.user_id END) as unique_customer_count, ' .
-                'COUNT(*) as total_created_order_count, ' .
-                'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as completed_order_count, ' .
+                'orders.branch_id, '.
+                'COALESCE(SUM(CASE WHEN '.$validSalesSql.' THEN orders.total ELSE 0 END), 0) as revenue, '.
+                'COALESCE(SUM(CASE WHEN '.$validSalesSql.' THEN 1 ELSE 0 END), 0) as valid_order_count, '.
+                'COUNT(DISTINCT CASE WHEN '.$validSalesSql.' AND orders.user_id IS NOT NULL THEN orders.user_id END) as unique_customer_count, '.
+                'COUNT(*) as total_created_order_count, '.
+                'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as completed_order_count, '.
                 'COALESCE(SUM(CASE WHEN orders.status = "cancelled" THEN 1 ELSE 0 END), 0) as cancelled_order_count'
             )
             ->groupBy('orders.branch_id');
@@ -1663,9 +1684,9 @@ class SuperAdminAnalyticsService
         $productTotals = $query
             ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
             ->selectRaw(
-                "orders.branch_id as branch_id, order_items.product_id as top_product_id, " .
-                'COALESCE(NULLIF(products.name, \'\'), '.$this->sqlConcat(["'Sản phẩm #'", 'order_items.product_id', "' đã xóa'"]).') as top_product_name, ' .
-                'products.image as top_product_image, SUM(order_items.quantity) as top_product_quantity, ' .
+                'orders.branch_id as branch_id, order_items.product_id as top_product_id, '.
+                'COALESCE(NULLIF(products.name, \'\'), '.$this->sqlConcat(["'Sản phẩm #'", 'order_items.product_id', "' đã xóa'"]).') as top_product_name, '.
+                'products.image as top_product_image, SUM(order_items.quantity) as top_product_quantity, '.
                 'SUM(COALESCE(order_items.total_price, order_items.quantity * order_items.unit_price)) as top_product_revenue'
             )
             ->groupBy('orders.branch_id', 'order_items.product_id', 'products.name', 'products.image');
@@ -1693,11 +1714,11 @@ class SuperAdminAnalyticsService
         $productTotals = $query
             ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
             ->selectRaw(
-                'orders.branch_id, ' .
-                'order_items.product_id as top_product_id, ' .
-                'COALESCE(NULLIF(products.name, \'\'), '.$this->sqlConcat(["'Sản phẩm #'", 'order_items.product_id', "' đã xóa'"]).') as top_product_name, ' .
-                'products.image as top_product_image, ' .
-                'COALESCE(SUM(order_items.quantity), 0) as top_product_quantity, ' .
+                'orders.branch_id, '.
+                'order_items.product_id as top_product_id, '.
+                'COALESCE(NULLIF(products.name, \'\'), '.$this->sqlConcat(["'Sản phẩm #'", 'order_items.product_id', "' đã xóa'"]).') as top_product_name, '.
+                'products.image as top_product_image, '.
+                'COALESCE(SUM(order_items.quantity), 0) as top_product_quantity, '.
                 'COALESCE(SUM(COALESCE(order_items.total_price, order_items.quantity * order_items.unit_price)), 0) as top_product_revenue'
             )
             ->groupBy('orders.branch_id', 'order_items.product_id', 'products.name', 'products.image');
@@ -1705,8 +1726,8 @@ class SuperAdminAnalyticsService
         $rankedProducts = DB::query()
             ->fromSub($productTotals, 'branch_product_totals')
             ->selectRaw(
-                'branch_id, top_product_id, top_product_name, top_product_image, top_product_quantity, top_product_revenue, ' .
-                'SUM(top_product_quantity) OVER (PARTITION BY branch_id) as items_sold, ' .
+                'branch_id, top_product_id, top_product_name, top_product_image, top_product_quantity, top_product_revenue, '.
+                'SUM(top_product_quantity) OVER (PARTITION BY branch_id) as items_sold, '.
                 'ROW_NUMBER() OVER (PARTITION BY branch_id ORDER BY top_product_quantity DESC, top_product_revenue DESC, top_product_id ASC) as branch_product_rank'
             );
 
@@ -1725,10 +1746,10 @@ class SuperAdminAnalyticsService
         return $query
             ->leftJoin('products', 'products.id', '=', 'order_items.product_id')
             ->selectRaw(
-                'order_items.product_id, ' .
-                'COALESCE(NULLIF(products.name, \'\'), '.$this->sqlConcat(["'Sản phẩm #'", 'order_items.product_id', "' đã xóa'"]).') as product_name, ' .
-                'products.image as product_image, ' .
-                'SUM(order_items.quantity) as total_quantity, ' .
+                'order_items.product_id, '.
+                'COALESCE(NULLIF(products.name, \'\'), '.$this->sqlConcat(["'Sản phẩm #'", 'order_items.product_id', "' đã xóa'"]).') as product_name, '.
+                'products.image as product_image, '.
+                'SUM(order_items.quantity) as total_quantity, '.
                 'SUM(COALESCE(order_items.total_price, order_items.quantity * order_items.unit_price)) as total_revenue'
             )
             ->groupBy('order_items.product_id', 'products.name', 'products.image');
@@ -1767,7 +1788,8 @@ class SuperAdminAnalyticsService
         int $productId,
         array $branchIds = []
     ): Builder {
-        $query = $this->validSalesOrderItemsQuery()
+        $query = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('order_items.product_id', $productId)
             ->whereNotNull('orders.branch_id');
 
@@ -1779,10 +1801,43 @@ class SuperAdminAnalyticsService
 
         return $query
             ->selectRaw(
-                'orders.branch_id as branch_id, ' .
-                'COALESCE(SUM(order_items.quantity), 0) as total_quantity, ' .
-                'COALESCE(SUM(COALESCE(order_items.total_price, order_items.quantity * order_items.unit_price)), 0) as total_revenue'
+                'orders.branch_id as branch_id, '.
+                "COALESCE(SUM(CASE WHEN orders.status = 'completed' THEN order_items.quantity ELSE 0 END), 0) as total_quantity, ".
+                "COALESCE(SUM(CASE WHEN orders.status = 'completed' THEN COALESCE(order_items.total_price, order_items.quantity * order_items.unit_price) ELSE 0 END), 0) as total_revenue, ".
+                'COUNT(DISTINCT orders.id) as related_order_count, '.
+                "COUNT(DISTINCT CASE WHEN orders.status = 'cancelled' THEN orders.id END) as cancelled_order_count"
             )
+            ->groupBy('orders.branch_id');
+    }
+
+    private function productBranchReviewTotalsSubquery(
+        ?CarbonInterface $from,
+        ?CarbonInterface $to,
+        int $productId,
+        array $branchIds = []
+    ): Builder {
+        $query = Review::query()
+            ->join('orders', 'orders.id', '=', 'reviews.order_id')
+            ->where('reviews.product_id', $productId)
+            ->where('reviews.status', true)
+            ->whereNotNull('orders.branch_id')
+            ->whereExists(function ($subquery) use ($productId): void {
+                $subquery->selectRaw('1')
+                    ->from('order_items')
+                    ->whereColumn('order_items.order_id', 'orders.id')
+                    ->where('order_items.product_id', $productId);
+            });
+
+        if ($from && $to) {
+            $query->whereBetween('reviews.created_at', [$from, $to]);
+        }
+
+        if ($branchIds !== []) {
+            $query->whereIn('orders.branch_id', $branchIds);
+        }
+
+        return $query
+            ->selectRaw('orders.branch_id as branch_id, COUNT(reviews.id) as review_count, AVG(reviews.rating) as average_rating')
             ->groupBy('orders.branch_id');
     }
 
@@ -1805,6 +1860,27 @@ class SuperAdminAnalyticsService
         }
 
         return $this->productBranchAggregateCache[$cacheKey];
+    }
+
+    private function productBranchReviewAggregateRows(
+        ?CarbonInterface $from,
+        ?CarbonInterface $to,
+        int $productId,
+        array $branchIds = []
+    ): Collection {
+        $cacheKey = $this->memoKey([
+            'product-branch-review-aggregate',
+            $productId,
+            $this->dateKey($from),
+            $this->dateKey($to),
+            $branchIds,
+        ]);
+
+        if (! array_key_exists($cacheKey, $this->productBranchReviewAggregateCache)) {
+            $this->productBranchReviewAggregateCache[$cacheKey] = $this->productBranchReviewTotalsSubquery($from, $to, $productId, $branchIds)->get();
+        }
+
+        return $this->productBranchReviewAggregateCache[$cacheKey];
     }
 
     /**
@@ -1927,11 +2003,11 @@ class SuperAdminAnalyticsService
 
             $this->branchOrderAggregateCache[$cacheKey] = $query
                 ->selectRaw(
-                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN orders.total ELSE 0 END), 0) as revenue, ' .
-                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as valid_order_count, ' .
-                    'COUNT(DISTINCT CASE WHEN orders.status = "completed" AND orders.user_id IS NOT NULL THEN orders.user_id END) as unique_customer_count, ' .
-                    'COUNT(*) as total_created_order_count, ' .
-                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as completed_order_count, ' .
+                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN orders.total ELSE 0 END), 0) as revenue, '.
+                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as valid_order_count, '.
+                    'COUNT(DISTINCT CASE WHEN orders.status = "completed" AND orders.user_id IS NOT NULL THEN orders.user_id END) as unique_customer_count, '.
+                    'COUNT(*) as total_created_order_count, '.
+                    'COALESCE(SUM(CASE WHEN orders.status = "completed" THEN 1 ELSE 0 END), 0) as completed_order_count, '.
                     'COALESCE(SUM(CASE WHEN orders.status = "cancelled" THEN 1 ELSE 0 END), 0) as cancelled_order_count'
                 )
                 ->first();

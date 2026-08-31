@@ -190,11 +190,11 @@
 
 
             <div class="focus-product-summary-grid">
-                <article class="focus-product-summary-card">
+                <article class="focus-product-summary-card" @if($focusSelectedProductId > 0) tabindex="0" role="button" data-drilldown="product_sales" data-product-id="{{ $focusSelectedProductId }}" @else aria-disabled="true" @endif>
                     <div class="focus-product-summary-label">Tổng số lượng</div>
                     <div class="focus-product-summary-value">{{ number_format((int) ($focusSummary['total_quantity'] ?? 0)) }}</div>
                 </article>
-                <article class="focus-product-summary-card">
+                <article class="focus-product-summary-card" @if($focusSelectedProductId > 0) tabindex="0" role="button" data-drilldown="product_revenue" data-product-id="{{ $focusSelectedProductId }}" @else aria-disabled="true" @endif>
                     <div class="focus-product-summary-label">Tổng doanh thu</div>
                     <div class="focus-product-summary-value">{{ number_format((int) ($focusSummary['total_revenue'] ?? 0), 0, ',', '.') }}đ</div>
                 </article>
@@ -224,7 +224,7 @@
                     @php
                         $isTopBranch = (int) ($branch['branch_id'] ?? 0) === (int) ($focusSummary['strongest_branch_id'] ?? 0);
                     @endphp
-                    <article class="focus-product-branch-card {{ $isTopBranch ? 'top' : '' }}">
+                    <article class="focus-product-branch-card {{ $isTopBranch ? 'top' : '' }}" @if($focusSelectedProductId > 0) tabindex="0" role="button" data-drilldown="product_sales" data-product-id="{{ $focusSelectedProductId }}" data-branch-id="{{ $branch['branch_id'] }}" aria-label="Xem dữ liệu {{ $selectedProductName }} tại {{ $branch['branch_name'] }}" title="Nhấn để xem các đơn hàng của {{ $selectedProductName }} tại chi nhánh này" @else aria-disabled="true" @endif>
                         <span class="focus-product-branch-rank">{{ $branch['rank'] }}</span>
                         <div style="min-width:0;">
                             <h4 class="focus-product-branch-name">{{ $branch['branch_name'] }}</h4>
@@ -236,21 +236,26 @@
                             </div>
                         </div>
                         <div class="focus-product-branch-stats">
-                            <div class="focus-product-branch-stat">
-                                <div class="focus-product-branch-stat-label">Số lượng</div>
+                            <div class="focus-product-branch-stat" @if($focusSelectedProductId > 0) tabindex="0" role="button" data-drilldown="product_sales" data-product-id="{{ $focusSelectedProductId }}" data-branch-id="{{ $branch['branch_id'] }}" title="Đã bán {{ number_format((int) ($branch['total_quantity'] ?? 0)) }} sản phẩm. Nhấn để xem các đơn hàng liên quan." @else aria-disabled="true" @endif>
+                                <div class="focus-product-branch-stat-label">Số lượng bán</div>
                                 <div class="focus-product-branch-stat-value">{{ number_format((int) ($branch['total_quantity'] ?? 0)) }}</div>
                             </div>
-                            <div class="focus-product-branch-stat">
+                            <div class="focus-product-branch-stat" @if($focusSelectedProductId > 0) tabindex="0" role="button" data-drilldown="product_revenue" data-product-id="{{ $focusSelectedProductId }}" data-branch-id="{{ $branch['branch_id'] }}" title="Sản phẩm tạo ra {{ number_format((int) ($branch['total_revenue'] ?? 0), 0, ',', '.') }}đ tại chi nhánh này. Nhấn để xem chi tiết." @else aria-disabled="true" @endif>
                                 <div class="focus-product-branch-stat-label">Doanh thu</div>
                                 <div class="focus-product-branch-stat-value">{{ number_format((int) ($branch['total_revenue'] ?? 0), 0, ',', '.') }}đ</div>
                             </div>
-                            <div class="focus-product-branch-stat">
-                                <div class="focus-product-branch-stat-label">Tỷ trọng SL</div>
-                                <div class="focus-product-branch-stat-value">{{ number_format((float) ($branch['quantity_share_percentage'] ?? 0), 1, ',', '.') }}%</div>
+                            <div class="focus-product-branch-stat" @if($focusSelectedProductId > 0) tabindex="0" role="button" data-drilldown="product_cancellation_rate" data-product-id="{{ $focusSelectedProductId }}" data-branch-id="{{ $branch['branch_id'] }}" title="{{ number_format((int) ($branch['cancelled_order_count'] ?? 0)) }} trên {{ number_format((int) ($branch['related_order_count'] ?? 0)) }} đơn có sản phẩm này đã bị hủy. Nhấn để xem các đơn đã hủy." @else aria-disabled="true" @endif>
+                                <div class="focus-product-branch-stat-label">Tỷ lệ hủy</div>
+                                <div class="focus-product-branch-stat-value">{{ number_format((float) ($branch['cancellation_rate'] ?? 0), 1, ',', '.') }}%</div>
                             </div>
-                            <div class="focus-product-branch-stat">
-                                <div class="focus-product-branch-stat-label">Tỷ trọng DT</div>
-                                <div class="focus-product-branch-stat-value">{{ number_format((float) ($branch['revenue_share_percentage'] ?? 0), 1, ',', '.') }}%</div>
+                            <div class="focus-product-branch-stat {{ (int) ($branch['review_count'] ?? 0) > 0 ? '' : 'text-secondary' }}" @if($focusSelectedProductId > 0 && (int) ($branch['review_count'] ?? 0) > 0) tabindex="0" role="button" data-drilldown="product_reviews" data-product-id="{{ $focusSelectedProductId }}" data-branch-id="{{ $branch['branch_id'] }}" title="Điểm trung bình từ {{ number_format((int) $branch['review_count']) }} lượt đánh giá. Nhấn để xem đánh giá." @else aria-disabled="true" title="Chưa có đánh giá của sản phẩm này tại chi nhánh trong kỳ đang xem" @endif>
+                                <div class="focus-product-branch-stat-label">Đánh giá</div>
+                                @if((int) ($branch['review_count'] ?? 0) > 0)
+                                    <div class="focus-product-branch-stat-value">{{ number_format((float) $branch['average_rating'], 1, ',', '.') }}/5</div>
+                                    <div class="focus-product-summary-note">{{ number_format((int) $branch['review_count']) }} lượt</div>
+                                @else
+                                    <div class="focus-product-summary-note">Chưa có đánh giá</div>
+                                @endif
                             </div>
                         </div>
                         <div class="focus-product-branch-badges">

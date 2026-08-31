@@ -711,6 +711,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
             <div class="stat-label">Tổng doanh thu</div>
             <div id="kpi-revenue-value" class="stat-value">{{ number_format($totalRevenue, 0, ',', '.') }}đ</div>
             <div id="kpi-revenue-comparison" class="text-secondary small">{{ $comparisonLabel ?? 'So với tuần trước' }}</div>
+            <button type="button" class="dashboard-trace-link" data-drilldown="revenue"><i class="bi bi-search"></i> Xem dữ liệu nguồn</button>
 
             <div class="sparkline">
                 <div class="spark-bar" style="height: 30%"></div>
@@ -735,6 +736,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
             <div class="stat-label">Đơn hàng mới</div>
             <div id="kpi-orders-value" class="stat-value">{{ $selectedPeriodStat['orders'] ?? 0 }}</div>
             <div class="text-secondary small" id="kpi-orders-label">{{ $selectedPeriodStat['label'] ?? 'Kỳ hiện tại' }}</div>
+            <button type="button" class="dashboard-trace-link" data-drilldown="orders"><i class="bi bi-search"></i> Xem dữ liệu nguồn</button>
 
             <div class="sparkline" style="opacity: 0.15; filter: hue-rotate(180deg);">
                 <div class="spark-bar" style="height: 40%"></div>
@@ -759,6 +761,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
             <div class="stat-label">Khách hàng</div>
             <div id="kpi-users-value" class="stat-value">{{ $totalUsers }}</div>
             <div class="text-secondary small">Khách hàng đăng ký mới</div>
+            <button type="button" class="dashboard-trace-link" data-drilldown="new_customers"><i class="bi bi-search"></i> Xem dữ liệu nguồn</button>
 
             <div class="sparkline">
                 <div class="spark-bar" style="height: 35%"></div>
@@ -783,6 +786,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
             <div class="stat-label">Sản phẩm menu</div>
             <div id="kpi-products-value" class="stat-value">{{ $totalProducts }}</div>
             <div class="text-secondary small">Sản phẩm đang bán</div>
+            <button type="button" class="dashboard-trace-link" data-drilldown="products"><i class="bi bi-search"></i> Xem dữ liệu nguồn</button>
         </div>
     </div>
 </div>
@@ -808,10 +812,14 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
                     class="chart-col"
                     style="height: {{ $bar['height'] }}%"
                     tabindex="0"
-                    role="img"
-                    aria-label="{{ $bar['label'] }} - {{ $bar['tooltip_value'] ?? number_format($bar['value'], 0, ',', '.').'đ' }}"
+                    role="button"
+                    aria-label="{{ $bar['label'] }} - Doanh thu: {{ $bar['tooltip_value'] ?? number_format($bar['value'], 0, ',', '.').'đ' }}. Nhấn để xem chi tiết"
+                    title="{{ $bar['label'] }}: Doanh thu {{ $bar['tooltip_value'] ?? number_format($bar['value'], 0, ',', '.').'đ' }} — Nhấn để xem chi tiết"
                     data-label="{{ $bar['label'] }}"
-                    data-value="{{ $bar['tooltip_value'] ?? number_format($bar['value'], 0, ',', '.').'đ' }}">
+                    data-value="{{ $bar['tooltip_value'] ?? number_format($bar['value'], 0, ',', '.').'đ' }}"
+                    data-drilldown="revenue"
+                    data-from="{{ $bar['from']->format('Y-m-d H:i:s') }}"
+                    data-to="{{ $bar['to']->format('Y-m-d H:i:s') }}">
                 </div>
                 @empty
                 <div class="chart-col" style="height: 15%"></div>
@@ -832,7 +840,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
 
             <div id="top-products-list" class="d-flex flex-column gap-3">
                 @forelse(($topProducts ?? []) as $topProduct)
-                <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='var(--a-bg-subtle)'" onmouseout="this.style.background='transparent'">
+                <div class="d-flex align-items-center gap-3 p-2 rounded-3" tabindex="0" role="button" data-drilldown="product_sales" data-product-id="{{ $topProduct['id'] }}" style="transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='var(--a-bg-subtle)'" onmouseout="this.style.background='transparent'">
                     <div class="admin-thumb" style="width: 50px; height: 50px; border-radius: var(--radius-md);">
                         <img src="{{ $topProduct['image_url'] }}" alt="{{ $topProduct['name'] }}">
                     </div>
@@ -908,9 +916,9 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
                                 @endif
                             </div>
                         </div>
-                        <div class="comparison-cell comparison-number">{{ number_format((float) ($row['revenue'] ?? 0), 0, ',', '.') . 'đ' }}</div>
-                        <div class="comparison-cell comparison-number">{{ number_format((int) ($row['valid_order_count'] ?? 0), 0, ',', '.') }}</div>
-                        <div class="comparison-cell comparison-number">{{ number_format((float) ($row['average_order_value'] ?? 0), 0, ',', '.') . 'đ' }}</div>
+                        <div class="comparison-cell comparison-number" tabindex="0" role="button" data-drilldown="revenue" data-from="{{ $row['start_at'] }}" data-to="{{ $row['end_at'] }}">{{ number_format((float) ($row['revenue'] ?? 0), 0, ',', '.') . 'đ' }}</div>
+                        <div class="comparison-cell comparison-number" tabindex="0" role="button" data-drilldown="orders" data-from="{{ $row['start_at'] }}" data-to="{{ $row['end_at'] }}">{{ number_format((int) ($row['valid_order_count'] ?? 0), 0, ',', '.') }}</div>
+                        <div class="comparison-cell comparison-number" tabindex="0" role="button" data-drilldown="average_order_value" data-from="{{ $row['start_at'] }}" data-to="{{ $row['end_at'] }}">{{ number_format((float) ($row['average_order_value'] ?? 0), 0, ',', '.') . 'đ' }}</div>
                         <div class="comparison-cell">
                             <div class="comparison-change {{ $changeType }}">
                                 <span class="comparison-change-badge">{{ $revenueChange['label'] ?? 'Chưa đủ dữ liệu' }}</span>
@@ -1028,9 +1036,9 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
                                         ${row.is_partial ? '<span class="comparison-period-pill">Đang diễn ra</span>' : ''}
                                     </div>
                                 </div>
-                                <div class="comparison-cell comparison-number">${escapeHtml(formatCurrency(row.revenue || 0))}</div>
-                                <div class="comparison-cell comparison-number">${escapeHtml(Number(row.valid_order_count || 0).toLocaleString('vi-VN'))}</div>
-                                <div class="comparison-cell comparison-number">${escapeHtml(formatCurrency(row.average_order_value || 0))}</div>
+                                <div class="comparison-cell comparison-number" tabindex="0" role="button" data-drilldown="revenue" data-from="${escapeHtml(row.start_at || '')}" data-to="${escapeHtml(row.end_at || '')}">${escapeHtml(formatCurrency(row.revenue || 0))}</div>
+                                <div class="comparison-cell comparison-number" tabindex="0" role="button" data-drilldown="orders" data-from="${escapeHtml(row.start_at || '')}" data-to="${escapeHtml(row.end_at || '')}">${escapeHtml(Number(row.valid_order_count || 0).toLocaleString('vi-VN'))}</div>
+                                <div class="comparison-cell comparison-number" tabindex="0" role="button" data-drilldown="average_order_value" data-from="${escapeHtml(row.start_at || '')}" data-to="${escapeHtml(row.end_at || '')}">${escapeHtml(formatCurrency(row.average_order_value || 0))}</div>
                                 <div class="comparison-cell">
                                     <div class="comparison-change ${escapeHtml(changeType)}">
                                         <span class="comparison-change-badge">${escapeHtml(revenueChange.label || 'Chưa đủ dữ liệu')}</span>
@@ -1222,7 +1230,7 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
                 const revenue = formatCurrency(topProduct.revenue || 0);
 
                 return `
-                    <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='var(--a-bg-subtle)'" onmouseout="this.style.background='transparent'">
+                    <div class="d-flex align-items-center gap-3 p-2 rounded-3" tabindex="0" role="button" data-drilldown="product_sales" data-product-id="${Number(topProduct.id || 0)}" style="transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='var(--a-bg-subtle)'" onmouseout="this.style.background='transparent'">
                         <div class="admin-thumb" style="width: 50px; height: 50px; border-radius: var(--radius-md);">
                             <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(name)}">
                         </div>
@@ -1284,6 +1292,12 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
             // replace chart datasets for chart rendering
             if (data.chartDatasets) {
                 chartDatasets = data.chartDatasets;
+            }
+            if (data.selectedPeriodStat && typeof window.setDashboardDrilldownDefaults === 'function') {
+                window.setDashboardDrilldownDefaults({
+                    from: `${data.selectedPeriodStat.start} 00:00:00`,
+                    to: `${data.selectedPeriodStat.end} 23:59:59`
+                });
             }
 
             if (typeof renderTopProducts === 'function' && Array.isArray(data.topProducts)) {
@@ -1395,6 +1409,11 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
         chartContainer.appendChild(tooltipEl);
 
         const getBars = () => Array.from(chartContainer.querySelectorAll('.chart-col'));
+        const metricLabels = {
+            revenue: 'Doanh thu',
+            orders: 'Đơn hàng',
+            users: 'Khách hàng mới',
+        };
 
         const clearActiveBars = () => {
             getBars().forEach((barEl) => barEl.classList.remove('active'));
@@ -1411,10 +1430,16 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
             barEl.style.height = `${Math.max(10, Number(bar.height || 0))}%`;
             barEl.style.animationDelay = `${index * 0.04}s`;
             barEl.setAttribute('tabindex', '0');
-            barEl.setAttribute('role', 'img');
-            barEl.setAttribute('aria-label', `${bar.label || ''} - ${bar.tooltip_value || '0'}`);
+            barEl.setAttribute('role', 'button');
             barEl.dataset.label = bar.label || '';
             barEl.dataset.value = bar.tooltip_value || '0';
+            const activeMetric = chartContainer.dataset.activeChart || 'revenue';
+            const metricLabel = metricLabels[activeMetric] || 'Số liệu';
+            barEl.setAttribute('aria-label', `${bar.label || ''} - ${metricLabel}: ${bar.tooltip_value || '0'}. Nhấn để xem chi tiết`);
+            barEl.setAttribute('title', `${bar.label || ''}: ${metricLabel} ${bar.tooltip_value || '0'} — Nhấn để xem chi tiết`);
+            barEl.dataset.drilldown = activeMetric === 'users' ? 'new_customers' : activeMetric;
+            barEl.dataset.from = bar.from || '';
+            barEl.dataset.to = bar.to || '';
             return barEl;
         };
 
@@ -1449,7 +1474,8 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
 
             const label = closestBar.dataset.label || '';
             const value = closestBar.dataset.value || '0';
-            tooltipEl.innerHTML = `<span class="label">${label}</span><span class="value">${value}</span>`;
+            const metricLabel = metricLabels[chartContainer.dataset.activeChart || 'revenue'] || 'Số liệu';
+            tooltipEl.innerHTML = `<span class="label">${label}</span><span class="value">${metricLabel}: ${value}</span><span class="small d-block mt-1">Nhấn để xem chi tiết</span>`;
 
             const tooltipGap = 12;
             const maxX = rect.width - tooltipEl.offsetWidth - 8;
@@ -1597,5 +1623,15 @@ $dashboardScopeLabel = $dashboardBranch ? 'chi nhánh ' . $dashboardBranch->name
         updatePeriodInUrl(selectedPeriodKey);
     });
 </script>
+
+@php
+    $drilldownEndpoint = route('admin.dashboard.drilldown');
+    $drilldownDefaults = [
+        'from' => ($selectedPeriodStat['start'] ?? now()->format('Y-m-d')).' 00:00:00',
+        'to' => ($selectedPeriodStat['end'] ?? now()->format('Y-m-d')).' 23:59:59',
+        'branch_id' => $dashboardBranch?->id,
+    ];
+@endphp
+@include('admin.partials.dashboard-drilldown')
 
 @endsection
