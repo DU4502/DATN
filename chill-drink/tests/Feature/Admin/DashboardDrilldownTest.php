@@ -289,6 +289,8 @@ class DashboardDrilldownTest extends TestCase
             ->assertOk()->assertJsonPath('data.total', 21)->assertJsonPath('data.last_page', 2)->assertJsonCount(20, 'data.rows');
         $this->actingAs($this->admin)->getJson($this->url('orders', ['page' => 2]))
             ->assertOk()->assertJsonCount(1, 'data.rows');
+        $this->actingAs($this->admin)->getJson($this->url('orders', ['per_page' => 6]))
+            ->assertOk()->assertJsonPath('data.per_page', 6)->assertJsonPath('data.last_page', 4)->assertJsonCount(6, 'data.rows');
         $this->actingAs($this->admin)->getJson($this->url('orders', ['from' => '2026-08-20 00:00:00', 'to' => '2026-08-20 23:59:59']))
             ->assertOk()->assertJsonPath('value', 0)->assertJsonPath('data.total', 0)->assertJsonCount(0, 'data.rows');
         $emptyAverage = $this->actingAs($this->admin)->getJson($this->url('average_order_value', ['from' => '2026-08-20 00:00:00', 'to' => '2026-08-20 23:59:59']));
@@ -329,6 +331,12 @@ class DashboardDrilldownTest extends TestCase
         $modal = file_get_contents(resource_path('views/admin/partials/dashboard-drilldown.blade.php'));
         $this->assertStringContainsString('config.branchId', $modal);
         $this->assertStringContainsString('config.productId', $modal);
+        $this->assertStringContainsString('aspect-ratio:8/5', $modal);
+        $this->assertStringContainsString('per_page:6', $modal);
+        $this->assertStringContainsString('dashboard-trace-results', $modal);
+        $this->assertStringContainsString('compactFormula', $modal);
+        $this->assertStringContainsString('Cách tính nhanh', $modal);
+        $this->assertStringNotContainsString('modal-dialog-scrollable', $modal);
 
         $this->actingAs($this->superAdmin)->get('/admin/super-admin')
             ->assertOk()

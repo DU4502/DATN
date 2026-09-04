@@ -45,7 +45,7 @@ class DashboardDrilldownRequest extends FormRequest
             'product_id' => ['required_if:metric,product_sales,product_revenue,product_cancellation_rate,product_reviews', 'nullable', 'integer', 'min:1', 'exists:products,id'],
             'search' => ['nullable', 'string', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1', 'max:100000'],
-            'per_page' => ['nullable', Rule::in([20, 30, 50])],
+            'per_page' => ['nullable', Rule::in([6, 20, 30, 50])],
         ];
     }
 

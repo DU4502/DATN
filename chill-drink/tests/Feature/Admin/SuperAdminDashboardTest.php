@@ -173,6 +173,29 @@ class SuperAdminDashboardTest extends TestCase
             ->assertSee('Danh sách quản trị viên', false);
     }
 
+    public function test_branch_edit_submit_handler_supports_forms_loaded_by_ajax(): void
+    {
+        $superAdmin = User::factory()->create([
+            'email' => User::SUPER_ADMIN_EMAIL,
+            'role_id' => 3,
+        ]);
+
+        $content = $this->actingAs($superAdmin)
+            ->get('/admin/super-admin')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString(
+            "const form = e.target.closest?.('.branch-edit-form');",
+            $content
+        );
+        $this->assertStringContainsString("formData.set('_token', csrfToken);", $content);
+        $this->assertStringNotContainsString(
+            "document.querySelectorAll('.branch-edit-form').forEach",
+            $content
+        );
+    }
+
     public function test_quick_revenue_chart_json_keeps_each_bucket_drilldown_range(): void
     {
         $superAdmin = User::factory()->create([

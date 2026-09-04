@@ -2817,9 +2817,16 @@ function hideBranchEditModal(form) {
 async function submitBranchEditForm(form) {
     const formData = new FormData(form);
     const action = form.getAttribute('action');
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+        || String(formData.get('_token') || '');
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn ? submitBtn.innerHTML : '';
+
+    // The analytics regions are replaced with HTML fetched in the background.
+    // Always prefer the token from the current page over a token in that fragment.
+    if (csrfToken) {
+        formData.set('_token', csrfToken);
+    }
 
     if (submitBtn) {
         submitBtn.disabled = true;
@@ -2857,10 +2864,9 @@ async function submitBranchEditForm(form) {
         showSuperAdminToast(data?.message || 'Cập nhật chi nhánh thành công!', 'success');
     } catch (error) {
         console.error('Branch edit error:', error);
-
-        if (!form.querySelector('[data-branch-edit-errors]')) {
-            alert('Có lỗi xảy ra. Vui lòng thử lại.');
-        }
+        setBranchEditErrors(form, {
+            request: [error?.message || 'Có lỗi xảy ra. Vui lòng thử lại.'],
+        });
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -2869,14 +2875,18 @@ async function submitBranchEditForm(form) {
     }
 }
 
-document.querySelectorAll('.branch-edit-form').forEach((form) => {
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        submitBranchEditForm(form);
-    }, true);
-});
+// Delegate from document because filtering and pagination replace branch forms.
+document.addEventListener('submit', function(e) {
+    const form = e.target.closest?.('.branch-edit-form');
+    if (!form) {
+        return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    submitBranchEditForm(form);
+}, true);
 
 document.addEventListener('click', function(e) {
     const toggleButton = e.target.closest('[data-branch-status-toggle]');
