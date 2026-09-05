@@ -58,13 +58,33 @@ class HomeController extends Controller
 
         $slides = $branch ? $branch->slides()->where('is_active', true)->get() : collect();
 
+        $featuredVouchers = \App\Models\Voucher::query()
+            ->where('status', true)
+            ->where('show_on_products', true)
+            ->where(function ($query) {
+                $query->whereNull('starts_at')
+                    ->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', now());
+            })
+            ->where(function ($query) {
+                $query->where('usage_limit', '<=', 0)
+                    ->orWhereRaw('used_count < usage_limit');
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit(4)
+            ->get();
+
         return view('client.home', compact(
             'recommendationResult',
             'categories',
             'discoverProducts',
             'favoriteProductIds',
             'slides',
-            'branch'
+            'branch',
+            'featuredVouchers'
         ));
     }
 

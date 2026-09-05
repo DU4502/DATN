@@ -31,67 +31,216 @@
     }
 
     .shop-hero {
+        position: relative;
         display: grid;
         grid-template-columns: 1.35fr 1fr;
-        gap: 1.75rem;
+        gap: 2rem;
         overflow: hidden;
-        border-radius: 32px;
-        padding: 2rem;
-        background: linear-gradient(135deg, #0e5e48 0%, #1f9577 100%);
+        border-radius: 28px;
+        padding: 2.25rem 2.5rem;
+        background: linear-gradient(135deg, #094838 0%, #10634f 50%, #187d66 100%);
+        box-shadow: 0 20px 45px rgba(9, 72, 56, 0.22);
         color: #ffffff;
-        min-height: 320px;
+        min-height: 310px;
+        align-items: center;
+        isolation: isolate;
+    }
+
+    .shop-hero__ambient {
+        position: absolute;
+        top: -15%;
+        right: -10%;
+        width: 440px;
+        height: 440px;
+        border-radius: 50%;
+        background-size: cover;
+        background-position: center;
+        filter: blur(55px);
+        opacity: 0.32;
+        pointer-events: none;
+        z-index: 0;
+        animation: heroAmbientPulse 7s ease-in-out infinite alternate;
+    }
+
+    .shop-hero__mesh {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 55%),
+                    radial-gradient(circle at 15% 85%, rgba(0, 0, 0, 0.16) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .shop-hero__content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
     }
 
     .shop-hero__badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.6rem 1rem;
+        gap: 0.45rem;
+        padding: 0.45rem 1rem;
         border-radius: 999px;
         background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
         color: #ffffff;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
+        letter-spacing: 0.07em;
+    }
+
+    .shop-hero__badge i {
+        color: #ffd166;
+        font-size: 0.95rem;
     }
 
     .shop-hero__title {
-        font-size: clamp(2rem, 4vw, 3rem);
-        line-height: 1.03;
+        font-size: clamp(1.85rem, 3.2vw, 2.65rem);
+        line-height: 1.15;
         font-weight: 800;
-        margin: 1rem 0 0.75rem;
+        margin: 0.9rem 0 0.65rem;
+        letter-spacing: -0.02em;
+        color: #ffffff;
     }
 
     .shop-hero__text {
-        max-width: 40rem;
-        font-size: 1.05rem;
-        line-height: 1.8;
-        margin-bottom: 1.75rem;
-        color: rgba(255, 255, 255, 0.92);
+        max-width: 38rem;
+        font-size: 0.98rem;
+        line-height: 1.65;
+        margin-bottom: 1.5rem;
+        color: rgba(255, 255, 255, 0.88);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .shop-hero__actions {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        flex-wrap: wrap;
     }
 
     .shop-hero__button {
-        min-width: 170px;
-        padding: 0.95rem 1.75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.78rem 1.85rem;
         border-radius: 999px;
         font-weight: 700;
+        font-size: 0.95rem;
+        background: #ffffff;
+        color: #0e5e48;
+        border: none;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        text-decoration: none;
+    }
+
+    .shop-hero__button:hover {
+        background: #f0fdf9;
+        color: #084c3c;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+    }
+
+    .shop-hero__button i {
+        transition: transform 0.25s ease;
+    }
+
+    .shop-hero__button:hover i {
+        transform: translateX(4px);
     }
 
     .shop-hero__visual {
-        display: grid;
+        position: relative;
+        z-index: 1;
+        display: flex;
         align-items: center;
-        justify-items: center;
-        min-height: 260px;
+        justify-content: center;
     }
 
-    .shop-hero__visual img {
-        width: min(100%, 300px);
-        max-height: 270px;
-        border-radius: 22px;
-        object-fit: contain;
-        background: rgba(255, 255, 255, 0.08);
-        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.14);
+    .shop-hero__card {
+        position: relative;
+        width: 100%;
+        max-width: 290px;
+        aspect-ratio: 1 / 1;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        padding: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .shop-hero:hover .shop-hero__card {
+        transform: translateY(-4px) scale(1.02);
+    }
+
+    .shop-hero__card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 18px;
+        transition: transform 0.4s ease;
+    }
+
+    .shop-hero:hover .shop-hero__card img {
+        transform: scale(1.05);
+    }
+
+    .shop-hero__price-tag {
+        position: absolute;
+        bottom: 1.25rem;
+        right: 1.25rem;
+        background: rgba(9, 72, 56, 0.88);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 0.92rem;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    }
+
+    @keyframes heroAmbientPulse {
+        0% { transform: scale(1) rotate(0deg); opacity: 0.24; }
+        100% { transform: scale(1.22) rotate(12deg); opacity: 0.38; }
+    }
+
+    @media (max-width: 991px) {
+        .shop-hero {
+            grid-template-columns: 1fr;
+            text-align: center;
+            padding: 2rem 1.5rem;
+            gap: 1.5rem;
+        }
+        .shop-hero__content {
+            align-items: center;
+        }
+        .shop-hero__actions {
+            justify-content: center;
+        }
+        .shop-hero__card {
+            max-width: 240px;
+        }
     }
 
     .shop-vouchers {
@@ -263,8 +412,27 @@
     }
 
     .shop-sidebar {
+        position: -webkit-sticky;
         position: sticky;
-        top: 108px;
+        top: 96px;
+        z-index: 20;
+    }
+
+    .btn-new-products {
+        background: linear-gradient(135deg, #ff9f1c 0%, #f77f00 100%);
+        border: none;
+        color: #ffffff !important;
+        font-weight: 700;
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
+        box-shadow: 0 6px 18px rgba(247, 127, 0, 0.28);
+        transition: all 0.22s ease;
+    }
+
+    .btn-new-products:hover {
+        background: linear-gradient(135deg, #f77f00 0%, #e06c00 100%);
+        box-shadow: 0 8px 24px rgba(247, 127, 0, 0.38);
+        transform: translateY(-2px);
     }
 
     .shop-grid-head {
@@ -411,7 +579,6 @@
         transform: translateX(2px);
     }
 
-    .filter-panel,
     .promo-panel,
     .shop-product-card {
         position: relative;
@@ -422,6 +589,11 @@
     }
 
     .filter-panel {
+        position: relative;
+        border: 1px solid rgba(13, 147, 115, 0.12);
+        border-radius: 20px;
+        background: #ffffff;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
         overflow: visible;
     }
 
@@ -438,22 +610,22 @@
     }
 
     .category-chip {
-        min-height: 30px;
+        min-height: 34px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
         width: 100%;
         border: 0;
-        border-radius: var(--radius-sm);
+        border-radius: 10px;
         background: transparent;
-        color: var(--drink-muted);
-        font-size: 0.84rem;
-        font-weight: 700;
-        padding: 0.34rem 0;
+        color: #4b5563;
+        font-size: 0.88rem;
+        font-weight: 600;
+        padding: 0.42rem 0.65rem;
         text-align: left;
         text-decoration: none;
-        transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        transition: all 0.18s ease;
     }
 
     .category-radio {
@@ -528,202 +700,230 @@
         transform: scale(1.03);
     }
 
-    .shop-product-card {
-        padding: 0.75rem;
-        height: 100%;
+    /* ─── Product Card (Same as Home Weather Section) ─── */
+    .home-product {
         display: flex;
         flex-direction: column;
-        transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
-    }
-
-    .shop-product-price {
-        display: flex;
-        justify-content: center;
-        text-align: center;
-    }
-
-    .shop-product-card:hover {
-        border-color: rgba(0, 139, 122, 0.38);
-        transform: translateY(-5px);
-        box-shadow: var(--shadow-lg), var(--shadow-glow);
-    }
-
-    .shop-product-image {
-        position: relative;
+        border-radius: 20px;
         overflow: hidden;
-        border-radius: var(--radius-sm);
-        aspect-ratio: 4 / 3;
-        background: var(--drink-primary-soft);
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        height: 100%;
+        position: relative;
     }
 
-    .shop-product-image img,
-    .shop-product-image .product-image {
+    .home-product:hover {
+        transform: translateY(-5px);
+        border-color: rgba(13, 147, 115, 0.3);
+        box-shadow: 0 12px 32px rgba(13, 147, 115, 0.15);
+    }
+
+    .home-product__img {
+        position: relative;
+        aspect-ratio: 1;
+        overflow: hidden;
+        background: linear-gradient(145deg, #f9fafb, #fff);
+    }
+
+    .home-product__img img,
+    .home-product__img .product-image {
         width: 100%;
         height: 100%;
-        min-height: 100%;
-        object-fit: contain !important;
-        object-position: center !important;
-        padding: 0.55rem;
+        object-fit: cover !important;
+        padding: 0 !important;
         display: block;
-        background: var(--drink-primary-soft) !important;
-        transition: transform 0.55s ease, filter 0.35s ease;
+        transition: transform 0.5s ease;
     }
 
-    .shop-product-card:hover .shop-product-image img {
-        filter: saturate(1.12) contrast(1.03);
-        transform: scale(1.07);
+    .home-product:hover .home-product__img img,
+    .home-product:hover .home-product__img .product-image {
+        transform: scale(1.05);
     }
 
-    .product-favorite-btn { position: absolute; top: 1.3rem; right: 1.3rem; z-index: 5; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; color: #687875; background: rgba(255,255,255,.94); box-shadow: 0 8px 22px rgba(16,63,55,.15); backdrop-filter: blur(8px); transition: transform .18s ease, color .18s ease, background .18s ease; }
-    .product-favorite-btn:hover { color: #e83e5b; transform: scale(1.08); }
-    .product-favorite-btn.is-active { color: #fff; border-color: #e83e5b; background: #e83e5b; }
-    .product-favorite-btn i { font-size: 1.12rem; line-height: 1; }
-    .product-favorite-btn.is-loading { opacity: .6; pointer-events: none; }
-
-    .product-tag {
+    .home-product .product-image-cart-form {
         position: absolute;
-        top: 0.55rem;
-        left: 0.55rem;
-        right: auto;
-        border-radius: var(--radius-sm);
-        background: #dff4ef;
-        color: var(--drink-primary-dark);
-        font-size: 0.65rem;
-        font-weight: 800;
-        padding: 0.22rem 0.5rem;
-    }
-
-    .shop-product-title {
-        min-height: 2.6rem;
-        display: -webkit-box;
-        overflow: hidden;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-        line-height: 1.2;
-    }
-
-    .shop-product-meta {
+        inset: 0;
+        z-index: 3;
         display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 0.75rem;
-    }
-
-    .product-rating-mini {
-        flex: 0 0 auto;
-        display: inline-flex;
         align-items: center;
-        gap: 0.18rem;
-        color: #f59e0b;
-        font-size: 0.78rem;
-        font-weight: 800;
-        line-height: 1;
-        white-space: nowrap;
-        margin-top: 0.3rem;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(7, 58, 53, 0.12);
+        transition: opacity 0.22s ease;
     }
 
-    .product-rating-mini i {
-        font-size: 0.72rem;
+    .home-product__img:hover .product-image-cart-form,
+    .home-product__img:focus-within .product-image-cart-form {
+        opacity: 1;
     }
 
-    .shop-product-sku {
-        min-height: 1.25rem;
-    }
-
-    .shop-product-desc {
-        min-height: 2.75rem;
-        display: -webkit-box;
-        overflow: hidden;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-    }
-
-    .shop-product-actions {
-        margin-top: auto;
-    }
-
-    .add-round {
-        width: 56px;
-        height: 56px;
-        min-width: 56px;
+    .home-product .product-cart-btn {
+        width: 54px;
+        height: 54px;
+        border: 0;
+        border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border: 0;
-        border-radius: 50%;
-        background: #008b7a;
+        background: #0d9373;
         color: #ffffff;
-        font-size: 1.75rem;
-        font-weight: 900;
+        box-shadow: 0 18px 36px rgba(13, 147, 115, 0.28);
+        pointer-events: auto;
+        transform: translateY(8px) scale(0.94);
+        transition: transform 0.22s ease, background 0.22s ease, box-shadow 0.22s ease;
+    }
+
+    .home-product .product-cart-btn i {
+        font-size: 1.25rem !important;
         line-height: 1;
-        text-decoration: none;
-        appearance: none;
-        -webkit-appearance: none;
-        box-shadow: 0 14px 28px rgba(0, 107, 95, 0.22);
-        position: relative;
+    }
+
+    .home-product__img:hover .product-cart-btn,
+    .home-product__img:focus-within .product-cart-btn {
+        transform: translateY(0) scale(1);
+    }
+
+    .home-product .product-cart-btn:hover {
+        background: #0a7a5f;
+        box-shadow: 0 20px 40px rgba(13, 147, 115, 0.34);
+    }
+
+    .home-product__tag {
+        position: absolute;
+        top: 0.875rem;
+        left: 0.875rem;
+        padding: 0.3rem 0.75rem;
+        border-radius: 50px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        color: #0a7a5f;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         z-index: 2;
-        transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
     }
 
-    .shop-product-card button.add-round,
-    .shop-product-card a.add-round {
-        background: #008b7a !important;
-        color: #ffffff !important;
-        opacity: 1 !important;
-    }
-
-    .add-round:hover {
-        background: #006b5f;
-        transform: scale(1.05);
-        box-shadow: 0 18px 34px rgba(0, 107, 95, 0.28);
-        color: #ffffff;
-    }
-
-    .shop-product-card form[data-ajax-cart] {
-        flex: 0 0 auto;
+    .home-product__favorite-form {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 5;
         margin: 0;
     }
 
-    .add-round svg,
-    .add-round i,
-    .add-round .add-round-symbol {
-        display: block;
-        color: currentColor !important;
-        font-size: 1.75rem;
-        font-weight: 900;
-        line-height: 1;
-    }
-
-    .add-round .add-round-symbol {
-        transform: translateY(-1px);
-    }
-
-    .product-cart-btn {
+    .home-product__favorite {
+        display: inline-grid;
+        place-items: center;
         width: 42px;
         height: 42px;
-        border: 0;
-        border-radius: 14px;
         padding: 0;
-        display: inline-flex;
+        border: 1px solid rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        color: #687875;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 8px 22px rgba(16, 63, 55, 0.15);
+        text-decoration: none;
+        backdrop-filter: blur(8px);
+        transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease;
+    }
+
+    .home-product__favorite:hover {
+        color: #e83e5b;
+        transform: scale(1.08);
+    }
+
+    .home-product__favorite.is-active {
+        color: #fff;
+        border-color: #e83e5b;
+        background: #e83e5b;
+    }
+
+    .home-product__favorite.is-loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .home-product__favorite i { font-size: 1.1rem; line-height: 1; }
+
+    .home-product__body {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        padding: 1.15rem 1.25rem 1.25rem;
+    }
+
+    .home-product__body [data-availability-badge] {
+        display: flex !important;
         align-items: center;
         justify-content: center;
-        background: var(--drink-primary-soft);
-        color: var(--c-primary, var(--drink-primary));
-        box-shadow: inset 0 0 0 1px rgba(13, 147, 115, 0.12);
-        transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        width: 100% !important;
+        text-align: center;
+        padding: 0.32rem 0.6rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.78rem;
+        line-height: 1.3;
+        white-space: normal;
+        margin-bottom: 0.55rem;
     }
 
-    .shop-product-card:hover .product-cart-btn,
-    .product-cart-btn:hover {
-        background: var(--c-primary, var(--drink-primary));
-        color: #ffffff;
-        transform: translateY(-1px);
-        box-shadow: 0 10px 20px rgba(13, 147, 115, 0.24);
+    .home-product__rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 0.45rem;
+        font-size: 0.78rem;
+        color: #F59E0B;
     }
 
-    .product-cart-btn i {
-        font-size: 1rem !important;
-        line-height: 1;
+    .home-product__rating span {
+        color: #6B7280;
+        margin-left: 2px;
+    }
+
+    .home-product__name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0 0 0.25rem;
+        letter-spacing: -0.02em;
+        line-height: 1.35;
+    }
+
+    .home-product__name a {
+        color: #111827;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .home-product__name a:hover { color: #0D9373; }
+
+    .home-product__sku {
+        font-size: 0.78rem;
+        color: #9CA3AF;
+        font-family: ui-monospace, monospace;
+        margin: 0 0 0.85rem;
+    }
+
+    .home-product__footer {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: auto;
+        padding-top: 0.85rem;
+        border-top: 1px solid #F3F4F6;
+        text-align: center;
+    }
+
+    .home-product__price {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0D9373;
+        letter-spacing: -0.02em;
     }
 
     .product-detail-btn {
@@ -1045,26 +1245,17 @@
             --bs-gutter-y: 0.6rem;
         }
         .shop-products-grid > .col-sm-6 { width: 50%; }
-        .shop-product-card { padding: 0.5rem; border-radius: 12px; }
-        .shop-product-image { margin-bottom: 0.45rem !important; aspect-ratio: 1; border-radius: 10px; }
-        .shop-product-image img, .shop-product-image .product-image { padding: 0.3rem; }
-        .product-favorite-btn { top: 0.75rem; right: 0.75rem; width: 32px; height: 32px; }
-        .product-favorite-btn i { font-size: 0.86rem; }
-        .product-tag {
-            top: 0.35rem; left: 0.35rem; max-width: calc(100% - 2.4rem);
-            overflow: hidden; padding: 0.16rem 0.35rem; font-size: 0.52rem;
-            text-overflow: ellipsis; white-space: nowrap;
-        }
-        .shop-product-meta { display: block; }
-        .shop-product-title { min-height: 2.15rem; font-size: 0.82rem; line-height: 1.25; }
-        .product-rating-mini, .shop-product-sku, .shop-product-desc { display: none; }
-        .shop-product-price { justify-content: flex-start; margin: 0.35rem 0 0.45rem !important; }
-        .shop-product-price .h5 { font-size: 0.9rem; }
-        .shop-product-card > .mb-2 { margin-bottom: 0.4rem !important; }
-        .shop-product-actions { gap: 0.35rem !important; }
-        .product-detail-btn { min-height: 34px; font-size: 0.68rem; }
-        .product-cart-btn { width: 34px; height: 34px; border-radius: 10px; }
-        .product-cart-btn i { font-size: 0.85rem !important; }
+        .home-product { border-radius: 16px; }
+        .home-product__body { padding: 0.85rem; }
+        .home-product__name { font-size: 0.92rem; }
+        .home-product__sku { font-size: 0.72rem; margin-bottom: 0.5rem; }
+        .home-product__price { font-size: 1.05rem; }
+        .home-product .product-cart-btn { width: 44px; height: 44px; }
+        .home-product .product-cart-btn i { font-size: 1.05rem !important; }
+        .home-product .product-image-cart-form { opacity: 1; background: transparent; }
+        .home-product__tag { top: 0.5rem; left: 0.5rem; padding: 0.2rem 0.5rem; font-size: 0.62rem; }
+        .home-product__favorite { width: 34px; height: 34px; top: 0.5rem; right: 0.5rem; }
+        .home-product__favorite i { font-size: 0.95rem; }
 
         .quick-add-modal .modal-header { padding: 0.85rem 0.9rem 0.45rem; }
         .quick-add-modal .modal-body { padding: 0 0.9rem 0.9rem; }
@@ -1097,14 +1288,19 @@
     <div class="container">
         <div class="row g-4">
             <aside class="col-lg-3">
-                <div class="shop-sidebar d-flex flex-column gap-4">
-                    <div class="d-grid mb-3">
-                        <a href="{{ route('products.index') }}" class="btn btn-warning btn-lg rounded-pill text-white">Sản phẩm mới</a>
-                    </div>
+                <div class="shop-sidebar d-flex flex-column gap-3">
                     <div class="filter-panel p-4">
-                        <h2 class="filter-panel__heading h5 fw-bold mb-4">
-                            Bộ lọc
-                        </h2>
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <h2 class="filter-panel__heading h5 fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-funnel-fill text-primary" style="font-size: 1rem;"></i>
+                                <span>Bộ lọc</span>
+                            </h2>
+                            @if(request('category') || request('sort') || request('min_price') || request('max_price'))
+                                <a href="{{ route('products.index') }}" class="text-secondary small text-decoration-none fw-semibold d-inline-flex align-items-center gap-1" title="Xóa tất cả bộ lọc">
+                                    <i class="bi bi-arrow-counterclockwise"></i>Làm mới
+                                </a>
+                            @endif
+                        </div>
 
                         <button type="button" class="filter-panel__mobile-toggle" aria-expanded="false" aria-controls="productFilterBody">
                             <span><i class="bi bi-sliders me-2"></i>Bộ lọc sản phẩm</span>
@@ -1113,111 +1309,151 @@
 
                         <div class="filter-panel__body" id="productFilterBody">
 
-                        <h3 class="filter-title mb-3">Danh mục</h3>
-                        <div class="category-list d-grid gap-2">
-                            <a href="{{ route('products.index') }}" class="category-chip {{ !request('category') && empty($searchQuery) ? 'active' : '' }}">
-                                <span>Tất cả</span>
-                                <span class="category-radio" aria-hidden="true"></span>
-                            </a>
-                            @forelse($categories as $category)
-                                <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-chip {{ request('category') == $category->id ? 'active' : '' }}">
-                                    <span>{{ $category->name }}</span>
-                                    <span class="category-radio" aria-hidden="true"></span>
-                                </a>
-                            @empty
-                                <a href="{{ route('products.index') }}" class="category-chip"><span>Trà sữa</span><span class="category-radio" aria-hidden="true"></span></a>
-                                <a href="{{ route('products.index') }}" class="category-chip"><span>Cà phê</span><span class="category-radio" aria-hidden="true"></span></a>
-                                <a href="{{ route('products.index') }}" class="category-chip"><span>Nước ép</span><span class="category-radio" aria-hidden="true"></span></a>
-                                <a href="{{ route('products.index') }}" class="category-chip"><span>Sinh tố</span><span class="category-radio" aria-hidden="true"></span></a>
-                            @endforelse
-                        </div>
-
-                        <div class="border-top mt-4 pt-4">
-                            <h3 class="filter-title mb-3">Lọc theo giá</h3>
-                            <form action="{{ route('products.index') }}" method="GET" id="priceFilterForm">
-                                @if(request('category'))
-                                    <input type="hidden" name="category" value="{{ request('category') }}">
-                                @endif
-                                @if(!empty($searchQuery))
-                                    <input type="hidden" name="search" value="{{ $searchQuery }}">
-                                @endif
-                                @if(request('sort'))
-                                    <input type="hidden" name="sort" value="{{ request('sort') }}">
-                                @endif
-                                
-                                <input type="hidden" name="min_price" id="minPriceInput" value="{{ request('min_price', 0) }}">
-                                <input type="hidden" name="max_price" id="maxPriceInput" value="{{ request('max_price', 100000) }}">
-                                
-                                <input 
-                                    class="range-control w-100" 
-                                    type="range" 
-                                    min="0" 
-                                    max="100000" 
-                                    step="5000"
-                                    value="{{ request('max_price', 100000) }}"
-                                    id="priceRange"
-                                >
-                                <div class="d-flex justify-content-between text-secondary small fw-semibold mt-2">
-                                    <span id="minPriceLabel">{{ number_format(request('min_price', 0), 0, ',', '.') }}đ</span>
-                                    <span id="maxPriceLabel">{{ number_format(request('max_price', 100000), 0, ',', '.') }}đ</span>
-                                </div>
-                                
-                                @if(request('min_price') || request('max_price'))
-                                    <div class="mt-3">
-                                        <a href="{{ route('products.index', request()->except(['min_price', 'max_price'])) }}" class="btn btn-outline-secondary w-100 fw-bold btn-sm">Xóa lọc giá</a>
+                            <!-- SẮP XẾP (ĐÃ ĐƯỢC CHUYỂN LÊN TRÊN ĐẦU) -->
+                            <div class="mb-4">
+                                <h3 class="filter-title mb-2.5 d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-arrow-down-up text-primary"></i>
+                                    <span>Sắp xếp theo</span>
+                                </h3>
+                                <form method="GET" action="{{ route('products.index') }}">
+                                    @foreach(request()->except(['sort', 'page']) as $key => $value)
+                                        @if(is_array($value))
+                                            @foreach($value as $nestedValue)
+                                                <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
+                                            @endforeach
+                                        @else
+                                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                        @endif
+                                    @endforeach
+                                    <input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
+                                    <div class="sort-dropdown sort-dropdown--full" data-sort-dropdown>
+                                        <button type="button" class="sort-dropdown-toggle" aria-expanded="false">
+                                            <span data-sort-label>{{ $currentSortLabel }}</span>
+                                            <i class="bi bi-chevron-down"></i>
+                                        </button>
+                                        <div class="sort-dropdown-menu shadow-lg">
+                                            @foreach($sortOptions as $value => $label)
+                                                <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active' : '' }}" data-sort-value="{{ $value }}">
+                                                    {{ $label }}
+                                                </button>
+                                            @endforeach
+                                        </div>
                                     </div>
-                                @endif
-                            </form>
-                        </div>
+                                </form>
+                            </div>
 
-                        <div class="border-top mt-4 pt-4">
-                            <h2 class="filter-title mb-3">Sắp xếp</h2>
-                            <form method="GET" action="{{ route('products.index') }}">
-                                @foreach(request()->except(['sort', 'page']) as $key => $value)
-                                    @if(is_array($value))
-                                        @foreach($value as $nestedValue)
-                                            <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
-                                        @endforeach
-                                    @else
-                                        <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                            <div class="border-top my-3.5"></div>
+
+                            <!-- DANH MỤC -->
+                            <div class="mb-4">
+                                <h3 class="filter-title mb-2.5 d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-grid-fill text-primary"></i>
+                                    <span>Danh mục</span>
+                                </h3>
+                                <div class="category-list d-grid gap-1">
+                                    <a href="{{ route('products.index') }}" class="category-chip {{ !request('category') && empty($searchQuery) ? 'active' : '' }}">
+                                        <span>Tất cả</span>
+                                        <span class="category-radio" aria-hidden="true"></span>
+                                    </a>
+                                    @forelse($categories as $category)
+                                        <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-chip {{ request('category') == $category->id ? 'active' : '' }}">
+                                            <span>{{ $category->name }}</span>
+                                            <span class="category-radio" aria-hidden="true"></span>
+                                        </a>
+                                    @empty
+                                        <a href="{{ route('products.index') }}" class="category-chip"><span>Trà sữa</span><span class="category-radio" aria-hidden="true"></span></a>
+                                        <a href="{{ route('products.index') }}" class="category-chip"><span>Cà phê</span><span class="category-radio" aria-hidden="true"></span></a>
+                                        <a href="{{ route('products.index') }}" class="category-chip"><span>Nước ép</span><span class="category-radio" aria-hidden="true"></span></a>
+                                        <a href="{{ route('products.index') }}" class="category-chip"><span>Sinh tố</span><span class="category-radio" aria-hidden="true"></span></a>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            <div class="border-top my-3.5"></div>
+
+                            <!-- LỌC THEO GIÁ -->
+                            <div>
+                                <h3 class="filter-title mb-2.5 d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-tag-fill text-primary"></i>
+                                    <span>Khoảng giá</span>
+                                </h3>
+                                <form action="{{ route('products.index') }}" method="GET" id="priceFilterForm">
+                                    @if(request('category'))
+                                        <input type="hidden" name="category" value="{{ request('category') }}">
                                     @endif
-                                @endforeach
-                                <input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
-                                <div class="sort-dropdown sort-dropdown--full" data-sort-dropdown>
-                                    <button type="button" class="sort-dropdown-toggle" aria-expanded="false">
-                                        <span data-sort-label>{{ $currentSortLabel }}</span>
-                                        <i class="bi bi-chevron-down"></i>
-                                    </button>
-                                    <div class="sort-dropdown-menu">
-                                        @foreach($sortOptions as $value => $label)
-                                            <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active' : '' }}" data-sort-value="{{ $value }}">
-                                                {{ $label }}
-                                            </button>
-                                        @endforeach
+                                    @if(!empty($searchQuery))
+                                        <input type="hidden" name="search" value="{{ $searchQuery }}">
+                                    @endif
+                                    @if(request('sort'))
+                                        <input type="hidden" name="sort" value="{{ request('sort') }}">
+                                    @endif
+                                    
+                                    <input type="hidden" name="min_price" id="minPriceInput" value="{{ request('min_price', 0) }}">
+                                    <input type="hidden" name="max_price" id="maxPriceInput" value="{{ request('max_price', 100000) }}">
+                                    
+                                    <input 
+                                        class="range-control w-100" 
+                                        type="range" 
+                                        min="0" 
+                                        max="100000" 
+                                        step="5000"
+                                        value="{{ request('max_price', 100000) }}"
+                                        id="priceRange"
+                                    >
+                                    <div class="d-flex justify-content-between text-secondary small fw-semibold mt-2">
+                                        <span id="minPriceLabel">{{ number_format(request('min_price', 0), 0, ',', '.') }}đ</span>
+                                        <span id="maxPriceLabel">{{ number_format(request('max_price', 100000), 0, ',', '.') }}đ</span>
                                     </div>
-                                </div>
-                            </form>
-                        </div>
-                        </div>
-                    </div>
+                                    
+                                    @if(request('min_price') || request('max_price'))
+                                        <div class="mt-3">
+                                            <a href="{{ route('products.index', request()->except(['min_price', 'max_price'])) }}" class="btn btn-outline-secondary w-100 fw-bold btn-sm rounded-pill">Xóa lọc giá</a>
+                                        </div>
+                                    @endif
+                                </form>
+                            </div>
 
-                    <div class="promo-panel">
-                        <img src="{{ asset('images/chill-drink-promo.png') }}" alt="Thành viên Chill Drink">
+                        </div>
                     </div>
                 </div>
             </aside>
 
             <div class="col-lg-9">
                 <div class="shop-main-top">
+                    @php
+                        $heroProduct = $latestProduct ?? null;
+                        $heroName = $heroProduct?->name ?? 'Matcha Dừa Mây';
+                        $heroDesc = $heroProduct?->display_description ?? 'Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.';
+                        $heroImage = $heroProduct?->image_url ?? asset('images/matcha.png');
+                        $heroUrl = $heroProduct ? route('products.show', $heroProduct->slug) : route('products.index');
+                        $heroPrice = $heroProduct?->price ? number_format($heroProduct->price, 0, ',', '.') . 'đ' : null;
+                    @endphp
+
                     <div class="shop-hero">
-                        <div>
-                            <span class="shop-hero__badge">Món mới nhất</span>
-                            <h2 class="shop-hero__title">Matcha Dừa Mây</h2>
-                            <p class="shop-hero__text">Sự kết hợp hoàn hảo giữa vị đắng thanh của Matcha và vị béo của cốt dừa.</p>
-                            <a href="{{ route('products.index') }}" class="btn btn-light btn-lg rounded-pill shop-hero__button">Thử ngay</a>
+                        <div class="shop-hero__ambient" style="background-image: url('{{ $heroImage }}');"></div>
+                        <div class="shop-hero__mesh"></div>
+
+                        <div class="shop-hero__content">
+                            <span class="shop-hero__badge">
+                                <i class="bi bi-stars"></i> Món mới nhất
+                            </span>
+                            <h2 class="shop-hero__title">{{ $heroName }}</h2>
+                            <p class="shop-hero__text">{{ $heroDesc }}</p>
+                            <div class="shop-hero__actions">
+                                <a href="{{ $heroUrl }}" class="shop-hero__button">
+                                    <span>Thử ngay</span>
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
+                            </div>
                         </div>
+
                         <div class="shop-hero__visual">
-                            <img src="{{ asset('images/matcha.png') }}" alt="Matcha Dừa Mây" loading="lazy">
+                            <div class="shop-hero__card">
+                                <img src="{{ $heroImage }}" alt="{{ $heroName }}" loading="lazy">
+                                @if($heroPrice)
+                                    <span class="shop-hero__price-tag">{{ $heroPrice }}</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
 
@@ -1275,37 +1511,11 @@
                     </div>
                 </div>
 
-                <div class="shop-grid-head">
+                <div class="shop-grid-head mb-4">
                     <div>
                         <h2 class="h4 fw-bold mb-1">Danh sách đồ uống</h2>
                         <p class="text-secondary mb-0">{{ $products->total() }} sản phẩm phù hợp</p>
                     </div>
-                    <form method="GET" action="{{ route('products.index') }}" class="shop-sort">
-                        @foreach(request()->except(['sort', 'page']) as $key => $value)
-                            @if(is_array($value))
-                                @foreach($value as $nestedValue)
-                                    <input type="hidden" name="{{ $key }}[]" value="{{ $nestedValue }}">
-                                @endforeach
-                            @else
-                                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                            @endif
-                        @endforeach
-                        <input type="hidden" name="sort" value="{{ $currentSort }}" data-sort-input>
-                        <span class="text-secondary fw-semibold small">Sắp xếp</span>
-                        <div class="sort-dropdown" data-sort-dropdown>
-                            <button type="button" class="sort-dropdown-toggle" aria-expanded="false">
-                                <span data-sort-label>{{ $currentSortLabel }}</span>
-                                <i class="bi bi-chevron-down"></i>
-                            </button>
-                            <div class="sort-dropdown-menu">
-                                @foreach($sortOptions as $value => $label)
-                                    <button type="button" class="sort-dropdown-option {{ $currentSort === $value ? 'active' : '' }}" data-sort-value="{{ $value }}">
-                                        {{ $label }}
-                                    </button>
-                                @endforeach
-                            </div>
-                        </div>
-                    </form>
                 </div>
 
                 @if(!empty($searchQuery))
@@ -1318,72 +1528,78 @@
 
                 <div class="row g-4 shop-products-grid">
                     @forelse($products as $product)
+                        @php
+                            $reviewCount = (int) ($product->reviews_count ?? 0);
+                            $rating = $reviewCount > 0 ? round((float) ($product->reviews_avg_rating ?? 0), 1) : 0;
+                            $isAvailableAtCurrentBranch = $product->availabilityAt($branch) === true;
+                        @endphp
                         <div class="col-sm-6 col-xl-4">
-                            <article class="shop-product-card">
-                                @auth
-                                    @php($isFavorite = $favoriteProductIds->contains($product->id))
-                                    <form method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>@csrf<button type="submit" class="product-favorite-btn {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button><i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i></button></form>
-                                @else
-                                    <a href="{{ route('login') }}" class="product-favorite-btn" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích"><i class="bi bi-heart"></i></a>
-                                @endauth
-                                <a href="{{ route('products.show', $product->slug) }}" class="shop-product-image d-block mb-3">
-                                    <x-product-image
-                                        :src="$product->image_url"
-                                        :sku="$product->sku ?? null"
-                                        :alt="$product->name"
-                                        :name="$product->name"
-                                        :category="$product->category?->name"
-                                    />
-                                    <span class="product-tag">{{ $product->category->name ?? 'Đồ uống' }}</span>
-                                </a>
-
-                                <div class="shop-product-meta mb-1">
-                                    <h2 class="h5 fw-bold mb-0 shop-product-title">
-                                        <a href="{{ route('products.show', $product->slug) }}" class="text-dark text-decoration-none">{{ $product->name }}</a>
-                                    </h2>
-                                    @if(($product->reviews_count ?? 0) > 0)
-                                        <span class="product-rating-mini" aria-label="Đánh giá {{ number_format((float) $product->reviews_avg_rating, 1) }} sao">
-                                            <i class="bi bi-star-fill" aria-hidden="true"></i>
-                                            {{ number_format((float) $product->reviews_avg_rating, 1) }}
-                                        </span>
+                            <article class="home-product">
+                                <div class="home-product__img">
+                                    <span class="home-product__tag">{{ $product->category?->name ?? 'Đồ uống' }}</span>
+                                    @auth
+                                        @php($isFavorite = $favoriteProductIds->contains($product->id))
+                                        <form class="home-product__favorite-form" method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>
+                                            @csrf
+                                            <button type="submit" class="home-product__favorite {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button>
+                                                <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i>
+                                            </button>
+                                        </form>
                                     @else
-                                        <span class="product-rating-mini text-secondary">Chưa có đánh giá</span>
-                                    @endif
+                                        <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
+                                            <i class="bi bi-heart"></i>
+                                        </a>
+                                    @endauth
+                                    <a href="{{ route('products.show', $product->slug) }}">
+                                        <x-product-image
+                                            :src="$product->image_url"
+                                            :sku="$product->sku ?? null"
+                                            :name="$product->name"
+                                            :alt="$product->name"
+                                            :category="$product->category?->name"
+                                        />
+                                    </a>
+                                    <div class="product-image-cart-form">
+                                        <button
+                                            type="button"
+                                            class="product-cart-btn {{ $isAvailableAtCurrentBranch ? '' : 'disabled' }}"
+                                            aria-label="Chọn size và thêm {{ $product->name }}"
+                                            data-quick-add
+                                            data-action="{{ route('cart.add', $product->id) }}"
+                                            data-name="{{ $product->name }}"
+                                            data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
+                                            data-base-price="{{ (int) ($product->price ?? 0) }}"
+                                            data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
+                                            data-image="{{ $product->image_url }}"
+                                            data-category="{{ $product->category?->name }}"
+                                            data-product-availability="{{ $product->id }}"
+                                            data-branch-id="{{ $branch?->id }}"
+                                            data-product-action
+                                            @disabled(! $isAvailableAtCurrentBranch)
+                                        >
+                                            <i class="bi {{ $isAvailableAtCurrentBranch ? 'bi-cart-plus' : 'bi-cart-x' }}" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                @if(!empty($product->sku))
-                                    <p class="text-secondary small font-monospace mb-2 shop-product-sku">{{ $product->sku }}</p>
-                                @else
-                                    <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
-                                @endif
-                                <p class="text-secondary small mb-3 shop-product-desc">{{ \Illuminate\Support\Str::limit($product->display_description, 70) }}</p>
-
-                                <div class="shop-product-price mb-3">
-                                    <span class="h5 fw-bold text-primary mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
-                                </div>
-                                <div class="mb-2">
-                                    <x-product-availability-badge :product="$product" :branch="$branch" />
-                                </div>
-                                <div class="d-flex align-items-center gap-2 shop-product-actions">
-                                    <a href="{{ route('products.show', $product->slug) }}" class="product-detail-btn">Chi tiết</a>
-                                    <button
-                                        type="button"
-                                        class="product-cart-btn {{ $product->availabilityAt($branch) === true ? '' : 'disabled' }}"
-                                        aria-label="Chọn size và thêm {{ $product->name }}"
-                                        data-quick-add
-                                        data-action="{{ route('cart.add', $product->id) }}"
-                                        data-name="{{ $product->name }}"
-                                        data-price="{{ number_format($product->price ?? 0, 0, ',', '.') }}đ"
-                                        data-base-price="{{ (int) ($product->price ?? 0) }}"
-                                        data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
-                                        data-image="{{ $product->image_url }}"
-                                        data-category="{{ $product->category?->name }}"
-                                        data-product-availability="{{ $product->id }}"
-                                        data-branch-id="{{ $branch?->id }}"
-                                        data-product-action
-                                        @disabled($product->availabilityAt($branch) !== true)
-                                    >
-                                        <i class="bi {{ $product->availabilityAt($branch) === true ? 'bi-cart-plus' : 'bi-cart-x' }}" aria-hidden="true"></i>
-                                    </button>
+                                <div class="home-product__body">
+                                    <x-product-availability-badge :product="$product" :branch="$branch" class="mb-2" />
+                                    <div class="home-product__rating">
+                                        @if($reviewCount > 0)
+                                            @for($star = 1; $star <= 5; $star++)
+                                                <i class="bi {{ $rating >= $star ? 'bi-star-fill' : ($rating >= $star - 0.5 ? 'bi-star-half' : 'bi-star') }}"></i>
+                                            @endfor
+                                            <span>({{ number_format($rating, 1) }} · {{ $reviewCount }})</span>
+                                        @else
+                                            <i class="bi bi-star text-secondary"></i>
+                                            <span>Chưa có đánh giá</span>
+                                        @endif
+                                    </div>
+                                    <h3 class="home-product__name">
+                                        <a href="{{ route('products.show', $product->slug) }}">{{ $product->name }}</a>
+                                    </h3>
+                                    <div class="home-product__footer">
+                                        <span class="home-product__price">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</span>
+                                    </div>
                                 </div>
                             </article>
                         </div>
@@ -1398,37 +1614,41 @@
                                 $item['slug'],
                             ]) as $item)
                                 <div class="col-sm-6 col-xl-4">
-                                    <article class="shop-product-card">
-                                        <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}" class="shop-product-image d-block mb-3">
-                                            <img src="{{ $item[3] }}" alt="{{ $item[0] }}">
+                                    <article class="home-product">
+                                        <div class="home-product__img">
                                             @if($item[4])
-                                                <span class="product-tag">{{ $item[4] }}</span>
+                                                <span class="home-product__tag">{{ $item[4] }}</span>
                                             @endif
-                                        </a>
-                                        <div class="shop-product-meta mb-2">
-                                            <h2 class="h5 fw-bold mb-0 shop-product-title">{{ $item[0] }}</h2>
-                                            <span class="product-rating-mini text-secondary">Chưa có đánh giá</span>
+                                            <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}">
+                                                <img src="{{ $item[3] }}" alt="{{ $item[0] }}">
+                                            </a>
+                                            <div class="product-image-cart-form">
+                                                <button
+                                                    type="button"
+                                                    class="product-cart-btn"
+                                                    aria-label="Chọn size và thêm {{ $item[0] }}"
+                                                    data-quick-add
+                                                    data-action="{{ route('cart.add', 'demo-' . $item[5]) }}"
+                                                    data-name="{{ $item[0] }}"
+                                                    data-price="{{ $item[2] }}"
+                                                    data-base-price="{{ (int) preg_replace('/\D/', '', $item[2]) }}"
+                                                    data-image="{{ $item[3] }}"
+                                                >
+                                                    <i class="bi bi-cart-plus" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <p class="text-secondary small font-monospace mb-2 shop-product-sku">&nbsp;</p>
-                                        <p class="text-secondary small mb-3 shop-product-desc">{{ $item[1] }}</p>
-                                        <div class="shop-product-price mb-3">
-                                            <span class="h5 fw-bold text-primary mb-0">{{ $item[2] }}</span>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2 shop-product-actions">
-                                            <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}" class="product-detail-btn">Chi tiết</a>
-                                            <button
-                                                type="button"
-                                                class="product-cart-btn"
-                                                aria-label="Chọn size và thêm {{ $item[0] }}"
-                                                data-quick-add
-                                                data-action="{{ route('cart.add', 'demo-' . $item[5]) }}"
-                                                data-name="{{ $item[0] }}"
-                                                data-price="{{ $item[2] }}"
-                                                data-base-price="{{ (int) preg_replace('/\D/', '', $item[2]) }}"
-                                                data-image="{{ $item[3] }}"
-                                            >
-                                                <i class="bi bi-cart-plus" aria-hidden="true"></i>
-                                            </button>
+                                        <div class="home-product__body">
+                                            <div class="home-product__rating">
+                                                <i class="bi bi-star text-secondary"></i>
+                                                <span>Chưa có đánh giá</span>
+                                            </div>
+                                            <h3 class="home-product__name">
+                                                <a href="{{ isset($item[5]) ? route('products.show', $item[5]) : route('products.index') }}">{{ $item[0] }}</a>
+                                            </h3>
+                                            <div class="home-product__footer">
+                                                <span class="home-product__price">{{ $item[2] }}</span>
+                                            </div>
                                         </div>
                                     </article>
                                 </div>

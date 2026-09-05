@@ -33,9 +33,6 @@
             </div>
         </div>
 
-        @if($isOpen && auth()->id() !== $group->owner_id)
-        @endif
-
         <div data-group-participation>
         @if(!$currentMember && $isOpen && !$isFull)
             <form method="POST" action="{{ route('group-orders.join', $group->code) }}" class="group-card p-4 mb-4" data-group-async-action data-group-join>@csrf
@@ -55,7 +52,7 @@
                         @foreach($products as $product)
                             <button type="button" class="group-product-option" data-product-option data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-search="{{ $product->name }} {{ $product->sku }}" data-toppings="{{ $productToppingMap->get($product->id, collect())->implode(',') }}">
                                 <x-product-image :src="$product->image_url" :sku="$product->sku" :name="$product->name" :category="$product->category?->name" class="group-product-option-image" />
-                                <span class="group-product-option-copy"><strong>{{ $product->name }}</strong><span class="text-secondary small">{{ $product->sku }} · {{ $product->category?->name }}</span></span>
+                                <span class="group-product-option-copy"><strong>{{ $product->name }}</strong><span class="text-secondary small">{{ $product->category?->name }}</span></span>
                                 <small class="group-product-option-price">{{ number_format($product->price, 0, ',', '.') }}đ</small>
                             </button>
                         @endforeach

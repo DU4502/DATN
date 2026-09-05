@@ -112,9 +112,16 @@ class BranchShippingFee
         $isFast = in_array($methodKey, ['fast', 'express', 'quick', 'priority'], true);
         $methodFee = $isFast ? (int) $settings['fast_surcharge'] : 0;
 
+        $freeKm = (float) $settings['free_km'];
+        $distanceLabel = $distance <= $freeKm
+            ? 'Miễn phí trong ' . number_format($freeKm, 0, ',', '.') . ' km'
+            : number_format(round($chargeableKm, 1), 1, ',', '.') . ' km tính phí';
+
         return [
             'distance_km' => $distance,
-            'distance_label' => rtrim(rtrim(number_format($distance, 2, '.', ''), '0'), '.') . ' km',
+            'distance_label' => $distanceLabel,
+            'estimate_label' => $distance <= $freeKm ? 'Gần cửa hàng' : ($distance <= 5.0 ? 'Khu vực gần' : ($distance <= 8.0 ? 'Khu vực nội thành' : 'Khu vực xa hơn')),
+            'estimate_detail' => $distance <= $freeKm ? 'trong vùng miễn phí ship' : ('cách chi nhánh ~' . number_format($distance, 1, ',', '.') . ' km'),
             'method' => $isFast ? 'fast' : 'standard',
             'method_label' => $isFast ? 'Giao nhanh' : 'Giao tiêu chuẩn',
             'method_eta' => $isFast ? 'Ưu tiên' : 'Tiêu chuẩn',
@@ -122,7 +129,7 @@ class BranchShippingFee
             'method_fee' => $methodFee,
             'total_fee' => $baseFee + $methodFee,
             'branch_id' => $branchId,
-            'free_km' => (float) $settings['free_km'],
+            'free_km' => $freeKm,
             'max_distance_km' => self::MAX_DISTANCE_KM,
             'chargeable_km' => round($chargeableKm, 2),
             'per_km_fee' => (int) $tier['per_km_fee'],

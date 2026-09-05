@@ -60,7 +60,7 @@ class CheckoutController extends Controller
         $cart = $this->normalizeCartForCheckout($cart);
 
         if (empty($cart)) {
-            return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
+            return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống.');
         }
 
         if (! empty($this->invalidCheckoutCartKeys($cart))) {
@@ -75,12 +75,12 @@ class CheckoutController extends Controller
         if ($request->query->has('items')) {
             $selectedKeys = $this->selectedCartKeys($request->query('items', []), $cart);
 
-            if (empty($selectedKeys)) {
-                return redirect()->route('cart.index')->with('error', 'Vui lòng chọn ít nhất một sản phẩm để thanh toán.');
+            if (! empty($selectedKeys)) {
+                $cart = array_intersect_key($cart, array_flip($selectedKeys));
+                session(['checkout_cart_keys' => $selectedKeys]);
+            } else {
+                session()->forget('checkout_cart_keys');
             }
-
-            $cart = array_intersect_key($cart, array_flip($selectedKeys));
-            session(['checkout_cart_keys' => $selectedKeys]);
         } else {
             session()->forget('checkout_cart_keys');
         }
@@ -351,7 +351,14 @@ class CheckoutController extends Controller
         $cart = $this->normalizeCartForCheckout($this->cartForCheckout($fullCart, $selectedKeys));
 
         if (empty($cart)) {
-            return redirect()->route('cart.index')->with('error', 'Your cart is empty!');
+            if ($lastOrderId = session()->get('last_completed_order_id')) {
+                $lastOrder = Order::find($lastOrderId);
+                if ($lastOrder && $lastOrder->user_id === auth()->id()) {
+                    return redirect()->route('checkout.success', $lastOrder);
+                }
+            }
+
+            return redirect()->route('cart.index')->with('error', 'Giỏ hàng của bạn đang trống.');
         }
 
         if (! empty($this->invalidCheckoutCartKeys($cart))) {
@@ -400,8 +407,14 @@ class CheckoutController extends Controller
             }
 
             [$voucher, $orderDiscount] = $this->resolveVoucher($request->input('voucher_code'), $subtotal, false);
-            [$shippingVoucher, $rawShippingDiscount] = $this->resolveVoucher($request->input('shipping_voucher_code'), $subtotal, true);
-            $shippingDiscount = min((int) $shippingFee, (int) $rawShippingDiscount);
+            if ($fulfillmentType === 'pickup' || (int) $shippingFee <= 0) {
+                $shippingVoucher = null;
+                $rawShippingDiscount = 0;
+                $shippingDiscount = 0;
+            } else {
+                [$shippingVoucher, $rawShippingDiscount] = $this->resolveVoucher($request->input('shipping_voucher_code'), $subtotal, true);
+                $shippingDiscount = min((int) $shippingFee, (int) $rawShippingDiscount);
+            }
             $discount = $orderDiscount + $shippingDiscount;
             $grandTotal = max(0, $subtotal + $shippingFee - $discount);
             $addressText = trim(collect([
@@ -533,6 +546,7 @@ class CheckoutController extends Controller
             }
 
             DB::commit();
+            session()->put('last_completed_order_id', $order->id);
 
             if ($completedGroupOrder
                 && $order->payment_method !== 'vnpay'
@@ -1480,11 +1494,26 @@ class CheckoutController extends Controller
     protected function selectedCartKeys(mixed $keys, array $cart): array
     {
         $keys = is_array($keys) ? $keys : [$keys];
+        $cartKeys = array_keys($cart);
 
-        return array_values(array_filter(
-            array_map('strval', $keys),
-            fn (string $key) => array_key_exists($key, $cart)
-        ));
+        $matched = [];
+        foreach ($keys as $key) {
+            $keyStr = (string) $key;
+            if (array_key_exists($keyStr, $cart)) {
+                $matched[] = $keyStr;
+                continue;
+            }
+            // Normalize hyphen vs underscore matching (e.g. reorder-130-xxx vs reorder_130_xxx)
+            $normalizedKey = str_replace(['-', '_'], '', $keyStr);
+            foreach ($cartKeys as $cartKey) {
+                if (str_replace(['-', '_'], '', (string) $cartKey) === $normalizedKey) {
+                    $matched[] = (string) $cartKey;
+                    break;
+                }
+            }
+        }
+
+        return array_values(array_unique($matched));
     }
 
     protected function cartForCheckout(array $cart, mixed $selectedKeys): array
@@ -1493,7 +1522,13 @@ class CheckoutController extends Controller
             return $cart;
         }
 
-        return array_intersect_key($cart, array_flip($this->selectedCartKeys($selectedKeys, $cart)));
+        $filtered = array_intersect_key($cart, array_flip($this->selectedCartKeys($selectedKeys, $cart)));
+
+        if (empty($filtered) && ! empty($cart)) {
+            return $cart;
+        }
+
+        return $filtered;
     }
 
     protected function invalidCheckoutCartKeys(array $cart): array

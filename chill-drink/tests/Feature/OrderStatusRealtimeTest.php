@@ -105,6 +105,8 @@ class OrderStatusRealtimeTest extends TestCase
     {
         $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
         $order = $this->orderFor($customer, $this->branch());
+        $completedOrder = $this->orderFor($customer, $this->branch());
+        $completedOrder->update(['status' => OrderStatus::COMPLETED]);
 
         $this->actingAs($customer)
             ->get(route('orders.index'))

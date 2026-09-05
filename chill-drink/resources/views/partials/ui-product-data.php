@@ -10,7 +10,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
     $uiCategoryImages = [
         'Trà Sữa' => asset('images/products/tra-sua-tran-chau-duong-den.webp'),
         'Cà Phê' => asset('images/products/ca-phe-sua-da.png'),
-        'Sinh Tố' => asset('images/products/sinh-to-xoai.png'),
+        'Sinh Tố' => asset('images/products/sinh-to-dau.png'),
         'Nước Ép' => asset('images/products/nuoc-ep-cam.png'),
         'Trà Trái Cây' => asset('images/products/tra-dao-cam-sa.png'),
         'Soda' => asset('images/products/soda-blue-curacao.png'),

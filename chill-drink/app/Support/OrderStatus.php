@@ -11,16 +11,16 @@ final class OrderStatus
     public const PENDING = 'pending';              // Chờ xác nhận
     public const CONFIRMED = 'confirmed';          // Đã xác nhận
     public const PREPARING = 'preparing';          // Đang pha chế
-    
+
     // Trạng thái giao hàng
     public const READY_FOR_DELIVERY = 'ready_for_delivery';  // Sẵn sàng giao
     public const SHIPPER_PICKED_UP = 'shipper_picked_up';    // Shipper đã lấy hàng
     public const DELIVERING = 'delivering';                   // Đang giao
     public const DELIVERED = 'delivered';                     // Đã giao
-    
+
     // Trạng thái lấy tại quán
     public const READY_FOR_PICKUP = 'ready_for_pickup';      // Sẵn sàng lấy
-    
+
     // Trạng thái kết thúc
     public const COMPLETED = 'completed';          // Hoàn thành
     public const CANCELLED = 'cancelled';          // Đã hủy
@@ -184,7 +184,7 @@ final class OrderStatus
         if ($fulfillmentType === 'pickup') {
             return self::PICKUP_SEQUENCE;
         }
-        
+
         return self::DELIVERY_SEQUENCE;
     }
 
@@ -213,7 +213,7 @@ final class OrderStatus
 
         // Lấy sequence phù hợp
         $sequence = self::getSequence($fulfillmentType);
-        
+
         $fromIndex = array_search($from, $sequence, true);
         $toIndex = array_search($to, $sequence, true);
 
@@ -278,11 +278,11 @@ final class OrderStatus
         $current = self::normalize($current);
         $labels = self::actionLabels();
         $options = [];
-        
+
         // Luôn thêm trạng thái hiện tại (để dropdown có value selected)
         $currentLabel = $labels[$current] ?? self::label($current);
         $options[$current] = $currentLabel;
-        
+
         // Nếu đã completed hoặc cancelled, không cho phép thay đổi
         if ($current === self::COMPLETED) {
             return $options;
@@ -291,13 +291,13 @@ final class OrderStatus
         if ($current === self::CANCELLED) {
             return $options;
         }
-        
+
         // Nếu đã DELIVERED, KHÔNG cho admin chuyển sang COMPLETED
         // (Khách hàng sẽ tự xác nhận)
         if ($current === self::DELIVERED) {
             return $options;
         }
-        
+
         // Thêm trạng thái tiếp theo nếu có
         $next = self::nextStatus($current, $fulfillmentType);
         if ($next !== null && isset($labels[$next])) {
@@ -691,7 +691,7 @@ final class OrderStatus
 
     public static function validationRule(): string
     {
-        return 'in:'.implode(',', array_keys(self::labels()));
+        return 'in:' . implode(',', array_keys(self::labels()));
     }
 
     /**

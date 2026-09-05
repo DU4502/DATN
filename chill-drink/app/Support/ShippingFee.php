@@ -47,8 +47,8 @@ class ShippingFee
         [
             'distance' => 3.5,
             'label' => 'Khu vực gần',
-            'detail' => 'nội thành gần cửa hàng',
-            'keywords' => ['ba đình', 'ba dinh', 'đống đa', 'dong da', 'hai bà trưng', 'hai ba trung', 'tây hồ', 'tay ho'],
+            'detail' => 'gần chi nhánh (nội thành)',
+            'keywords' => ['ba đình', 'ba dinh', 'đống đa', 'dong da', 'hai bà trưng', 'hai ba trung', 'tây hồ', 'tay ho', 'thanh hóa', 'thanh hoa', 'hạc thành', 'hac thanh', 'nông cống', 'nong cong', 'đông quang', 'dong quang', 'đông sơn', 'dong son', 'quảng thắng', 'quang thang', 'đông vinh', 'dong vinh'],
         ],
         [
             'distance' => 6.5,
@@ -72,7 +72,7 @@ class ShippingFee
             'distance' => 13.5,
             'label' => 'Ngoại khu gần',
             'detail' => 'gần giới hạn phục vụ 15 km',
-            'keywords' => ['hồ chí minh', 'ho chi minh', 'tp.hcm', 'tphcm', 'đà nẵng', 'da nang', 'cần thơ', 'can tho', 'thanh hóa', 'thanh hoa', 'khác', 'khac'],
+            'keywords' => ['hồ chí minh', 'ho chi minh', 'tp.hcm', 'tphcm', 'đà nẵng', 'da nang', 'cần thơ', 'can tho', 'khác', 'khac'],
         ],
     ];
 

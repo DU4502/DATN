@@ -483,6 +483,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::get('/orders', [ProfileController::class, 'orders'])->name('orders.index');
+    Route::get('/orders/{order}', [DeliveryTrackingController::class, 'show'])->name('orders.show');
     Route::get('/orders/{order}/track', [DeliveryTrackingController::class, 'show'])->name('orders.track');
     Route::get('/orders/{order}/delivery-tracking', [DeliveryTrackingController::class, 'authenticated'])->name('orders.delivery-tracking');
     Route::get('/orders/{order}/delivery-chat/messages', [OrderDeliveryChatController::class, 'customerMessages'])->name('orders.delivery-chat.messages');

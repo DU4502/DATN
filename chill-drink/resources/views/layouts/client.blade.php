@@ -1946,11 +1946,23 @@
                             @endif
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end profile-menu">
-                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
-                            <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng</a></li>
+                            <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Hồ sơ cá nhân</a></li>
+                            <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="bi bi-receipt me-2"></i>Đơn hàng của tôi</a></li>
+                            <li><a class="dropdown-item" href="{{ route('profile.addresses.index') }}"><i class="bi bi-geo-alt me-2"></i>Địa chỉ của bạn</a></li>
+                            <li><a class="dropdown-item" href="{{ route('favorites.index') }}"><i class="bi bi-heart me-2"></i>Món yêu thích</a></li>
                             <li><a class="dropdown-item" href="{{ route('loyalty.index') }}"><i class="bi bi-star-fill me-2 text-warning"></i>Điểm thưởng</a></li>
                             @if(auth()->user()->isStaff())
-                                <li><a class="dropdown-item" href="{{ auth()->user()->isSuperAdmin() ? route('admin.super-admin') : (auth()->user()->isCskh() ? route('admin.chat.index') : route('admin.dashboard')) }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
+                                @php
+                                    $staffDashboardUrl = match(true) {
+                                        auth()->user()->isSuperAdmin() => route('admin.super-admin'),
+                                        auth()->user()->isAdmin() => route('admin.dashboard'),
+                                        auth()->user()->isCskh() => route('admin.chat.index'),
+                                        auth()->user()->isStaffOnly() => route('staff.dashboard'),
+                                        auth()->user()->isShipper() => route('shipper.dashboard'),
+                                        default => route('admin.dashboard'),
+                                    };
+                                @endphp
+                                <li><a class="dropdown-item" href="{{ $staffDashboardUrl }}"><i class="bi bi-grid-1x2 me-2"></i>Quay lại trang quản lý</a></li>
                             @endif
                             <li>
                                 <hr class="dropdown-divider" style="margin: 0.25rem 0;">
@@ -2012,28 +2024,28 @@
                     <h3 class="footer-heading">Sản phẩm</h3>
                     <div class="d-flex flex-column gap-2">
                         <a href="{{ route('products.index') }}" class="footer-link">Tất cả</a>
-                        <a href="#" class="footer-link">Trà sữa</a>
-                        <a href="#" class="footer-link">Cà phê</a>
-                        <a href="#" class="footer-link">Nước ép</a>
+                        <a href="{{ route('products.index', ['category' => 'tra-sua']) }}" class="footer-link">Trà sữa</a>
+                        <a href="{{ route('products.index', ['category' => 'ca-phe']) }}" class="footer-link">Cà phê</a>
+                        <a href="{{ route('products.index', ['category' => 'nuoc-ep']) }}" class="footer-link">Nước ép</a>
                     </div>
                 </div>
                 <div class="col-6 col-lg-2">
                     <h3 class="footer-heading">Hỗ trợ</h3>
                     <div class="d-flex flex-column gap-2">
-                        <a href="#" class="footer-link">Liên hệ</a>
-                        <a href="#" class="footer-link">Câu hỏi thường gặp</a>
-                        <a href="#" class="footer-link">Chính sách đổi trả</a>
+                        <a href="{{ route('legal.terms') }}" class="footer-link">Liên hệ & Hỗ trợ</a>
+                        <a href="{{ route('legal.terms') }}" class="footer-link">Điều khoản dịch vụ</a>
+                        <a href="{{ route('legal.returns') }}" class="footer-link">Chính sách đổi trả</a>
                     </div>
                 </div>
                 <div class="col-lg-4">
                     <h3 class="footer-heading">Liên hệ</h3>
                     <div class="d-flex flex-column gap-2">
-                        <span class="footer-link" style="cursor: default;">
-                            <i class="bi bi-telephone me-2"></i>1900-xxxx
-                        </span>
-                        <span class="footer-link" style="cursor: default;">
+                        <a href="tel:0945606336" class="footer-link text-decoration-none">
+                            <i class="bi bi-telephone me-2"></i>0945 606 336
+                        </a>
+                        <a href="mailto:contact@chilldrink.com" class="footer-link text-decoration-none">
                             <i class="bi bi-envelope me-2"></i>contact@chilldrink.com
-                        </span>
+                        </a>
                         <span class="footer-link" style="cursor: default;">
                             <i class="bi bi-geo-alt me-2"></i>Hà Nội, Việt Nam
                         </span>

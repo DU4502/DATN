@@ -176,7 +176,13 @@ class ProductController extends Controller
             ->limit(4)
             ->get();
 
-        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers', 'branch'));
+        $latestProduct = Product::query()
+            ->with(['category', 'branchStatuses'])
+            ->where('status', true)
+            ->latest('id')
+            ->first();
+
+        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers', 'branch', 'latestProduct'));
     }
 
     /**

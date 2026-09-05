@@ -27,8 +27,14 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): View
     {
+        $user = $request->user();
+        if ($user) {
+            $user->address = self::cleanAddressString($user->address);
+            $user->area = self::cleanAddressString($user->area);
+        }
+
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $user,
         ]);
     }
 
@@ -219,6 +225,13 @@ class ProfileController extends Controller
             $data['avatar'] = $request->file('avatar_file')->store('avatars', 'public');
         }
 
+        if (isset($data['area'])) {
+            $data['area'] = self::cleanAddressString($data['area']);
+        }
+        if (isset($data['address'])) {
+            $data['address'] = self::cleanAddressString($data['address']);
+        }
+
         $user->fill($data);
 
         if ($user->isDirty('email') && Schema::hasColumn('users', 'email_verified_at')) {
@@ -227,7 +240,51 @@ class ProfileController extends Controller
 
         $user->save();
 
+        // Keep default address in addresses table in sync if user already has addresses
+        $defaultAddress = $user->addresses()->where('is_default', true)->first();
+        if ($defaultAddress) {
+            $defaultAddress->update([
+                'receiver_name' => $user->name ?: $defaultAddress->receiver_name,
+                'phone' => $user->phone ?: $defaultAddress->phone,
+                'detail' => $user->address ?: $defaultAddress->detail,
+                'province' => $user->area ?: $defaultAddress->province,
+                'latitude' => $user->latitude ?? $defaultAddress->latitude,
+                'longitude' => $user->longitude ?? $defaultAddress->longitude,
+            ]);
+        }
+
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
+    }
+
+    /**
+     * Deduplicate comma-separated tokens and collapse consecutive duplicate words in address string.
+     */
+    public static function cleanAddressString(?string $address): ?string
+    {
+        if (! $address) {
+            return $address;
+        }
+
+        // Collapse consecutive duplicate words/tokens like "254 254" -> "254"
+        $address = preg_replace('/\b(\S+)(?:\s+\1\b)+/u', '$1', $address);
+
+        $parts = array_map('trim', explode(',', $address));
+        $unique = [];
+        $seen = [];
+
+        foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
+            }
+            $part = preg_replace('/\b(\S+)(?:\s+\1\b)+/u', '$1', $part);
+            $key = mb_strtolower($part, 'UTF-8');
+            if (! isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique[] = $part;
+            }
+        }
+
+        return implode(', ', $unique);
     }
 
     /**

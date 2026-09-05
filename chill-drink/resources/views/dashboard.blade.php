@@ -74,17 +74,31 @@
                         <p class="mb-0 opacity-75 fs-5">Rất vui được gặp lại bạn tại Chill Drink</p>
                     </div>
                     
+@php
+    $currentUser = auth()->user();
+    $ordersCount = $currentUser?->orders()->count() ?? 0;
+    $loyaltyPoints = number_format($currentUser?->loyalty_points ?? 0);
+    $activeVouchersCount = \App\Models\Voucher::where('status', true)
+        ->where(function($q) {
+            $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+        })
+        ->where(function($q) {
+            $q->whereNull('expires_at')->orWhere('expires_at', '>=', now());
+        })
+        ->count();
+@endphp
+
                     <div class="dashboard-stats">
                         <div class="stat-item">
-                            <div class="stat-value text-primary">0</div>
+                            <div class="stat-value text-primary">{{ $ordersCount }}</div>
                             <div class="stat-label">Đơn hàng đã đặt</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value text-primary">0</div>
+                            <div class="stat-value text-primary">{{ $loyaltyPoints }}</div>
                             <div class="stat-label">Điểm thưởng</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value text-primary">0</div>
+                            <div class="stat-value text-primary">{{ $activeVouchersCount }}</div>
                             <div class="stat-label">Phiếu ưu đãi khả dụng</div>
                         </div>
                     </div>

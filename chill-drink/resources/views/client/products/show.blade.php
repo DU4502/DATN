@@ -1280,9 +1280,6 @@
                     <div>
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
                         <h1 class="display-5 fw-bold mb-3">{{ $product->name }}</h1>
-                        @if(!empty($product->sku))
-                        <p class="text-secondary small font-monospace mb-2">Mã sản phẩm: {{ $product->sku }}</p>
-                        @endif
                         <p class="h2 text-primary fw-bold mb-0" data-detail-price-display data-base-price="{{ (int)($product->price ?? 0) }}">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
                     </div>
 

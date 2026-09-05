@@ -504,7 +504,7 @@
                     <label class="register-check" for="terms">
                         <input id="terms" name="terms" type="checkbox" value="1" class="form-check-input @error('terms') is-invalid @enderror" required @checked(old('terms'))>
                         <span>
-                            Tôi đã đọc và đồng ý với <a href="#">Thỏa thuận sử dụng dịch vụ</a>, <a href="#">Chính sách quyền riêng tư</a>.
+                            Tôi đã đọc và đồng ý với <a href="{{ route('legal.terms') }}" target="_blank">Thỏa thuận sử dụng dịch vụ</a>, <a href="{{ route('legal.privacy') }}" target="_blank">Chính sách quyền riêng tư</a>.
                             @error('terms') <span class="invalid-feedback d-block">{{ $message }}</span> @enderror
                         </span>
                     </label>

@@ -483,10 +483,33 @@ $paymentLabels = $paymentLabels ?? [
         display: flex;
         flex-wrap: wrap;
         justify-content: space-between;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem 1.25rem;
+        align-items: flex-start;
+        gap: 1.25rem;
+        padding: 1.15rem 1.25rem;
         background: #f9fffd;
+    }
+
+    .order-card-footer-info {
+        flex: 1 1 480px;
+        min-width: 260px;
+        max-width: 100%;
+    }
+
+    .order-card-footer-actions {
+        flex: 0 0 auto;
+        min-width: 210px;
+        margin-left: auto;
+        text-align: right;
+    }
+
+    @media (max-width: 575.98px) {
+        .order-card-footer-actions {
+            width: 100%;
+            margin-left: 0;
+            text-align: right;
+            border-top: 1px dashed var(--drink-border);
+            padding-top: 0.75rem;
+        }
     }
 
     .orders-empty {
@@ -511,16 +534,11 @@ $paymentLabels = $paymentLabels ?? [
     }
 </style>
 
-<div id="profile-orders" class="mt-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+<div id="profile-orders" class="mt-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
             <h2 class="h4 fw-bold mb-0">Lịch sử mua hàng</h2>
-        </div>
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{{ route('loyalty.index') }}" class="btn btn-outline-warning"><i class="bi bi-star-fill me-1"></i>Điểm thưởng</a>
-            <a href="{{ route('favorites.index') }}" class="btn btn-outline-danger"><i class="bi bi-heart me-1"></i>Món yêu thích</a>
-            <a href="{{ route('group-orders.index') }}" class="btn btn-outline-primary"><i class="bi bi-people me-1"></i>Đơn nhóm</a>
-            <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Tiếp tục mua sắm</a>
+            <p class="text-secondary small mb-0">Theo dõi tiến trình các đơn hàng gần đây của bạn.</p>
         </div>
     </div>
 
@@ -587,12 +605,14 @@ $paymentLabels = $paymentLabels ?? [
             <div class="d-flex flex-column align-items-end">
                 <div class="fw-bold text-primary">{{ number_format($totalSubtotal, 0, ',', '.') }}đ</div>
 
-                @if($product)
-                <form method="POST" action="{{ route('orders.items.reorder', [$order, $item]) }}" class="mt-2">
-                    @csrf
-                    <button class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-repeat me-1"></i>Mua lại món này</button>
-                </form>
-                @endif
+                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mt-2">
+                    @if($product)
+                    <form method="POST" action="{{ route('orders.items.reorder', [$order, $item]) }}" class="m-0">
+                        @csrf
+                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3"><i class="bi bi-arrow-repeat me-1"></i>Mua lại món này</button>
+                    </form>
+                    @endif
+                </div>
 
                 @if(($statusKey ?? '') === 'completed' && $product)
                 @if(auth()->check() && ! $hasReviewedForThisItem)
@@ -663,7 +683,16 @@ $paymentLabels = $paymentLabels ?? [
         @endforeach
 
         <div class="order-card-footer">
-            <div class="text-secondary small">
+            @if($order->status === 'cancelled' && $order->cancellation_reason)
+            <div class="alert alert-danger d-flex align-items-start gap-2 mb-3 p-2.5 cancellation-reason-alert w-100" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem; flex: 1 0 100%;">
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-bold mb-1">Lý do hủy đơn:</div>
+                    <div>{{ $order->cancellation_reason }}</div>
+                </div>
+            </div>
+            @endif
+            <div class="text-secondary small order-card-footer-info">
                 <div class="mb-2">
                     <strong class="text-dark">
                         {{ ($order->fulfillment_type ?? 'delivery') === 'pickup' ? 'Thông tin nhận hàng:' : 'Thông tin giao hàng:' }}
@@ -716,6 +745,8 @@ $paymentLabels = $paymentLabels ?? [
                             if (preg_match('/^(.*?)(Giao hàng:.*)$/uis', $noteText, $matches)) {
                                 $customerNote = trim($matches[1]);
                                 $deliveryInfo = trim($matches[2]);
+                                // Loại bỏ phần lặp lại địa chỉ vì địa chỉ đã được hiển thị rõ ràng ở dòng trên
+                                $deliveryInfo = preg_replace('/,?\s*địa chỉ:\s*.*$/ui', '', $deliveryInfo);
                             } else {
                                 $customerNote = $noteText;
                             }
@@ -731,17 +762,8 @@ $paymentLabels = $paymentLabels ?? [
                     </div>
                     @endif
                 </div>
-                @if($order->status === 'cancelled' && $order->cancellation_reason)
-                <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2 cancellation-reason-alert" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
-                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold mb-1">Lý do hủy đơn:</div>
-                        <div>{{ $order->cancellation_reason }}</div>
-                    </div>
-                </div>
-                @endif
             </div>
-            <div class="text-end">
+            <div class="text-end ms-auto order-card-footer-actions">
                 <div class="text-secondary small">Tổng thanh toán</div>
                 <div class="h5 fw-bold text-primary mb-0">{{ $order->support_issue_id ? 'Miễn phí' : number_format((int) ($order->display_total ?? $order->total ?? 0), 0, ',', '.').'đ' }}</div>
                 
@@ -757,16 +779,22 @@ $paymentLabels = $paymentLabels ?? [
                         <span>Xem chi tiết đơn hàng</span>
                         <i class="bi bi-chevron-down"></i>
                     </button>
-                    @if(($order->fulfillment_type ?? 'delivery') === 'delivery' && $statusKey !== 'cancelled')
-                        <a href="{{ route('orders.track', $order) }}" class="btn btn-sm btn-primary w-100 fw-semibold">
+                    {{-- Link đến trang theo dõi / chi tiết đơn -- luôn hiển thị --}}
+                    <a href="{{ route('orders.show', $order) }}"
+                       class="btn btn-sm w-100 fw-semibold {{ (($order->fulfillment_type ?? 'delivery') === 'delivery' && $statusKey !== 'cancelled' && $statusKey !== 'completed') ? 'btn-primary' : 'btn-outline-primary' }}">
+                        @if(($order->fulfillment_type ?? 'delivery') === 'delivery' && !in_array($statusKey, ['cancelled', 'completed']))
                             <i class="bi bi-geo-alt-fill me-1"></i>Theo dõi đơn hàng
-                        </a>
-                    @endif
+                        @else
+                            <i class="bi bi-eye me-1"></i>Xem chi tiết đơn
+                        @endif
+                    </a>
 
+                    @if(in_array($statusKey, ['completed', 'cancelled', 'delivered']))
                     <form method="POST" action="{{ route('orders.reorder', $order) }}">
                         @csrf
                         <button class="btn btn-sm btn-outline-primary w-100"><i class="bi bi-lightning-charge me-1"></i>Đặt lại đơn</button>
                     </form>
+                    @endif
                     @php
                         $hasIssueReport = (int) ($order->issue_reports_count ?? 0) > 0;
                     @endphp
@@ -846,7 +874,7 @@ $paymentLabels = $paymentLabels ?? [
                         <h3 class="h6 fw-bold mb-1">Chi tiết đơn hàng</h3>
                         <p class="text-secondary small mb-0">Hiển thị đầy đủ size, topping, đường, đá và ghi chú của từng món.</p>
                     </div>
-                    <span class="badge text-bg-light border">{{ $order->orderItems->count() }} món cấu hình</span>
+                    <span class="badge text-bg-light border">{{ $order->orderItems->count() }} món</span>
                 </div>
 
                 <div class="order-detail-list">
@@ -1135,7 +1163,7 @@ $paymentLabels = $paymentLabels ?? [
         
         // If order is cancelled and has a reason, display it in the footer
         if (status === 'cancelled' && payload.cancellation_reason) {
-            const footer = orderCard.querySelector('.order-card-footer > div:first-child');
+            const footer = orderCard.querySelector('.order-card-footer');
             if (footer) {
                 // Remove existing cancellation reason if any
                 const existingReason = footer.querySelector('.cancellation-reason-alert');
@@ -1143,17 +1171,17 @@ $paymentLabels = $paymentLabels ?? [
                     existingReason.remove();
                 }
                 
-                // Add new cancellation reason
+                // Add new cancellation reason at top of footer spanning full width
                 const reasonHtml = `
-                    <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 mb-0 p-2 cancellation-reason-alert" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem;">
-                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.1rem; flex-shrink: 0;"></i>
+                    <div class="alert alert-danger d-flex align-items-start gap-2 mb-3 p-2.5 cancellation-reason-alert w-100" style="border-radius: 12px; border-left: 4px solid #dc2626; font-size: 0.9rem; flex: 1 0 100%;">
+                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 1.1rem; flex-shrink: 0;"></i>
                         <div class="flex-grow-1">
                             <div class="fw-bold mb-1">Lý do hủy đơn:</div>
                             <div>${escapeHtml(payload.cancellation_reason)}</div>
                         </div>
                     </div>
                 `;
-                footer.insertAdjacentHTML('beforeend', reasonHtml);
+                footer.insertAdjacentHTML('afterbegin', reasonHtml);
             }
         }
         

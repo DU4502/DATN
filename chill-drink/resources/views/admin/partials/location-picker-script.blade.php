@@ -213,22 +213,23 @@
 
     function uniqueAddressParts(parts) {
         const seen = new Set();
+        const result = [];
 
-        return parts
-            .map((part) => String(part || '').trim())
-            .filter((part) => {
-                if (!part) {
-                    return false;
+        for (const part of parts) {
+            let raw = String(part || '').trim();
+            if (!raw) continue;
+            raw = raw.replace(/\b(\S+)(?:\s+\1\b)+/gu, '$1');
+            const tokens = raw.split(',').map((t) => t.trim().replace(/\b(\S+)(?:\s+\1\b)+/gu, '$1')).filter(Boolean);
+            for (const token of tokens) {
+                const key = token.toLocaleLowerCase('vi-VN');
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push(token);
                 }
+            }
+        }
 
-                const key = part.toLocaleLowerCase('vi-VN');
-                if (seen.has(key)) {
-                    return false;
-                }
-
-                seen.add(key);
-                return true;
-            });
+        return result;
     }
 
     function isCoordinateLikeText(value) {
@@ -491,6 +492,9 @@
         const houseTargetSelector = container.dataset.autoFillHouseTarget;
         const areaTargetSelector = container.dataset.autoFillAreaTarget;
         const streetTargetSelector = container.dataset.autoFillStreetTarget;
+        const wardTargetSelector = container.dataset.autoFillWardTarget;
+        const districtTargetSelector = container.dataset.autoFillDistrictTarget;
+        const provinceTargetSelector = container.dataset.autoFillProvinceTarget;
         const showTerritoryLabels = container.dataset.showTerritoryLabels === '1';
 
         if (!mapEl || !latInput || !lngInput) {
@@ -708,6 +712,9 @@
                 areaInput: areaTargetSelector
                     ? document.querySelector(areaTargetSelector.trim())
                     : (selectors[1] ? document.querySelector(selectors[1].trim()) : null),
+                wardInput: wardTargetSelector ? document.querySelector(wardTargetSelector.trim()) : null,
+                districtInput: districtTargetSelector ? document.querySelector(districtTargetSelector.trim()) : null,
+                provinceInput: provinceTargetSelector ? document.querySelector(provinceTargetSelector.trim()) : null,
             };
         };
 
@@ -715,7 +722,7 @@
             const normalized = normalizeResolvedAddress(item, {
                 displayName: String(item?.displayName || item?.display_name || item?.title || '').trim(),
             });
-            const { houseInput, streetInput, areaInput } = getAddressTargets();
+            const { houseInput, streetInput, areaInput, wardInput, districtInput, provinceInput } = getAddressTargets();
             const currentHouseValue = String(houseInput?.value || '').trim();
             const currentStreetValue = String(streetInput?.value || '').trim();
             const currentAreaValue = String(areaInput?.value || '').trim();
@@ -746,6 +753,21 @@
             if (areaInput) {
                 areaInput.value = normalized.area || (preserveExisting ? readableAddressPart(currentAreaValue) : '');
                 areaInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (wardInput && normalized.ward) {
+                wardInput.value = normalized.ward;
+                wardInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (districtInput && normalized.district) {
+                districtInput.value = normalized.district;
+                districtInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (provinceInput && normalized.province) {
+                provinceInput.value = normalized.province;
+                provinceInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
 
             return normalized;

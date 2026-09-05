@@ -224,10 +224,12 @@
 
 <section class="profile-page">
     <div class="container">
-        <div class="profile-heading text-center">
+        <div class="profile-heading text-center mb-4">
             <h1 class="fw-bold mb-1">Cập nhật hồ sơ</h1>
             <p class="text-secondary mb-0">Quản lý thông tin cá nhân và bảo mật tài khoản.</p>
         </div>
+
+        @include('profile.partials.account-navigation', ['activeTab' => 'profile'])
 
         <div id="profile-info" class="row g-4 justify-content-center">
             <div class="col-lg-6">
@@ -311,13 +313,13 @@
                                     <h3 class="h6 fw-bold mb-0">Địa chỉ giao hàng</h3>
                                 </div>
                                 <div class="profile-address-search form-floating mb-3">
-                                    <input id="profileAddressSearch" type="search" class="form-control" value="{{ trim(old('address', $user->address) . ' ' . old('area', $user->area)) }}" placeholder="Tìm số nhà, đường, phường/xã..." autocomplete="off">
+                                    <input id="profileAddressSearch" type="search" class="form-control" value="{{ \App\Http\Controllers\ProfileController::cleanAddressString(trim(old('address', $user->address) . ', ' . old('area', $user->area))) }}" placeholder="Tìm số nhà, đường, phường/xã..." autocomplete="off">
                                     <label for="profileAddressSearch">Tìm địa chỉ giao hàng</label>
                                     <i class="bi bi-search profile-address-search-icon"></i>
                                     <div id="profileAddressSuggestions" class="profile-address-suggestions d-none"></div>
                                 </div>
                                 <div class="form-floating mb-3">
-                                    <input id="area" name="area" type="text" class="form-control @error('area') is-invalid @enderror" value="{{ old('area', $user->area) }}" placeholder="Bấm định vị để lấy khu vực">
+                                    <input id="area" name="area" type="text" class="form-control @error('area') is-invalid @enderror" value="{{ old('area', \App\Http\Controllers\ProfileController::cleanAddressString($user->area)) }}" placeholder="Bấm định vị để lấy khu vực">
                                     <label for="area">Khu vực (Phường/Xã, Tỉnh/TP)</label>
                                     <button id="profileLocationBtn" class="btn btn-primary position-absolute top-50 translate-middle-y end-0 me-2 py-1 px-3 rounded-pill" type="button" style="z-index: 10;">
                                         <i class="bi bi-crosshair me-1"></i>Định vị
@@ -327,7 +329,7 @@
                                 <div id="profileLocationStatus" class="form-text small mb-2 text-primary"></div>
                                 
                                 <div class="form-floating mb-3">
-                                    <input id="address" name="address" type="text" class="form-control @error('address') is-invalid @enderror" value="{{ old('address', $user->address) }}" placeholder="Số nhà, tên đường..." autocomplete="street-address">
+                                    <input id="address" name="address" type="text" class="form-control @error('address') is-invalid @enderror" value="{{ old('address', \App\Http\Controllers\ProfileController::cleanAddressString($user->address)) }}" placeholder="Số nhà, tên đường..." autocomplete="street-address">
                                     <label for="address">Địa chỉ chi tiết (Số nhà, đường...)</label>
                                     @error('address') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                 </div>
@@ -338,9 +340,9 @@
                                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                                         <div>
                                             <div class="fw-bold fs-6">Vị trí Map</div>
-                                            <div class="text-secondary small" id="profileMapText">{{ trim(($user->address ?? '') . ' ' . ($user->area ?? '')) ?: 'Chưa có vị trí' }}</div>
+                                            <div class="text-secondary small" id="profileMapText">{{ \App\Http\Controllers\ProfileController::cleanAddressString(trim(($user->address ?? '') . ', ' . ($user->area ?? ''))) ?: 'Chưa có vị trí' }}</div>
                                         </div>
-                                        <a id="profileMapLink" href="https://www.google.com/maps/search/{{ urlencode(trim(($user->address ?? '') . ' ' . ($user->area ?? ''))) }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm rounded-pill">
+                                        <a id="profileMapLink" href="https://www.google.com/maps/search/{{ urlencode(\App\Http\Controllers\ProfileController::cleanAddressString(trim(($user->address ?? '') . ', ' . ($user->area ?? '')))) }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm rounded-pill">
                                             Xem trên Map
                                         </a>
                                     </div>
@@ -358,10 +360,10 @@
                 </div>
             </div>
 
-            <div class="col-lg-5">
+            <div class="col-lg-6">
                 <div class="profile-card">
                     <div class="d-flex align-items-center gap-3 mb-4">
-                        <span class="section-title-icon text-warning" style="background: #FEF3C7;"><i class="bi bi-shield-lock"></i></span>
+                        <span class="section-title-icon"><i class="bi bi-shield-lock"></i></span>
                         <h2 class="h4 fw-bold mb-0">Đổi mật khẩu</h2>
                     </div>
                     
@@ -415,7 +417,7 @@
                         </div>
 
                         <div class="mt-4 pt-3 border-top d-flex align-items-center gap-3">
-                            <button type="submit" class="btn btn-warning px-4 rounded-pill fw-semibold text-dark" data-password-submit>Lưu mật khẩu mới</button>
+                            <button type="submit" class="btn btn-primary px-4 rounded-pill fw-semibold" data-password-submit>Lưu mật khẩu mới</button>
                             <span class="text-danger small fw-semibold d-none" data-password-form-message></span>
                             @if (session('status') === 'password-updated')
                                 <span class="text-success fw-medium"><i class="bi bi-check-circle me-1"></i>Đã đổi mật khẩu thành công.</span>
@@ -626,18 +628,24 @@
 
     function uniqueProfileAddressParts(parts) {
         const seen = new Set();
+        const result = [];
 
-        return parts.filter((part) => {
-            const value = String(part || '').trim();
-            const key = value.toLocaleLowerCase('vi-VN');
-
-            if (!value || seen.has(key)) {
-                return false;
+        for (const part of parts) {
+            let raw = String(part || '').trim();
+            if (!raw) continue;
+            // Collapse consecutive duplicate words/tokens like "254 254" -> "254"
+            raw = raw.replace(/\b(\S+)(?:\s+\1\b)+/gu, '$1');
+            const tokens = raw.split(',').map((t) => t.trim().replace(/\b(\S+)(?:\s+\1\b)+/gu, '$1')).filter(Boolean);
+            for (const token of tokens) {
+                const key = token.toLocaleLowerCase('vi-VN');
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push(token);
+                }
             }
+        }
 
-            seen.add(key);
-            return true;
-        });
+        return result;
     }
 
     function escapeProfileHtml(value) {
@@ -926,10 +934,10 @@
                     const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=vi`);
                     const data = await response.json();
                     const address = data.address || {};
-                    const streetLine = compactProfileAddress([
+                    const streetLine = compactProfileAddress(uniqueProfileAddressParts([
                         address.house_number,
                         address.road || address.pedestrian || address.footway,
-                    ]);
+                    ]));
                     const wardLine = pickVietnamWardName([
                         address.city,
                         address.suburb,
@@ -941,14 +949,14 @@
                         address.town,
                     ]);
                     const provinceLine = String(address.state || address.region || '').trim();
-                    const areaLine = compactProfileAddress([
+                    const areaLine = compactProfileAddress(uniqueProfileAddressParts([
                         wardLine,
                         provinceLine,
-                    ]);
+                    ]));
 
                     profileAddressInput.value = streetLine || data.display_name || `${lat}, ${lng}`;
                     profileAreaInput.value = areaLine || data.display_name || `${lat}, ${lng}`;
-                    setProfileMapLocation(lat, lng, compactProfileAddress([profileAddressInput.value, profileAreaInput.value]));
+                    setProfileMapLocation(lat, lng, compactProfileAddress(uniqueProfileAddressParts([profileAddressInput.value, profileAreaInput.value])));
                     profileLocationStatus.textContent = 'Đã tự điền địa chỉ! Vui lòng lưu lại.';
                 } catch (error) {
                     profileAddressInput.value = `Vị trí hiện tại: ${lat}, ${lng}`;

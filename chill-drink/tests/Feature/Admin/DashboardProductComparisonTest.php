@@ -23,18 +23,9 @@ class DashboardProductComparisonTest extends TestCase
         $response = $this->actingAs($admin)->get('/admin/dashboard');
 
         $response->assertOk()
-            ->assertSee('So sánh theo thời gian', false)
-            ->assertSee('Bảng lịch sử doanh thu của chi nhánh, mới nhất ở trên cùng.', false)
-            ->assertSee('Tải Excel', false)
-            ->assertSee('4 kỳ', false)
-            ->assertSee('8 kỳ', false)
-            ->assertSee('12 kỳ', false)
-            ->assertSee('Kỳ', false)
-            ->assertSee('Trung bình/đơn', false)
-            ->assertSee('So với kỳ trước', false)
-            ->assertDontSee('Cả hai', false)
-            ->assertDontSee('Đơn hàng mới nhất', false)
-            ->assertDontSee('Tất cả đơn hàng', false);
+            ->assertDontSee('So sánh theo thời gian', false)
+            ->assertDontSee('Bảng lịch sử doanh thu của chi nhánh, mới nhất ở trên cùng.', false)
+            ->assertDontSee('Cả hai', false);
     }
 
     public function test_admin_dashboard_time_comparison_respects_branch_scope_and_orders_periods_newest_first(): void

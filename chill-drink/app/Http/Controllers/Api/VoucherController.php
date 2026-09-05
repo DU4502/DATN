@@ -112,17 +112,18 @@ class VoucherController extends Controller
                 ->get();
         }
 
-        $vouchers = $userVouchers->map(function ($uv) {
+        $vouchers = $userVouchers->filter(fn ($uv) => $uv->voucher !== null)->map(function ($uv) {
             return [
                 'id' => $uv->id,
                 'code' => $uv->voucher->code,
                 'description' => $uv->voucher->description,
                 'value' => $uv->voucher->formattedValue(),
+                'raw_value' => (float) $uv->voucher->value,
                 'type' => $uv->voucher->type,
-                'min_order' => $uv->voucher->min_order,
-                'max_discount' => $uv->voucher->max_discount,
+                'min_order' => (int) $uv->voucher->min_order,
+                'max_discount' => (int) ($uv->voucher->max_discount ?? 0),
             ];
-        });
+        })->values();
 
         return response()->json(['vouchers' => $vouchers]);
     }

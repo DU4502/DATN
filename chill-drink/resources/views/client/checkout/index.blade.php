@@ -24,33 +24,62 @@
     // Get user coordinates
     $userLatitude = $userLatitude ?? null;
     $userLongitude = $userLongitude ?? null;
-    $hasUserLocation = !empty($userLatitude) && !empty($userLongitude);
+    $selectedCheckoutAddress = collect($addressBook ?? [])->firstWhere('id', $selectedAddressId ?? 'primary');
+    $addressLat = $selectedCheckoutAddress['latitude'] ?? $userLatitude;
+    $addressLng = $selectedCheckoutAddress['longitude'] ?? $userLongitude;
+    $hasAddressCoords = !empty($addressLat) && !empty($addressLng);
+    $selectedBranch = $branches->first();
     $fulfillmentType = old('fulfillment_type', 'delivery');
     $selectedShippingMethod = old('shipping_method_ui', 'standard');
-    $shippingQuote = \App\Support\ShippingFee::quoteForAddress(
-        old('shipping_address_ui', $primaryAddress),
-        old('shipping_area_ui', $primaryArea),
-        $selectedShippingMethod,
-        $cartQuantity
-    );
-    $shippingFee = $fulfillmentType === 'pickup' ? 0 : $shippingQuote['total_fee'];
+
+    if ($fulfillmentType === 'pickup') {
+        $shippingFee = 0;
+        $shippingQuote = [
+            'total_fee' => 0,
+            'distance_km' => 0,
+            'distance_label' => 'Nhận tại quán',
+            'estimate_label' => 'Tự nhận tại chi nhánh',
+            'estimate_detail' => 'Nhận trực tiếp tại cửa hàng',
+        ];
+    } elseif ($hasAddressCoords && $selectedBranch && !empty($selectedBranch->latitude) && !empty($selectedBranch->longitude)) {
+        $dist = $selectedBranch->distanceTo((float) $addressLat, (float) $addressLng);
+        $shippingQuote = array_merge([
+            'estimate_label' => $dist <= 3.5 ? 'Khu vực gần' : 'Khu vực xa hơn',
+            'estimate_detail' => 'cách chi nhánh ~' . number_format($dist, 1, ',', '.') . ' km',
+            'distance_label' => number_format($dist, 1, ',', '.') . ' km',
+        ], \App\Support\ShippingFee::calculate($dist, $selectedShippingMethod, $cartQuantity));
+        $shippingFee = $shippingQuote['total_fee'];
+    } else {
+        $shippingQuote = \App\Support\ShippingFee::quoteForAddress(
+            old('shipping_address_ui', $primaryAddress),
+            old('shipping_area_ui', $primaryArea),
+            $selectedShippingMethod,
+            $cartQuantity
+        );
+        $shippingFee = $shippingQuote['total_fee'];
+    }
     $availableVouchers = collect($availableVouchers ?? []);
     $receivedVouchers = collect($receivedVouchers ?? []);
     $ownedVoucherModels = $receivedVouchers->pluck('voucher')->filter();
     $selectableVouchers = $availableVouchers->concat($ownedVoucherModels)->unique('id')->values();
     $loyaltyContext = $loyaltyContext ?? ['points' => 0];
-    $selectedCheckoutAddress = collect($addressBook ?? [])->firstWhere('id', $selectedAddressId ?? 'primary');
     $selectedCheckoutPhone = trim((string) ($selectedCheckoutAddress['phone'] ?? $user->phone ?? ''));
     $checkoutPhoneReady = $selectedCheckoutPhone !== '' && $selectedCheckoutPhone !== 'Chưa cập nhật';
-    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext) {
+    $isShippingVoucher = fn ($voucher) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::upper((string) $voucher->code), ['SHIP', 'FREE']) || (isset($voucher->discount_target) && $voucher->discount_target === 'shipping');
+    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext, $shippingFee, $fulfillmentType, $isShippingVoucher) {
         $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
         $hasPoints = ! $voucher->is_redeemable
             || (int) $voucher->point_cost <= 0
             || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
 
+        if ($isShippingVoucher($voucher)) {
+            if ($fulfillmentType === 'pickup' || $shippingFee <= 0) {
+                return false;
+            }
+        }
+
         return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasPoints;
     };
-    $isShippingVoucher = fn ($voucher) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::upper((string) $voucher->code), ['SHIP', 'FREE']);
     $shippingVouchers = $availableVouchers->filter($isShippingVoucher)->values();
     $discountVouchers = $availableVouchers->reject($isShippingVoucher)->values();
     $voucherDisplayGroups = collect([
@@ -2221,15 +2250,30 @@
                                 $disabledReason = ! $hasMinimumOrder
                                     ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
                                     : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
+                                if ($voucherIsShipping) {
+                                    if ($fulfillmentType === 'pickup') {
+                                        $voucherUsable = false;
+                                        $disabledReason = 'Đơn nhận tại quán không áp dụng freeship';
+                                    } elseif ($shippingFee <= 0) {
+                                        $voucherUsable = false;
+                                        $disabledReason = 'Phí vận chuyển 0đ (không cần áp dụng)';
+                                    }
+                                }
                             @endphp
                             <div
                                 class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
-                                @if($voucherUsable) data-voucher-card @endif
+                                data-voucher-card
                                 data-voucher-code="{{ $voucher->code }}"
                                 data-voucher-label="{{ $voucherLabel }}"
                                 data-voucher-discount="{{ $voucherDiscount }}"
                                 data-voucher-type="{{ $voucherIsShipping ? 'shipping' : 'discount' }}"
                                 data-voucher-disabled="{{ $voucherUsable ? '0' : '1' }}"
+                                data-min-order="{{ (int) $voucher->min_order }}"
+                                data-rate-type="{{ $voucher->type }}"
+                                data-voucher-value="{{ (float) $voucher->value }}"
+                                data-max-discount="{{ (int) ($voucher->max_discount ?? 0) }}"
+                                data-point-cost="{{ (int) ($voucher->point_cost ?? 0) }}"
+                                data-is-redeemable="{{ $voucher->is_redeemable ? '1' : '0' }}"
                                 data-is-received="1"
                                 style="position: relative;"
                             >
@@ -2260,12 +2304,12 @@
                                         @endif
                                     </div>
                                     @if($voucherUsable)
-                                        <span class="voucher-only mb-2">
+                                        <span class="voucher-only mb-2" data-voucher-badge>
                                             {{ $voucherIsShipping ? 'Giảm phí vận chuyển' : 'Giảm đơn hàng' }}
                                             {{ number_format($voucherDiscount, 0, ',', '.') }}đ
                                         </span>
                                     @else
-                                        <span class="voucher-only mb-2">{{ $disabledReason }}</span>
+                                        <span class="voucher-only mb-2" data-voucher-badge>{{ $disabledReason }}</span>
                                     @endif
                                     <div class="voucher-progress mt-2 mb-1"><span style="width: {{ $usagePercent }}%"></span></div>
                                     <div class="small text-secondary">
@@ -2320,15 +2364,30 @@
                                             $disabledReason = ! $hasMinimumOrder
                                                 ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
                                                 : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
+                                            if ($voucherIsShipping) {
+                                                if ($fulfillmentType === 'pickup') {
+                                                    $voucherUsable = false;
+                                                    $disabledReason = 'Đơn nhận tại quán không áp dụng freeship';
+                                                } elseif ($shippingFee <= 0) {
+                                                    $voucherUsable = false;
+                                                    $disabledReason = 'Phí vận chuyển 0đ (không cần áp dụng)';
+                                                }
+                                            }
                                         @endphp
                                         <div
                                             class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
-                                            @if($voucherUsable) data-voucher-card @endif
+                                            data-voucher-card
                                             data-voucher-code="{{ $voucher->code }}"
                                             data-voucher-label="{{ $voucherLabel }}"
                                             data-voucher-discount="{{ $voucherDiscount }}"
                                             data-voucher-type="{{ $voucherIsShipping ? 'shipping' : 'discount' }}"
                                             data-voucher-disabled="{{ $voucherUsable ? '0' : '1' }}"
+                                            data-min-order="{{ (int) $voucher->min_order }}"
+                                            data-rate-type="{{ $voucher->type }}"
+                                            data-voucher-value="{{ (float) $voucher->value }}"
+                                            data-max-discount="{{ (int) ($voucher->max_discount ?? 0) }}"
+                                            data-point-cost="{{ (int) ($voucher->point_cost ?? 0) }}"
+                                            data-is-redeemable="{{ $voucher->is_redeemable ? '1' : '0' }}"
                                         >
                                             <div class="voucher-ticket-brand">
                                                 <span class="brand-circle"><i class="bi {{ $voucherIcon }}"></i></span>
@@ -2350,12 +2409,12 @@
                                                     @endif
                                                 </div>
                                                 @if($voucherUsable)
-                                                    <span class="voucher-only mb-2">
+                                                    <span class="voucher-only mb-2" data-voucher-badge>
                                                         {{ $voucherIsShipping ? 'Giảm phí vận chuyển' : 'Giảm đơn hàng' }}
                                                         {{ number_format($voucherDiscount, 0, ',', '.') }}đ
                                                     </span>
                                                 @else
-                                                    <span class="voucher-only mb-2">{{ $disabledReason }}</span>
+                                                    <span class="voucher-only mb-2" data-voucher-badge>{{ $disabledReason }}</span>
                                                 @endif
                                                 <div class="voucher-progress mt-2 mb-1"><span style="width: {{ $usagePercent }}%"></span></div>
                                                 <div class="small text-secondary">
@@ -2821,6 +2880,9 @@
             shippingConfig.discount = 0;
             summaryVoucherText.textContent = 'Chưa áp dụng';
             updateShippingSummary();
+            if (typeof refreshVoucherCards === 'function') {
+                refreshVoucherCards();
+            }
 
             if (payload.count === 0) {
                 window.location.href = @json(route('cart.index'));
@@ -2942,6 +3004,93 @@
                 discount: Number(document.querySelector('[data-voucher-card][data-voucher-type="discount"].active')?.dataset.voucherDiscount || {{ (int) $discount }}),
             }
         };
+        window.shippingConfig = shippingConfig;
+        const loyaltyPoints = {{ (int) ($loyaltyContext['points'] ?? 0) }};
+
+        function refreshVoucherCards() {
+            const subtotal = Number(shippingConfig.subtotal || 0);
+            const isPickup = document.getElementById('deliveryTypePickup')?.checked === true;
+            const currentShippingFee = isPickup ? 0 : Number(shippingConfig.fixedShippingFee || 0);
+
+            document.querySelectorAll('[data-voucher-card]').forEach((card) => {
+                const type = card.dataset.voucherType || 'discount';
+                const minOrder = Number(card.dataset.minOrder || 0);
+                const rateType = card.dataset.rateType || 'fixed';
+                const val = Number(card.dataset.voucherValue || 0);
+                const maxDiscount = Number(card.dataset.maxDiscount || 0);
+                const pointCost = Number(card.dataset.pointCost || 0);
+                const isRedeemable = card.dataset.isRedeemable === '1';
+
+                let calculatedDiscount = 0;
+                if (rateType === 'percent') {
+                    const raw = Math.round((subtotal * val) / 100);
+                    calculatedDiscount = maxDiscount > 0 ? Math.min(raw, maxDiscount) : raw;
+                } else {
+                    calculatedDiscount = val;
+                }
+
+                const hasMinimumOrder = subtotal >= minOrder;
+                const hasPoints = !isRedeemable || pointCost <= 0 || loyaltyPoints >= pointCost;
+
+                let isUsable = calculatedDiscount > 0 && hasMinimumOrder && hasPoints;
+                let disabledReason = '';
+
+                if (!hasMinimumOrder) {
+                    isUsable = false;
+                    disabledReason = `Cần đơn từ ${formatVnd(minOrder)}`;
+                } else if (!hasPoints) {
+                    isUsable = false;
+                    disabledReason = `Cần ${formatVnd(pointCost).replace('đ', '')} điểm`;
+                }
+
+                if (type === 'shipping') {
+                    if (isPickup) {
+                        isUsable = false;
+                        disabledReason = 'Đơn nhận tại quán không áp dụng freeship';
+                    } else if (currentShippingFee <= 0) {
+                        isUsable = false;
+                        disabledReason = 'Phí vận chuyển 0đ (không cần áp dụng)';
+                    } else {
+                        calculatedDiscount = Math.min(calculatedDiscount, currentShippingFee);
+                    }
+                }
+
+                card.dataset.voucherDiscount = calculatedDiscount;
+                card.dataset.voucherDisabled = isUsable ? '0' : '1';
+                card.classList.toggle('is-disabled', !isUsable);
+
+                const radio = card.querySelector('.voucher-radio');
+                if (radio) {
+                    radio.disabled = !isUsable;
+                }
+
+                if (!isUsable && card.classList.contains('active')) {
+                    card.classList.remove('active');
+                    if (radio) {
+                        radio.classList.remove('active');
+                        radio.setAttribute('aria-pressed', 'false');
+                    }
+                    if (pendingVouchers[type]?.code === card.dataset.voucherCode) {
+                        pendingVouchers[type] = voucherState(null);
+                        if (type === 'shipping') {
+                            selectedShippingVoucherCode.value = '';
+                        } else {
+                            selectedVoucherCode.value = '';
+                        }
+                    }
+                }
+
+                const badge = card.querySelector('[data-voucher-badge]');
+                if (badge) {
+                    if (isUsable) {
+                        badge.textContent = `${type === 'shipping' ? 'Giảm phí vận chuyển' : 'Giảm đơn hàng'} ${formatVnd(calculatedDiscount)}`;
+                    } else {
+                        badge.textContent = disabledReason;
+                    }
+                }
+            });
+        }
+        window.refreshVoucherCards = refreshVoucherCards;
         let addressBook = @json($addressBook ?? []);
         const addressSaveUrls = {
             primary: @json(route('checkout.addresses.primary.update')),
@@ -3620,6 +3769,14 @@
             if (isPickup) {
                 const shippingFee = 0;
                 shippingConfig.fixedShippingFee = 0;
+                if (pendingVouchers?.shipping?.code) {
+                    pendingVouchers.shipping = voucherState(null);
+                    selectedShippingVoucherCode.value = '';
+                    shippingConfig.discount = Number(pendingVouchers?.discount?.discount || 0);
+                    if (summaryVoucherText) {
+                        summaryVoucherText.textContent = shippingConfig.discount > 0 ? `-${formatVnd(shippingConfig.discount)}` : (selectedVoucherCode?.value ? 'Đã chọn mã giảm giá' : 'Chưa áp dụng');
+                    }
+                }
                 const grandTotal = Math.max(0, shippingConfig.subtotal - Number(shippingConfig.discount || 0));
                 if (shippingDistanceLabel) shippingDistanceLabel.textContent = 'Tự nhận';
                 if (shippingEstimateDetail) shippingEstimateDetail.textContent = `Nhận tại cửa hàng · ${selectedOption?.value ? selectedOption.textContent.split(' — ')[0] : 'Chưa chọn chi nhánh'}`;
@@ -3628,6 +3785,7 @@
                 summaryShippingFee.textContent = formatVnd(0);
                 summaryShippingDistance.textContent = 'Tự nhận tại chi nhánh';
                 summaryGrandTotal.textContent = formatVnd(grandTotal);
+                if (typeof refreshVoucherCards === 'function') refreshVoucherCards();
                 return;
             }
 
@@ -3637,6 +3795,14 @@
 
             if (!Number.isFinite(userLat) || !Number.isFinite(userLon) || !branchId) {
                 const fallbackFee = Number(shippingConfig.fixedShippingFee || 0);
+                if (fallbackFee <= 0 && pendingVouchers?.shipping?.code) {
+                    pendingVouchers.shipping = voucherState(null);
+                    selectedShippingVoucherCode.value = '';
+                    shippingConfig.discount = Number(pendingVouchers?.discount?.discount || 0);
+                    if (summaryVoucherText) {
+                        summaryVoucherText.textContent = shippingConfig.discount > 0 ? `-${formatVnd(shippingConfig.discount)}` : (selectedVoucherCode?.value ? 'Đã chọn mã giảm giá' : 'Chưa áp dụng');
+                    }
+                }
                 if (shippingDistanceLabel) shippingDistanceLabel.textContent = 'Chờ địa chỉ';
                 if (shippingEstimateDetail) shippingEstimateDetail.textContent = 'Ước tính · Vui lòng chọn địa chỉ và chi nhánh';
                 if (shippingInlineFee) shippingInlineFee.textContent = formatVnd(fallbackFee);
@@ -3644,6 +3810,7 @@
                 summaryShippingFee.textContent = formatVnd(fallbackFee);
                 summaryShippingDistance.textContent = 'Chưa có lộ trình đường bộ';
                 summaryGrandTotal.textContent = formatVnd(Math.max(0, shippingConfig.subtotal + fallbackFee - Number(shippingConfig.discount || 0)));
+                if (typeof refreshVoucherCards === 'function') refreshVoucherCards();
                 return;
             }
 
@@ -3666,6 +3833,14 @@
                 const distance = Number(payload.distance_km);
                 const shippingFee = Number(payload.shipping?.total_fee || 0);
                 shippingConfig.fixedShippingFee = shippingFee;
+                if (shippingFee <= 0 && pendingVouchers?.shipping?.code) {
+                    pendingVouchers.shipping = voucherState(null);
+                    selectedShippingVoucherCode.value = '';
+                }
+                shippingConfig.discount = Number(pendingVouchers?.discount?.discount || 0) + Math.min(shippingFee, Number(pendingVouchers?.shipping?.discount || 0));
+                if (summaryVoucherText) {
+                    summaryVoucherText.textContent = shippingConfig.discount > 0 ? `-${formatVnd(shippingConfig.discount)}` : 'Chưa áp dụng';
+                }
                 const durationSeconds = Number(payload.duration_s || 0);
                 const routeNote = payload.route_fallback ? ' · tuyến tạm tính' : ' · theo đường thực tế';
 
@@ -3677,6 +3852,7 @@
                     summaryShippingFee.textContent = '--';
                     summaryShippingDistance.textContent = `Khoảng cách đường bộ: ${distance.toFixed(1)} km`;
                     summaryGrandTotal.textContent = formatVnd(Math.max(0, shippingConfig.subtotal - Number(shippingConfig.discount || 0)));
+                    if (typeof refreshVoucherCards === 'function') refreshVoucherCards();
                     return;
                 }
 
@@ -3696,11 +3872,13 @@
                 if (selectedOption) {
                     selectedOption.dataset.distance = String(distance);
                 }
+                if (typeof refreshVoucherCards === 'function') refreshVoucherCards();
             } catch (error) {
                 if (sequence !== deliveryQuoteSequence) return;
                 if (shippingDistanceLabel) shippingDistanceLabel.textContent = 'Chưa tính được';
                 if (shippingEstimateDetail) shippingEstimateDetail.textContent = error.message || 'Không thể lấy tuyến đường lúc này';
                 if (shippingEta) shippingEta.textContent = '';
+                if (typeof refreshVoucherCards === 'function') refreshVoucherCards();
             }
         };
 
@@ -4529,8 +4707,22 @@
                     receivedVouchersList.innerHTML = '';
 
                     data.vouchers.forEach(voucher => {
+                        const isShipping = /SHIP|FREE/.test(voucher.code);
                         const voucherHtml = `
-                            <div class="voucher-ticket ${/SHIP|FREE/.test(voucher.code) ? 'is-shipping' : 'is-discount'}" data-voucher-card data-voucher-type="${/SHIP|FREE/.test(voucher.code) ? 'shipping' : 'discount'}" data-voucher-code="${escapeHtml(voucher.code)}" data-voucher-label="${escapeHtml(voucher.description ? `${voucher.code} - ${voucher.description}` : voucher.code)}" data-voucher-discount="0">
+                            <div class="voucher-ticket ${isShipping ? 'is-shipping' : 'is-discount'}"
+                                data-voucher-card
+                                data-voucher-type="${isShipping ? 'shipping' : 'discount'}"
+                                data-voucher-code="${escapeHtml(voucher.code)}"
+                                data-voucher-label="${escapeHtml(voucher.description ? `${voucher.code} - ${voucher.description}` : voucher.code)}"
+                                data-voucher-discount="0"
+                                data-min-order="${Number(voucher.min_order || 0)}"
+                                data-rate-type="${escapeHtml(voucher.type || 'fixed')}"
+                                data-voucher-value="${Number(voucher.raw_value || 0)}"
+                                data-max-discount="${Number(voucher.max_discount || 0)}"
+                                data-point-cost="0"
+                                data-is-redeemable="0"
+                                data-is-received="1"
+                            >
                                 <div class="voucher-ticket-brand">
                                     <span class="brand-circle"><i class="bi bi-gift"></i></span>
                                     <strong>${escapeHtml(voucher.code)}</strong>
@@ -4543,7 +4735,7 @@
                                     <div class="text-secondary small">
                                         ${escapeHtml(voucher.description || 'Phiếu ưu đãi')}
                                     </div>
-                                    <span class="voucher-only mt-2 mb-2">
+                                    <span class="voucher-only mt-2 mb-2" data-voucher-badge>
                                         Bạn đã nhận voucher này
                                     </span>
                                 </div>
@@ -4554,6 +4746,9 @@
                     });
 
                     bindVoucherCards(receivedVouchersList);
+                    if (typeof refreshVoucherCards === 'function') {
+                        refreshVoucherCards();
+                    }
                 } else {
                     receivedVouchersSection.style.display = 'none';
                 }
@@ -4565,10 +4760,18 @@
         // Load received vouchers when modal is shown
         const voucherModalElement = document.getElementById('voucherModal');
         if (voucherModalElement) {
-            voucherModalElement.addEventListener('show.bs.modal', loadReceivedVouchers);
+            voucherModalElement.addEventListener('show.bs.modal', () => {
+                if (typeof refreshVoucherCards === 'function') {
+                    refreshVoucherCards();
+                }
+                loadReceivedVouchers();
+            });
         }
 
         bindVoucherCards(document);
+        if (typeof refreshVoucherCards === 'function') {
+            refreshVoucherCards();
+        }
         renderAddressList();
         const initialAddress = getAddressById(selectedAddressId);
         if (initialAddress) {
@@ -4589,6 +4792,20 @@
         updateShippingSummary();
         syncCheckoutPhoneState();
         requestCheckoutDeviceLocation();
+
+        const mainCheckoutForm = document.querySelector('form[action*="checkout/process"]');
+        const placeOrderBtn = document.getElementById('placeOrderButton');
+        if (mainCheckoutForm && placeOrderBtn) {
+            mainCheckoutForm.addEventListener('submit', function (e) {
+                if (placeOrderBtn.dataset.submitting === 'true') {
+                    e.preventDefault();
+                    return false;
+                }
+                placeOrderBtn.dataset.submitting = 'true';
+                placeOrderBtn.classList.add('disabled');
+                placeOrderBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang xử lý đơn hàng...';
+            });
+        }
     });
 
     // Delivery type toggle
@@ -4772,8 +4989,17 @@
 
             const discount = 0;
 
+            if (window.shippingConfig) {
+                window.shippingConfig.subtotal = currentSubtotal;
+                window.shippingConfig.discount = 0;
+            }
+
             if (grandTotalEl) {
                 grandTotalEl.textContent = formatMoney(Math.max(0, currentSubtotal + shippingFee - discount));
+            }
+
+            if (typeof window.refreshVoucherCards === 'function') {
+                window.refreshVoucherCards();
             }
 
             if (shippingDistanceEl && !shippingDistanceEl.textContent.trim()) {
