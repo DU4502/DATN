@@ -1205,43 +1205,47 @@
                     $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
                     $productNameLower = mb_strtolower($product->name ?? '');
                     $categoryLower = mb_strtolower($detailCategory ?? '');
-                    $detailToppings = match (true) {
-                        str_contains($productNameLower, 'matcha') => [
-                            ['Trân châu đen', 5000],
-                            ['Kem cheese', 7000],
-                            ['Thạch matcha', 6000],
-                        ],
-                        str_contains($categoryLower, 'trà sữa') || str_contains($productNameLower, 'trà sữa') => [
-                            ['Trân châu đen', 5000],
-                            ['Pudding trứng', 7000],
-                            ['Thạch phô mai', 8000],
-                        ],
-                        str_contains($categoryLower, 'cà phê') || str_contains($productNameLower, 'cà phê') => [
-                            ['Kem mặn', 7000],
-                            ['Shot espresso', 10000],
-                            ['Caramel', 6000],
-                        ],
-                        str_contains($categoryLower, 'sinh tố') || str_contains($productNameLower, 'sinh tố') => [
-                            ['Hạt chia', 5000],
-                            ['Sữa chua', 7000],
-                            ['Nha đam', 6000],
-                        ],
-                        str_contains($categoryLower, 'nước ép') || str_contains($productNameLower, 'nước ép') => [
-                            ['Nha đam', 6000],
-                            ['Hạt chia', 5000],
-                            ['Soda', 7000],
-                        ],
-                        str_contains($categoryLower, 'soda') || str_contains($productNameLower, 'soda') => [
-                            ['Thạch trái cây', 6000],
-                            ['Nha đam', 6000],
-                            ['Trân châu trắng', 7000],
-                        ],
-                        default => [
-                            ['Trân châu trắng', 7000],
-                            ['Thạch nha đam', 6000],
-                            ['Kem cheese', 7000],
-                        ],
-                    };
+                    if (isset($product) && $product instanceof \App\Models\Product && $product->relationLoaded('toppings') && $product->toppings->isNotEmpty()) {
+                        $detailToppings = $product->toppings->map(fn($t) => [$t->name, (int) $t->price])->toArray();
+                    } else {
+                        $detailToppings = match (true) {
+                            str_contains($productNameLower, 'matcha') => [
+                                ['Trân châu đen', 5000],
+                                ['Kem cheese', 7000],
+                                ['Thạch matcha', 6000],
+                            ],
+                            str_contains($categoryLower, 'trà sữa') || str_contains($productNameLower, 'trà sữa') => [
+                                ['Trân châu đen', 5000],
+                                ['Pudding trứng', 7000],
+                                ['Thạch phô mai', 8000],
+                            ],
+                            str_contains($categoryLower, 'cà phê') || str_contains($productNameLower, 'cà phê') => [
+                                ['Kem mặn', 7000],
+                                ['Shot espresso', 10000],
+                                ['Caramel', 6000],
+                            ],
+                            str_contains($categoryLower, 'sinh tố') || str_contains($productNameLower, 'sinh tố') => [
+                                ['Hạt chia', 5000],
+                                ['Sữa chua', 7000],
+                                ['Nha đam', 6000],
+                            ],
+                            str_contains($categoryLower, 'nước ép') || str_contains($productNameLower, 'nước ép') => [
+                                ['Nha đam', 6000],
+                                ['Hạt chia', 5000],
+                                ['Soda', 7000],
+                            ],
+                            str_contains($categoryLower, 'soda') || str_contains($productNameLower, 'soda') => [
+                                ['Thạch trái cây', 6000],
+                                ['Nha đam', 6000],
+                                ['Trân châu trắng', 7000],
+                            ],
+                            default => [
+                                ['Trân châu trắng', 7000],
+                                ['Thạch nha đam', 6000],
+                                ['Kem cheese', 7000],
+                            ],
+                        };
+                    }
                 @endphp
                 <div class="detail-gallery">
                     <div class="detail-photo-card">
@@ -1440,7 +1444,7 @@
                         </div>
 
                         <div class="option-block">
-                            <label class="option-label d-block mb-3">Thêm món kèm</label>
+                            <label class="option-label d-block mb-3">Thêm món kèm <small class="text-secondary fw-normal">(tối đa 3 món)</small></label>
                             <div class="d-flex flex-wrap gap-2" data-topping-group>
                                 @foreach($detailToppings as $topping)
                                     <button type="button" class="choice-btn topping-choice" data-topping-name="{{ $topping[0] }}" data-topping-price="{{ $topping[1] }}">
@@ -2068,6 +2072,20 @@
 
             toppingGroup.querySelectorAll('.topping-choice').forEach(function (button) {
                 button.addEventListener('click', function () {
+                    const isAlreadyActive = button.classList.contains('active');
+                    const activeCount = toppingGroup.querySelectorAll('.topping-choice.active').length;
+
+                    if (!isAlreadyActive && activeCount >= 3) {
+                        if (typeof window.showToast === 'function') {
+                            window.showToast('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.', 'warning');
+                        } else if (typeof showToast === 'function') {
+                            showToast('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.', 'warning');
+                        } else {
+                            alert('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.');
+                        }
+                        return;
+                    }
+
                     button.classList.toggle('active');
                     syncToppings();
                 });

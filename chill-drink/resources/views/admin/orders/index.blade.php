@@ -559,16 +559,29 @@
                                                     <div class="mt-1">
                                                         Trạng thái: <strong class="status-text-{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">{{ strtoupper(\App\Support\OrderStatus::label((string) $order->status)) }}</strong>
                                                     </div>
-                                                    @if($order->status_changed_at)
-                                                        @php
-                                                            $changedByUser = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
-                                                        @endphp
-                                                                <div class="mt-1 text-muted" style="font-size:0.72rem;">
-                                                                    <i class="bi bi-clock-history me-1"></i>{{ $order->status_changed_at->format('H:i · d/m/Y') }}
-                                                                    @if($changedByUser)
-                                                                        bởi <strong>{{ $changedByUser->name }}</strong>
-                                                                    @endif
-                                                                </div>
+                                                    @php
+                                                        $changedByUser = $order->statusChangedBy;
+                                                        $historyCount = $order->statusHistories ? $order->statusHistories->count() : 0;
+                                                    @endphp
+                                                    @if($order->status_changed_at || $historyCount > 0)
+                                                        <div class="mt-1 text-muted" style="font-size:0.75rem;">
+                                                            <i class="bi bi-clock-history me-1"></i>
+                                                            @if($order->status_changed_at)
+                                                                {{ $order->status_changed_at->format('H:i · d/m/Y') }}
+                                                                @if($changedByUser)
+                                                                    bởi <strong>{{ $changedByUser->name }}</strong>
+                                                                @endif
+                                                            @else
+                                                                Lịch sử cập nhật: {{ $historyCount }} bước
+                                                            @endif
+                                                        </div>
+                                                        <div class="mt-1">
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                                                    style="font-size: 0.72rem; border-radius: 6px;"
+                                                                    data-bs-toggle="modal" data-bs-target="#adminOrderHistoryModal-{{ $order->id }}">
+                                                                <i class="bi bi-clock-history text-primary me-1"></i>Xem lịch sử xử lý ({{ $historyCount }})
+                                                            </button>
+                                                        </div>
                                                     @endif
 
                                                     <div class="d-flex gap-2 align-items-stretch mt-3">
@@ -595,6 +608,7 @@
                                     </div>
                                 </div>
                             </div>
+                            @include('partials.order-status-history-modal', ['order' => $order, 'modalId' => 'adminOrderHistoryModal-' . $order->id])
                         </div>
                     </td>
                 </tr>

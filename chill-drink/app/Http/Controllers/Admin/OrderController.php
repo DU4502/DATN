@@ -55,7 +55,7 @@ class OrderController extends Controller
         $statusOptions = OrderStatus::filterOptions();
 
         $orders = Order::query()
-            ->with(['user', 'branch', 'address', 'shipper.user', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product'])
+            ->with(['user', 'branch', 'address', 'shipper.user', 'orderItems.product', 'orderItems.productSize.size', 'reviews.user', 'reviews.product', 'statusChangedBy', 'statusHistories.actor'])
             // Admin không thấy đơn hàng guest chưa xác nhận email
             ->where('status', '!=', \App\Support\OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             // Giao dịch VNPay chưa hoàn tất chưa phải là đơn cần xử lý.
@@ -395,9 +395,8 @@ class OrderController extends Controller
             'status' => $currentStatus,
             'status_label' => OrderStatus::label($currentStatus),
             'status_changed_at' => $order->status_changed_at?->format('d/m/Y H:i'),
-            'status_changed_by_name' => $order->status_changed_by
-                ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên')
-                : null,
+            'status_changed_by_name' => $order->statusChangedBy?->name
+                ?? ($order->status_changed_by ? (\App\Models\User::find($order->status_changed_by)?->name ?? 'Nhân viên') : null),
             'next_status' => $this->orderManagementNextStatusForOrder($order),
             'can_cancel' => $canCancelForActor,
             'status_options' => $statusOptionsForActor,

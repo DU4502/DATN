@@ -2868,21 +2868,11 @@
             shippingConfig.subtotal = Number(payload.total || 0);
             shippingConfig.cupCount = Math.max(1, Number(payload.quantity_count || 1));
 
-            // Giá trị voucher phụ thuộc tạm tính, yêu cầu chọn lại để tổng tiền luôn chính xác.
-            selectedVoucherCode.value = '';
-            selectedShippingVoucherCode.value = '';
-            pendingVouchers = { shipping: voucherState(null), discount: voucherState(null) };
-            document.querySelectorAll('[data-voucher-card].active').forEach((card) => {
-                card.classList.remove('active');
-                card.querySelector('.voucher-radio')?.classList.remove('active');
-            });
-            selectedVoucherText.textContent = 'Giỏ hàng đã thay đổi · vui lòng chọn lại phiếu ưu đãi';
-            shippingConfig.discount = 0;
-            summaryVoucherText.textContent = 'Chưa áp dụng';
-            updateShippingSummary();
+            // Tự động kiểm tra và tính toán lại giá trị voucher đã chọn theo đơn giá mới
             if (typeof refreshVoucherCards === 'function') {
                 refreshVoucherCards();
             }
+            updateShippingSummary();
 
             if (payload.count === 0) {
                 window.location.href = @json(route('cart.index'));
@@ -3078,6 +3068,10 @@
                             selectedVoucherCode.value = '';
                         }
                     }
+                } else if (isUsable && card.classList.contains('active')) {
+                    if (pendingVouchers[type]?.code === card.dataset.voucherCode) {
+                        pendingVouchers[type].discount = calculatedDiscount;
+                    }
                 }
 
                 const badge = card.querySelector('[data-voucher-badge]');
@@ -3089,6 +3083,27 @@
                     }
                 }
             });
+
+            // Đồng bộ lại tổng giảm giá và text hiển thị sau khi tính toán lại
+            const shippingFee = Number(shippingConfig.fixedShippingFee || 0);
+            const discountPart = Number(pendingVouchers?.discount?.discount || 0);
+            const shippingPart = Math.min(shippingFee, Number(pendingVouchers?.shipping?.discount || 0));
+            shippingConfig.discount = discountPart + shippingPart;
+
+            const activeLabels = [pendingVouchers?.shipping?.label, pendingVouchers?.discount?.label].filter(Boolean);
+            if (selectedVoucherText) {
+                if (activeLabels.length > 0) {
+                    selectedVoucherText.textContent = `Đã chọn: ${activeLabels.join(' + ')}`;
+                } else {
+                    selectedVoucherText.textContent = 'Chưa chọn phiếu ưu đãi';
+                }
+            }
+
+            if (summaryVoucherText) {
+                summaryVoucherText.textContent = shippingConfig.discount > 0
+                    ? `-${formatVnd(shippingConfig.discount)}`
+                    : 'Chưa áp dụng';
+            }
         }
         window.refreshVoucherCards = refreshVoucherCards;
         let addressBook = @json($addressBook ?? []);
@@ -4960,48 +4975,20 @@
             const shippingDistanceEl = document.getElementById('summaryShippingDistance');
             const grandTotalEl = document.getElementById('summaryGrandTotal');
             const currentSubtotal = parseMoney(subtotalEl?.textContent);
-            const shippingFee = parseMoney(shippingFeeEl?.textContent);
-            const selectedVoucherCode = document.getElementById('selectedVoucherCode');
-            const selectedShippingVoucherCode = document.getElementById('selectedShippingVoucherCode');
-            const selectedVoucherText = document.getElementById('selectedVoucherText');
-            const summaryVoucherText = document.getElementById('summaryVoucherText');
-
-            if (selectedVoucherCode) {
-                selectedVoucherCode.value = '';
-            }
-
-            if (selectedShippingVoucherCode) {
-                selectedShippingVoucherCode.value = '';
-            }
-
-            document.querySelectorAll('[data-voucher-card].active').forEach((card) => {
-                card.classList.remove('active');
-                card.querySelector('.voucher-radio')?.classList.remove('active');
-            });
-
-            if (selectedVoucherText) {
-                selectedVoucherText.textContent = 'Giỏ hàng đã thay đổi · vui lòng chọn lại phiếu ưu đãi';
-            }
-
-            if (summaryVoucherText) {
-                summaryVoucherText.textContent = 'Chưa áp dụng';
-            }
-
-            const discount = 0;
-
             if (window.shippingConfig) {
                 window.shippingConfig.subtotal = currentSubtotal;
-                window.shippingConfig.discount = 0;
-            }
-
-            if (grandTotalEl) {
-                grandTotalEl.textContent = formatMoney(Math.max(0, currentSubtotal + shippingFee - discount));
+                window.shippingConfig.cupCount = Math.max(1, Number(payload.quantity_count || 1));
             }
 
             if (typeof window.refreshVoucherCards === 'function') {
                 window.refreshVoucherCards();
             }
 
+            if (typeof window.updateShippingSummary === 'function') {
+                window.updateShippingSummary();
+            }
+
+            const shippingDistanceEl = document.getElementById('summaryShippingDistance');
             if (shippingDistanceEl && !shippingDistanceEl.textContent.trim()) {
                 shippingDistanceEl.textContent = 'Đã cập nhật số lượng';
             }

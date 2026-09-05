@@ -50,6 +50,8 @@ class StaffOrderController extends Controller
                 'orderItems.product',
                 'orderItems.productSize.size',
                 'orderItems.toppingLines.topping',
+                'statusChangedBy',
+                'statusHistories.actor',
             ])
             ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION)
             ->when($filters['q'] !== '', function ($query) use ($filters) {

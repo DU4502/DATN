@@ -159,6 +159,12 @@ class Order extends Model
         return $this->belongsTo(User::class, 'status_changed_by');
     }
 
+    public function statusHistories()
+    {
+        return $this->hasMany(OrderStatusHistory::class, 'order_id')->orderBy('created_at', 'asc')->orderBy('id', 'asc');
+    }
+
+
     public function address()
     {
         return $this->belongsTo(Address::class);
@@ -295,31 +301,61 @@ class Order extends Model
 
     protected static function booted(): void
     {
-        static::updating(function (Order $order) {
-            if ($order->isDirty('status') && ! $order->isDirty('status_changed_at')) {
-                $order->status_changed_at = now();
+        static::created(function (Order $order) {
+            try {
+                $order->statusHistories()->create([
+                    'from_status' => null,
+                    'to_status' => $order->status ?? OrderStatus::PENDING,
+                    'actor_id' => $order->status_changed_by ?? $order->user_id ?? (auth()->id() ?? null),
+                    'note' => 'Đặt đơn hàng thành công',
+                    'created_at' => $order->created_at ?? now(),
+                ]);
+            } catch (\Throwable $e) {
+                // Ignore if table not ready
             }
+        });
 
-            if ($order->isDirty('status') && OrderStatus::normalize($order->status) === OrderStatus::DELIVERED && is_null($order->delivered_at)) {
-                $order->delivered_at = now();
+        static::updating(function (Order $order) {
+            if ($order->isDirty('status')) {
+                if (! $order->isDirty('status_changed_at')) {
+                    $order->status_changed_at = now();
+                }
+                if (! $order->isDirty('status_changed_by') && auth()->check()) {
+                    $order->status_changed_by = auth()->id();
+                }
+                if (OrderStatus::normalize($order->status) === OrderStatus::DELIVERED && is_null($order->delivered_at)) {
+                    $order->delivered_at = now();
+                }
             }
         });
 
         static::updated(function (Order $order) {
-            if (! $order->wasChanged('status')
-                || OrderStatus::normalize((string) $order->status) !== OrderStatus::COMPLETED
-                || ! $order->support_issue_id) {
-                return;
-            }
+            if ($order->wasChanged('status')) {
+                try {
+                    $from = $order->getOriginal('status');
+                    $to = $order->status;
+                    $order->statusHistories()->create([
+                        'from_status' => $from,
+                        'to_status' => $to,
+                        'actor_id' => $order->status_changed_by ?? (auth()->id() ?? null),
+                        'note' => $to === OrderStatus::CANCELLED ? ($order->cancellation_reason ?: 'Đã hủy đơn hàng') : 'Cập nhật trạng thái đơn hàng',
+                        'created_at' => $order->status_changed_at ?? now(),
+                    ]);
+                } catch (\Throwable $e) {
+                    // Ignore
+                }
 
-            OrderIssueReport::query()
-                ->whereKey($order->support_issue_id)
-                ->whereNotIn('status', ['resolved', 'rejected'])
-                ->update([
-                    'status' => 'resolved',
-                    'resolved_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                if (OrderStatus::normalize((string) $order->status) === OrderStatus::COMPLETED && $order->support_issue_id) {
+                    OrderIssueReport::query()
+                        ->whereKey($order->support_issue_id)
+                        ->whereNotIn('status', ['resolved', 'rejected'])
+                        ->update([
+                            'status' => 'resolved',
+                            'resolved_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                }
+            }
         });
     }
 

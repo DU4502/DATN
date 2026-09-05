@@ -84,7 +84,7 @@
                     <th>Thanh toán</th>
                     <th class="text-end">Tổng tiền</th>
                     <th class="text-center">Trạng thái</th>
-                    <th class="text-center">Người đổi TT</th>
+                    <th class="text-center">Cập nhật gần nhất</th>
                     <th class="text-center">Thời gian đổi</th>
                     <th class="text-center">Hành động</th>
                 </tr>
@@ -96,7 +96,8 @@
                     $fulfillmentType = $order->fulfillment_type ?? 'delivery';
                     $statusStepOpts  = \App\Support\OrderStatus::storeStepwiseOptions((string) $order->status, $fulfillmentType);
                     $nextStatus      = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
-                    $changedBy       = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
+                    $changedBy       = $order->statusChangedBy;
+                    $historyCount    = $order->statusHistories ? $order->statusHistories->count() : 0;
                 @endphp
                 <tr data-order-id="{{ $order->id }}">
                     <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
@@ -126,20 +127,28 @@
                             <select name="status" class="form-select form-select-sm"
                                     onchange="this.form.submit()"
                                     @disabled($nextStatus === null)>
+                                <option value="{{ $order->status }}" selected>{{ \App\Support\OrderStatus::label((string) $order->status) }} (Hiện tại)</option>
                                 @foreach($statusStepOpts as $value => $label)
-                                    <option value="{{ $value }}" @selected($order->status === $value)>{{ $label }}</option>
+                                    @if($value !== $order->status)
+                                        <option value="{{ $value }}">{{ $label }}</option>
+                                    @endif
                                 @endforeach
                             </select>
                         </form>
                     </td>
                     <td class="text-center">
                         @if($changedBy)
-                            <span class="badge bg-light text-dark" style="font-size:.72rem;">
-                                <i class="bi bi-person me-1"></i>{{ $changedBy->name }}
-                                @if($changedBy->isStaffOnly()) <span class="text-warning">(NV)</span>
-                                @elseif($changedBy->isAdmin()) <span class="text-info">(Admin)</span>
+                            <div class="d-inline-flex align-items-center gap-1" style="font-size: .8rem; white-space: nowrap;">
+                                <i class="bi bi-person text-secondary"></i>
+                                <span class="fw-semibold text-dark">{{ $changedBy->name }}</span>
+                                @if($changedBy->isAdmin() || $changedBy->isSuperAdmin())
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: .62rem; padding: 2px 5px;">QL</span>
+                                @elseif($changedBy->isStaffOnly())
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: .62rem; padding: 2px 5px;">NV</span>
+                                @elseif($changedBy->isShipper())
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" style="font-size: .62rem; padding: 2px 5px;">TX</span>
                                 @endif
-                            </span>
+                            </div>
                         @else
                             <span class="text-secondary small">—</span>
                         @endif
@@ -198,7 +207,7 @@
                                     @if($order->status_changed_at)
                                     <div class="alert alert-info border-0 py-2 px-3 mb-3" style="border-radius:10px;font-size:.82rem;">
                                         <i class="bi bi-clock-history me-1"></i>
-                                        Trạng thái được cập nhật lúc <strong>{{ $order->status_changed_at->format('H:i · d/m/Y') }}</strong>
+                                        Trạng thái cập nhật lúc <strong>{{ $order->status_changed_at->format('H:i · d/m/Y') }}</strong>
                                         @if($changedBy) bởi <strong>{{ $changedBy->name }}</strong>@endif
                                     </div>
                                     @endif

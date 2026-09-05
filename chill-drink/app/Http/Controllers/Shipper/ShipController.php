@@ -194,11 +194,11 @@ class ShipController extends Controller
             ->count();
 
         $completedOrders = Order::where('shipper_id', $shipperInfo->id)
-            ->where('status', OrderStatus::COMPLETED)
+            ->whereIn('status', [OrderStatus::DELIVERED, OrderStatus::COMPLETED])
             ->count();
 
         $income = Order::where('shipper_id', $shipperInfo->id)
-            ->where('status', OrderStatus::COMPLETED)
+            ->whereIn('status', [OrderStatus::DELIVERED, OrderStatus::COMPLETED])
             ->sum('shipping_fee');
 
         $orders = $this->activeDeliveryOrderQuery($shipperInfo)
@@ -1071,7 +1071,7 @@ class ShipController extends Controller
         $amountToCollect = max(0, (int) ($order->total ?? $order->total_price ?? 0));
 
         $orderValues = [
-            'status' => OrderStatus::COMPLETED,
+            'status' => OrderStatus::DELIVERED,
             'delivered_at' => now(),
             'status_changed_at' => now(),
             'status_changed_by' => auth()->id(),
@@ -1135,13 +1135,11 @@ class ShipController extends Controller
             );
         }
 
-        // Đơn hoàn tất ngay khi shipper giao xong; doanh thu và điểm thưởng được ghi nhận tức thời.
-        $order->awardLoyaltyPoints();
         RealtimeOrderNotifier::orderStatusUpdated($order);
 
         $deliveryMessage = $requiresCodCollection
-            ? 'Đã giao hàng, hoàn thành đơn và ghi nhận đã thu COD '.number_format($amountToCollect, 0, ',', '.').'đ.'
-            : 'Đã giao hàng và hoàn thành đơn. Đơn đã thanh toán trước.';
+            ? 'Đã giao hàng và ghi nhận đã thu COD '.number_format($amountToCollect, 0, ',', '.').'đ. Đơn chờ khách xác nhận hoặc tự động hoàn tất sau 30 phút.'
+            : 'Đã giao hàng thành công. Đơn chờ khách xác nhận hoặc tự động hoàn tất sau 30 phút.';
 
         if (($returnPlan['status'] ?? null) === 'continue_bundle') {
             $autoStartedOrder = $this->autoStartDeliveryWhenDue($shipper);

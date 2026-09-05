@@ -2423,6 +2423,13 @@
                 if (isAddAction) {
                     setAddButtonState('success');
                     flyToCart();
+                    if (document.body.dataset.page === 'cart') {
+                        sessionStorage.setItem('cart_flash_toast', data.message || 'Đã thêm sản phẩm vào giỏ hàng!');
+                        window.setTimeout(() => {
+                            window.location.reload();
+                        }, 400);
+                        return;
+                    }
                     showCartFeedback(data.message, {
                         redirectUrl: '{{ route('cart.index', [], false) }}',
                         redirectLabel: 'Xem giỏ hàng',

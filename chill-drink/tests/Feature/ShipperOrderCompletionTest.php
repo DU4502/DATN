@@ -78,11 +78,18 @@ class ShipperOrderCompletionTest extends TestCase
             ->assertRedirect();
 
         $completedOrder = $order->fresh();
-        $this->assertSame(OrderStatus::COMPLETED, $completedOrder->status);
+        $this->assertSame(OrderStatus::DELIVERED, $completedOrder->status);
         $this->assertSame('paid', $completedOrder->payment_status);
         $this->assertNotNull($completedOrder->delivered_at);
         $this->assertSame($shipperUser->id, (int) $completedOrder->status_changed_by);
         $this->assertSame('delivered', $shipment->fresh()->status);
+
+        // Khách hàng xác nhận đã nhận hàng -> chuyển sang COMPLETED và ghi nhận doanh thu
+        $this->actingAs($customer)
+            ->post(route('orders.confirm-received', $completedOrder))
+            ->assertRedirect();
+
+        $this->assertSame(OrderStatus::COMPLETED, $completedOrder->fresh()->status);
         $this->assertSame(
             135000,
             app(SuperAdminAnalyticsService::class)

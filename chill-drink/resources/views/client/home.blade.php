@@ -778,54 +778,56 @@
     }
 
     .home-quick-modal .modal-dialog {
-        max-width: 620px;
+        max-width: 660px;
+        margin: 1.25rem auto;
     }
 
     .home-quick-modal .modal-content {
         overflow: hidden;
         border: 0;
         border-radius: 24px;
-        box-shadow: 0 26px 70px rgba(8, 42, 38, .24);
+        box-shadow: 0 20px 60px rgba(8, 42, 38, .22);
     }
 
     .home-quick-modal .modal-header {
-        padding: 1.2rem 1.4rem .7rem;
+        padding: 1.1rem 1.4rem 0.35rem;
     }
 
     .home-quick-modal .modal-body {
-        padding: .8rem 1.4rem 1.1rem;
+        padding: 0 1.4rem 1.15rem;
     }
 
     .home-quick-thumb {
-        width: 76px;
-        height: 76px;
-        border: 1px solid var(--c-border);
-        border-radius: 18px;
-        padding: .35rem;
+        width: 54px;
+        height: 54px;
+        border: 1px solid var(--drink-border);
+        border-radius: 12px;
+        padding: .25rem;
         object-fit: contain;
         background: #fff;
+        flex: 0 0 auto;
     }
 
     .home-quick-product {
-        padding: .75rem;
-        border: 1px solid var(--c-border);
-        border-radius: 18px;
-        background: var(--c-bg-warm);
+        padding: .65rem .9rem;
+        margin-bottom: .55rem;
+        border: 1px solid #d6ebe5;
+        border-radius: 16px;
+        background: #effbf8;
     }
 
     .home-quick-section {
-        padding-top: .9rem;
-        margin-top: .9rem;
-        border-top: 1px solid var(--c-border-light);
+        padding: .55rem 0;
+        border-top: 1px solid #edf1f0;
     }
 
     .home-quick-label {
         display: flex;
         align-items: center;
         gap: .45rem;
-        margin-bottom: .65rem;
+        margin-bottom: .45rem;
         color: var(--c-ink);
-        font-size: .82rem;
+        font-size: .92rem;
         font-weight: 800;
     }
 
@@ -834,84 +836,152 @@
     }
 
     .home-quick-choice {
-        min-width: 64px;
-        min-height: 46px;
-        border: 1.5px solid var(--c-border);
+        min-width: 0;
+        border: 1.5px solid var(--c-border, #e5e7eb) !important;
         border-radius: 12px;
-        padding: .48rem .8rem;
-        color: var(--c-ink);
-        background: #fff;
-        font-weight: 800;
+        padding: .42rem .75rem;
+        color: var(--c-ink, #111827) !important;
+        background: #fff !important;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
     }
 
-    .home-quick-choice:hover,
+    .home-quick-choice:hover {
+        border-color: var(--c-primary, #0d9373) !important;
+        background: var(--c-primary-light, #e6f7f2) !important;
+        color: var(--c-primary-dark, #067a5f) !important;
+        box-shadow: 0 0 0 3px rgba(13, 147, 115, .13);
+    }
+
     .home-quick-choice.active {
-        border-color: var(--c-primary);
-        color: var(--c-primary-dark);
-        background: var(--c-primary-light);
+        border-color: var(--c-primary, #0d9373) !important;
+        background: var(--c-primary-light, #e6f7f2) !important;
+        color: var(--c-primary-dark, #067a5f) !important;
         box-shadow: 0 0 0 3px rgba(13, 147, 115, .12);
-    }
-
-    .home-quick-size {
-        flex: 1 1 0;
+        transform: translateY(-1px);
     }
 
     .home-quick-choice small {
         display: block;
-        margin-top: .08rem;
+        margin-top: .05rem;
         color: var(--c-muted);
-        font-size: .68rem;
+        font-size: .72rem;
         font-weight: 700;
+        opacity: .85;
+    }
+
+    .home-quick-size-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .5rem;
+    }
+
+    .home-quick-sugar-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: .35rem;
+    }
+
+    .home-quick-ice-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .35rem;
+    }
+
+    .home-quick-sugar-grid .home-quick-choice,
+    .home-quick-ice-grid .home-quick-choice {
+        padding: 0.42rem 0.2rem;
+        font-size: 0.86rem;
+        text-align: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    .home-quick-levels-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 1.25rem;
+        align-items: start;
+    }
+
+    .home-quick-topping-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: .5rem;
     }
 
     .home-quick-topping {
         min-width: 0;
-        flex: 1 1 30%;
+        border-radius: 12px;
         text-align: left;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
     }
 
-    .home-quick-topping small {
-        display: block;
-        font-size: .72rem;
-        opacity: .8;
-    }
-
-    .home-quick-footer {
-        display: flex;
+    .home-quick-actions {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
-        gap: .8rem;
-        width: 100%;
+        gap: 0.85rem;
+        padding-top: .6rem;
     }
 
     .home-quick-qty {
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        gap: 0.75rem;
+        min-height: 48px;
+        padding: 0 0.85rem;
         border: 1px solid var(--c-border);
         border-radius: 999px;
         background: #fff;
     }
 
     .home-quick-qty button {
-        width: 36px;
-        height: 42px;
         border: 0;
-        color: var(--c-primary);
         background: transparent;
-        font-size: 1.15rem;
+        color: var(--c-primary);
+        font-size: 1.25rem;
     }
 
     .home-quick-qty strong {
-        min-width: 24px;
+        min-width: 20px;
         text-align: center;
+        font-size: 1.1rem;
     }
 
-    @media (max-width: 575.98px) {
-        .home-quick-topping {
-            flex-basis: 46%;
+    .home-quick-submit {
+        min-height: 48px;
+        font-size: 1rem;
+        border-radius: 999px;
+        box-shadow: 0 6px 16px rgba(13, 147, 115, .2);
+    }
+
+    @media (max-width: 767.98px) {
+        .home-quick-modal .modal-dialog {
+            margin: .5rem;
+        }
+
+        .home-quick-modal .modal-header {
+            padding: 1rem 1rem .3rem;
         }
 
         .home-quick-modal .modal-body {
-            padding-inline: 1rem;
+            padding: 0 1rem 1rem;
+        }
+
+        .home-quick-levels-grid {
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+
+        .home-quick-topping-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .home-quick-actions {
+            grid-template-columns: 1fr;
         }
     }
 
@@ -2038,6 +2108,8 @@
                                     data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
                                     data-base-price="{{ (float) $product->price }}"
                                     data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
+                                    data-toppings='@json($product->relationLoaded("toppings") ? $product->toppings->map(fn($t) => ["name" => $t->name, "price" => (int) $t->price]) : [])'
+                                    data-category="{{ $product->category?->name }}"
                                     data-image="{{ $product->image_url }}"
                                     data-product-availability="{{ $product->id }}"
                                     data-branch-id="{{ $branch?->id }}"
@@ -2356,8 +2428,8 @@
                 <input type="hidden" name="ice_level" value="100" data-home-quick-input="ice">
                 <input type="hidden" name="toppings" value="[]" data-home-quick-input="toppings">
                 <input type="hidden" name="quantity" value="1" data-home-quick-input="quantity">
-                <div class="modal-header border-0 pb-0">
-                    <h2 class="modal-title h4 fw-bold" id="homeQuickAddTitle">Tùy chọn đồ uống</h2>
+                <div class="modal-header border-0 pb-1">
+                    <h2 class="modal-title h5 fw-bold mb-0" id="homeQuickAddTitle">Tùy chọn đồ uống</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
                 <div class="modal-body">
@@ -2365,42 +2437,50 @@
                         <img class="home-quick-thumb" src="{{ $uiPlaceholderImage('Sản phẩm', 'Đồ uống') }}" alt="Ảnh sản phẩm" data-home-quick-image>
                         <div>
                             <div class="fw-bold fs-5" data-home-quick-name></div>
-                            <div class="text-primary fw-bold" data-home-quick-price></div>
+                            <div class="text-primary fw-bold fs-5" data-home-quick-price></div>
                         </div>
                     </div>
                     <div class="home-quick-section">
                         <div class="home-quick-label"><i class="bi bi-cup-straw"></i>Chọn kích cỡ</div>
-                        <div class="d-flex gap-2" data-home-quick-group="size">
-                            <button type="button" class="home-quick-choice home-quick-size active" data-value="S" data-extra="0">S<small>Giá gốc</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="M" data-extra="5000">M<small>+5.000đ</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="L" data-extra="10000">L<small>+10.000đ</small></button>
+                        <div class="home-quick-size-grid" data-home-quick-group="size">
+                            <button type="button" class="home-quick-choice active" data-value="S" data-extra="0">S<small>Giá gốc</small></button>
+                            <button type="button" class="home-quick-choice" data-value="M" data-extra="5000">M<small>+5.000đ</small></button>
+                            <button type="button" class="home-quick-choice" data-value="L" data-extra="10000">L<small>+10.000đ</small></button>
                         </div>
                     </div>
-                    <div class="home-quick-section row g-3">
-                        <div class="col-md-6">
+                    <div class="home-quick-section home-quick-levels-grid">
+                        <div>
                             <div class="home-quick-label"><i class="bi bi-droplet"></i>Mức đường</div>
-                            <div class="d-flex flex-wrap gap-2" data-home-quick-group="sugar">
-                                <button type="button" class="home-quick-choice" data-value="0">0%</button><button type="button" class="home-quick-choice" data-value="30">30%</button><button type="button" class="home-quick-choice" data-value="50">50%</button><button type="button" class="home-quick-choice" data-value="70">70%</button><button type="button" class="home-quick-choice active" data-value="100">100% (Tiêu chuẩn)</button>
+                            <div class="home-quick-sugar-grid" data-home-quick-group="sugar">
+                                <button type="button" class="home-quick-choice" data-value="0">0%</button>
+                                <button type="button" class="home-quick-choice" data-value="30">30%</button>
+                                <button type="button" class="home-quick-choice" data-value="50">50%</button>
+                                <button type="button" class="home-quick-choice" data-value="70">70%</button>
+                                <button type="button" class="home-quick-choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div>
                             <div class="home-quick-label"><i class="bi bi-snow"></i>Mức đá</div>
-                            <div class="d-flex flex-wrap gap-2" data-home-quick-group="ice">
-                                <button type="button" class="home-quick-choice" data-value="0">Không đá</button><button type="button" class="home-quick-choice" data-value="50">Ít đá</button><button type="button" class="home-quick-choice active" data-value="100">100% (Tiêu chuẩn)</button>
+                            <div class="home-quick-ice-grid" data-home-quick-group="ice">
+                                <button type="button" class="home-quick-choice" data-value="0">Không đá</button>
+                                <button type="button" class="home-quick-choice" data-value="50">Ít đá</button>
+                                <button type="button" class="home-quick-choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
                             </div>
                         </div>
                     </div>
                     <div class="home-quick-section">
-                        <div class="home-quick-label"><i class="bi bi-plus-circle"></i>Thêm món kèm <span class="text-secondary fw-normal">(có thể chọn nhiều)</span></div>
-                        <div class="d-flex flex-wrap gap-2" data-home-toppings>
-                            <button type="button" class="home-quick-choice home-quick-topping" data-name="Trân châu đen" data-price="5000">Trân châu đen<small>+5.000đ</small></button>
-                            <button type="button" class="home-quick-choice home-quick-topping" data-name="Kem cheese" data-price="7000">Kem cheese<small>+7.000đ</small></button>
-                            <button type="button" class="home-quick-choice home-quick-topping" data-name="Thạch nha đam" data-price="6000">Thạch nha đam<small>+6.000đ</small></button>
-                        </div>
+                        <div class="home-quick-label"><i class="bi bi-plus-circle"></i>Thêm món kèm <small class="text-secondary fw-normal">(tối đa 3 món)</small></div>
+                        <div class="home-quick-topping-grid" data-home-toppings></div>
                     </div>
-                </div>
-                <div class="modal-footer border-0 pt-0 px-4 pb-4">
-                    <div class="home-quick-footer">
-                        <div class="home-quick-qty"><button type="button" data-home-qty-minus aria-label="Giảm số lượng">−</button><strong data-home-qty-label>1</strong><button type="button" data-home-qty-plus aria-label="Tăng số lượng">+</button></div>
-                        <button type="submit" class="btn btn-primary flex-grow-1 rounded-pill py-3 fw-bold">Thêm vào giỏ · <span data-home-quick-total>0đ</span></button>
+                    <div class="home-quick-actions">
+                        <div class="home-quick-qty">
+                            <button type="button" data-home-qty-minus aria-label="Giảm số lượng">−</button>
+                            <strong data-home-qty-label>1</strong>
+                            <button type="button" data-home-qty-plus aria-label="Tăng số lượng">+</button>
+                        </div>
+                        <button type="submit" class="btn btn-primary rounded-pill fw-bold home-quick-submit">
+                            Thêm vào giỏ · <span data-home-quick-total>0đ</span>
+                        </button>
                     </div>
                 </div>
             </form>
@@ -2416,6 +2496,64 @@
         const modal = new bootstrap.Modal(element);
         const input = (name) => form.querySelector(`[data-home-quick-input="${name}"]`);
         let basePrice = 0;
+
+        function normalizeText(value) {
+            return String(value || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd');
+        }
+
+        function toppingOptionsFor(name, category) {
+            const text = normalizeText(`${name} ${category}`);
+
+            if (text.includes('matcha')) {
+                return [['Trân châu đen', 5000], ['Kem cheese', 7000], ['Thạch matcha', 6000]];
+            }
+
+            if (text.includes('tra sua')) {
+                return [['Trân châu đen', 5000], ['Pudding trứng', 7000], ['Thạch phô mai', 8000]];
+            }
+
+            if (text.includes('ca phe')) {
+                return [['Kem mặn', 7000], ['Shot espresso', 10000], ['Caramel', 6000]];
+            }
+
+            if (text.includes('sinh to')) {
+                return [['Hạt chia', 5000], ['Sữa chua', 7000], ['Nha đam', 6000]];
+            }
+
+            if (text.includes('nuoc ep')) {
+                return [['Nha đam', 6000], ['Hạt chia', 5000], ['Soda', 7000]];
+            }
+
+            if (text.includes('soda')) {
+                return [['Thạch trái cây', 6000], ['Nha đam', 6000], ['Trân châu trắng', 7000]];
+            }
+
+            return [['Trân châu trắng', 7000], ['Thạch nha đam', 6000], ['Kem cheese', 7000]];
+        }
+
+        function renderHomeToppings(name, category, customToppings = []) {
+            const container = element.querySelector('[data-home-toppings]');
+            if (!container) return;
+
+            let options = [];
+            if (Array.isArray(customToppings) && customToppings.length > 0) {
+                options = customToppings.map(t => [t.name, Number(t.price || 0)]);
+            } else {
+                options = toppingOptionsFor(name, category);
+            }
+
+            container.innerHTML = options.map(([tName, price]) => `
+                <button type="button" class="home-quick-choice home-quick-topping" data-name="${tName}" data-price="${price}">
+                    ${tName}
+                    <small>+${Number(price).toLocaleString('vi-VN')}đ</small>
+                </button>
+            `).join('');
+        }
+
         const updateTotal = () => {
             const sizeButton = element.querySelector('[data-home-quick-group="size"] .active');
             const sizeExtra = Number(sizeButton?.dataset.extra || 0);
@@ -2424,6 +2562,7 @@
             const quantity = Number(input('quantity').value || 1);
             element.querySelector('[data-home-quick-total]').textContent = ((basePrice + sizeExtra + toppingTotal) * quantity).toLocaleString('vi-VN') + 'đ';
         };
+
         const resetGroup = (name, value) => {
             input(name).value = value;
             element.querySelectorAll(`[data-home-quick-group="${name}"] .home-quick-choice`).forEach((button) => button.classList.toggle('active', button.dataset.value === value));
@@ -2443,12 +2582,18 @@
                 sizesMap = JSON.parse(button.dataset.sizes || '{}');
             } catch (e) {}
 
-            element.querySelectorAll('[data-home-quick-group="size"] .home-quick-size').forEach((sizeBtn) => {
+            element.querySelectorAll('[data-home-quick-group="size"] .home-quick-choice').forEach((sizeBtn) => {
                 const sz = sizeBtn.dataset.value;
                 if (sz === 'S') {
                     sizeBtn.dataset.extra = '0';
-                } else if (sizesMap[sz] !== undefined) {
-                    const extraPrice = Number(sizesMap[sz]);
+                    const small = sizeBtn.querySelector('small');
+                    if (small) small.textContent = 'Giá gốc';
+                } else {
+                    const fallbackExtra = sz === 'M' ? 5000 : 10000;
+                    const rawPrice = sizesMap[sz] !== undefined ? Number(sizesMap[sz]) : null;
+                    const extraPrice = Number.isFinite(rawPrice)
+                        ? (rawPrice >= basePrice ? Math.max(0, rawPrice - basePrice) : Math.max(0, rawPrice))
+                        : fallbackExtra;
                     sizeBtn.dataset.extra = extraPrice;
                     const small = sizeBtn.querySelector('small');
                     if (small) small.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
@@ -2458,7 +2603,13 @@
             resetGroup('size', 'S');
             resetGroup('sugar', '50');
             resetGroup('ice', '100');
-            element.querySelectorAll('[data-home-toppings] .home-quick-choice').forEach((item) => item.classList.remove('active'));
+
+            let toppingsList = [];
+            try {
+                toppingsList = JSON.parse(button.dataset.toppings || '[]');
+            } catch (e) {}
+
+            renderHomeToppings(button.dataset.name || '', button.dataset.category || '', toppingsList);
             input('toppings').value = '[]';
             updateTotal();
             modal.show();
@@ -2472,6 +2623,21 @@
         element.querySelector('[data-home-toppings]').addEventListener('click', (event) => {
             const button = event.target.closest('.home-quick-choice');
             if (!button) return;
+
+            const isAlreadyActive = button.classList.contains('active');
+            const activeCount = element.querySelectorAll('[data-home-toppings] .active').length;
+
+            if (!isAlreadyActive && activeCount >= 3) {
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.', 'warning');
+                } else if (typeof showToast === 'function') {
+                    showToast('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.', 'warning');
+                } else {
+                    alert('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.');
+                }
+                return;
+            }
+
             button.classList.toggle('active');
             input('toppings').value = JSON.stringify(Array.from(element.querySelectorAll('[data-home-toppings] .active')).map((item) => ({
                 name: item.dataset.name,

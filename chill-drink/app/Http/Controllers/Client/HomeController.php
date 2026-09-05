@@ -30,6 +30,11 @@ class HomeController extends Controller
             ];
         $recommendationResult['message'] = $this->recommendationMessage($recommendationResult);
 
+        $recommendations = $recommendationResult['recommendations'] ?? collect();
+        if ($recommendations instanceof \Illuminate\Support\Collection && $recommendations->isNotEmpty()) {
+            (new \Illuminate\Database\Eloquent\Collection($recommendations->pluck('product')->filter()))->loadMissing('toppings');
+        }
+
         // Get all categories (include soft-deleted, hide only after force delete)
         $categories = Category::withTrashed()->orderBy('name')->get();
 
@@ -41,7 +46,12 @@ class HomeController extends Controller
         ];
 
         $discoverProductsBySlug = Product::query()
-            ->with(['category', 'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
+            ->with([
+                'category',
+                'sizes',
+                'toppings',
+                'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id)),
+            ])
             ->where('status', true)
             ->whereIn('slug', $discoverProductSlugs)
             ->get()

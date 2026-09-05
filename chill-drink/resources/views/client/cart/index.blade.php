@@ -210,17 +210,53 @@
         color: #003731;
     }
 
-    .recommend-image {
+    .cart-recommend-wrap { position: relative; height: 100%; display: flex; flex-direction: column; }
+    .cart-recommend-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border-radius: 24px;
+        overflow: hidden;
+        background: #fff;
+        transition: transform .22s ease, box-shadow .22s ease;
+    }
+    .cart-recommend-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 36px rgba(8, 42, 38, 0.12);
+    }
+    .cart-recommend-card .recommend-image,
+    .cart-recommend-card img.product-image {
         aspect-ratio: 1 / 1;
         width: 100%;
+        height: auto !important;
+        max-height: 220px;
         object-fit: cover;
-        border-radius: 18px 18px 0 0;
+        border-radius: 24px 24px 0 0;
+        flex-shrink: 0;
+        display: block;
     }
-
-    .cart-recommend-wrap { position: relative; height: 100%; }
-    .cart-recommend-actions { position: absolute; top: 1rem; right: 1rem; bottom: 1rem; z-index: 6; display: flex; flex-direction: column; justify-content: space-between; gap: .65rem; pointer-events: none; }
+    .cart-recommend-card > .p-3 {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 96px;
+        padding: 1rem 4.5rem 1rem 1.15rem !important;
+    }
+    .cart-recommend-actions {
+        position: absolute;
+        top: 0.85rem;
+        right: 0.85rem;
+        bottom: 0.85rem;
+        z-index: 6;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: .65rem;
+        pointer-events: none;
+    }
     .cart-recommend-actions form, .cart-recommend-actions a, .cart-recommend-actions button { pointer-events: auto; }
-    .cart-recommend-action { display: grid; place-items: center; width: 45px; height: 45px; padding: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; background: rgba(255,255,255,.94); box-shadow: 0 10px 24px rgba(15,65,57,.18); backdrop-filter: blur(8px); transition: transform .18s ease, color .18s ease, background .18s ease; }
+    .cart-recommend-action { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid rgba(255,255,255,.9); border-radius: 50%; background: rgba(255,255,255,.94); box-shadow: 0 8px 20px rgba(15,65,57,.16); backdrop-filter: blur(8px); transition: transform .18s ease, color .18s ease, background .18s ease; }
     .cart-recommend-action:hover { transform: scale(1.08); }
     .cart-recommend-action.is-favorite { color: #e83e5b; }
     .cart-recommend-action.is-favorite.is-active,
@@ -228,8 +264,7 @@
     .cart-recommend-action.is-favorite.is-active:focus { color: #e83e5b; border-color: rgba(255,255,255,.9); background: rgba(255,255,255,.96); }
     .cart-recommend-action.is-add { color: #fff; border-color: #079b7d; background: #079b7d; }
     .cart-recommend-action.is-add:hover { background: #06735f; }
-    .cart-recommend-action i { font-size: 1.18rem; line-height: 1; }
-    .cart-recommend-card > .p-3 { min-height: 106px; padding-right: 4.75rem !important; }
+    .cart-recommend-action i { font-size: 1.15rem; line-height: 1; }
 
     @media (max-width: 767.98px) {
         .cart-page {
@@ -572,7 +607,7 @@
                                         <p class="text-secondary small mb-1">
                                             Đường {{ $item['sugar_level'] ?? 100 }}% · Đá {{ $item['ice_level'] ?? 100 }}%
                                         </p>
-                                        <p class="text-primary fw-bold mb-0">{{ number_format($item['price'], 0, ',', '.') }}đ</p>
+                                        <p class="text-secondary small mb-0">Đơn giá: <span class="fw-bold text-dark">{{ number_format($item['price'], 0, ',', '.') }}đ</span></p>
                                     </div>
 
                                     <div class="cart-item-controls d-flex flex-column align-items-md-end gap-3">
@@ -611,20 +646,24 @@
                             <strong><span data-selected-count>{{ count($cart) }}</span> món</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
-                            <span class="text-secondary">Tạm tính đã chọn</span>
+                            <span class="text-secondary">Tạm tính tiền món</span>
                             <strong data-selected-total>{{ number_format($total, 0, ',', '.') }}đ</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Phí vận chuyển</span>
-                            <strong class="text-primary">Tính theo km</strong>
+                            <strong class="text-primary small">Tính ở bước thanh toán</strong>
                         </div>
-                        <div class="d-flex justify-content-between mb-4">
+                        @if($tax > 0)
+                        <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Thuế ước tính</span>
-                            <strong>{{ $tax > 0 ? number_format($tax, 0, ',', '.') . 'đ' : '0đ' }}</strong>
+                            <strong>{{ number_format($tax, 0, ',', '.') }}đ</strong>
                         </div>
+                        @endif
+
+                        <hr class="my-3" style="border-color: rgba(0, 139, 122, 0.15);">
 
                         <div class="d-flex justify-content-between align-items-center h4 fw-bold mb-4">
-                            <span>Tạm tính</span>
+                            <span>Tổng thanh toán</span>
                             <span class="text-primary" data-selected-grand-total>{{ number_format($total + $tax, 0, ',', '.') }}đ</span>
                         </div>
 
@@ -1039,6 +1078,31 @@
 
         document.addEventListener('cart:updated', updateSelectionSummary);
         updateSelectionSummary();
+
+        const flashToast = sessionStorage.getItem('cart_flash_toast');
+        if (flashToast) {
+            sessionStorage.removeItem('cart_flash_toast');
+            let feedback = document.querySelector('[data-cart-feedback]');
+            if (!feedback) {
+                feedback = document.createElement('div');
+                feedback.className = 'cart-feedback';
+                feedback.dataset.cartFeedback = 'true';
+                document.body.appendChild(feedback);
+            }
+            feedback.innerHTML = `
+                <span class="cart-feedback-icon"><i class="bi bi-bag-check"></i></span>
+                <span class="cart-feedback-copy">
+                    <strong>Thành công</strong>
+                    <span>${flashToast}</span>
+                </span>
+                <span class="cart-feedback-actions">
+                    <button type="button" class="cart-feedback-close" aria-label="Đóng"><i class="bi bi-x-lg"></i></button>
+                </span>
+            `;
+            feedback.querySelector('.cart-feedback-close')?.addEventListener('click', () => feedback.classList.remove('show'));
+            feedback.classList.add('show');
+            window.setTimeout(() => feedback.classList.remove('show'), 2500);
+        }
     });
 </script>
 @endsection
