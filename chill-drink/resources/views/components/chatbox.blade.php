@@ -332,7 +332,7 @@
             }
         },
 
-        async selectBranch(branch) {
+        async selectBranch(branch, allowRecovery = true) {
             if (!this.conversationId || this.selectingBranch) return;
             this.selectingBranch = true;
             this.selectedBranchNameTemp = branch.name;
@@ -351,7 +351,19 @@
                     },
                     body: JSON.stringify(body),
                 });
-                const data = await res.json();
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 403 && allowRecovery) {
+                    // A stale conversation id can survive an account switch.
+                    // Start a fresh conversation owned by the current user and retry once.
+                    this.conversationId = null;
+                    this.branchId = null;
+                    this.branchName = '';
+                    await this.getOrCreateConversation();
+                    if (this.conversationId) {
+                        await this.selectBranch(branch, false);
+                    }
+                    return;
+                }
                 if (data.success) {
                     if (data.conversation_id) {
                         this.conversationId = data.conversation_id;
