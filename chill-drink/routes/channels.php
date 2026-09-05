@@ -52,6 +52,12 @@ Broadcast::channel('order.{orderId}', function ($user, $orderId) {
         ->exists();
 });
 
+Broadcast::channel('shipper-orders.{userId}', function ($user, $userId) {
+    return $user
+        && $user->isShipper()
+        && (int) $user->id === (int) $userId;
+});
+
 Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
     $conversation = Conversation::find($conversationId);
     if (! $conversation) {

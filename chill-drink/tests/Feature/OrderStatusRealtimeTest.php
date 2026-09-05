@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\OrderStatusUpdated;
 use App\Models\Branch;
 use App\Models\Order;
+use App\Models\Shipper;
 use App\Models\User;
 use App\Support\OrderStatus;
 use App\Support\OrderRealtimeChannel;
@@ -154,6 +155,84 @@ class OrderStatusRealtimeTest extends TestCase
             ->assertSee("channel.listen('.order.status.updated'", false)
             ->assertSee('Number(payload?.order_id) !== orderId', false)
             ->assertSee('poll(true)', false);
+    }
+
+    public function test_shipper_orders_page_subscribes_and_updates_assigned_order_status_realtime(): void
+    {
+        $this->enableRealtime();
+        $branch = $this->branch();
+        $shipperUser = User::factory()->create([
+            'role_id' => User::SHIPPER_ROLE_ID,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+        $shipper = Shipper::create([
+            'user_id' => $shipperUser->id,
+            'code' => 'SHIPPER-RT-'.uniqid(),
+            'phone' => '0900000002',
+            'status' => 'available',
+        ]);
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $branch);
+        $order->update([
+            'shipper_id' => $shipper->id,
+            'status' => OrderStatus::PREPARING,
+        ]);
+
+        $this->actingAs($shipperUser)
+            ->get(route('shipper.orders'))
+            ->assertOk()
+            ->assertSee('data-shipper-order="'.$order->id.'"', false)
+            ->assertSee('data-shipper-order-status', false)
+            ->assertSee("window.Echo.private('shipper-orders.'", false)
+            ->assertSee(".listen('.order.status.updated'", false)
+            ->assertSee("badge.textContent = payload.status_label || status", false);
+    }
+
+    public function test_admin_ready_for_delivery_update_is_broadcast_to_the_assigned_shipper(): void
+    {
+        $this->enableRealtime();
+        Event::fake([OrderStatusUpdated::class]);
+        $branch = $this->branch();
+        $admin = User::factory()->create([
+            'role_id' => 2,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+        $shipperUser = User::factory()->create([
+            'role_id' => User::SHIPPER_ROLE_ID,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+        $shipper = Shipper::create([
+            'user_id' => $shipperUser->id,
+            'code' => 'SHIPPER-ADMIN-RT-'.uniqid(),
+            'phone' => '0900000003',
+            'status' => 'busy',
+        ]);
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $branch);
+        $order->update([
+            'shipper_id' => $shipper->id,
+            'status' => OrderStatus::PREPARING,
+        ]);
+
+        $this->actingAs($admin)
+            ->putJson(route('admin.orders.updateStatus', $order), [
+                'status' => OrderStatus::READY_FOR_DELIVERY,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', OrderStatus::READY_FOR_DELIVERY);
+
+        $this->assertSame(OrderStatus::READY_FOR_DELIVERY, $order->fresh()->status);
+        Event::assertDispatched(OrderStatusUpdated::class, function (OrderStatusUpdated $event) use ($order, $shipperUser) {
+            $channels = collect($event->broadcastOn())
+                ->filter(fn ($channel) => $channel instanceof PrivateChannel)
+                ->map(fn (PrivateChannel $channel) => $channel->name);
+
+            return (int) $event->order->id === (int) $order->id
+                && $channels->contains('private-shipper-orders.'.$shipperUser->id);
+        });
     }
 
     public function test_guest_checkout_success_subscribes_only_to_its_opaque_order_channel(): void

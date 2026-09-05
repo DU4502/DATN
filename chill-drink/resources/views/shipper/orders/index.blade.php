@@ -50,13 +50,13 @@
             };
             $phone = $order->customerPhone();
         @endphp
-        <article class="ship-order-card {{ $isNew ? 'is-new' : '' }}">
+        <article class="ship-order-card {{ $isNew ? 'is-new' : '' }}" data-shipper-order="{{ $order->id }}">
             <div class="ship-order-top">
                 <div>
                     <div class="ship-order-code">{{ $order->displayCode() }}</div>
                     <div class="ship-order-time">{{ $order->created_at?->format('d/m/Y · H:i') }}</div>
                 </div>
-                <span class="ship-badge {{ $badgeClass }}">{{ $isNew ? 'Chờ xác nhận' : $label }}</span>
+                <span class="ship-badge {{ $badgeClass }}" data-shipper-order-status>{{ $isNew ? 'Chờ xác nhận' : $label }}</span>
             </div>
 
             <div class="ship-order-customer">

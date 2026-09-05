@@ -295,6 +295,64 @@
     </div>
 </div>
 
+@php
+    $shipperRouteOrder = request()->route('order') ?? request()->route('id') ?? request()->query('id');
+    $shipperRouteOrderId = is_object($shipperRouteOrder)
+        ? (int) ($shipperRouteOrder->id ?? 0)
+        : (is_numeric($shipperRouteOrder) ? (int) $shipperRouteOrder : 0);
+@endphp
+@if(\App\Support\RealtimeOrderNotifier::isConfigured() && $shipperLayoutUser?->isShipper())
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.Echo || window.__chillShipperOrderRealtimeBooted) return;
+    window.__chillShipperOrderRealtimeBooted = true;
+
+    const channel = window.Echo.private('shipper-orders.' + @json((int) $shipperLayoutUser->id));
+    const badgeTone = status => {
+        if (['confirmed', 'preparing'].includes(status)) return 'info';
+        if (['ready_for_delivery', 'shipper_picked_up', 'delivering'].includes(status)) return 'warn';
+        if (status === 'cancelled') return 'danger';
+        return '';
+    };
+
+    channel.listen('.order.status.updated', payload => {
+        const orderId = Number(payload?.order_id || 0);
+        const status = String(payload?.status || '');
+        if (!orderId || !status) return;
+
+        const cards = Array.from(document.querySelectorAll(`[data-shipper-order="${orderId}"]`));
+        cards.forEach(card => {
+            if (['delivered', 'completed', 'cancelled'].includes(status)) {
+                card.remove();
+                return;
+            }
+            const badge = card.querySelector('[data-shipper-order-status]');
+            if (!badge) return;
+            badge.classList.remove('info', 'warn', 'danger');
+            const tone = badgeTone(status);
+            if (tone) badge.classList.add(tone);
+            badge.textContent = payload.status_label || status;
+        });
+
+        document.dispatchEvent(new CustomEvent('shipper:order-status-updated', {detail: payload}));
+
+        const isOrderWorkspace = @json(request()->routeIs('shipper.orders.show') || request()->routeIs('shipper.map*'));
+        const currentOrderId = Number(@json($shipperRouteOrderId));
+        if (isOrderWorkspace && currentOrderId === orderId) {
+            window.location.reload();
+            return;
+        }
+
+        // An assigned order not present in the current page needs its complete card
+        // (customer/address/actions), which is safest to render from the server once.
+        if (!cards.length && @json(request()->routeIs('shipper.dashboard') || request()->routeIs('shipper.orders'))) {
+            window.location.reload();
+        }
+    });
+});
+</script>
+@endif
+
 <script>
 (() => {
     const pulseUrl = @json(route('shipper.assignments.pulse'));

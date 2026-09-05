@@ -116,13 +116,13 @@
             };
             $phone = $order->customerPhone();
         @endphp
-        <article class="ship-order-card {{ $isNew ? 'is-new' : '' }}">
+        <article class="ship-order-card {{ $isNew ? 'is-new' : '' }}" data-shipper-order="{{ $order->id }}">
             <div class="ship-order-top">
                 <div>
                     <div class="ship-order-code">{{ $order->displayCode() }}</div>
                     <div class="ship-order-time">Cập nhật {{ $order->updated_at?->diffForHumans() }}</div>
                 </div>
-                <span class="ship-badge {{ $badgeClass }}">{{ $isNew ? 'Mới giao' : $label }}</span>
+                <span class="ship-badge {{ $badgeClass }}" data-shipper-order-status>{{ $isNew ? 'Mới giao' : $label }}</span>
             </div>
 
             <div class="ship-order-customer">

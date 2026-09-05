@@ -18,7 +18,7 @@ class OrderStatusUpdated implements ShouldBroadcastNow
 
     public function __construct(public Order $order)
     {
-        $this->order->loadMissing('user');
+        $this->order->loadMissing('user', 'shipper.user');
     }
 
     public function broadcastOn(): array
@@ -41,6 +41,11 @@ class OrderStatusUpdated implements ShouldBroadcastNow
             $channels[] = new Channel($guestChannel);
         }
 
+        $shipperUserId = $this->order->shipper?->user_id;
+        if (is_numeric($shipperUserId)) {
+            $channels[] = new PrivateChannel('shipper-orders.'.(int) $shipperUserId);
+        }
+
         return $channels;
     }
 
@@ -56,6 +61,7 @@ class OrderStatusUpdated implements ShouldBroadcastNow
         return [
             'order_id' => (int) $this->order->id,
             'order_code' => $this->order->displayCode(),
+            'branch_id' => is_numeric($this->order->branch_id) ? (int) $this->order->branch_id : null,
             'status' => $payload['status'],
             'status_label' => $payload['status_label'],
             'status_icon' => OrderStatus::notificationIcon($payload['status']),
