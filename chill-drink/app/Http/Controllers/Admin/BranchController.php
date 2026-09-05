@@ -113,6 +113,7 @@ class BranchController extends Controller
         $validated['status'] = $request->boolean('status', true);
 
         $branch->update($validated);
+        $this->broadcastStatus($branch);
 
         \App\Models\SystemLog::record(
             request()->user(),
@@ -282,7 +283,8 @@ class BranchController extends Controller
      */
     public function toggleStatus(Branch $branch)
     {
-        $branch->update(['status' => ! $branch->status]);
+        request()->validate(['status' => 'sometimes|required|boolean']);
+        $branch->update(['status' => request()->has('status') ? request()->boolean('status') : ! $branch->status]);
 
         \App\Models\SystemLog::record(
             request()->user(),
@@ -291,11 +293,32 @@ class BranchController extends Controller
             'info'
         );
 
+        // Broadcast realtime event
+        $this->broadcastStatus($branch);
+
         if (request()->expectsJson()) {
-            return response()->json(['success' => true, 'status' => $branch->status]);
+            return response()->json([
+                'success' => true,
+                'status' => $branch->status,
+                'branch' => $branch->only(['id', 'name', 'status']),
+                'message' => $branch->status
+                    ? (($branch->latitude === null || $branch->longitude === null)
+                        ? 'Đã mở chi nhánh. Cần bổ sung vị trí Google Maps để xuất hiện ở checkout giao hàng.'
+                        : 'Đã mở chi nhánh. Checkout sẽ cập nhật các chi nhánh trong phạm vi giao hàng.')
+                    : 'Đã đóng chi nhánh, ngừng nhận đơn mới.',
+            ]);
         }
 
         return redirect()->to(route('admin.super-admin') . '#branch-ranking')
             ->with('success', ($branch->status ? 'Kích hoạt' : 'Vô hiệu hóa') . ' chi nhánh thành công!');
+    }
+
+    private function broadcastStatus(Branch $branch): void
+    {
+        try {
+            broadcast(new \App\Events\BranchStatusUpdated($branch));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 }

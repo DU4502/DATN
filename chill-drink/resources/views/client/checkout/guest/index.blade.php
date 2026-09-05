@@ -1585,7 +1585,18 @@
             return R * c;
         }
 
+        let branchLocation = [null, null];
+        let branchOptionsSequence = 0;
+        window.refreshCheckoutBranches = async (branches) => {
+            if (!branchSelect) return;
+            const previous = branchSelect.value;
+            branchesData.splice(0, branchesData.length, ...(Array.isArray(branches) ? branches : []));
+            await renderBranchOptions(...branchLocation);
+            if (previous !== branchSelect.value) branchSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        };
         async function renderBranchOptions(latitude = null, longitude = null) {
+            const sequence = ++branchOptionsSequence;
+            branchLocation = [latitude, longitude];
             if (!branchSelect) return;
 
             const currentValue = branchSelect.value || '';
@@ -1644,6 +1655,7 @@
                 const response = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
                 const payload = await response.json();
                 if (!response.ok || !payload.success) throw new Error(payload.message || 'Không tải được chi nhánh.');
+                if (sequence !== branchOptionsSequence) return;
 
                 writeOptions(Array.isArray(payload.data) ? payload.data : [], true);
                 if (branchSelectNote) {
@@ -1651,14 +1663,17 @@
                     branchSelectNote.textContent = 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng không quá 15 km theo lộ trình đường bộ.';
                 }
             } catch (error) {
+                if (sequence !== branchOptionsSequence) return;
                 writeOptions(branchesData, false);
                 if (branchSelectNote) {
                     branchSelectNote.classList.remove('d-none');
                     branchSelectNote.textContent = 'Chưa tải được tuyến đường. Hệ thống sẽ kiểm tra chính xác khi tiếp tục.';
                 }
             } finally {
-                branchSelect.disabled = false;
-                updateSummary();
+                if (sequence === branchOptionsSequence) {
+                    branchSelect.disabled = false;
+                    updateSummary();
+                }
             }
         }
 
@@ -1964,4 +1979,5 @@
         }
     });
 </script>
+@include('components.branch-availability-sync')
 @endsection

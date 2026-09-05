@@ -2793,7 +2793,10 @@ function syncBranchRankingRow(branch) {
 
     const nameCell = row.querySelector('[data-branch-name-cell]');
     if (nameCell) {
-        nameCell.textContent = branch.name ?? '';
+        const nameText = nameCell.querySelector('[data-branch-name-text]');
+        if (nameText) {
+            nameText.textContent = branch.name ?? '';
+        }
     }
 
     const statusCell = row.querySelector('[data-branch-status-cell]');
@@ -2801,6 +2804,51 @@ function syncBranchRankingRow(branch) {
         statusCell.innerHTML = branch.status
             ? `<span class="sa-state sa-state-active" data-branch-status-badge="${branchId}"><i class="bi bi-check-circle"></i> Hoạt động</span>`
             : `<span class="sa-state" style="background: #fef2f2; color: #991b1b;" data-branch-status-badge="${branchId}"><i class="bi bi-pause-circle"></i> Tạm ngưng</span>`;
+    }
+}
+
+function syncBranchStatusRealtime(payload) {
+    if (!payload || payload.id === undefined || payload.id === null) {
+        return;
+    }
+
+    const branchId = String(payload.id);
+    const isActive = payload.status === true || payload.status === 1 || payload.status === '1';
+    const branch = { ...payload, id: branchId, status: isActive };
+
+    document.querySelectorAll(`[data-branch-status-input="${branchId}"]`).forEach((input) => {
+        input.value = isActive ? '1' : '0';
+        input.defaultValue = input.value;
+    });
+
+    syncBranchRankingRow(branch);
+    renderBranchStatusToggle(branchId);
+
+    document.querySelectorAll(`[data-branch-status-badge="${branchId}"]`).forEach((badge) => {
+        badge.closest('tr')?.animate(
+            [
+                { backgroundColor: 'rgba(13, 147, 115, 0.16)' },
+                { backgroundColor: 'transparent' },
+            ],
+            { duration: 1200, easing: 'ease-out' }
+        );
+    });
+}
+
+function bootBranchStatusRealtime() {
+    if (!window.Echo || window.__superAdminBranchStatusRealtimeBooted) {
+        return;
+    }
+
+    window.__superAdminBranchStatusRealtimeBooted = true;
+    window.Echo.channel('branches').listen('BranchStatusUpdated', syncBranchStatusRealtime);
+}
+
+function notifyBranchAvailabilityChanged() {
+    try {
+        localStorage.setItem('branch-availability-changed', String(Date.now()));
+    } catch (error) {
+        console.warn('Không thể phát tín hiệu cập nhật chi nhánh.', error);
     }
 }
 
@@ -2860,6 +2908,7 @@ async function submitBranchEditForm(form) {
         const branch = data.branch || {};
         syncBranchEditModal(form, branch);
         syncBranchRankingRow(branch);
+        notifyBranchAvailabilityChanged();
         hideBranchEditModal(form);
         showSuperAdminToast(data?.message || 'Cập nhật chi nhánh thành công!', 'success');
     } catch (error) {
@@ -2888,7 +2937,7 @@ document.addEventListener('submit', function(e) {
     submitBranchEditForm(form);
 }, true);
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', async function(e) {
     const toggleButton = e.target.closest('[data-branch-status-toggle]');
     if (!toggleButton) {
         return;
@@ -2897,13 +2946,43 @@ document.addEventListener('click', function(e) {
     const branchId = toggleButton.getAttribute('data-branch-status-toggle');
     const input = document.querySelector(`[data-branch-status-input="${branchId}"]`);
 
-    if (!input) {
+    if (!input || toggleButton.disabled) {
         return;
     }
 
-    input.value = input.value === '1' ? '0' : '1';
-    renderBranchStatusToggle(branchId);
+    const form = toggleButton.closest('form');
+    const saveButton = form?.querySelector('[type="submit"]');
+    toggleButton.disabled = true;
+    if (saveButton) saveButton.disabled = true;
+    toggleButton.textContent = 'Đang cập nhật…';
+    try {
+        const url = @json(route('admin.branches.toggle-status', ['branch' => '__BRANCH__'])).replace('__BRANCH__', branchId);
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/json', 'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': form.querySelector('[name="_token"]').value,
+            },
+            body: JSON.stringify({ status: input.value !== '1' }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Không thể đổi trạng thái.');
+        input.value = data.status ? '1' : '0';
+        input.defaultValue = input.value;
+        syncBranchStatusRealtime(data.branch);
+        showSuperAdminToast(data.message, 'success');
+        notifyBranchAvailabilityChanged();
+    } catch (error) {
+        showSuperAdminToast(error.message || 'Không thể kết nối máy chủ.', 'danger');
+    } finally {
+        renderBranchStatusToggle(branchId);
+        toggleButton.disabled = false;
+        if (saveButton) saveButton.disabled = false;
+    }
 });
+
+document.addEventListener('DOMContentLoaded', bootBranchStatusRealtime);
+bootBranchStatusRealtime();
 
 async function loadAdminsRegion(url) {
     const targetUrl = new URL(url, window.location.origin);

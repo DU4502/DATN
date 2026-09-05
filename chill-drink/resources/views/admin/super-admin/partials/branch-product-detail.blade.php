@@ -350,7 +350,7 @@
                                     <i class="bi bi-{{ $branchStatusValue ? 'toggle-on' : 'toggle-off' }} me-1"></i>
                                     <span data-branch-status-label="{{ $branch['branch_id'] }}">{{ $branchStatusValue ? 'Đóng chi nhánh' : 'Mở chi nhánh' }}</span>
                                 </button>
-                                <small class="text-secondary">Nhấn để đổi trạng thái chi nhánh</small>
+                                <small class="text-secondary">Đóng/mở được lưu ngay. Chi nhánh cần có tọa độ Google Maps để hiện ở checkout.</small>
                             </div>
                         </div>
                         <div class="modal-footer" style="gap: 0.75rem;">

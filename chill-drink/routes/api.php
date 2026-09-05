@@ -15,6 +15,7 @@ Route::get('/products', [ProductApiController::class, 'index'])->name('api.produ
 Route::get('/products/{product:slug}', [ProductApiController::class, 'show'])->name('api.products.show');
 Route::get('/branches/nearest', [NearestBranchController::class, 'nearest'])->name('api.branches.nearest');
 Route::get('/branches', [NearestBranchController::class, 'list'])->name('api.branches.list');
+Route::get('/branches/availability', [NearestBranchController::class, 'availability'])->name('api.branches.availability');
 Route::get('/delivery/quote', DeliveryQuoteController::class)->name('api.delivery.quote');
 Route::get('/map-link/resolve', ResolveMapLinkController::class)->name('api.map-link.resolve');
 Route::get('/reverse-geocode', ReverseGeocodeController::class)->name('api.reverse-geocode');

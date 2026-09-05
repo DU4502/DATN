@@ -11,6 +11,13 @@ use Illuminate\Http\Request;
 
 class NearestBranchController extends Controller
 {
+    public function availability(): JsonResponse
+    {
+        return response()->json([
+            'data' => Branch::availableForLocation()->orderBy('id')->get(['id', 'name', 'address', 'latitude', 'longitude']),
+        ])->header('Cache-Control', 'no-store');
+    }
+
     public function nearest(Request $request, DeliveryRoutingService $routing): JsonResponse
     {
         $validated = $request->validate([

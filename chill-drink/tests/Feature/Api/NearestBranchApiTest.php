@@ -120,4 +120,38 @@ class NearestBranchApiTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('success', false);
     }
+
+    public function test_availability_only_returns_active_branches_with_coordinates(): void
+    {
+        $available = Branch::query()->create([
+            'name' => 'Chi nhánh đang mở',
+            'code' => 'AVAILABLE-RT',
+            'address' => 'Có tọa độ',
+            'latitude' => 19.807157,
+            'longitude' => 105.776156,
+            'status' => true,
+        ]);
+
+        Branch::query()->create([
+            'name' => 'Chi nhánh đang đóng',
+            'code' => 'CLOSED-RT',
+            'address' => 'Có tọa độ',
+            'latitude' => 19.807157,
+            'longitude' => 105.776156,
+            'status' => false,
+        ]);
+
+        Branch::query()->create([
+            'name' => 'Chi nhánh thiếu tọa độ',
+            'code' => 'NO-COORDS-RT',
+            'address' => 'Chưa gắn map',
+            'status' => true,
+        ]);
+
+        $this->getJson('/api/branches/availability')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $available->id, 'name' => 'Chi nhánh đang mở'])
+            ->assertJsonMissing(['name' => 'Chi nhánh đang đóng'])
+            ->assertJsonMissing(['name' => 'Chi nhánh thiếu tọa độ']);
+    }
 }

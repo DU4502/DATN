@@ -320,4 +320,72 @@
 
 @include('admin.partials.branch-map-link-script')
 
+<script>
+// Realtime cập nhật trạng thái chi nhánh
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof window.Echo === 'undefined') {
+        console.warn('Laravel Echo chưa được khởi tạo');
+        return;
+    }
+
+    window.Echo.channel('branches')
+        .listen('BranchStatusUpdated', function(event) {
+            console.log('Branch status updated:', event);
+
+            // Tìm row của chi nhánh trong bảng
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:first-child strong');
+                if (!nameCell) return;
+
+                if (nameCell.textContent.trim() === event.name) {
+                    // Cập nhật badge trạng thái
+                    const statusCell = row.querySelector('td:nth-child(6)');
+                    if (statusCell) {
+                        if (event.status) {
+                            statusCell.innerHTML = '<span class="badge bg-success">Hoạt động</span>';
+                        } else {
+                            statusCell.innerHTML = '<span class="badge bg-danger">Vô hiệu hóa</span>';
+                        }
+                    }
+
+                    // Cập nhật nút toggle
+                    const toggleForm = row.querySelector('form[action*="toggle-status"]');
+                    if (toggleForm) {
+                        const btn = toggleForm.querySelector('button');
+                        if (event.status) {
+                            btn.className = 'btn btn-sm btn-outline-warning';
+                            btn.title = 'Vô hiệu hóa';
+                            btn.innerHTML = '<i class="bi bi-lock"></i>';
+                        } else {
+                            btn.className = 'btn btn-sm btn-outline-success';
+                            btn.title = 'Kích hoạt';
+                            btn.innerHTML = '<i class="bi bi-unlock"></i>';
+                        }
+                    }
+
+                    // Hiệu ứng highlight
+                    row.style.transition = 'background-color 0.3s';
+                    row.style.backgroundColor = '#fffbeb';
+                    setTimeout(() => {
+                        row.style.backgroundColor = '';
+                    }, 2000);
+                }
+            });
+
+            // Hiển thị thông báo toast (nếu có)
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'info',
+                    title: `Chi nhánh "${event.name}" đã ${event.status_text}`,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            }
+        });
+});
+</script>
+
 @endsection
