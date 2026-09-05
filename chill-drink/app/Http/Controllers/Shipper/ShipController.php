@@ -120,6 +120,7 @@ class ShipController extends Controller
     public function assignmentPulse(): JsonResponse
     {
         $shipper = $this->getShipper();
+        $this->touchPresence($shipper);
         $ordersQuery = $this->deliveryOrderQuery($shipper)
             ->whereIn('status', self::ACTIVE_ORDER_STATUSES)
             ->limit(10);
@@ -197,6 +198,7 @@ class ShipController extends Controller
                 'show_url' => route('shipper.orders.show', $latest->id),
                 'map_url' => route('shipper.map', ['id' => $latest->id]),
                 'branch_name' => $latest->branch?->name ?? 'Chi nhánh',
+                'distance_km' => $distanceKm,
                 'details' => $assignmentDetails,
             ] : null,
         ]);
@@ -308,7 +310,7 @@ class ShipController extends Controller
 
     /**
      * "Nhận đơn" chỉ là xác nhận đã thấy và tiếp nhận nhiệm vụ.
-     * Hệ thống đã gán order.shipper_id ngay khi quán xác nhận đơn.
+     * Hệ thống chỉ gán order.shipper_id khi quán chuyển đơn sang Sẵn sàng giao.
      */
     public function acceptOrder($id)
     {
@@ -1447,7 +1449,10 @@ class ShipController extends Controller
                 : 'Bạn đang có chuyến hoạt động nên chưa thể chuyển Offline.');
         }
 
-        $shipper->forceFill(['status' => $validated['status']])->save();
+        $shipper->forceFill([
+            'status' => $validated['status'],
+            'last_active_at' => $validated['status'] === 'online' ? now() : null,
+        ])->save();
 
         $suffix = '';
         if ($validated['status'] === 'online') {
@@ -1467,6 +1472,35 @@ class ShipController extends Controller
         }
 
         return back()->with('success', 'Đã cập nhật trạng thái shipper.'.$suffix);
+    }
+
+    public function presenceOffline(Request $request): JsonResponse
+    {
+        $shipper = $this->getShipper();
+        $hasActiveOrder = Order::where('shipper_id', $shipper->id)
+            ->whereIn('status', self::ACTIVE_ORDER_STATUSES)
+            ->exists();
+        $isReturning = app(ShipperReturnService::class)->currentReturn($shipper) !== null;
+
+        if (! $hasActiveOrder && ! $isReturning && $shipper->status === 'online') {
+            $shipper->forceFill([
+                'status' => 'offline',
+                'last_active_at' => null,
+            ])->save();
+        } else {
+            $shipper->forceFill(['last_active_at' => null])->save();
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    private function touchPresence(Shipper $shipper): void
+    {
+        if (! in_array($shipper->status, ['online', 'busy'], true)) {
+            return;
+        }
+
+        $shipper->forceFill(['last_active_at' => now()])->save();
     }
 
     public function updateLocation(Request $request): JsonResponse

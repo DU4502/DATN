@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.dispatchEvent(new CustomEvent('shipper:order-status-updated', {detail: payload}));
 
-        if (status === 'confirmed' && payload.shipper_order && typeof window.ChillShipperAssignmentPrompt === 'function') {
+        if (status === 'ready_for_delivery' && payload.shipper_order && typeof window.ChillShipperAssignmentPrompt === 'function') {
             window.ChillShipperAssignmentBellLoop?.(payload.shipper_order.assignment_key || payload.order_id);
             window.ChillShipperAssignmentPrompt(payload.shipper_order);
         }
@@ -456,6 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 (() => {
     const pulseUrl = @json(route('shipper.assignments.pulse'));
+    const presenceOfflineUrl = @json(route('shipper.presence.offline'));
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const pendingSoundKey = 'chilldrink_shipper_pending_assignment_sound';
     const startedAssignmentKey = 'chilldrink_shipper_started_assignment';
     const assignmentBellIntervalMs = 5000;
@@ -511,7 +513,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div class="shipper-assignment-address"><i class="fa-solid fa-location-dot"></i><span><strong>${escapeHtml(order.details?.customer_name || 'Khách hàng')}</strong>${escapeHtml(order.details?.shipping_address || 'Địa chỉ giao hàng đang cập nhật')}<small>${escapeHtml(order.details?.customer_phone || 'Chưa có số điện thoại')}</small></span></div>
                 <div class="shipper-assignment-details">
-                    <div class="shipper-assignment-detail"><i class="fa-solid fa-location-dot"></i>Khoảng cách<strong>${escapeHtml(Number.isFinite(Number(order.distance_km)) ? `${order.distance_km} km` : 'Đang tính')}</strong></div>
+                    <div class="shipper-assignment-detail"><i class="fa-solid fa-location-dot"></i>Khoảng cách<strong>${escapeHtml(Number.isFinite(Number(order.distance_km ?? order.details?.distance_km)) ? `${order.distance_km ?? order.details?.distance_km} km` : 'Đang tính')}</strong></div>
                     <div class="shipper-assignment-detail"><i class="fa-solid fa-layer-group"></i>Quy mô đơn<strong>${escapeHtml(order.details?.bundle_order_count > 1 ? `Ghép ${order.details.bundle_order_count} đơn` : 'Đơn lẻ')}</strong></div>
                     <div class="shipper-assignment-detail"><i class="fa-solid fa-mug-hot"></i>Số lượng<strong>${escapeHtml(order.details?.bundle_total_cups || order.details?.total_cups || 0)} cốc · ${escapeHtml(order.details?.item_lines || 0)} món</strong></div>
                     <div class="shipper-assignment-detail"><i class="fa-solid fa-money-bill-wave"></i>Tổng tiền<strong>${escapeHtml(order.details?.total_formatted || 'Xem chi tiết')}</strong></div>
@@ -649,6 +651,13 @@ document.addEventListener('DOMContentLoaded', () => {
     unlockAudioAndReplayPending();
     setInterval(pollAssignment, assignmentBellIntervalMs);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) pollAssignment(); });
+    window.addEventListener('pagehide', () => {
+        if (!presenceOfflineUrl || !csrfToken) return;
+        const body = new Blob([new URLSearchParams({_token: csrfToken}).toString()], {
+            type: 'application/x-www-form-urlencoded; charset=UTF-8'
+        });
+        navigator.sendBeacon?.(presenceOfflineUrl, body);
+    });
 })();
 </script>
 <script>

@@ -277,8 +277,8 @@ class StaffOrderController extends Controller
 
 
         $dispatchResult = null;
-        if ($newStatus === OrderStatus::CONFIRMED
-            && $oldStatus !== OrderStatus::CONFIRMED
+        if ($newStatus === OrderStatus::READY_FOR_DELIVERY
+            && OrderStatus::normalize((string) $oldStatus) !== OrderStatus::READY_FOR_DELIVERY
             && ($order->fulfillment_type ?? 'delivery') === 'delivery') {
             $dispatchResult = app(ShipperDispatchService::class)
                 ->dispatchConfirmedOrder($order->fresh(['branch']));
@@ -331,11 +331,16 @@ class StaffOrderController extends Controller
                     'id' => (int) $freshOrder->id,
                     'order_id' => (int) $freshOrder->id,
                     'order_code' => $freshOrder->displayCode(),
+                    'customer_name' => $freshOrder->customerName() ?: 'Khách hàng',
+                    'created_at' => $freshOrder->created_at?->format('H:i · d/m/Y'),
+                    'fulfillment_type' => $freshFulfillmentType,
+                    'total_formatted' => number_format((int) ($freshOrder->total ?? $freshOrder->total_price ?? 0), 0, ',', '.').'đ',
                     'status' => $freshStatus,
                     'status_label' => OrderStatus::label($freshStatus),
                     'status_class' => 'status-text-'.$freshStatus,
                     'status_options' => $freshOptions,
                     'next_status' => OrderStatus::storeNextStatus($freshStatus, $freshFulfillmentType),
+                    'status_update_url' => route('staff.orders.updateStatus', $freshOrder->id),
                     'can_update' => count($freshOptions) > 1,
                     'updated_at' => $freshOrder->updated_at?->toIso8601String(),
                     'status_changed_at' => $freshOrder->status_changed_at?->format('d/m H:i'),

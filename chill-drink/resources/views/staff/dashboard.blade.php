@@ -81,7 +81,7 @@
 </div>
 
 <!-- Đơn hàng cần xử lý -->
-<div class="admin-card mb-4">
+<div class="admin-card mb-4" data-staff-dashboard-orders-card>
     <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
         <div>
             <h3 class="h5 fw-bold mb-1">Đơn hàng cần xử lý</h3>
@@ -89,6 +89,7 @@
         </div>
         <a href="{{ route('staff.orders.index') }}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
     </div>
+    <div data-staff-dashboard-orders-list>
     @forelse($recentOrders as $order)
     @php
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
@@ -136,11 +137,12 @@
         </div>
     </div>
     @empty
-    <div class="p-5 text-center text-secondary">
+    <div class="p-5 text-center text-secondary" data-staff-dashboard-empty>
         <i class="bi bi-check-circle" style="font-size:2rem;color:#00a870;"></i>
         <p class="mt-2 mb-0 fw-semibold">Không có đơn hàng nào cần xử lý!</p>
     </div>
     @endforelse
+    </div>
 </div>
 
 <!-- Modal hủy đơn hàng -->
@@ -204,10 +206,67 @@ document.addEventListener('DOMContentLoaded', function () {
         cancelled: 'Đã hủy'
     };
 
+    const escapeHtml = function (value) {
+        const div = document.createElement('div');
+        div.textContent = value == null ? '' : String(value);
+        return div.innerHTML;
+    };
+
+    const createDashboardOrderRow = function (payload) {
+        const orderId = Number(payload.order_id || payload.id) || 0;
+        if (!orderId) return null;
+
+        const nextStatus = payload.next_status || null;
+        const updateUrl = payload.status_update_url || `{{ url('staff/orders') }}/${orderId}/status`;
+        const row = document.createElement('div');
+        row.className = 'p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3';
+        row.dataset.staffDashboardOrder = '';
+        row.dataset.orderId = String(orderId);
+        row.dataset.orderStatus = payload.status || '';
+        row.dataset.fulfillmentType = payload.fulfillment_type || 'delivery';
+        row.innerHTML = `
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:40px;height:40px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0;">
+                    <i class="bi bi-bag"></i>
+                </div>
+                <div>
+                    <div class="fw-bold text-primary">${escapeHtml(payload.order_code || `#${orderId}`)}</div>
+                    <div class="text-secondary" style="font-size:0.82rem;">${escapeHtml(payload.customer_name || 'Khách hàng')}</div>
+                    <div class="text-secondary" style="font-size:0.75rem;">${escapeHtml(payload.created_at || '')}</div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="fw-bold text-primary">${escapeHtml(payload.total_formatted || '')}</span>
+                ${nextStatus ? `
+                    <form action="${escapeHtml(updateUrl)}" method="POST" class="mb-0" data-dashboard-status-form>
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="status" value="${escapeHtml(nextStatus)}" data-dashboard-status-input>
+                        <button type="submit" class="btn btn-sm btn-primary" style="background:#00a870;border-color:#00a870;" data-dashboard-status-button>
+                            ${escapeHtml(statusLabels[nextStatus] || nextStatus)} <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </form>
+                ` : `<span class="badge bg-success">${escapeHtml(statusLabels[payload.status] || payload.status_label || payload.status || 'Đã cập nhật')}</span>`}
+            </div>
+        `;
+
+        return row;
+    };
+
     window.updateStaffDashboardOrder = function (payload) {
         payload = payload || {};
-        const row = document.querySelector(`[data-staff-dashboard-order][data-order-id="${Number(payload.order_id) || 0}"]`);
-        if (!row) return;
+        const orderId = Number(payload.order_id || payload.id) || 0;
+        if (!orderId) return;
+
+        let row = document.querySelector(`[data-staff-dashboard-order][data-order-id="${orderId}"]`);
+        if (!row) {
+            row = createDashboardOrderRow(payload);
+            const list = document.querySelector('[data-staff-dashboard-orders-list]');
+            if (!row || !list) return;
+
+            list.querySelector('[data-staff-dashboard-empty]')?.remove();
+            list.prepend(row);
+        }
 
         row.dataset.orderStatus = payload.status || row.dataset.orderStatus;
         const form = row.querySelector('[data-dashboard-status-form]');

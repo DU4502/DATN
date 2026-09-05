@@ -9,7 +9,7 @@ class DispatchWaitingDeliveryOrders extends Command
 {
     protected $signature = 'delivery:dispatch-waiting {--limit=5 : Số đơn tối đa thử điều phối trong một lượt}';
 
-    protected $description = 'P9: tự điều phối lại các đơn delivery đang confirmed/preparing/ready nhưng chưa có shipper';
+    protected $description = 'P9: tự điều phối lại các đơn delivery đã sẵn sàng giao nhưng chưa có shipper';
 
     public function handle(ShipperDispatchService $dispatch): int
     {
