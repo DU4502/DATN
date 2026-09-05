@@ -25,9 +25,14 @@ class OrderCreated implements ShouldBroadcastNow
             ? (int) $this->order->branch_id
             : null;
 
-        $channels = $branchId
-            ? [new PrivateChannel('admin-notifications.'.$branchId)]
-            : [new PrivateChannel('admin-notifications')];
+        $channels = [new PrivateChannel('super-admin-orders')];
+
+        if ($branchId) {
+            $channels[] = new PrivateChannel('staff-orders.'.$branchId);
+            // Branch admins keep the existing realtime data feed used by order
+            // lists/dashboard. Their modal listener is intentionally not rendered.
+            $channels[] = new PrivateChannel('admin-notifications.'.$branchId);
+        }
 
         return $channels;
     }

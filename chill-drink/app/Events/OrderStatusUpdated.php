@@ -4,6 +4,8 @@ namespace App\Events;
 
 use App\Models\Order;
 use App\Support\OrderStatus;
+use App\Support\OrderRealtimeChannel;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -32,6 +34,11 @@ class OrderStatusUpdated implements ShouldBroadcastNow
 
         if ($this->order->user_id) {
             $channels[] = new PrivateChannel('user.'.$this->order->user_id);
+            $channels[] = new PrivateChannel(OrderRealtimeChannel::authenticated($this->order));
+        } elseif ($guestChannel = OrderRealtimeChannel::guest($this->order)) {
+            // Guest tracking uses the high-entropy guest capability token, never the
+            // sequential order id, so another customer's order cannot be guessed.
+            $channels[] = new Channel($guestChannel);
         }
 
         return $channels;

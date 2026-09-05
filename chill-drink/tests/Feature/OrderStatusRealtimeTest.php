@@ -7,7 +7,9 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Models\User;
 use App\Support\OrderStatus;
+use App\Support\OrderRealtimeChannel;
 use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
@@ -36,6 +38,7 @@ class OrderStatusRealtimeTest extends TestCase
         $this->assertSame(OrderStatus::label(OrderStatus::CONFIRMED), $payload['status_label']);
         $this->assertNotEmpty($payload['updated_at']);
         $this->assertContains('private-user.'.$customer->id, $channelNames);
+        $this->assertContains('private-order.'.$order->id, $channelNames);
         $this->assertNotContains('private-user.'.$otherCustomer->id, $channelNames);
     }
 
@@ -80,6 +83,92 @@ class OrderStatusRealtimeTest extends TestCase
         $this->actingAs($otherCustomer)->postJson('/broadcasting/auth', $payload)->assertForbidden();
     }
 
+    public function test_order_tracking_private_channel_only_authorizes_its_customer(): void
+    {
+        $this->enableRealtime();
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $otherCustomer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $this->branch());
+        $payload = [
+            'socket_id' => '1234.5678',
+            'channel_name' => 'private-order.'.$order->id,
+        ];
+
+        $this->actingAs($customer)->postJson('/broadcasting/auth', $payload)->assertOk();
+        $this->actingAs($otherCustomer)->postJson('/broadcasting/auth', $payload)->assertForbidden();
+    }
+
+    public function test_guest_orders_broadcast_on_distinct_opaque_channels(): void
+    {
+        $branch = $this->branch();
+        $first = $this->guestOrder($branch, 'guest-token-a-'.str_repeat('1', 32));
+        $second = $this->guestOrder($branch, 'guest-token-b-'.str_repeat('2', 32));
+
+        $firstChannels = collect((new OrderStatusUpdated($first))->broadcastOn())
+            ->filter(fn ($channel) => $channel instanceof Channel && ! $channel instanceof PrivateChannel)
+            ->pluck('name')
+            ->values();
+        $secondChannels = collect((new OrderStatusUpdated($second))->broadcastOn())
+            ->filter(fn ($channel) => $channel instanceof Channel && ! $channel instanceof PrivateChannel)
+            ->pluck('name')
+            ->values();
+
+        $this->assertCount(1, $firstChannels);
+        $this->assertCount(1, $secondChannels);
+        $this->assertNotSame($firstChannels->first(), $secondChannels->first());
+        $this->assertStringStartsWith('guest-order.', $firstChannels->first());
+        $this->assertStringNotContainsString($first->guest_token, $firstChannels->first());
+    }
+
+    public function test_staff_status_changes_dispatch_customer_realtime_events_for_each_step(): void
+    {
+        $this->enableRealtime();
+        Event::fake([OrderStatusUpdated::class]);
+        $branch = $this->branch();
+        $staff = User::factory()->create([
+            'role_id' => User::STAFF_ROLE_ID,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $branch);
+
+        $this->actingAs($staff);
+        foreach ([OrderStatus::CONFIRMED, OrderStatus::PREPARING, OrderStatus::READY_FOR_DELIVERY] as $status) {
+            $this->put(route('staff.orders.updateStatus', $order->id), ['status' => $status])->assertRedirect();
+        }
+
+        Event::assertDispatchedTimes(OrderStatusUpdated::class, 3);
+        $this->assertSame(OrderStatus::READY_FOR_DELIVERY, $order->fresh()->status);
+    }
+
+    public function test_tracking_page_subscribes_to_exact_order_channel_and_refreshes_on_event(): void
+    {
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $this->branch());
+
+        $this->actingAs($customer)
+            ->get(route('orders.track', $order))
+            ->assertOk()
+            ->assertSee('data-realtime-channel="order.'.$order->id.'"', false)
+            ->assertSee("channel.listen('.order.status.updated'", false)
+            ->assertSee('Number(payload?.order_id) !== orderId', false)
+            ->assertSee('poll(true)', false);
+    }
+
+    public function test_guest_checkout_success_subscribes_only_to_its_opaque_order_channel(): void
+    {
+        $order = $this->guestOrder($this->branch(), 'checkout-guest-'.str_repeat('a', 40));
+        $channel = OrderRealtimeChannel::guest($order);
+
+        $this->withSession(["guest_order_tokens.{$order->id}" => $order->guest_token])
+            ->get(route('checkout.success', $order))
+            ->assertOk()
+            ->assertSee('data-realtime-channel="'.$channel.'"', false)
+            ->assertSee('data-realtime-private="0"', false)
+            ->assertDontSee('data-realtime-channel="order.'.$order->id.'"', false);
+    }
+
     public function test_failed_status_transition_does_not_dispatch_realtime_event(): void
     {
         $this->enableRealtime();
@@ -99,6 +188,37 @@ class OrderStatusRealtimeTest extends TestCase
 
         $this->assertSame(OrderStatus::PENDING, $order->fresh()->status);
         Event::assertNotDispatched(OrderStatusUpdated::class);
+    }
+
+    public function test_broadcast_failure_does_not_roll_back_a_saved_staff_status_change(): void
+    {
+        $this->enableRealtime();
+        $branch = $this->branch();
+        $staff = User::factory()->create([
+            'role_id' => User::STAFF_ROLE_ID,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+        $customer = User::factory()->create(['role_id' => 1, 'is_active' => true]);
+        $order = $this->orderFor($customer, $branch);
+
+        Event::forget(OrderStatusUpdated::class);
+        Event::listen(OrderStatusUpdated::class, static function (): void {
+            throw new \RuntimeException('Broadcast transport unavailable');
+        });
+
+        $this->actingAs($staff)
+            ->putJson(route('staff.orders.updateStatus', $order), [
+                'status' => OrderStatus::CONFIRMED,
+            ])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => OrderStatus::CONFIRMED,
+            'status_changed_by' => $staff->id,
+        ]);
     }
 
     public function test_orders_page_renders_realtime_status_targets_without_removing_existing_actions(): void
@@ -284,6 +404,27 @@ class OrderStatusRealtimeTest extends TestCase
         return Order::create([
             'order_code' => 'CD-RT-'.uniqid(),
             'user_id' => $customer->id,
+            'branch_id' => $branch->id,
+            'fulfillment_type' => 'delivery',
+            'subtotal' => 100000,
+            'shipping_fee' => 0,
+            'discount' => 0,
+            'total' => 100000,
+            'payment_method' => 'cod',
+            'payment_status' => 'pending',
+            'status' => OrderStatus::PENDING,
+        ]);
+    }
+
+    private function guestOrder(Branch $branch, string $token): Order
+    {
+        return Order::create([
+            'order_code' => 'CD-GUEST-'.uniqid(),
+            'user_id' => null,
+            'guest_name' => 'Guest realtime',
+            'guest_email' => uniqid().'@example.test',
+            'guest_phone' => '0900000000',
+            'guest_token' => $token,
             'branch_id' => $branch->id,
             'fulfillment_type' => 'delivery',
             'subtotal' => 100000,

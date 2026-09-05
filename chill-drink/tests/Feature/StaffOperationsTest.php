@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\OrderStatusUpdated;
 use App\Models\Branch;
 use App\Models\Conversation;
 use App\Models\GroupOrder;
@@ -9,6 +10,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Support\OrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class StaffOperationsTest extends TestCase
@@ -149,6 +151,100 @@ class StaffOperationsTest extends TestCase
             'socket_id' => '1234.5678',
             'channel_name' => 'private-admin-notifications',
         ])->assertForbidden();
+    }
+
+    public function test_new_order_modal_is_rendered_for_staff_but_not_branch_admin(): void
+    {
+        config([
+            'broadcasting.default' => 'reverb',
+            'broadcasting.connections.reverb.key' => 'test-key',
+            'broadcasting.connections.reverb.secret' => 'test-secret',
+            'broadcasting.connections.reverb.app_id' => 'test-app',
+        ]);
+        $branch = $this->branch('STAFF-MODAL');
+        $otherBranch = $this->branch('STAFF-MODAL-OTHER');
+        $staff = $this->staff($branch);
+        $customer = User::factory()->create(['role_id' => 1, 'phone' => '0901234567']);
+        $ownOrder = $this->order($customer, $branch, 'STAFF-MODAL-OWN');
+        $otherOrder = $this->order($customer, $otherBranch, 'STAFF-MODAL-OTHER');
+        $admin = User::factory()->create([
+            'role_id' => 2,
+            'branch_id' => $branch->id,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('staff.dashboard'))
+            ->assertOk()
+            ->assertSee('id="staffNewOrderAlert"', false)
+            ->assertSee('Cảnh báo đơn mới')
+            ->assertSee('Địa chỉ giao hàng')
+            ->assertSee('Chi tiết món')
+            ->assertSee('Size ${item.size_name}', false)
+            ->assertSee('${item.sugar_level}% đường', false)
+            ->assertSee('${item.ice_level}% đá', false)
+            ->assertSee('Xem sau 5 phút')
+            ->assertSee('Tắt cảnh báo')
+            ->assertSee("Number(event.detail?.branch_id) === branchId", false)
+            ->assertSee("document.addEventListener('order:status-updated'", false)
+            ->assertSee("Number(event.detail?.order_id) !== Number(activeOrder.order_id)", false)
+            ->assertSee('refreshQueued = refreshQueued || forceShow', false);
+
+        $this->getJson(route('staff.orders.pending-alerts'))
+            ->assertOk()
+            ->assertJsonPath('pending_count', 1)
+            ->assertJsonPath('orders.0.order_id', $ownOrder->id)
+            ->assertJsonPath('orders.0.customer_phone', '0901234567')
+            ->assertJsonStructure(['orders' => [[
+                'order_code', 'created_at', 'branch_name', 'customer_name',
+                'customer_phone', 'payment_method_label', 'total_formatted',
+                'shipping_address', 'note', 'items', 'url', 'status_update_url',
+            ]]])
+            ->assertJsonMissing(['order_id' => $otherOrder->id]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertDontSee('adminPendingAlertLayer', false)
+            ->assertDontSee('staffNewOrderAlert', false)
+            ->assertSee('window.showRealtimeToast', false)
+            ->assertSee('branchAdminOrderChannel', false)
+            ->assertSee(".listen('.order.created'", false)
+            ->assertSee(".listen('.order.status.updated'", false);
+    }
+
+    public function test_only_one_staff_member_can_accept_the_same_pending_order(): void
+    {
+        config([
+            'broadcasting.default' => 'reverb',
+            'broadcasting.connections.reverb.key' => 'test-key',
+            'broadcasting.connections.reverb.secret' => 'test-secret',
+            'broadcasting.connections.reverb.app_id' => 'test-app',
+        ]);
+        Event::fake([OrderStatusUpdated::class]);
+
+        $branch = $this->branch('STAFF-DOUBLE-ACCEPT');
+        $firstStaff = $this->staff($branch);
+        $secondStaff = $this->staff($branch);
+        $customer = User::factory()->create(['role_id' => 1]);
+        $order = $this->order($customer, $branch, 'STAFF-DOUBLE-ACCEPT-ORDER');
+
+        $this->actingAs($firstStaff)
+            ->putJson(route('staff.orders.updateStatus', $order), ['status' => OrderStatus::CONFIRMED])
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->actingAs($secondStaff)
+            ->putJson(route('staff.orders.updateStatus', $order), ['status' => OrderStatus::CONFIRMED])
+            ->assertConflict()
+            ->assertJsonPath('success', false);
+
+        $freshOrder = $order->fresh();
+        $this->assertSame(OrderStatus::CONFIRMED, $freshOrder->status);
+        $this->assertSame($firstStaff->id, (int) $freshOrder->status_changed_by);
+        $this->assertSame($branch->id, (int) $freshOrder->branch_id);
+        $this->assertSame($customer->id, (int) $freshOrder->user_id);
+        Event::assertDispatchedTimes(OrderStatusUpdated::class, 1);
     }
 
     private function branch(string $code): Branch

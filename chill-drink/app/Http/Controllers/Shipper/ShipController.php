@@ -384,6 +384,10 @@ class ShipController extends Controller
 
         $order = $result['order'];
 
+        // Accepting a shipment changes the customer-facing journey/driver card
+        // even though the canonical order status remains unchanged.
+        RealtimeOrderNotifier::orderTrackingUpdated($order);
+
         return redirect()->route('shipper.map', ['id' => $order->id])
             ->with(
                 'success',

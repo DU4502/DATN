@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\GroupOrderGroupMessageSent;
 use App\Events\MessageSent;
 use App\Events\OrderStatusUpdated;
+use App\Events\OrderCreated;
 use App\Models\Branch;
 use App\Models\Conversation;
 use App\Models\GroupOrder;
@@ -119,6 +120,12 @@ class RealtimeAuthorizationTest extends TestCase
         $this->authorizeChannel($superAdmin, 'private-admin-notifications')->assertOk();
         $this->authorizeChannel($superAdmin, 'private-admin-notifications.'.$branch->id)->assertOk();
         $this->authorizeChannel($superAdmin, 'private-admin-notifications.'.$otherBranch->id)->assertOk();
+
+        $this->authorizeChannel($staff, 'private-staff-orders.'.$branch->id)->assertOk();
+        $this->authorizeChannel($staff, 'private-staff-orders.'.$otherBranch->id)->assertForbidden();
+        $this->authorizeChannel($admin, 'private-staff-orders.'.$branch->id)->assertForbidden();
+        $this->authorizeChannel($superAdmin, 'private-super-admin-orders')->assertOk();
+        $this->authorizeChannel($admin, 'private-super-admin-orders')->assertForbidden();
     }
 
     public function test_private_user_channel_only_allows_the_matching_authenticated_user(): void
@@ -219,7 +226,13 @@ class RealtimeAuthorizationTest extends TestCase
         $this->assertSame('order.status.updated', $orderEvent->broadcastAs());
         $this->assertContains('private-admin-notifications.'.$branch->id, $orderChannels);
         $this->assertContains('private-user.'.$customer->id, $orderChannels);
+        $this->assertContains('private-order.'.$order->id, $orderChannels);
         $this->assertNotContains('private-admin-notifications', $orderChannels);
+
+        $createdChannels = $this->privateChannelNames((new OrderCreated($order))->broadcastOn());
+        $this->assertContains('private-staff-orders.'.$branch->id, $createdChannels);
+        $this->assertContains('private-super-admin-orders', $createdChannels);
+        $this->assertContains('private-admin-notifications.'.$branch->id, $createdChannels);
     }
 
     private function authorizeChannel(User $user, string $channel)

@@ -2,6 +2,7 @@
 
 use App\Models\Conversation;
 use App\Models\GroupOrder;
+use App\Models\Order;
 use Illuminate\Support\Facades\Broadcast;
 
 /*
@@ -29,8 +30,26 @@ Broadcast::channel('admin-notifications.{branchId}', function ($user, $branchId)
         ));
 });
 
+Broadcast::channel('staff-orders.{branchId}', function ($user, $branchId) {
+    return $user
+        && $user->isStaffOnly()
+        && is_numeric($user->branch_id)
+        && (int) $user->branch_id === (int) $branchId;
+});
+
+Broadcast::channel('super-admin-orders', function ($user) {
+    return $user && $user->isSuperAdmin();
+});
+
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (int) $user->id === (int) $userId;
+});
+
+Broadcast::channel('order.{orderId}', function ($user, $orderId) {
+    return $user && Order::query()
+        ->whereKey((int) $orderId)
+        ->where('user_id', $user->id)
+        ->exists();
 });
 
 Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {

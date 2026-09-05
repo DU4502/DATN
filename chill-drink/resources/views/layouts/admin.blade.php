@@ -197,6 +197,7 @@
             }, 6000);
         };
     </script>
+    @if($currentAdminUser?->isStaffOnly()) {{-- Role guard: branch admins never initialize the new-order modal. --}}
     <script>
         (function () {
             const adminBranchId = @json($currentAdminUser?->isAdmin() && is_numeric($currentAdminUser?->branch_id) ? (int) $currentAdminUser->branch_id : null);
@@ -1079,6 +1080,7 @@
             });
         })();
     </script>
+    @endif
     @include('partials.realtime')
     <script>
         // Cập nhật badge chat sidebar mỗi 5 giây

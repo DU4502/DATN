@@ -3,6 +3,14 @@
 @php
     $status = \App\Support\OrderStatus::normalize((string) $order->status);
     $isDelivery = ($order->fulfillment_type ?? 'delivery') === 'delivery';
+    $orderRealtimeChannel = null;
+    $orderRealtimePrivate = false;
+    if (auth()->check() && (int) auth()->id() === (int) $order->user_id) {
+        $orderRealtimeChannel = \App\Support\OrderRealtimeChannel::authenticated($order);
+        $orderRealtimePrivate = true;
+    } elseif ($order->isGuest() && \App\Support\GuestOrderAccess::canView($order, request())) {
+        $orderRealtimeChannel = \App\Support\OrderRealtimeChannel::guest($order);
+    }
 @endphp
 
 @if($isDelivery)
@@ -10,6 +18,8 @@
          data-delivery-live
          data-order-id="{{ $order->id }}"
          data-live-url="{{ $liveUrl }}"
+         data-realtime-channel="{{ $orderRealtimeChannel }}"
+         data-realtime-private="{{ $orderRealtimePrivate ? '1' : '0' }}"
          data-scooter-icon="{{ asset('images/tracking/shipper-scooter.png') }}?v=datn3-map2">
     <div class="delivery-live-head">
         <div class="min-w-0">
@@ -303,6 +313,9 @@
             mapEl.dataset.ready = '1';
 
             const liveUrl = root.dataset.liveUrl;
+            const orderId = Number(root.dataset.orderId || 0);
+            const realtimeChannel = root.dataset.realtimeChannel || '';
+            const realtimePrivate = root.dataset.realtimePrivate === '1';
             const scooterIconUrl = root.dataset.scooterIcon;
             const stageEl = root.querySelector('[data-live-stage]');
             const updatedEl = root.querySelector('[data-live-updated]');
@@ -421,6 +434,7 @@
             let lastData = null;
             let lastMode = null;
             let pollBusy = false;
+            let forcedRefreshQueued = false;
             let pollCount = 0;
             let timer = null;
             let stopped = false;
@@ -722,8 +736,9 @@
             };
 
             const poll = async (forceRoute = false) => {
-                if (stopped || pollBusy) {
-                    schedulePoll();
+                if (stopped) return;
+                if (pollBusy) {
+                    forcedRefreshQueued = forcedRefreshQueued || forceRoute;
                     return;
                 }
                 if (document.hidden && !forceRoute) {
@@ -775,13 +790,21 @@
                     if (updatedEl) updatedEl.textContent = 'Không tải được dữ liệu. Trang sẽ tự thử lại.';
                 } finally {
                     pollBusy = false;
-                    schedulePoll();
+                    if (forcedRefreshQueued) {
+                        forcedRefreshQueued = false;
+                        poll(true);
+                    } else {
+                        schedulePoll();
+                    }
                 }
             };
 
             const schedulePoll = () => {
                 if (stopped) return;
                 const liveMode = lastData && typeof lastData.mode === 'string' && lastData.mode.startsWith('shipper');
+                // Order/status changes are event-driven. Periodic refresh remains only
+                // while rendering shipper GPS, which has no location broadcast event.
+                if (!liveMode) return;
                 const delayedMode = lastData?.mode === 'shipper_delayed';
                 const delay = document.hidden ? 6000 : (liveMode ? (delayedMode ? 2200 : 1600) : 4000);
                 if (nextPollTimeout) clearTimeout(nextPollTimeout);
@@ -803,6 +826,21 @@
             });
 
             poll(true);
+            if (window.Echo && realtimeChannel) {
+                const channel = realtimePrivate
+                    ? window.Echo.private(realtimeChannel)
+                    : window.Echo.channel(realtimeChannel);
+
+                channel.listen('.order.status.updated', payload => {
+                    if (Number(payload?.order_id) !== orderId) return;
+                    if (typeof window.dispatchOrderStatusUpdate === 'function') {
+                        window.dispatchOrderStatusUpdate(payload);
+                    }
+                    // Fetch one authorized snapshot immediately so stage, journey,
+                    // shipper and map all change atomically with the broadcast event.
+                    poll(true);
+                });
+            }
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) {
                     refreshMapSize();

@@ -17,6 +17,9 @@
         receivesBranchOrders: @json($receivesBranchOrders),
         adminBranchId: @json($realtimeUser?->isAdmin() && is_numeric($realtimeUser?->branch_id) ? (int) $realtimeUser->branch_id : null),
         adminChannels: @json($realtimeAdminChannels),
+        branchAdminOrderChannel: @json($realtimeUser?->isAdmin() && is_numeric($realtimeUser?->branch_id) ? 'admin-notifications.'.(int) $realtimeUser->branch_id : null),
+        staffOrderChannel: @json($realtimeUser?->isStaffOnly() && is_numeric($realtimeUser?->branch_id) ? 'staff-orders.'.(int) $realtimeUser->branch_id : null),
+        superAdminOrderChannel: @json($realtimeUser?->isSuperAdmin() ? 'super-admin-orders' : null),
         userId: @json(auth()->id()),
         branchId: @json(session('nearest_branch_id') ?? auth()->user()?->branch_id),
         branchIds: @json($realtimeBranchIds),
@@ -97,13 +100,27 @@
         if (window.realtimeConfig.receivesBranchOrders) {
             window.realtimeConfig.adminChannels.forEach(function (adminChannel) {
                 window.Echo.private(adminChannel)
-                    .listen('.order.created', function (payload) {
-                        document.dispatchEvent(new CustomEvent('order:created', { detail: payload }));
-                    })
                     .listen('.order.status.updated', function (payload) {
                         window.dispatchOrderStatusUpdate(payload, { toast: false });
                     });
             });
+
+            const newOrderChannel = window.realtimeConfig.staffOrderChannel || window.realtimeConfig.superAdminOrderChannel;
+            if (newOrderChannel) {
+                window.Echo.private(newOrderChannel)
+                    .listen('.order.created', function (payload) {
+                        document.dispatchEvent(new CustomEvent('order:created', { detail: payload }));
+                    });
+            }
+
+            // Keep branch-admin order tables/dashboard live without restoring the
+            // new-order modal, whose Blade/JS is excluded for this role.
+            if (window.realtimeConfig.branchAdminOrderChannel) {
+                window.Echo.private(window.realtimeConfig.branchAdminOrderChannel)
+                    .listen('.order.created', function (payload) {
+                        document.dispatchEvent(new CustomEvent('order:created', { detail: payload }));
+                    });
+            }
         } else if (window.realtimeConfig.userId) {
             window.Echo.private('user.' + window.realtimeConfig.userId)
                 .listen('.order.status.updated', function (payload) {

@@ -126,6 +126,7 @@
     };
 </script>
 @include('partials.realtime')
+@include('partials.staff-new-order-alert')
 <script>
     (function () {
         const badge = document.getElementById('sidebar-chat-badge');

@@ -688,6 +688,7 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'staff'])->group(fun
 
     // Đơn hàng
     Route::get('/orders', [StaffOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/pending-alerts', [StaffOrderController::class, 'pendingAlerts'])->name('orders.pending-alerts');
     Route::put('/orders/{id}/status', [StaffOrderController::class, 'updateStatus'])->name('orders.updateStatus');
 
     // Tình trạng bán sản phẩm tại đúng chi nhánh của Staff
