@@ -497,6 +497,7 @@
                 root.hidden = true;
                 sessionStorage.removeItem(pendingSoundKey);
                 stopBellLoop();
+                document.querySelectorAll('[data-staff-flash]').forEach(alert => alert.remove());
                 window.showRealtimeToast?.(data.message || 'Đã xác nhận đơn hàng.', 'success');
                 await loadPending(true);
             } catch (error) {

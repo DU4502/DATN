@@ -94,10 +94,10 @@
 
         <main class="admin-page">
             @if(session('success'))
-                <div class="alert alert-success" style="border-radius:var(--radius-sm);font-size:0.8125rem;">{{ session('success') }}</div>
+                <div class="alert alert-success" style="border-radius:var(--radius-sm);font-size:0.8125rem;" data-staff-flash>{{ session('success') }}</div>
             @endif
             @if(session('error'))
-                <div class="alert alert-danger" style="border-radius:var(--radius-sm);font-size:0.8125rem;">{{ session('error') }}</div>
+                <div class="alert alert-danger" style="border-radius:var(--radius-sm);font-size:0.8125rem;" data-staff-flash>{{ session('error') }}</div>
             @endif
 
             @yield('content')

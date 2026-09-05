@@ -380,7 +380,7 @@ class ShipperDispatchScoringService
             ->where(function ($query) {
                 $query->whereNull('fulfillment_type')->orWhere('fulfillment_type', 'delivery');
             })
-            ->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::PREPARING, OrderStatus::READY_FOR_DELIVERY])
+            ->where('status', OrderStatus::READY_FOR_DELIVERY)
             ->get(['branch_id', 'status', 'shipper_id']);
 
         $result = [];

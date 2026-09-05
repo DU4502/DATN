@@ -14,6 +14,7 @@ use App\Services\DeliveryRoutingService;
 use App\Services\ShipperBundleService;
 use App\Services\ShipperDispatchService;
 use App\Services\ShipperDispatchScoringService;
+use App\Support\OrderStatus;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -72,6 +73,28 @@ class DeliveryBundleDispatchTest extends TestCase
         $this->assertTrue($decision->shipper->is($shipper));
         $this->assertNotNull($decision->score);
         $this->assertIsArray($decision->features_json);
+    }
+
+    public function test_dispatch_skips_orders_before_the_store_marks_them_ready_for_delivery(): void
+    {
+        Notification::fake();
+
+        $branch = $this->createBranch('DSP-NOT-READY', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'NOT-READY-SHIPPER', 'online');
+
+        foreach ([OrderStatus::CONFIRMED, OrderStatus::PREPARING] as $status) {
+            $order = $this->createOrder($branch, 'NOT-READY-'.$status);
+            $order->forceFill(['status' => $status])->save();
+
+            $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($order->fresh());
+
+            $this->assertSame('skipped', $result['status']);
+            $this->assertNull($order->fresh()->shipper_id);
+        }
+
+        $this->assertSame('online', $shipper->fresh()->status);
+        $this->assertDatabaseCount('shipments', 0);
+        $this->assertDatabaseCount('delivery_dispatch_decisions', 0);
     }
 
     public function test_scheduled_order_is_not_dispatched_too_early(): void
@@ -204,6 +227,28 @@ class DeliveryBundleDispatchTest extends TestCase
             'shipper_id' => $shipper->id,
             'status' => 'accepted',
         ]);
+    }
+
+    public function test_assignment_pulse_exposes_checkout_distance_for_shipper_prompt(): void
+    {
+        $branch = $this->createBranch('DSP-PULSE-DISTANCE', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'PULSE-DISTANCE-SHIPPER', 'busy');
+        $order = $this->createOrder($branch, 'PULSE-DISTANCE-ORDER', $shipper);
+        $order->forceFill([
+            'note' => 'Giao hàng: khoảng cách 6.4 km, 5 cốc, phí 7.000đ',
+        ])->save();
+        Shipment::create([
+            'order_id' => $order->id,
+            'shipper_id' => $shipper->id,
+            'status' => 'accepted',
+            'assigned_at' => now(),
+        ]);
+
+        $this->actingAs($shipper->user)
+            ->getJson(route('shipper.assignments.pulse'))
+            ->assertOk()
+            ->assertJsonPath('order.distance_km', 6.4)
+            ->assertJsonPath('order.details.distance_km', 6.4);
     }
 
     public function test_delivery_arrival_swipe_unlocks_only_within_two_hundred_and_fifty_meters(): void
@@ -558,7 +603,7 @@ class DeliveryBundleDispatchTest extends TestCase
             'total' => 10000,
             'payment_method' => 'cod',
             'payment_status' => 'pending',
-            'status' => 'confirmed',
+            'status' => OrderStatus::READY_FOR_DELIVERY,
             'shipping_latitude' => (float) $branch->latitude + 0.01,
             'shipping_longitude' => (float) $branch->longitude + 0.01,
         ]);

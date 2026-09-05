@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Models\GroupOrder;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\ShipperDispatchService;
 use App\Support\OrderStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -75,6 +76,31 @@ class StaffOperationsTest extends TestCase
         }
 
         $this->assertSame(OrderStatus::COMPLETED, $pickupOrder->fresh()->status);
+    }
+
+    public function test_staff_dispatches_shipper_only_after_order_is_ready_for_delivery(): void
+    {
+        $branch = $this->branch('STAFF-DISPATCH-READY');
+        $staff = $this->staff($branch);
+        $customer = User::factory()->create(['role_id' => 1]);
+        $order = $this->order($customer, $branch, 'STAFF-DISPATCH-READY-ORDER');
+
+        $this->mock(ShipperDispatchService::class, function ($mock) {
+            $mock->shouldReceive('dispatchConfirmedOrder')
+                ->once()
+                ->andReturn(['status' => 'waiting', 'shipper' => null]);
+        });
+
+        $this->actingAs($staff)
+            ->put(route('staff.orders.updateStatus', $order), ['status' => OrderStatus::CONFIRMED])
+            ->assertRedirect();
+        $this->put(route('staff.orders.updateStatus', $order), ['status' => OrderStatus::PREPARING])
+            ->assertRedirect();
+        $this->put(route('staff.orders.updateStatus', $order), ['status' => OrderStatus::READY_FOR_DELIVERY])
+            ->assertRedirect();
+
+        $this->assertSame(OrderStatus::READY_FOR_DELIVERY, $order->fresh()->status);
+        $this->assertNull($order->fresh()->shipper_id);
     }
 
     public function test_staff_direct_requests_cannot_cross_branch_or_enter_admin_and_shipper_areas(): void
@@ -177,14 +203,14 @@ class StaffOperationsTest extends TestCase
             ->get(route('staff.dashboard'))
             ->assertOk()
             ->assertSee('id="staffNewOrderAlert"', false)
-            ->assertSee('Cảnh báo đơn mới')
+            ->assertSee('Thông báo đơn mới')
             ->assertSee('Địa chỉ giao hàng')
             ->assertSee('Chi tiết món')
             ->assertSee('Size ${item.size_name}', false)
             ->assertSee('${item.sugar_level}% đường', false)
             ->assertSee('${item.ice_level}% đá', false)
             ->assertSee('Xem sau 5 phút')
-            ->assertSee('Tắt cảnh báo')
+            ->assertSee('Tắt thông báo')
             ->assertSee("Number(event.detail?.branch_id) === branchId", false)
             ->assertSee("document.addEventListener('order:status-updated'", false)
             ->assertSee("Number(event.detail?.order_id) !== Number(activeOrder.order_id)", false)

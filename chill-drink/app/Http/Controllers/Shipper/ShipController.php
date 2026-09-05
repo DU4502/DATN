@@ -197,6 +197,7 @@ class ShipController extends Controller
                 'show_url' => route('shipper.orders.show', $latest->id),
                 'map_url' => route('shipper.map', ['id' => $latest->id]),
                 'branch_name' => $latest->branch?->name ?? 'Chi nhánh',
+                'distance_km' => $distanceKm,
                 'details' => $assignmentDetails,
             ] : null,
         ]);
@@ -308,7 +309,7 @@ class ShipController extends Controller
 
     /**
      * "Nhận đơn" chỉ là xác nhận đã thấy và tiếp nhận nhiệm vụ.
-     * Hệ thống đã gán order.shipper_id ngay khi quán xác nhận đơn.
+     * Hệ thống chỉ gán order.shipper_id khi quán chuyển đơn sang Sẵn sàng giao.
      */
     public function acceptOrder($id)
     {

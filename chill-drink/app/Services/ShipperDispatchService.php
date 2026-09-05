@@ -24,8 +24,6 @@ class ShipperDispatchService
     ];
 
     private const DISPATCHABLE_UNASSIGNED_STATUSES = [
-        OrderStatus::CONFIRMED,
-        OrderStatus::PREPARING,
         OrderStatus::READY_FOR_DELIVERY,
     ];
 
