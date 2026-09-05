@@ -319,14 +319,27 @@ class StaffOrderController extends Controller
         }
 
         if ($request->expectsJson()) {
+            $freshOrder = $order->fresh();
+            $freshStatus = OrderStatus::normalize((string) $freshOrder->status);
+            $freshFulfillmentType = $freshOrder->fulfillment_type ?? 'delivery';
+            $freshOptions = OrderStatus::storeStepwiseOptions($freshStatus, $freshFulfillmentType);
+
             return response()->json([
                 'success' => true,
                 'message' => $message,
                 'data' => [
-                    'id' => (int) $order->id,
-                    'order_code' => $order->displayCode(),
-                    'status' => OrderStatus::normalize((string) $order->status),
-                    'status_label' => OrderStatus::label((string) $order->status),
+                    'id' => (int) $freshOrder->id,
+                    'order_id' => (int) $freshOrder->id,
+                    'order_code' => $freshOrder->displayCode(),
+                    'status' => $freshStatus,
+                    'status_label' => OrderStatus::label($freshStatus),
+                    'status_class' => 'status-text-'.$freshStatus,
+                    'status_options' => $freshOptions,
+                    'next_status' => OrderStatus::storeNextStatus($freshStatus, $freshFulfillmentType),
+                    'can_update' => count($freshOptions) > 1,
+                    'updated_at' => $freshOrder->updated_at?->toIso8601String(),
+                    'status_changed_at' => $freshOrder->status_changed_at?->format('d/m H:i'),
+                    'status_changed_by_name' => $user->name,
                 ],
             ]);
         }

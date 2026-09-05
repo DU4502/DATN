@@ -95,7 +95,11 @@
         $nextStatus = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
         $canCancel = $order->status === \App\Support\OrderStatus::PENDING;
     @endphp
-    <div class="p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
+    <div class="p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3"
+        data-staff-dashboard-order
+        data-order-id="{{ $order->id }}"
+        data-order-status="{{ $order->status }}"
+        data-fulfillment-type="{{ $fulfillmentType }}">
         <div class="d-flex align-items-center gap-3">
             <div style="width:40px;height:40px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0;">
                 <i class="bi bi-bag"></i>
@@ -109,11 +113,11 @@
         <div class="d-flex align-items-center gap-3">
             <span class="fw-bold text-primary">{{ number_format($order->total ?? 0, 0, ',', '.') }}đ</span>
             @if($nextStatus)
-            <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST" class="mb-0">
+            <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST" class="mb-0" data-dashboard-status-form>
                 @csrf
                 @method('PUT')
-                <input type="hidden" name="status" value="{{ $nextStatus }}">
-                <button type="submit" class="btn btn-sm btn-primary" style="background:#00a870;border-color:#00a870;">
+                <input type="hidden" name="status" value="{{ $nextStatus }}" data-dashboard-status-input>
+                <button type="submit" class="btn btn-sm btn-primary" style="background:#00a870;border-color:#00a870;" data-dashboard-status-button>
                     {{ \App\Support\OrderStatus::label($nextStatus) }} <i class="bi bi-arrow-right ms-1"></i>
                 </button>
             </form>
@@ -186,6 +190,53 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('cancelReason').value = '';
         });
     }
+
+    const statusLabels = {
+        pending: 'Chờ xác nhận',
+        confirmed: 'Đã xác nhận',
+        preparing: 'Đang pha chế',
+        ready_for_delivery: 'Sẵn sàng giao',
+        shipper_picked_up: 'Shipper đã lấy hàng',
+        delivering: 'Đang giao',
+        delivered: 'Đã giao',
+        ready_for_pickup: 'Sẵn sàng lấy',
+        completed: 'Hoàn thành',
+        cancelled: 'Đã hủy'
+    };
+
+    window.updateStaffDashboardOrder = function (payload) {
+        payload = payload || {};
+        const row = document.querySelector(`[data-staff-dashboard-order][data-order-id="${Number(payload.order_id) || 0}"]`);
+        if (!row) return;
+
+        row.dataset.orderStatus = payload.status || row.dataset.orderStatus;
+        const form = row.querySelector('[data-dashboard-status-form]');
+        const button = row.querySelector('[data-dashboard-status-button]');
+        const input = row.querySelector('[data-dashboard-status-input]');
+        if (!form || !button || !input) return;
+
+        const nextStatus = payload.next_status || null;
+        if (nextStatus) {
+            input.value = nextStatus;
+            button.disabled = false;
+            button.textContent = statusLabels[nextStatus] || nextStatus;
+            const icon = document.createElement('i');
+            icon.className = 'bi bi-arrow-right ms-1';
+            button.appendChild(icon);
+        } else {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-success';
+            badge.textContent = statusLabels[payload.status] || payload.status_label || payload.status || 'Đã cập nhật';
+            form.replaceWith(badge);
+        }
+
+        row.style.backgroundColor = 'rgba(13, 147, 115, 0.1)';
+        window.setTimeout(() => { row.style.backgroundColor = ''; }, 1500);
+    };
+
+    document.addEventListener('order:status-updated', function (event) {
+        window.updateStaffDashboardOrder(event.detail);
+    });
 });
 </script>
 

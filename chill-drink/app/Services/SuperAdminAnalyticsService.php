@@ -418,6 +418,11 @@ class SuperAdminAnalyticsService
                 'branch_id' => (int) $branch->id,
                 'branch_name' => (string) $branch->name,
                 'branch_code' => filled($branch->code ?? null) ? (string) $branch->code : null,
+                'branch_email' => $branch->email,
+                'branch_phone' => $branch->phone,
+                'branch_address' => $branch->address,
+                'branch_latitude' => $branch->latitude,
+                'branch_longitude' => $branch->longitude,
                 'branch_status' => (bool) $branch->status,
                 'total_quantity' => $currentQuantity,
                 'total_revenue' => $currentRevenue,
@@ -478,6 +483,11 @@ class SuperAdminAnalyticsService
                     'branch_id' => (int) $row['branch_id'],
                     'branch_name' => (string) $row['branch_name'],
                     'branch_code' => $row['branch_code'],
+                    'branch_email' => $row['branch_email'],
+                    'branch_phone' => $row['branch_phone'],
+                    'branch_address' => $row['branch_address'],
+                    'branch_latitude' => $row['branch_latitude'],
+                    'branch_longitude' => $row['branch_longitude'],
                     'branch_status' => (bool) $row['branch_status'],
                     'total_quantity' => (int) $row['total_quantity'],
                     'total_revenue' => (int) $row['total_revenue'],
@@ -1968,7 +1978,7 @@ class SuperAdminAnalyticsService
 
         if (! array_key_exists($cacheKey, $this->branchMetadataCache)) {
             $this->branchMetadataCache[$cacheKey] = Branch::query()
-                ->select(['id', 'name', 'code', 'status'])
+                ->select(['id', 'name', 'code', 'email', 'phone', 'address', 'latitude', 'longitude', 'status'])
                 ->when($normalizedScope !== [], fn (Builder $query) => $query->whereIn('id', $normalizedScope))
                 ->orderBy('id')
                 ->get();
@@ -1980,7 +1990,7 @@ class SuperAdminAnalyticsService
     private function resolveBranchForDetail(int $branchId, array $scopeBranchIds = []): ?Branch
     {
         return Branch::query()
-            ->select(['id', 'name', 'code', 'status'])
+            ->select(['id', 'name', 'code', 'email', 'phone', 'address', 'latitude', 'longitude', 'status'])
             ->when($scopeBranchIds !== [], fn (Builder $query) => $query->whereIn('id', $scopeBranchIds))
             ->orderByRaw('CASE WHEN id = ? THEN 0 ELSE 1 END', [$branchId])
             ->orderBy('id')

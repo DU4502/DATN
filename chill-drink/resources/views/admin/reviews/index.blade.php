@@ -91,7 +91,7 @@
             </thead>
             <tbody>
                 @forelse($reviews as $review)
-                    <tr>
+                    <tr data-instant-row>
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <div class="admin-review-thumb">
@@ -133,14 +133,28 @@
                         @if($hasReviewStatusColumn)
                             <td class="text-center">
                                 <div class="d-inline-flex flex-column align-items-center gap-2">
-                                    <span class="badge rounded-pill {{ $review->status ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' }}">
+                                    <span class="badge rounded-pill {{ $review->status ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' }}" data-instant-status-badge>
                                         {{ $review->status ? 'Đang hiển thị' : 'Đã ẩn' }}
                                     </span>
-                                    <form action="{{ route('admin.reviews.toggle-status', $review) }}" method="POST" class="m-0">
+                                    <form action="{{ route('admin.reviews.toggle-status', $review) }}" method="POST" class="m-0"
+                                          data-instant-form
+                                          data-instant-toggle-status
+                                          data-active-label="Đang hiển thị"
+                                          data-inactive-label="Đã ẩn"
+                                          data-active-badge-class="badge rounded-pill bg-success-subtle text-success border border-success-subtle"
+                                          data-inactive-badge-class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle"
+                                          data-active-button-class="btn btn-sm btn-outline-warning"
+                                          data-inactive-button-class="btn btn-sm btn-outline-success"
+                                          data-active-title="Ẩn đánh giá"
+                                          data-inactive-title="Hiện đánh giá"
+                                          data-active-button-label="Ẩn"
+                                          data-inactive-button-label="Hiện"
+                                          data-active-icon="bi bi-eye-slash me-1"
+                                          data-inactive-icon="bi bi-eye me-1">
                                         @csrf
                                         @method('PATCH')
-                                        <button type="submit" class="btn btn-sm {{ $review->status ? 'btn-outline-warning' : 'btn-outline-success' }}">
-                                            <i class="bi {{ $review->status ? 'bi-eye-slash' : 'bi-eye' }} me-1"></i>
+                                        <button type="submit" class="btn btn-sm {{ $review->status ? 'btn-outline-warning' : 'btn-outline-success' }}" title="{{ $review->status ? 'Ẩn đánh giá' : 'Hiện đánh giá' }}" data-instant-submit>
+                                            <i class="bi {{ $review->status ? 'bi-eye-slash' : 'bi-eye' }} me-1" data-instant-status-icon></i>
                                             {{ $review->status ? 'Ẩn' : 'Hiện' }}
                                         </button>
                                     </form>

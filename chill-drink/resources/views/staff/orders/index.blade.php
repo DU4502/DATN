@@ -98,7 +98,7 @@
                     $nextStatus      = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
                     $changedBy       = $order->status_changed_by ? \App\Models\User::find($order->status_changed_by) : null;
                 @endphp
-                <tr data-order-id="{{ $order->id }}">
+                <tr data-order-id="{{ $order->id }}" data-order-status="{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">
                     <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
                     <td class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</td>
                     <td>
@@ -121,18 +121,20 @@
                     </td>
                     <td class="text-end fw-bold text-primary">{{ number_format($order->total ?? 0, 0, ',', '.') }}đ</td>
                     <td class="text-center">
-                        <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST">
+                        <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST" data-staff-order-status-form data-order-id="{{ $order->id }}">
                             @csrf @method('PUT')
                             <select name="status" class="form-select form-select-sm"
-                                    onchange="this.form.submit()"
+                                    data-staff-order-status-select
+                                    data-current-status="{{ \App\Support\OrderStatus::normalize((string) $order->status) }}"
                                     @disabled($nextStatus === null)>
                                 @foreach($statusStepOpts as $value => $label)
                                     <option value="{{ $value }}" @selected($order->status === $value)>{{ $label }}</option>
                                 @endforeach
                             </select>
+                            <span class="spinner-border spinner-border-sm text-primary d-none mt-2" role="status" aria-label="Đang cập nhật" data-staff-order-status-loading></span>
                         </form>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center" data-staff-status-changed-by>
                         @if($changedBy)
                             <span class="badge bg-light text-dark" style="font-size:.72rem;">
                                 <i class="bi bi-person me-1"></i>{{ $changedBy->name }}
@@ -144,7 +146,7 @@
                             <span class="text-secondary small">—</span>
                         @endif
                     </td>
-                    <td class="text-center">
+                    <td class="text-center" data-staff-status-changed-at>
                         @if($order->status_changed_at)
                             <span class="text-secondary small">{{ $order->status_changed_at->format('d/m H:i') }}</span>
                         @else
@@ -235,7 +237,7 @@
                                         <!-- Nút hành động nhanh -->
                                         @if($nextStatus !== null)
                                         <div class="mt-3">
-                                            <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST">
+                                            <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST" data-staff-order-status-form data-order-id="{{ $order->id }}">
                                                 @csrf @method('PUT')
                                                 <input type="hidden" name="status" value="{{ $nextStatus }}">
                                                 <button type="submit" class="btn btn-primary w-100" style="background:#00a870;border-color:#00a870;border-radius:10px;">
@@ -265,7 +267,7 @@
                 <div class="modal fade" id="cancelOrderModal{{ $order->id }}" tabindex="-1">
                     <div class="modal-dialog">
                         <div class="modal-content" style="border-radius:16px;">
-                            <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST">
+                            <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST" data-staff-order-status-form data-order-id="{{ $order->id }}">
                                 @csrf @method('PUT')
                                 <input type="hidden" name="status" value="cancelled">
                                 <div class="modal-header border-0">
@@ -307,6 +309,163 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const pendingStatusUpdates = new Set();
+    const statusLabels = @json(\App\Support\OrderStatus::actionLabels());
+    const csrfToken = @json(csrf_token());
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        })[char]);
+    }
+
+    function showToast(message, type = 'info') {
+        if (typeof window.showRealtimeToast === 'function') {
+            window.showRealtimeToast(message, type === 'error' ? 'warning' : type);
+            return;
+        }
+        alert(message);
+    }
+
+    function normalizePayload(payload) {
+        if (!payload || typeof payload !== 'object') return null;
+        const orderId = payload.order_id || payload.id;
+        const data = payload.data && typeof payload.data === 'object' ? payload.data : payload;
+        const status = String(data.status || payload.status || '');
+        if (!orderId || !status) return null;
+
+        return {
+            ...payload,
+            ...data,
+            id: data.id || orderId,
+            order_id: orderId,
+            status,
+            status_label: data.status_label || payload.status_label || status,
+            status_options: data.status_options || payload.status_options || {[status]: data.status_label || payload.status_label || status},
+            next_status: data.next_status || payload.next_status || null,
+            can_update: data.can_update ?? payload.can_update,
+            status_changed_at: data.status_changed_at || payload.status_changed_at || null,
+            status_changed_by_name: data.status_changed_by_name || payload.status_changed_by_name || null,
+        };
+    }
+
+    function applyStatusPayload(rawPayload) {
+        const payload = normalizePayload(rawPayload);
+        if (!payload) return false;
+
+        const row = document.querySelector(`tr[data-order-id="${payload.order_id}"]`);
+        if (!row) return false;
+
+        const select = row.querySelector('[data-staff-order-status-select]');
+        if (select) {
+            select.replaceChildren(...Object.entries(payload.status_options || {[payload.status]: payload.status_label}).map(([value, label]) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                option.selected = value === payload.status;
+                return option;
+            }));
+            select.value = payload.status;
+            select.dataset.currentStatus = payload.status;
+            select.disabled = payload.can_update === false || select.options.length <= 1;
+        }
+
+        row.dataset.orderStatus = payload.status;
+
+        const changedBy = row.querySelector('[data-staff-status-changed-by]');
+        if (changedBy) {
+            changedBy.innerHTML = payload.status_changed_by_name
+                ? `<span class="badge bg-light text-dark" style="font-size:.72rem;"><i class="bi bi-person me-1"></i>${escapeHtml(payload.status_changed_by_name)}</span>`
+                : '<span class="text-secondary small">—</span>';
+        }
+
+        const changedAt = row.querySelector('[data-staff-status-changed-at]');
+        if (changedAt) {
+            changedAt.innerHTML = payload.status_changed_at
+                ? `<span class="text-secondary small">${escapeHtml(payload.status_changed_at)}</span>`
+                : '<span class="text-secondary small">—</span>';
+        }
+
+        const detailRow = document.getElementById(`order-detail-${payload.order_id}`);
+        const quickForm = detailRow?.querySelector('[data-staff-order-status-form] input[type="hidden"][name="status"]')?.closest('form');
+        if (quickForm) {
+            const hidden = quickForm.querySelector('input[name="status"]');
+            const button = quickForm.querySelector('button[type="submit"]');
+            if (payload.next_status) {
+                hidden.value = payload.next_status;
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = `Chuyển: ${escapeHtml(statusLabels[payload.next_status] || payload.next_status)} <i class="bi bi-arrow-right ms-1"></i>`;
+                }
+            } else if (button) {
+                button.disabled = true;
+                button.textContent = 'Không còn bước chuyển';
+            }
+        }
+
+        row.style.backgroundColor = 'rgba(13, 147, 115, 0.1)';
+        window.setTimeout(() => { row.style.backgroundColor = ''; }, 1500);
+        return true;
+    }
+
+    function responseErrorMessage(payload, fallback) {
+        return payload?.errors ? Object.values(payload.errors).flat().find(Boolean) || fallback : (payload?.message || fallback);
+    }
+
+    async function submitStatusForm(form, sourceSelect = null) {
+        const orderId = String(form.dataset.orderId || '');
+        if (!orderId || pendingStatusUpdates.has(orderId)) return;
+
+        const select = sourceSelect || form.querySelector('[data-staff-order-status-select]');
+        const previousStatus = select?.dataset.currentStatus || '';
+        const requestedStatus = select?.value || form.querySelector('input[name="status"]')?.value || '';
+        if (select && requestedStatus === previousStatus) return;
+
+        if (select && requestedStatus === 'cancelled') {
+            select.value = previousStatus;
+            showToast('Vui lòng mở chi tiết đơn để nhập lý do hủy.', 'error');
+            return;
+        }
+
+        const loading = form.querySelector('[data-staff-order-status-loading]');
+        pendingStatusUpdates.add(orderId);
+        if (select) select.disabled = true;
+        loading?.classList.remove('d-none');
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || payload.success !== true) {
+                throw new Error(responseErrorMessage(payload, 'Không thể cập nhật trạng thái đơn hàng.'));
+            }
+            applyStatusPayload(payload);
+            showToast(payload.message || 'Đã cập nhật trạng thái đơn hàng.', 'success');
+            form.closest('.modal') && bootstrap.Modal.getInstance(form.closest('.modal'))?.hide();
+        } catch (error) {
+            if (select && previousStatus) {
+                select.value = previousStatus;
+                select.dataset.currentStatus = previousStatus;
+            }
+            showToast(error.message || 'Không thể cập nhật trạng thái đơn hàng.', 'error');
+        } finally {
+            pendingStatusUpdates.delete(orderId);
+            loading?.classList.add('d-none');
+            if (select) select.disabled = select.options.length <= 1;
+        }
+    }
+
     document.querySelectorAll('[data-toggle-order-detail]').forEach(btn => {
         btn.addEventListener('click', function () {
             const id   = this.dataset.toggleOrderDetail;
@@ -316,6 +475,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.textContent = row.classList.contains('d-none') ? 'Chi tiết' : 'Ẩn';
             }
         });
+    });
+
+    document.addEventListener('change', event => {
+        const select = event.target.closest('[data-staff-order-status-select]');
+        if (select) submitStatusForm(select.closest('[data-staff-order-status-form]'), select);
+    });
+
+    document.addEventListener('submit', event => {
+        const form = event.target.closest('[data-staff-order-status-form]');
+        if (!form) return;
+        event.preventDefault();
+        submitStatusForm(form);
+    });
+
+    document.addEventListener('order:status-updated', event => {
+        const applied = applyStatusPayload(event.detail || {});
+        if (applied && event.detail?.status_label) {
+            showToast(`Đơn ${event.detail.order_code || event.detail.order_id} đã chuyển sang: ${event.detail.status_label}.`, 'info');
+        }
     });
 });
 </script>

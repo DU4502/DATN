@@ -232,17 +232,24 @@ class UserController extends Controller
             ->with('success', 'Đã cập nhật vai trò người dùng.');
     }
 
-    public function toggleStatus(User $user): RedirectResponse
+    public function toggleStatus(Request $request, User $user)
     {
-        $this->ensureCanManage($user, Auth::user());
+        $actor = $request->user();
+        $this->ensureCanManage($user, $actor);
 
-        if ($user->is(Auth::user())) {
+        if ($user->is($actor)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Không thể khóa tài khoản đang đăng nhập.'], 422);
+            }
             return back()->with('error', 'Không thể khóa tài khoản đang đăng nhập.');
         }
 
         $newStatus = ! (bool) $user->is_active;
 
         if ($this->wouldRemoveLastActiveAdmin($user, (int) $user->role_id, $newStatus)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Cần giữ lại ít nhất một quản trị viên đang hoạt động.'], 422);
+            }
             return back()->with('error', 'Cần giữ lại ít nhất một quản trị viên đang hoạt động.');
         }
 
@@ -258,12 +265,24 @@ class UserController extends Controller
         } catch (\Throwable) {}
 
         SystemLog::record(
-            Auth::user(),
+            $actor,
             ($newStatus ? 'Đã mở khóa ' : 'Đã khóa ').$user->email,
             'security',
             'success',
             ['target_user_id' => $user->id],
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_active' => (bool) $user->is_active,
+                'user' => [
+                    'id' => $user->id,
+                    'is_active' => (bool) $user->is_active,
+                ],
+                'message' => $user->is_active ? 'Đã mở khóa tài khoản.' : 'Đã khóa tài khoản.',
+            ]);
+        }
 
         return back()->with(
             'success',

@@ -93,7 +93,10 @@ img, svg, video, canvas { max-width: 100%; }
     -webkit-overflow-scrolling: touch;
 }
 
-.modal-dialog { max-width: calc(100vw - 1.5rem); }
+.modal-dialog {
+    width: min(var(--bs-modal-width, 500px), calc(100vw - 1.5rem));
+    max-width: calc(100vw - 1.5rem);
+}
 .modal-content { max-height: calc(100dvh - 1.5rem); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .modal-body { min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
 .modal-footer { flex-wrap: wrap; }

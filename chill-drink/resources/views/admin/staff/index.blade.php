@@ -333,7 +333,7 @@
         <div class="table-responsive">
             <table class="table staff-table mb-0 align-middle">
                 <thead>
-                    <tr>
+                    <tr data-instant-row>
                         <th>Nhân viên</th>
                         <th>Chi nhánh</th>
                         <th class="text-center">Trạng thái</th>
@@ -364,9 +364,9 @@
                         </td>
                         <td class="text-center">
                             @if($staff->is_active)
-                                <span class="staff-badge staff-badge-active"><i class="bi bi-check-circle-fill"></i>Hoạt động</span>
+                                <span class="staff-badge staff-badge-active" data-instant-status-badge><i class="bi bi-check-circle-fill"></i>Hoạt động</span>
                             @else
-                                <span class="staff-badge staff-badge-locked"><i class="bi bi-lock-fill"></i>Đã khóa</span>
+                                <span class="staff-badge staff-badge-locked" data-instant-status-badge><i class="bi bi-lock-fill"></i>Đã khóa</span>
                             @endif
                         </td>
                         <td class="text-center text-secondary" style="font-size:.75rem;">
@@ -380,13 +380,28 @@
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 {{-- Khóa/Mở --}}
-                                <form action="{{ route('admin.staff.toggle-status', $staff) }}" method="POST" class="d-inline">
+                                <form action="{{ route('admin.staff.toggle-status', $staff) }}" method="POST" class="d-inline"
+                                      data-instant-form
+                                      data-instant-toggle-status
+                                      data-confirm="{{ $staff->is_active ? 'Khóa' : 'Mở khóa' }} nhân viên {{ $staff->name }}?"
+                                      data-active-confirm="Khóa nhân viên {{ $staff->name }}?"
+                                      data-inactive-confirm="Mở khóa nhân viên {{ $staff->name }}?"
+                                      data-active-label="Hoạt động"
+                                      data-inactive-label="Đã khóa"
+                                      data-active-badge-class="staff-badge staff-badge-active"
+                                      data-inactive-badge-class="staff-badge staff-badge-locked"
+                                      data-active-button-class="btn btn-sm btn-outline-danger"
+                                      data-inactive-button-class="btn btn-sm btn-outline-success"
+                                      data-active-title="Khóa"
+                                      data-inactive-title="Mở khóa"
+                                      data-active-icon="bi bi-lock"
+                                      data-inactive-icon="bi bi-unlock">
                                     @csrf @method('PATCH')
                                     <button type="submit" class="btn btn-sm {{ $staff->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}"
                                             style="font-size:.75rem;width:35px;height:10px;padding:0;border-radius:100%;display:inline-flex;align-items:center;justify-content:center;"
-                                            onclick="return confirm('{{ $staff->is_active ? 'Khóa' : 'Mở khóa' }} nhân viên {{ $staff->name }}?')"
-                                            title="{{ $staff->is_active ? 'Khóa' : 'Mở khóa' }}">
-                                        <i class="bi bi-{{ $staff->is_active ? 'lock' : 'unlock' }}"></i>
+                                            title="{{ $staff->is_active ? 'Khóa' : 'Mở khóa' }}"
+                                            data-instant-submit>
+                                        <i class="bi bi-{{ $staff->is_active ? 'lock' : 'unlock' }}" data-instant-status-icon></i>
                                     </button>
                                 </form>
                             </div>

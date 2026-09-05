@@ -361,15 +361,14 @@
                 subdomains: 'abc',
                 attribution: '&copy; OpenStreetMap contributors'
             });
-            const fallbackTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            const fallbackTiles = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 keepBuffer: 6,
                 detectRetina: false,
                 updateWhenIdle: false,
                 updateWhenZooming: true,
-                subdomains: 'abcd',
-                r: window.devicePixelRatio > 1 ? '@2x' : '',
-                attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                subdomains: 'abc',
+                attribution: '&copy; OpenStreetMap contributors, Tiles style by HOT'
             });
             let tileFallbackSwapped = false;
             let tilesSettled = false;

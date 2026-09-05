@@ -79,6 +79,7 @@
                      data-status="{{ $normalizedStatus }}"
                      data-route-url="{{ route('shipper.map.route', $order->id) }}"
                      data-location-url="{{ route('shipper.location.update') }}"
+                     data-picked-up-url="{{ route('shipper.orders.picked-up', $order->id) }}"
                      data-tts-url="{{ route('shipper.navigation.voice') }}">
                 </div>
 
@@ -1042,33 +1043,67 @@
         margin:.15rem 0 .25rem !important;
     }
 
-    .shipper-navigation-page .card,
-    .shipper-navigation-page .card-body,
-    .shipper-navigation-page .btn,
-    .shipper-navigation-page .badge,
-    .shipper-navigation-page .alert,
-    .shipper-navigation-page .arrival-guard,
-    .shipper-navigation-page .customer-arrival-panel,
-    .shipper-navigation-page .cod-collect-box,
-    .shipper-navigation-page .paid-box,
+    .shipper-navigation-page {
+        background:linear-gradient(180deg, #eaf7f2 0%, #f3f7f5 46%, #ffffff 100%);
+    }
+    .shipper-navigation-page .nav-map-card {
+        border:1px solid rgba(203,221,214,.9) !important;
+        border-radius:22px !important;
+        box-shadow:0 18px 42px rgba(16,55,44,.12) !important;
+        background:#eef5f2;
+    }
+    .shipper-navigation-page .shipper-map-canvas {
+        border-radius:22px 22px 14px 14px !important;
+    }
+    .shipper-navigation-page .navigation-summary {
+        border-radius:20px !important;
+        background:linear-gradient(135deg, rgba(12,118,85,.96), rgba(17,80,68,.94)) !important;
+        border:1px solid rgba(255,255,255,.24);
+        box-shadow:0 16px 34px rgba(10,54,44,.26);
+    }
+    .shipper-navigation-page .navigation-turn-icon {
+        border-radius:16px !important;
+        background:rgba(255,255,255,.18) !important;
+    }
+    .shipper-navigation-page .map-destination-card,
+    .shipper-navigation-page .trip-contact-card,
+    .shipper-navigation-page .order-items-mobile-card,
+    .shipper-navigation-page .shipper-current-action-card {
+        border:1px solid rgba(217,231,226,.95) !important;
+        border-radius:22px !important;
+        box-shadow:0 10px 24px rgba(16,55,44,.07) !important;
+    }
+    .shipper-navigation-page .map-destination-card .card-body,
+    .shipper-navigation-page .trip-contact-card .card-body,
+    .shipper-navigation-page .order-items-mobile-card .card-body,
+    .shipper-navigation-page .shipper-current-action-card .card-body {
+        border-radius:22px !important;
+    }
+    .shipper-navigation-page .map-follow-button,
+    .shipper-navigation-page .map-tools-toggle {
+        border-radius:16px !important;
+        border:1px solid rgba(218,230,226,.94);
+        box-shadow:0 12px 24px rgba(15,55,44,.16);
+    }
+    .shipper-navigation-page .map-tools-menu,
+    .shipper-navigation-page .test-speed-control,
+    .shipper-navigation-page .map-tools-source {
+        border-radius:16px !important;
+    }
+    .shipper-navigation-page .map-tools-menu button {
+        border-radius:12px !important;
+    }
     .shipper-navigation-page .trip-mini-action,
     .shipper-navigation-page .qty-badge,
-    .shipper-navigation-page .order-items-toggle,
-    .shipper-navigation-page .order-items-toggle-meta .badge,
-    .shipper-navigation-page .nav-map-card,
-    .shipper-navigation-page .shipper-map-canvas,
-    .shipper-navigation-page .navigation-summary,
-    .shipper-navigation-page .navigation-turn-icon,
-    .shipper-navigation-page .route-source-pill,
-    .shipper-navigation-page .map-tools-toggle,
-    .shipper-navigation-page .map-tools-menu,
-    .shipper-navigation-page .map-tools-menu button,
-    .shipper-navigation-page .test-speed-control,
-    .shipper-navigation-page .test-speed-inputs input,
-    .shipper-navigation-page .map-tools-source,
-    .shipper-navigation-page .modal-content,
-    .shipper-navigation-page .btn-close {
-        border-radius:0 !important;
+    .shipper-navigation-page .status-action-pill,
+    .shipper-navigation-page .issue-mini-button {
+        border-radius:999px !important;
+    }
+    .shipper-navigation-page .ship-swipe-confirm {
+        border-radius:20px !important;
+    }
+    .shipper-navigation-page .ship-swipe-knob {
+        border-radius:16px !important;
     }
 
     @media (max-width: 430px) {
@@ -1402,15 +1437,14 @@
         subdomains:'abc',
         attribution:'&copy; OpenStreetMap contributors'
     });
-    const fallbackTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    const fallbackTiles = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
         maxZoom:19,
         updateWhenIdle:false,
         updateWhenZooming:true,
         keepBuffer:6,
         detectRetina:false,
-        subdomains:'abcd',
-        r:window.devicePixelRatio > 1 ? '@2x' : '',
-        attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+        subdomains:'abc',
+        attribution:'&copy; OpenStreetMap contributors, Tiles style by HOT'
     });
     let tileFallbackSwapped = false;
     let tilesSettled = false;
@@ -1693,22 +1727,21 @@
             style:{
                 version:8,
                 sources:{
-                    carto:{
+                    osmHot:{
                         type:'raster',
                         tiles:[
-                            'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                            'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                            'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-                            'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                            'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                            'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                            'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
                         ],
                         tileSize:256,
-                        attribution:'&copy; OpenStreetMap contributors &copy; CARTO',
+                        attribution:'&copy; OpenStreetMap contributors, Tiles style by HOT',
                     },
                 },
                 layers:[{
-                    id:'carto',
+                    id:'osm-hot',
                     type:'raster',
-                    source:'carto',
+                    source:'osmHot',
                     paint:{
                         'raster-fade-duration':0,
                     },
@@ -1844,6 +1877,7 @@
     let latestArrivalSnapshot = null;
     let latestArrivalSnapshotTargetKey = '';
     let currentAudio = null;
+
     let voiceRequestId = 0;
     let voiceRequestController = null;
     const voiceCache = new Map();
@@ -1874,7 +1908,7 @@
     let geoWatchId = null;
     const isLocalHost = ['127.0.0.1', 'localhost'].includes(window.location.hostname);
     const initialOrderStatus = String(mapEl.dataset.status || '');
-    let statusReloading = false;
+    let liveOrderStatus = initialOrderStatus;
     const NAV_VOICE_RATE = 1.00;
     const NAV_VOICE_VOLUME = 0.92;
     const NAV_VOICE_INTRO_GAP_MS = 170;
@@ -1890,6 +1924,57 @@
     const NAV_GUIDE_SPEED_SAMPLE_MAX_MS = 12000;
     const TEST_GPS_SESSION_KEY = 'shipper_map_test_gps_v1';
     const TEST_GPS_POINT_KEY = 'shipper_map_test_gps_point_v1';
+
+    function syncLocationFieldsForAction() {
+        if (!currentPosition) return;
+        const fields = {
+            pickupLatitude: currentPosition.latitude,
+            pickupLongitude: currentPosition.longitude,
+            pickupAccuracy: currentPosition.accuracy || '',
+        };
+        Object.entries(fields).forEach(([id, value]) => {
+            const field = document.getElementById(id);
+            if (field) field.value = value;
+        });
+    }
+
+    function renderReadyForDeliveryAction(arrival = latestArrivalSnapshot) {
+        const body = document.querySelector('.shipper-current-action-card > .card-body');
+        if (!body || document.getElementById('pickedUpForm')) return;
+
+        const verified = Boolean(arrival?.verified);
+        const disabled = !(verified && assignmentAccepted);
+        const label = verified ? 'Vuốt lấy hàng' : 'Tới quán để mở';
+
+        body.innerHTML = `
+            <div class="status-action-shell">
+                <div class="status-action-head">
+                    <div class="status-action-copy min-w-0">
+                        <div class="status-action-pill tone-green">Quán xong</div>
+                        <div class="status-action-title">${verified ? 'Đã tới quán' : 'Tới quán lấy hàng'}</div>
+                        <div class="status-action-desc">${verified ? 'Quán đã chuẩn bị xong. Vuốt để xác nhận đã lấy hàng.' : 'Quán đã xong. Tới quán để mở nút lấy hàng.'}</div>
+                    </div>
+                    @if($showIssueButton)
+                        <button type="button" class="issue-mini-button status-inline-issue" data-bs-toggle="modal" data-bs-target="#issueModal" title="Báo sự cố" aria-label="Báo sự cố"><i class="fa-solid fa-triangle-exclamation"></i></button>
+                    @endif
+                </div>
+                <form action="${escapeHtml(mapEl.dataset.pickedUpUrl || '')}" method="POST" id="pickedUpForm" class="mt-2">
+                    <input type="hidden" name="_token" value="${escapeHtml(csrf)}">
+                    <input type="hidden" name="latitude" id="pickupLatitude">
+                    <input type="hidden" name="longitude" id="pickupLongitude">
+                    <input type="hidden" name="accuracy" id="pickupAccuracy">
+                    <div class="ship-swipe-confirm ${disabled ? 'is-disabled' : ''}" data-swipe-submit data-tone="green" aria-disabled="${disabled ? 'true' : 'false'}">
+                        <div class="ship-swipe-fill" data-swipe-fill></div>
+                        <div class="ship-swipe-label" data-swipe-label>${escapeHtml(label)}</div>
+                        <div class="ship-swipe-knob" data-swipe-knob aria-hidden="true"><i class="fa-solid fa-angles-right"></i></div>
+                        <button type="submit" id="pickedUpButton" class="ship-swipe-native-submit" ${disabled ? 'disabled' : ''}>${escapeHtml(label)}</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        syncLocationFieldsForAction();
+        window.ChillDrinkInitSwipeSubmit?.(body);
+    }
 
     // File chuông thật thay cho WebAudio oscillator:
     // nghe rõ và ổn định hơn trên Chrome/điện thoại.
@@ -3563,7 +3648,7 @@
         const verified = Boolean(arrival.verified);
         const eligible = Boolean(arrival.eligible);
         const isStore = arrival.event === 'arrived_store';
-        const isReadyStorePickup = isStore && initialOrderStatus === 'ready_for_delivery';
+        const isReadyStorePickup = isStore && liveOrderStatus === 'ready_for_delivery';
         const isHandover = arrival.event === 'arrived_handover';
         const isCustomer = arrival.event === 'arrived_customer';
         const distance = Number(arrival.distance_m);
@@ -3637,14 +3722,19 @@
             }
         }
 
-        if (isStore && pickedUpButton) {
+        const livePickedUpButton = document.getElementById('pickedUpButton') || pickedUpButton;
+        const livePickedUpButtonText = document.getElementById('pickedUpButtonText') || pickedUpButtonText;
+        const livePickedUpButtonIcon = document.getElementById('pickedUpButtonIcon') || pickedUpButtonIcon;
+        if (isStore && livePickedUpButton) {
             const pickupEnabled = verified && assignmentAccepted;
-            pickedUpButton.disabled = !pickupEnabled;
+            livePickedUpButton.disabled = !pickupEnabled;
+            livePickedUpButton.closest('[data-swipe-submit]')?.classList.toggle('is-disabled', !pickupEnabled);
+            livePickedUpButton.closest('[data-swipe-submit]')?.setAttribute('aria-disabled', pickupEnabled ? 'false' : 'true');
             const pickupActionText = verified ? 'Vuốt lấy hàng' : 'Tới quán để mở';
-            if (pickedUpButtonText) pickedUpButtonText.textContent = pickupActionText;
-            else pickedUpButton.textContent = pickupActionText;
-            if (pickedUpButtonIcon) {
-                pickedUpButtonIcon.className = pickupEnabled ? 'fa-solid fa-box-open me-2' : 'fa-solid fa-lock me-2';
+            if (livePickedUpButtonText) livePickedUpButtonText.textContent = pickupActionText;
+            else livePickedUpButton.textContent = pickupActionText;
+            if (livePickedUpButtonIcon) {
+                livePickedUpButtonIcon.className = pickupEnabled ? 'fa-solid fa-box-open me-2' : 'fa-solid fa-lock me-2';
             }
         }
 
@@ -3871,11 +3961,13 @@
 
             const serverStatus = String(payload.status || '');
             const uiChangingStatuses = new Set(['ready_for_delivery', 'shipper_picked_up', 'delivering', 'delivered']);
-            if (!statusReloading && serverStatus && serverStatus !== initialOrderStatus && uiChangingStatuses.has(serverStatus)) {
-                statusReloading = true;
-                sourceEl.textContent = 'Trạng thái đơn vừa thay đổi · đang cập nhật thao tác...';
-                setTimeout(() => window.location.reload(), 250);
-                return;
+            if (serverStatus && serverStatus !== liveOrderStatus && uiChangingStatuses.has(serverStatus)) {
+                liveOrderStatus = serverStatus;
+                mapEl.dataset.status = serverStatus;
+                sourceEl.textContent = 'Trạng thái đơn vừa thay đổi · đã cập nhật realtime.';
+                if (serverStatus === 'ready_for_delivery') {
+                    renderReadyForDeliveryAction(payload.arrival || latestArrivalSnapshot);
+                }
             }
 
             const target = payload.target;
@@ -3982,6 +4074,25 @@
             routePending = false;
         }
     }
+
+    document.addEventListener('shipper:order-status-updated', event => {
+        const payload = event.detail || {};
+        if (Number(payload.order_id || 0) !== orderId) return;
+
+        const nextStatus = String(payload.status || '');
+        if (!nextStatus) return;
+
+        liveOrderStatus = nextStatus;
+        mapEl.dataset.status = nextStatus;
+        sourceEl.textContent = payload.status_label
+            ? `Đơn đã chuyển sang: ${payload.status_label}`
+            : 'Trạng thái đơn đã được cập nhật realtime.';
+
+        if (nextStatus === 'ready_for_delivery') {
+            renderReadyForDeliveryAction(latestArrivalSnapshot);
+            if (latestArrivalSnapshot) updateArrivalUi(latestArrivalSnapshot);
+        }
+    });
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));

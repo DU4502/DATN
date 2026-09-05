@@ -355,7 +355,7 @@ class StaffManagementController extends Controller
     /**
      * Khóa / mở khóa nhân viên
      */
-    public function toggleStatus(Request $request, User $user): RedirectResponse
+    public function toggleStatus(Request $request, User $user)
     {
         $this->ensureCanManage($user);
 
@@ -369,6 +369,18 @@ class StaffManagementController extends Controller
             'success',
             ['target_user_id' => $user->id],
         );
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_active' => (bool) $user->is_active,
+                'user' => [
+                    'id' => $user->id,
+                    'is_active' => (bool) $user->is_active,
+                ],
+                'message' => "Đã " . ($newStatus ? 'mở khóa' : 'khóa') . " nhân viên {$user->name}.",
+            ]);
+        }
 
         return redirect()->back()
             ->with('success', "Đã " . ($newStatus ? 'mở khóa' : 'khóa') . " nhân viên {$user->name}.");

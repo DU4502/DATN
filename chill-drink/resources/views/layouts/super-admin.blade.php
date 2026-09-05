@@ -789,6 +789,7 @@
         })();
     </script>
     @include('partials.order-issue-notification-badge')
+    @include('partials.instant-actions')
     @stack('scripts')
 </body>
 </html>

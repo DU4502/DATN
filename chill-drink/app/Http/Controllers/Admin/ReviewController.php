@@ -80,11 +80,24 @@ class ReviewController extends Controller
         return redirect()->back()->with('success', 'Đã xóa đánh giá thành công.');
     }
 
-    public function toggleStatus(Review $review): RedirectResponse
+    public function toggleStatus(Request $request, Review $review)
     {
         if (Schema::hasColumn('reviews', 'status')) {
             $review->update(['status' => ! (bool) $review->status]);
         }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'visible' => (bool) $review->status,
+                'review' => [
+                    'id' => $review->id,
+                    'status' => (bool) $review->status,
+                ],
+                'message' => 'Đã cập nhật trạng thái hiển thị đánh giá.',
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Đã cập nhật trạng thái hiển thị đánh giá.');
     }
 }

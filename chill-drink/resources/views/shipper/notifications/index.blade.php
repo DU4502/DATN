@@ -26,10 +26,10 @@
 </div>
 
 <div class="notify-summary">
-    <div><span>Chưa đọc</span><strong>{{ (int)$unreadCount }}</strong></div>
+    <div><span>Chưa đọc</span><strong data-notify-unread-count>{{ (int)$unreadCount }}</strong></div>
     <div><span>Tổng</span><strong>{{ (int)$totalCount }}</strong></div>
     @if($unreadCount > 0)
-        <form method="POST" action="{{ route('shipper.notifications.mark-all-read') }}">@csrf
+        <form method="POST" action="{{ route('shipper.notifications.mark-all-read') }}" data-instant-form data-instant-mark-read>@csrf
             <button class="btn btn-dark btn-sm"><i class="fa-solid fa-check-double me-1"></i>Đọc tất cả</button>
         </form>
     @endif

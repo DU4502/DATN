@@ -128,7 +128,7 @@
             </thead>
             <tbody>
                 @forelse($branches as $branch)
-                    <tr>
+                    <tr data-instant-row>
                         <td>
                             <strong>{{ $branch->name }}</strong>
                         </td>
@@ -156,9 +156,9 @@
                         </td>
                         <td>
                             @if($branch->status)
-                                <span class="badge bg-success">Hoạt động</span>
+                                <span class="badge bg-success" data-instant-status-badge>Hoạt động</span>
                             @else
-                                <span class="badge bg-danger">Vô hiệu hóa</span>
+                                <span class="badge bg-danger" data-instant-status-badge>Vô hiệu hóa</span>
                             @endif
                         </td>
                         <td>
@@ -166,11 +166,23 @@
                         </td>
                         <td>
                             <div class="d-flex gap-2">
-                                <form method="POST" action="{{ route('admin.branches.toggle-status', $branch) }}" style="display: inline;">
+                                <form method="POST" action="{{ route('admin.branches.toggle-status', $branch) }}" style="display: inline;"
+                                      data-instant-form
+                                      data-instant-toggle-status
+                                      data-active-label="Hoạt động"
+                                      data-inactive-label="Vô hiệu hóa"
+                                      data-active-badge-class="badge bg-success"
+                                      data-inactive-badge-class="badge bg-danger"
+                                      data-active-button-class="btn btn-sm btn-outline-warning"
+                                      data-inactive-button-class="btn btn-sm btn-outline-success"
+                                      data-active-title="Vô hiệu hóa"
+                                      data-inactive-title="Kích hoạt"
+                                      data-active-icon="bi bi-lock"
+                                      data-inactive-icon="bi bi-unlock">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="btn btn-sm btn-outline-{{ $branch->status ? 'warning' : 'success' }}" title="{{ $branch->status ? 'Vô hiệu hóa' : 'Kích hoạt' }}">
-                                        <i class="bi bi-{{ $branch->status ? 'lock' : 'unlock' }}"></i>
+                                    <button type="submit" class="btn btn-sm btn-outline-{{ $branch->status ? 'warning' : 'success' }}" title="{{ $branch->status ? 'Vô hiệu hóa' : 'Kích hoạt' }}" data-instant-submit>
+                                        <i class="bi bi-{{ $branch->status ? 'lock' : 'unlock' }}" data-instant-status-icon></i>
                                     </button>
                                 </form>
                                 <form method="POST" action="{{ route('admin.branches.destroy', $branch) }}" style="display: inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa chi nhánh này?');">

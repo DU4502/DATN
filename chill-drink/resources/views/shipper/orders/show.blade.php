@@ -118,7 +118,7 @@
 
                                 <div>
 
-                                    <span class="badge {{ $statusBadgeClass }}">
+                                    <span class="badge {{ $statusBadgeClass }}" data-shipper-detail-status>
                                         {{ $statusLabel }}
                                     </span>
 
@@ -587,5 +587,32 @@
 .ship-order-show-page .table-responsive{border:0!important;background:transparent!important;overflow:visible!important}.ship-order-show-page table thead{display:none}.ship-order-show-page table,.ship-order-show-page tbody{display:block;width:100%}.ship-order-show-page table tr{display:grid;grid-template-columns:1fr auto;gap:5px 10px;background:#f8faf9;border:1px solid var(--ship-line);border-radius:14px;padding:10px;margin:8px 0}.ship-order-show-page table td{display:block!important;border:0!important;padding:0!important;font-size:10.5px!important}.ship-order-show-page table td:nth-child(1){display:none!important}.ship-order-show-page table td:nth-child(2){font-weight:800;grid-column:1/-1}.ship-order-show-page table td:nth-child(3)::before{content:'SL: ';color:var(--ship-muted)}.ship-order-show-page table td:nth-child(4),.ship-order-show-page table td:nth-child(5){text-align:right!important}.ship-order-show-page table td:nth-child(5){font-weight:850;color:var(--ship-green-dark)}
 .ship-order-show-page .col-lg-4 .card:first-child{position:sticky;bottom:78px;z-index:15;box-shadow:0 12px 28px rgba(18,52,42,.14)!important}.ship-order-show-page .col-lg-4 .card:first-child .card-header{display:none}.ship-order-show-page .col-lg-4 .card:first-child .card-body{padding:10px!important}.ship-order-show-page .col-lg-4 .card:first-child .btn{font-size:11px;min-height:42px}.ship-order-show-page .col-lg-4 .card:first-child .alert{font-size:10px;padding:9px;margin-bottom:7px!important}.ship-order-show-page .modal-content{border:0;border-radius:22px}.ship-order-show-page .modal-dialog{margin:12px}.ship-order-show-page .modal-footer{display:grid;grid-template-columns:1fr 1fr}.ship-order-show-page .modal-footer .btn{width:100%;margin:0}
 </style>
+
+<script>
+document.addEventListener('shipper:order-status-updated', event => {
+    const payload = event.detail || {};
+    if (Number(payload.order_id || 0) !== {{ (int) $order->id }}) return;
+
+    const badge = document.querySelector('[data-shipper-detail-status]');
+    if (!badge) return;
+
+    const status = String(payload.status || '');
+    const classes = {
+        pending: 'bg-secondary',
+        confirmed: 'bg-info',
+        preparing: 'bg-primary',
+        ready_for_delivery: 'bg-warning text-dark',
+        ready_for_pickup: 'bg-info',
+        shipper_picked_up: 'bg-warning text-dark',
+        delivering: 'bg-warning text-dark',
+        delivered: 'bg-success',
+        completed: 'bg-success',
+        cancelled: 'bg-danger',
+    };
+
+    badge.className = `badge ${classes[status] || 'bg-secondary'}`;
+    badge.textContent = payload.status_label || status || 'Đã cập nhật';
+});
+</script>
 
 @endsection
