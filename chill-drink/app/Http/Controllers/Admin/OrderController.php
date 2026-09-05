@@ -406,6 +406,7 @@ class OrderController extends Controller
             'created_at_iso' => $order->created_at?->toIso8601String(),
             'scheduled_at' => $order->scheduled_at?->format('H:i · d/m/Y'),
             'delivery_type' => $order->delivery_type,
+            'is_support_redelivery' => $order->support_issue_id !== null,
             'delivery_note' => $order->delivery_note,
             'scheduled_delivery_time' => $order->scheduled_delivery_time?->format('H:i · d/m/Y'),
             'message' => "Đơn hàng mới {$orderCode} từ {$customerName}",

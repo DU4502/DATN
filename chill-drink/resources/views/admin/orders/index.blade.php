@@ -261,7 +261,10 @@
                     <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
                     <td class="text-secondary">{{ optional($order->created_at)->format('d/m/Y H:i') }}</td>
                     <td>
-                        @if($order->delivery_type === 'scheduled' && ($order->scheduled_delivery_time || $order->scheduled_at))
+                        @if($order->support_issue_id)
+                            <span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-arrow-repeat me-1"></i>Đơn giao bù miễn phí</span>
+                            @if($order->scheduled_delivery_time || $order->scheduled_at)<small class="d-block text-secondary mt-1">Dự kiến {{ ($order->scheduled_delivery_time ?? $order->scheduled_at)->format('H:i · d/m/Y') }}</small>@endif
+                        @elseif($order->delivery_type === 'scheduled' && ($order->scheduled_delivery_time || $order->scheduled_at))
                             <span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-calendar-check me-1"></i>Giao sau · {{ ($order->scheduled_delivery_time ?? $order->scheduled_at)->format('H:i · d/m/Y') }}</span>
                             @if($order->delivery_note)<small class="d-block text-secondary mt-1" title="{{ $order->delivery_note }}">{{ \Illuminate\Support\Str::limit($order->delivery_note, 42) }}</small>@endif
                         @else
@@ -1190,7 +1193,7 @@
             row.innerHTML = `
                 <td class="fw-bold text-primary">#${escapeHtml(payload.order_id)}</td>
                 <td class="text-secondary">${escapeHtml(payload.created_at || 'Vừa xong')}</td>
-                <td>${payload.delivery_type === 'scheduled' && (payload.scheduled_delivery_time || payload.scheduled_at) ? `<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-calendar-check me-1"></i>Giao sau · ${escapeHtml(payload.scheduled_delivery_time || payload.scheduled_at)}</span>${payload.delivery_note ? `<small class="d-block text-secondary mt-1" title="${escapeHtml(payload.delivery_note)}">${escapeHtml(String(payload.delivery_note).slice(0, 42))}</small>` : ''}` : '<span class="text-secondary small"><i class="bi bi-lightning-charge me-1"></i>Giao ngay</span>'}</td>
+                <td>${payload.is_support_redelivery ? `<span class="badge bg-success-subtle text-success-emphasis"><i class="bi bi-arrow-repeat me-1"></i>Đơn giao bù miễn phí</span>${payload.scheduled_delivery_time || payload.scheduled_at ? `<small class="d-block text-secondary mt-1">Dự kiến ${escapeHtml(payload.scheduled_delivery_time || payload.scheduled_at)}</small>` : ''}` : (payload.delivery_type === 'scheduled' && (payload.scheduled_delivery_time || payload.scheduled_at) ? `<span class="badge bg-info-subtle text-info-emphasis"><i class="bi bi-calendar-check me-1"></i>Giao sau · ${escapeHtml(payload.scheduled_delivery_time || payload.scheduled_at)}</span>${payload.delivery_note ? `<small class="d-block text-secondary mt-1" title="${escapeHtml(payload.delivery_note)}">${escapeHtml(String(payload.delivery_note).slice(0, 42))}</small>` : ''}` : '<span class="text-secondary small"><i class="bi bi-lightning-charge me-1"></i>Giao ngay</span>')}</td>
                 <td>
                     <div class="d-flex align-items-center gap-2">
                         <span class="admin-avatar" style="width:34px;height:34px;font-size:.8rem;">${escapeHtml((payload.customer_name || 'K').charAt(0))}</span>

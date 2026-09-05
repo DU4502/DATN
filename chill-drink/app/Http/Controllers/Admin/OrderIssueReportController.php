@@ -48,7 +48,7 @@ class OrderIssueReportController extends Controller
 
     public function index(Request $request): View
     {
-        $query = OrderIssueReport::with(['order.branch', 'order.orderItems.product', 'order.orderItems.productSize', 'redeliveryOrder', 'user', 'handler', 'voucher'])->latest();
+        $query = OrderIssueReport::with(['order.branch', 'order.orderItems.product', 'order.orderItems.productSize', 'redeliveryOrder.orderItems.product', 'user', 'handler', 'voucher'])->latest();
         $user = $request->user();
         $branchId = $user->isSuperAdmin() && $user->isViewingAdminWorkspace()
             ? $user->adminWorkspaceBranchId()
@@ -144,12 +144,28 @@ class OrderIssueReportController extends Controller
                 ]);
             }
 
+            $selectedQuantities = collect($data['redelivery_items'] ?? [])
+                ->map(fn ($quantity) => (int) $quantity)
+                ->filter(fn (int $quantity) => $quantity > 0);
+
+            if (($data['resolution_type'] ?? null) === 'redelivery' && ! $lockedIssue->redelivery_order_id) {
+                $originalItems = $lockedIssue->order->orderItems->keyBy('id');
+                foreach ($selectedQuantities as $itemId => $quantity) {
+                    $originalItem = $originalItems->get((int) $itemId);
+                    if (! $originalItem || $quantity > (int) $originalItem->quantity) {
+                        throw ValidationException::withMessages([
+                            'redelivery_items' => 'Số lượng giao bù không hợp lệ hoặc vượt quá số lượng của món trong đơn gốc.',
+                        ]);
+                    }
+                }
+                $data['redelivery_items'] = $selectedQuantities->all();
+            } elseif (($data['resolution_type'] ?? null) !== 'redelivery') {
+                $data['redelivery_items'] = null;
+            }
+
             if ($data['status'] === 'awaiting_confirmation'
                 && ($data['resolution_type'] ?? null) === 'redelivery'
                 && ! $lockedIssue->redelivery_order_id) {
-                $selectedQuantities = collect($data['redelivery_items'] ?? [])
-                    ->map(fn ($quantity) => (int) $quantity)
-                    ->filter(fn (int $quantity) => $quantity > 0);
                 $selectedItems = $lockedIssue->order->orderItems
                     ->filter(fn (OrderItem $item) => $selectedQuantities->has((string) $item->id) || $selectedQuantities->has($item->id));
 
@@ -218,8 +234,6 @@ class OrderIssueReportController extends Controller
 
                 $lockedIssue->redelivery_order_id = $redelivery->id;
             }
-
-            unset($data['redelivery_items']);
 
             if ($data['status'] === 'rejected') {
                 if (mb_strlen(trim((string) ($data['admin_note'] ?? ''))) < 10) {

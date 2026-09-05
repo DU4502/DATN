@@ -164,12 +164,12 @@ class ProfileController extends Controller
                 $supportIssue = OrderIssueReport::query()->lockForUpdate()->find($lockedOrder->support_issue_id);
                 if ($supportIssue
                     && (int) $supportIssue->redelivery_order_id === (int) $lockedOrder->id
-                    && $supportIssue->status === 'awaiting_confirmation') {
-                    $supportIssue->update([
+                    && $supportIssue->status !== 'rejected') {
+                    $supportIssue->update(array_filter([
                         'status' => 'resolved',
-                        'customer_confirmed_at' => now(),
-                        'resolved_at' => now(),
-                    ]);
+                        'customer_confirmed_at' => $supportIssue->customer_confirmed_at ?? now(),
+                        'resolved_at' => $supportIssue->resolved_at ?? now(),
+                    ], fn ($value) => $value !== null));
                 }
             }
 

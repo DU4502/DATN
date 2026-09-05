@@ -304,6 +304,23 @@ class Order extends Model
                 $order->delivered_at = now();
             }
         });
+
+        static::updated(function (Order $order) {
+            if (! $order->wasChanged('status')
+                || OrderStatus::normalize((string) $order->status) !== OrderStatus::COMPLETED
+                || ! $order->support_issue_id) {
+                return;
+            }
+
+            OrderIssueReport::query()
+                ->whereKey($order->support_issue_id)
+                ->whereNotIn('status', ['resolved', 'rejected'])
+                ->update([
+                    'status' => 'resolved',
+                    'resolved_at' => now(),
+                    'updated_at' => now(),
+                ]);
+        });
     }
 
     public function pointsEarnable(): int

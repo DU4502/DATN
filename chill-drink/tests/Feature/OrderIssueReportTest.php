@@ -382,6 +382,16 @@ class OrderIssueReportTest extends TestCase
         $productSize = ProductSize::create(['product_id' => $product->id, 'size_id' => $size->id, 'price' => 32000]);
         $originalItem = OrderItem::create(['order_id' => $order->id, 'product_id' => $product->id, 'product_size_id' => $productSize->id, 'ice_level' => 100, 'sugar_level' => 100, 'quantity' => 2, 'unit_price' => 32000, 'total_price' => 64000]);
 
+        $draftPayload = $this->adminPayload('processing', 'redelivery');
+        $draftPayload['redelivery_items'] = [$originalItem->id => 1];
+        $this->actingAs($admin)->patch(route('admin.order-issues.update', $issue), $draftPayload)
+            ->assertSessionHasNoErrors();
+        $this->assertSame(1, $issue->fresh()->redelivery_items[$originalItem->id]);
+        $this->actingAs($admin)->get(route('admin.order-issues.index'))
+            ->assertOk()
+            ->assertSee('name="redelivery_items['.$originalItem->id.']"', false)
+            ->assertSee('value="1"', false);
+
         $payload = $this->adminPayload('awaiting_confirmation', 'redelivery');
         $payload['redelivery_items'] = [$originalItem->id => 1];
         $this->actingAs($admin)->patch(route('admin.order-issues.update', $issue), $payload)
@@ -402,6 +412,14 @@ class OrderIssueReportTest extends TestCase
         $this->assertDatabaseHas('order_items', ['order_id' => $issue->redelivery_order_id, 'product_id' => $product->id, 'quantity' => 1, 'total_price' => 0]);
 
         $redeliveryOrder = Order::findOrFail($issue->redelivery_order_id);
+        $this->actingAs($admin)->get(route('admin.order-issues.index'))
+            ->assertOk()
+            ->assertSee('Đang thực hiện giao bù')
+            ->assertSee($redeliveryOrder->displayCode())
+            ->assertDontSee('Lưu phương án');
+        $this->actingAs($admin)->get(route('admin.orders.index'))
+            ->assertOk()
+            ->assertSee('Đơn giao bù miễn phí');
         $this->actingAs($customer)->get(route('orders.issues.create', $order))
             ->assertOk()
             ->assertSee($redeliveryOrder->displayCode())
@@ -417,6 +435,12 @@ class OrderIssueReportTest extends TestCase
         $this->assertSame('resolved', $issue->fresh()->status);
         $this->assertSame(OrderStatus::COMPLETED, $redeliveryOrder->fresh()->status);
         $this->assertNotNull($issue->fresh()->customer_confirmed_at);
+        $this->actingAs($admin)->get(route('admin.order-issues.index'))
+            ->assertOk()
+            ->assertSee('Đơn giao bù miễn phí cho')
+            ->assertSee($redeliveryOrder->displayCode())
+            ->assertSee($product->name)
+            ->assertSee('1×');
     }
 
     public function test_staff_and_shipper_cannot_access_admin_issue_routes(): void
@@ -428,6 +452,37 @@ class OrderIssueReportTest extends TestCase
                 ->get(route('admin.order-issues.index'))
                 ->assertRedirect(route('home'));
         }
+    }
+
+    public function test_completed_redelivery_order_always_resolves_linked_support_issue(): void
+    {
+        [$customer, $originalOrder, $branch] = $this->createCustomerOrder('ISSUE-REDELIVERY-SYNC');
+        $issue = $this->createIssue($originalOrder, $customer, [
+            'status' => 'awaiting_confirmation',
+            'resolution_type' => 'redelivery',
+        ]);
+        $redeliveryOrder = Order::create([
+            'order_code' => 'REDELIVERY-SYNC',
+            'support_issue_id' => $issue->id,
+            'user_id' => $customer->id,
+            'branch_id' => $branch->id,
+            'fulfillment_type' => 'delivery',
+            'delivery_type' => 'scheduled',
+            'subtotal' => 0,
+            'shipping_fee' => 0,
+            'discount' => 0,
+            'total' => 0,
+            'payment_method' => 'cod',
+            'payment_status' => 'paid',
+            'status' => OrderStatus::CONFIRMED,
+        ]);
+        $issue->update(['redelivery_order_id' => $redeliveryOrder->id]);
+
+        $redeliveryOrder->update(['status' => OrderStatus::COMPLETED]);
+
+        $issue->refresh();
+        $this->assertSame('resolved', $issue->status);
+        $this->assertNotNull($issue->resolved_at);
     }
 
     public function test_issue_smoke_data_rolls_back_cleanly(): void
