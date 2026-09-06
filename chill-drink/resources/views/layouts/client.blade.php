@@ -2475,6 +2475,7 @@
                 submitter.setAttribute('aria-busy', state === 'loading' ? 'true' : 'false');
 
                 const isIconButton = submitter.classList.contains('add-round') || submitter.classList.contains('product-cart-btn') || submitter.getAttribute('aria-label') === 'Thêm vào giỏ';
+                const hasDynamicContent = submitter.classList.contains('drink-customizer__submit');
                 const hasText = submitter.textContent.trim().length > 0 && !isIconButton;
 
                 if (state === 'loading' && isIconButton) {
@@ -2485,16 +2486,18 @@
                     submitter.innerHTML = '<i class="bi bi-check-lg" aria-hidden="true"></i>';
                 }
 
-                if (state === 'loading' && hasText) {
+                if (state === 'loading' && hasText && !hasDynamicContent) {
                     submitter.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang thêm';
                 }
 
-                if (state === 'success' && hasText) {
+                if (state === 'success' && hasText && !hasDynamicContent) {
                     submitter.innerHTML = '<i class="bi bi-check2-circle me-2"></i>Đã thêm';
                 }
 
-                if (state === 'idle' && typeof originalSubmitterHtml === 'string') {
-                    submitter.innerHTML = originalSubmitterHtml;
+                if (state === 'idle') {
+                    if (!hasDynamicContent && typeof originalSubmitterHtml === 'string') {
+                        submitter.innerHTML = originalSubmitterHtml;
+                    }
                     submitter.removeAttribute('aria-busy');
                     form.classList.remove('is-adding', 'is-added');
                 }
@@ -2754,6 +2757,10 @@
                         form.closest('[data-cart-row]')?.remove();
                     }
 
+                    document.dispatchEvent(new CustomEvent('cart:updated', {
+                        detail: data
+                    }));
+                } else {
                     document.dispatchEvent(new CustomEvent('cart:updated', {
                         detail: data
                     }));

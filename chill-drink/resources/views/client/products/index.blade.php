@@ -2068,6 +2068,12 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
             });
         }
 
+        document.addEventListener('cart:updated', () => {
+            if (modalElement.classList.contains('show')) {
+                modal.hide();
+            }
+        });
+
         document.querySelectorAll('[data-receive-code]').forEach((button) => {
             button.addEventListener('click', async () => {
                 const code = button.dataset.receiveCode;
