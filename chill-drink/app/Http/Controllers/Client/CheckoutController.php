@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Exceptions\ProductUnavailableException;
 use App\Models\Address;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Category;
 use App\Models\GroupOrder;
 use App\Models\Order;
@@ -239,6 +241,52 @@ class CheckoutController extends Controller
     /**
      * Process checkout
      */
+    public function availability(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'branch_id' => [
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
+        ]);
+
+        $cart = $this->cartForCheckout(
+            session()->get('cart', []),
+            session()->get('checkout_cart_keys')
+        );
+        $productIds = collect($cart)
+            ->pluck('product_id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+        $statuses = BranchProductStatus::query()
+            ->where('branch_id', (int) $validated['branch_id'])
+            ->whereIn('product_id', $productIds)
+            ->get()
+            ->keyBy('product_id');
+
+        $unavailable = collect($cart)
+            ->filter(function ($item) use ($statuses) {
+                $productId = $item['product_id'] ?? null;
+                $status = is_numeric($productId) ? $statuses->get((int) $productId) : null;
+
+                return ! $status || ! $status->is_available;
+            })
+            ->map(fn ($item) => [
+                'product_id' => (int) ($item['product_id'] ?? 0),
+                'name' => (string) ($item['name'] ?? 'Sản phẩm'),
+            ])
+            ->unique('product_id')
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'unavailable' => $unavailable,
+        ])->header('Cache-Control', 'no-store');
+    }
+
     public function process(Request $request)
     {
         $groupMemberUserIds = collect();
@@ -573,6 +621,13 @@ class CheckoutController extends Controller
                 'user_id' => auth()->id(),
                 'message' => $e->getMessage(),
             ]);
+
+            if ($e instanceof ProductUnavailableException) {
+                return redirect()->route('cart.index')->with(
+                    'error',
+                    $e->getMessage().' Món hết hàng đã được bỏ chọn, bạn có thể xóa món hoặc đổi chi nhánh.'
+                );
+            }
 
             // Không đưa câu SQL và cấu trúc cơ sở dữ liệu ra giao diện khách hàng.
             // Chi tiết kỹ thuật vẫn được giữ trong log để quản trị viên xử lý.

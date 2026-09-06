@@ -229,6 +229,9 @@
     .checkout-item-actions button:hover { background: var(--drink-soft); }
     .checkout-item-actions button:disabled { cursor: not-allowed; opacity: .4; }
     .checkout-item-actions button.is-remove { color: #dc3545; border-color: #f1c5cb; }
+    .checkout-summary-item.is-unavailable { border-color: rgba(220, 53, 69, .28); background: #fff7f7; }
+    .checkout-summary-item.is-unavailable .checkout-item-img { filter: grayscale(.55); opacity: .68; }
+    .checkout-summary-chip.is-unavailable { color: #b42334; background: #ffe8eb; }
     .delivery-choice { display: block; height: 100%; padding: 1rem; border: 1.5px solid var(--drink-border); border-radius: 16px; cursor: pointer; }
     .delivery-choice:has(input:checked) { border-color: var(--drink-primary); background: var(--drink-soft); box-shadow: 0 0 0 3px rgba(13,147,115,.1); }
     .scheduled-delivery-fields { display: none; padding: 1rem; border-radius: 16px; background: #f7fbfa; border: 1px solid var(--drink-border); }
@@ -1981,6 +1984,11 @@
                             <button type="submit" class="btn btn-primary btn-lg w-100 mt-3" id="placeOrderButton">
                                 <i class="bi bi-check2-circle me-2"></i>Đặt hàng
                             </button>
+                            <div class="alert alert-danger small mt-3 mb-0 d-none" id="checkoutAvailabilityWarning" role="alert" tabindex="-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                <span data-checkout-availability-message></span>
+                                <a href="{{ route('cart.index') }}" class="alert-link d-block mt-1">Quay lại giỏ hàng để cập nhật</a>
+                            </div>
                             <div
                                 class="alert alert-warning small mt-3 mb-0 {{ $checkoutPhoneReady && $primaryAddress !== '' ? 'd-none' : '' }}"
                                 id="checkoutContactWarning"
@@ -2486,6 +2494,7 @@
         const branchesListEndpoint = @json(route('api.branches.list'));
         const deliveryQuoteEndpoint = @json(route('api.delivery.quote'));
         const addressLookupEndpoint = @json(route('api.address-lookup'));
+        const checkoutAvailabilityEndpoint = @json(route('checkout.availability'));
         const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
         const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
         const scheduledDeliveryInput = document.getElementById('scheduled_delivery_time');
@@ -2504,6 +2513,109 @@
             const syncRequest = window.syncStorefrontBranch?.(selectedOption.value, branchName);
             syncRequest?.catch((error) => console.error('Không thể đồng bộ chi nhánh trên header.', error));
         }
+
+        const unavailableCheckoutProducts = new Map();
+        let checkoutAvailabilitySequence = 0;
+
+        function renderCheckoutAvailability() {
+            document.querySelectorAll('[data-checkout-product-id]').forEach((row) => {
+                const productId = String(row.dataset.checkoutProductId || '');
+                const unavailable = unavailableCheckoutProducts.has(productId);
+                const quantityControl = row.querySelector('[data-checkout-qty-control]');
+                const quantityInput = row.querySelector('[data-checkout-item-quantity-input]');
+
+                row.classList.toggle('is-unavailable', unavailable);
+                row.querySelector('[data-checkout-unavailable-badge]')?.classList.toggle('d-none', !unavailable);
+
+                if (quantityInput) {
+                    quantityInput.disabled = unavailable;
+                }
+
+                if (quantityControl) {
+                    if (unavailable) {
+                        quantityControl.querySelector('[data-checkout-qty-minus]')?.setAttribute('disabled', 'disabled');
+                        quantityControl.querySelector('[data-checkout-qty-plus]')?.setAttribute('disabled', 'disabled');
+                    } else {
+                        updateCheckoutControlState(quantityControl, clampCheckoutQuantity(quantityInput?.value || 1));
+                    }
+                }
+            });
+
+            const unavailableNames = [...unavailableCheckoutProducts.values()];
+            const hasUnavailableProducts = unavailableNames.length > 0;
+            const warning = document.getElementById('checkoutAvailabilityWarning');
+            const message = warning?.querySelector('[data-checkout-availability-message]');
+
+            placeOrderButton?.toggleAttribute('disabled', hasUnavailableProducts);
+            warning?.classList.toggle('d-none', !hasUnavailableProducts);
+
+            if (message && hasUnavailableProducts) {
+                message.textContent = `${unavailableNames.join(', ')} đã tạm hết hàng tại chi nhánh đang chọn. Vui lòng cập nhật giỏ hàng hoặc đổi chi nhánh.`;
+            }
+        }
+
+        async function refreshCheckoutAvailability() {
+            const branchId = document.getElementById('branch_id')?.value;
+
+            if (!branchId) {
+                return;
+            }
+
+            const sequence = ++checkoutAvailabilitySequence;
+
+            try {
+                const url = new URL(checkoutAvailabilityEndpoint, window.location.origin);
+                url.searchParams.set('branch_id', branchId);
+                const response = await fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                });
+                const payload = await response.json();
+
+                if (sequence !== checkoutAvailabilitySequence || !response.ok || payload.success !== true) {
+                    return;
+                }
+
+                unavailableCheckoutProducts.clear();
+                (payload.unavailable || []).forEach((product) => {
+                    unavailableCheckoutProducts.set(String(product.product_id), product.name || 'Sản phẩm');
+                });
+                renderCheckoutAvailability();
+            } catch (error) {
+                console.warn('Không thể kiểm tra trạng thái sản phẩm tại chi nhánh.', error);
+            }
+        }
+
+        document.addEventListener('product:availability-applied', (event) => {
+            const availability = event.detail || {};
+            const branchId = String(document.getElementById('branch_id')?.value || '');
+
+            if (!branchId || String(availability.branch_id || '') !== branchId) {
+                return;
+            }
+
+            const productId = String(availability.product_id || '');
+            if (!productId) {
+                return;
+            }
+
+            const row = document.querySelector(`[data-checkout-product-id="${CSS.escape(productId)}"]`);
+            if (!row) {
+                return;
+            }
+
+            if (availability.is_available) {
+                unavailableCheckoutProducts.delete(productId);
+            } else {
+                const productName = availability.product_name
+                    || row.querySelector('.checkout-summary-name')?.textContent?.trim()
+                    || 'Sản phẩm';
+                unavailableCheckoutProducts.set(productId, productName);
+                window.showRealtimeToast?.(`${productName} vừa tạm hết hàng tại chi nhánh đang chọn.`, 'warning');
+            }
+
+            renderCheckoutAvailability();
+        });
 
         function syncScheduledPaymentRule() {
             const scheduledInput = document.querySelector('input[name="delivery_type"][value="scheduled"]');
@@ -3724,6 +3836,7 @@
                 branchSelect.required = true;
                 window.updateShippingSummary?.();
                 syncCheckoutBranchWithHeader(branchSelect);
+                void refreshCheckoutAvailability();
                 return;
             }
 
@@ -3785,6 +3898,7 @@
                 }
                 window.updateShippingSummary?.();
                 syncCheckoutBranchWithHeader(branchSelect);
+                void refreshCheckoutAvailability();
                 return;
             }
 
@@ -3818,6 +3932,7 @@
                     branchSelect.disabled = false;
                     window.updateShippingSummary?.();
                     syncCheckoutBranchWithHeader(branchSelect);
+                    void refreshCheckoutAvailability();
                 }
             }
         }
@@ -3857,6 +3972,7 @@
                 branchSelect.value = nearestBranch.value;
                 await window.updateShippingSummary?.();
                 syncCheckoutBranchWithHeader(branchSelect);
+                void refreshCheckoutAvailability();
 
                 return nearestBranch;
             };
@@ -4273,6 +4389,15 @@
         });
 
         placeOrderButton?.closest('form')?.addEventListener('submit', function (event) {
+            if (unavailableCheckoutProducts.size > 0) {
+                event.preventDefault();
+                const warning = document.getElementById('checkoutAvailabilityWarning');
+                warning?.classList.remove('d-none');
+                warning?.focus({ preventScroll: true });
+                warning?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             const hasPhone = isValidCheckoutPhone(shippingPhoneInput?.value || '');
             const missingDeliveryAddress = Boolean(
                 fulfillmentDeliveryInput?.checked
@@ -4533,6 +4658,7 @@
         document.getElementById('branch_id')?.addEventListener('change', (event) => {
             window.updateShippingSummary?.();
             syncCheckoutBranchWithHeader(event.currentTarget);
+            void refreshCheckoutAvailability();
         });
 
         bindVoucherCards(document);
@@ -4554,6 +4680,7 @@
             renderBranchOptions();
         }
         updateShippingSummary();
+        void refreshCheckoutAvailability();
         syncCheckoutPhoneState();
         requestCheckoutDeviceLocation();
     });

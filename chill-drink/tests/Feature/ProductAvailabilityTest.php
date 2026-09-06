@@ -136,6 +136,40 @@ class ProductAvailabilityTest extends TestCase
             ->assertJsonPath('message', fn (string $message) => str_contains($message, $product->name));
     }
 
+    public function test_cart_keeps_unavailable_item_visible_but_excludes_it_from_checkout(): void
+    {
+        $branch = $this->branch('CART-LIVE-STATUS');
+        $product = Product::factory()->create([
+            'name' => 'Soda vừa tạm hết',
+            'price' => 38000,
+        ]);
+        BranchProductStatus::query()
+            ->where('branch_id', $branch->id)
+            ->where('product_id', $product->id)
+            ->update(['is_available' => false]);
+
+        $cart = [
+            'live-status-item' => [
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'price' => 38000,
+                'quantity' => 1,
+                'size' => 'S',
+                'size_label' => 'Size S',
+            ],
+        ];
+
+        $this->withSession([
+            'nearest_branch_id' => $branch->id,
+            'cart' => $cart,
+        ])->get(route('cart.index'))
+            ->assertOk()
+            ->assertSee($product->name)
+            ->assertSee('Tạm hết hàng tại '.$branch->name)
+            ->assertSee('data-cart-available="0"', false)
+            ->assertSee('product:availability-applied', false);
+    }
+
     public function test_cart_normalizes_size_prices_without_double_counting_base_price(): void
     {
         $branch = $this->branch('PRICING');
@@ -237,6 +271,13 @@ class ProductAvailabilityTest extends TestCase
 
         $this->actingAs($customer)
             ->withSession(['cart' => $cart, 'nearest_branch_id' => $branch->id])
+            ->getJson(route('checkout.availability', ['branch_id' => $branch->id]))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('unavailable.0.product_id', $product->id)
+            ->assertJsonPath('unavailable.0.name', $product->name);
+
+        $this->withSession(['cart' => $cart, 'nearest_branch_id' => $branch->id])
             ->from(route('checkout.index'))
             ->post(route('checkout.process'), [
                 'payment_method' => 'cod',
@@ -250,8 +291,8 @@ class ProductAvailabilityTest extends TestCase
                 'longitude' => 106.701,
                 'address_location_confirmed' => '1',
             ])
-            ->assertRedirect(route('checkout.index'))
-            ->assertSessionHas('error');
+            ->assertRedirect(route('cart.index'))
+            ->assertSessionHas('error', fn (string $message) => str_contains($message, $product->name));
 
         $this->assertDatabaseCount('orders', 0);
     }
