@@ -758,11 +758,25 @@
         border-radius: 30px;
         box-shadow: 0 26px 70px rgba(8, 42, 38, 0.24);
         overflow: hidden;
+        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
     }
 
     .quick-add-modal .modal-dialog { max-width: 780px; }
+    .quick-add-modal form {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
+    }
     .quick-add-modal .modal-header { padding: 1.5rem 1.75rem 0.75rem; }
-    .quick-add-modal .modal-body { padding: 0 1.75rem 1.25rem; }
+    .quick-add-modal .modal-body {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 1.75rem 1.25rem;
+        scrollbar-gutter: stable;
+    }
     .quick-add-modal .modal-title { font-size: 1.85rem; }
 
     .quick-product-summary {
@@ -804,6 +818,14 @@
         padding-top: .75rem;
     }
 
+    .quick-actions-footer {
+        flex: 0 0 auto;
+        padding: 0.85rem 1.75rem 1.25rem;
+        border-top: 1px solid #edf1f0;
+        background: #ffffff;
+        box-shadow: 0 -10px 24px rgba(8, 42, 38, 0.05);
+    }
+
     .quick-quantity {
         display: flex;
         align-items: center;
@@ -819,8 +841,14 @@
 
     @media (max-width: 767.98px) {
         .quick-add-modal .modal-dialog { margin: .65rem; }
+        .quick-add-modal .modal-content,
+        .quick-add-modal form {
+            max-height: calc(100vh - 1.3rem);
+            max-height: calc(100dvh - 1.3rem);
+        }
         .quick-add-modal .modal-header { padding: 1.2rem 1.1rem .7rem; }
         .quick-add-modal .modal-body { padding: 0 1.1rem 1.1rem; }
+        .quick-actions-footer { padding: .75rem 1.1rem 1.1rem; }
         .quick-levels-grid { grid-template-columns: 1fr; gap: 0; }
         .quick-topping-grid { grid-template-columns: 1fr; }
         .quick-actions { grid-template-columns: 1fr; }
@@ -1068,6 +1096,7 @@
 
         .quick-add-modal .modal-header { padding: 0.85rem 0.9rem 0.45rem; }
         .quick-add-modal .modal-body { padding: 0 0.9rem 0.9rem; }
+        .quick-actions-footer { padding: 0.65rem 0.9rem 0.9rem; }
         .quick-product-summary { padding: 0.6rem; }
         .quick-add-thumb { width: 58px; height: 58px; border-radius: 12px; }
         .quick-section { margin-top: 0.6rem; padding-top: 0.6rem; }
@@ -1518,16 +1547,17 @@
                         <div class="quick-topping-grid" data-quick-topping-group></div>
                     </div>
 
-                    <div class="quick-actions">
-                        <div class="quick-quantity" aria-label="Số lượng">
-                            <button type="button" data-quick-qty-minus aria-label="Giảm số lượng">−</button>
-                            <span class="fw-bold fs-5" data-quick-qty-display>1</span>
-                            <button type="button" data-quick-qty-plus aria-label="Tăng số lượng">+</button>
-                        </div>
-                        <button type="submit" class="btn btn-primary rounded-pill fw-bold quick-submit">
-                            Thêm vào giỏ · <span data-quick-total>0đ</span>
-                        </button>
+                </div>
+
+                <div class="quick-actions quick-actions-footer">
+                    <div class="quick-quantity" aria-label="Số lượng">
+                        <button type="button" data-quick-qty-minus aria-label="Giảm số lượng">−</button>
+                        <span class="fw-bold fs-5" data-quick-qty-display>1</span>
+                        <button type="button" data-quick-qty-plus aria-label="Tăng số lượng">+</button>
                     </div>
+                    <button type="submit" class="btn btn-primary rounded-pill fw-bold quick-submit">
+                        Thêm vào giỏ · <span data-quick-total>0đ</span>
+                    </button>
                 </div>
             </form>
         </div>
