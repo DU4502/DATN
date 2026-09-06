@@ -44,11 +44,11 @@
                 <div class="staff-order-alert__label">Ghi chú khách</div>
                 <div class="staff-order-alert__value" data-alert-note></div>
             </section>
-            <div class="staff-order-alert__actions d-flex flex-wrap justify-content-end gap-2">
-                <button type="button" class="btn btn-outline-secondary fw-semibold" data-alert-snooze><i class="bi bi-clock-history me-1"></i>Xem sau 5 phút</button>
-                <button type="button" class="btn btn-success fw-semibold" data-alert-confirm><i class="bi bi-check2-circle me-1"></i>Nhận / Xác nhận đơn</button>
-            </div>
         </div>
+        <footer class="staff-order-alert__actions d-flex flex-wrap justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary fw-semibold" data-alert-snooze><i class="bi bi-clock-history me-1"></i>Xem sau 5 phút</button>
+            <button type="button" class="btn btn-success fw-semibold" data-alert-confirm><i class="bi bi-check2-circle me-1"></i>Nhận / Xác nhận đơn</button>
+        </footer>
     </section>
 </div>
 <button id="staffNewOrderAlertEnable" type="button" class="staff-order-alert__enable" hidden><i class="bi bi-bell-fill"></i><span>Bật thông báo đơn mới</span></button>
@@ -76,8 +76,11 @@
 
     .staff-order-alert__dialog {
         position: relative;
+        display: flex;
+        flex-direction: column;
         width: min(1120px, calc(100vw - 44px));
         max-height: min(90vh, 780px);
+        max-height: min(90dvh, 780px);
         overflow: hidden;
         border-radius: 22px;
         background: #fff;
@@ -94,9 +97,10 @@
         display: grid;
         grid-template-columns: minmax(300px, .82fr) minmax(430px, 1.18fr);
         gap: 14px;
+        min-height: 0;
         padding: 18px 22px 20px;
-        max-height: calc(90vh - 118px);
-        overflow: hidden
+        overflow: auto;
+        overscroll-behavior: contain
     }
 
     .staff-order-alert__tag {
@@ -136,8 +140,11 @@
     }
 
     .staff-order-alert__actions {
-        grid-column: 1 / -1;
-        margin-top: 2px
+        flex: 0 0 auto;
+        padding: 14px 22px;
+        border-top: 1px solid #d8e9e4;
+        background: #fff;
+        box-shadow: 0 -8px 20px rgba(23, 51, 45, .06)
     }
 
     .staff-order-alert__card,
@@ -219,7 +226,7 @@
         .staff-order-alert__dialog {
             width: min(100%, calc(100vw - 20px));
             max-height: calc(100vh - 20px);
-            overflow: auto
+            max-height: calc(100dvh - 20px)
         }
 
         .staff-order-alert__header,
@@ -229,8 +236,7 @@
 
         .staff-order-alert__body {
             display: block;
-            max-height: none;
-            overflow: visible
+            overflow: auto
         }
 
         .staff-order-alert__grid {
@@ -244,7 +250,7 @@
         }
 
         .staff-order-alert__actions {
-            margin-top: 16px
+            padding: 12px 17px
         }
 
         .staff-order-alert__items {
