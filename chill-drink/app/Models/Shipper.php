@@ -22,6 +22,7 @@ class Shipper extends Model
         'license_plate',
         'avatar',
         'status',
+        'last_active_at',
         'station_branch_id',
         'returning_to_branch_id',
         'returning_started_at',
@@ -34,6 +35,7 @@ class Shipper extends Model
         'user_id' => 'integer',
         'station_branch_id' => 'integer',
         'returning_to_branch_id' => 'integer',
+        'last_active_at' => 'datetime',
         'returning_started_at' => 'datetime',
         'last_station_arrived_at' => 'datetime',
         'current_latitude' => 'float',
@@ -113,6 +115,17 @@ class Shipper extends Model
     public function isOnline(): bool
     {
         return $this->status === 'online';
+    }
+
+    public function isRecentlyActive(): bool
+    {
+        if (! $this->last_active_at) {
+            return false;
+        }
+
+        $ttlMinutes = max(1, (int) config('shipper_dispatch.presence.active_ttl_minutes', 3));
+
+        return $this->last_active_at->gte(now()->subMinutes($ttlMinutes));
     }
 
     /**

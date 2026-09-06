@@ -161,6 +161,7 @@ class ShipperDispatchService
         $candidateQuery = Shipper::query()
             ->with(['user.branch', 'stationBranch', 'returningBranch'])
             ->where('status', 'online')
+            ->when(Schema::hasColumn('shippers', 'last_active_at'), fn ($query) => $query->where('last_active_at', '>=', $this->activePresenceCutoff()))
             ->whereHas('user', fn ($query) => $query
                 ->where('role_id', User::SHIPPER_ROLE_ID)
                 ->where('is_active', 1)
@@ -187,7 +188,7 @@ class ShipperDispatchService
                 /** @var Shipper|null $shipper */
                 $shipper = Shipper::query()->with(['user.branch', 'stationBranch', 'returningBranch'])
                     ->whereKey($row['shipper']->id)->lockForUpdate()->first();
-                if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'online') {
+                if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'online' || ! $this->hasFreshPresence($shipper)) {
                     return ['status' => 'candidate_changed'];
                 }
                 if ((int) ($shipper->user?->branch_id ?? 0) !== (int) $lockedOrder->branch_id) {
@@ -242,6 +243,7 @@ class ShipperDispatchService
         $query = Shipper::query()
             ->with(['user.branch', 'stationBranch', 'returningBranch'])
             ->where('status', 'online')
+            ->when(Schema::hasColumn('shippers', 'last_active_at'), fn ($q) => $q->where('last_active_at', '>=', $this->activePresenceCutoff()))
             ->where('returning_to_branch_id', $snapshot->branch_id)
             ->whereNotNull('current_latitude')
             ->whereNotNull('current_longitude')
@@ -266,7 +268,7 @@ class ShipperDispatchService
 
                 /** @var Shipper|null $shipper */
                 $shipper = Shipper::query()->with('user')->whereKey($row['shipper']->id)->lockForUpdate()->first();
-                if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'online' || ! $shipper->returning_to_branch_id) {
+                if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'online' || ! $this->hasFreshPresence($shipper) || ! $shipper->returning_to_branch_id) {
                     return ['status' => 'candidate_changed'];
                 }
                 if ((int) ($shipper->user?->branch_id ?? 0) !== (int) $lockedOrder->branch_id
@@ -326,7 +328,7 @@ class ShipperDispatchService
 
             /** @var Shipper|null $shipper */
             $shipper = Shipper::query()->with('user')->whereKey($evaluation['shipper']->id)->lockForUpdate()->first();
-            if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'busy') {
+            if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'busy' || ! $this->hasFreshPresence($shipper)) {
                 return ['status' => 'waiting', 'shipper' => null, 'message' => 'Chuyến ghép vừa thay đổi trạng thái.'];
             }
 
@@ -480,6 +482,22 @@ class ShipperDispatchService
         return $shipper !== null
             && $shipper->user?->isShipper()
             && (bool) $shipper->user->is_active;
+    }
+
+    private function hasFreshPresence(?Shipper $shipper): bool
+    {
+        if (! $shipper || ! Schema::hasColumn('shippers', 'last_active_at')) {
+            return true;
+        }
+
+        return $shipper->last_active_at && $shipper->last_active_at->gte($this->activePresenceCutoff());
+    }
+
+    private function activePresenceCutoff()
+    {
+        $ttlMinutes = max(1, (int) config('shipper_dispatch.presence.active_ttl_minutes', 3));
+
+        return now()->subMinutes($ttlMinutes);
     }
 
     private function assignStandard(Order $order, Shipper $shipper, string $historyStatus, string $description): void

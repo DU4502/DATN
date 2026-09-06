@@ -50,4 +50,8 @@ return [
         'scan_limit' => 20,
         'dispatch_limit_per_trigger' => 5,
     ],
+
+    'presence' => [
+        'active_ttl_minutes' => 3,
+    ],
 ];

@@ -205,6 +205,11 @@ Route::middleware(['auth', 'shipper'])
             'updateStatus'
         ])->name('status.update');
 
+        Route::post('/presence/offline', [
+            ShipController::class,
+            'presenceOffline'
+        ])->name('presence.offline');
+
 
         // ==============================
         // QUAY VỀ CHI NHÁNH / CÂN BẰNG ĐỘI

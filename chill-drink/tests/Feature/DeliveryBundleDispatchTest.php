@@ -135,6 +135,7 @@ class DeliveryBundleDispatchTest extends TestCase
             'scheduled_delivery_time' => now()->addMinutes(60),
             'scheduled_at' => now()->addMinutes(60),
         ]);
+        $this->mockRouting();
 
         $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($order->fresh());
 
@@ -226,6 +227,28 @@ class DeliveryBundleDispatchTest extends TestCase
             'order_id' => $order->id,
             'shipper_id' => $shipper->id,
             'status' => 'accepted',
+        ]);
+    }
+
+    public function test_stale_online_shipper_does_not_receive_new_dispatch(): void
+    {
+        Notification::fake();
+
+        $branch = $this->createBranch('DSP-STALE', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'STALE-SHIPPER', 'online');
+        $shipper->forceFill(['last_active_at' => now()->subMinutes(10)])->save();
+        $order = $this->createOrder($branch, 'STALE-ORDER');
+
+        $this->mockRouting();
+
+        $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($order);
+
+        $this->assertSame('waiting', $result['status']);
+        $this->assertNull($order->fresh()->shipper_id);
+        $this->assertSame('online', $shipper->fresh()->status);
+        $this->assertDatabaseMissing('shipments', [
+            'order_id' => $order->id,
+            'shipper_id' => $shipper->id,
         ]);
     }
 
@@ -578,6 +601,7 @@ class DeliveryBundleDispatchTest extends TestCase
             'code' => $code,
             'phone' => '0900000000',
             'status' => $status,
+            'last_active_at' => in_array($status, ['online', 'busy'], true) ? now() : null,
             'station_branch_id' => $branch->id,
             'current_latitude' => $branch->latitude,
             'current_longitude' => $branch->longitude,
