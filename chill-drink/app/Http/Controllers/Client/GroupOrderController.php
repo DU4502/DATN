@@ -11,7 +11,9 @@ use App\Models\GroupOrderItem;
 use App\Models\GroupOrderMember;
 use App\Models\GroupOrderMessage;
 use App\Models\Product;
+use App\Models\ProductSize;
 use App\Services\ProductAvailabilityService;
+use App\Support\ProductSizePrice;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -787,8 +789,20 @@ class GroupOrderController extends Controller
 
     private function currentPrice(Product $product, string $size, array $toppings): int
     {
-        $sizeExtra = ['S' => 0, 'M' => 5000, 'L' => 10000][$size] ?? 0;
-        return max(0, (int) $product->price + $sizeExtra + (int) collect($toppings)->sum('price'));
+        $sizeCode = strtoupper(trim($size));
+        $fallbackExtra = ['S' => 0, 'M' => 5000, 'L' => 10000][$sizeCode] ?? 0;
+        $basePrice = max(0, (int) $product->price);
+        $storedSizePrice = ProductSize::query()
+            ->where('product_id', $product->id)
+            ->whereHas('size', fn ($query) => $query->whereIn('name', [$sizeCode, "Size {$sizeCode}"]))
+            ->value('price');
+        $sizeUnitPrice = ProductSizePrice::unitPrice(
+            $basePrice,
+            is_numeric($storedSizePrice) ? (int) $storedSizePrice : null,
+            $fallbackExtra
+        );
+
+        return $sizeUnitPrice + max(0, (int) collect($toppings)->sum('price'));
     }
 
     private function broadcastGroupUpdated(GroupOrder $group, string $action): void
@@ -830,13 +844,28 @@ class GroupOrderController extends Controller
         $cart = [];
         foreach ($group->items as $item) {
             $key = 'group-'.$group->id.'-'.$item->id;
+            $sizeCode = strtoupper(trim((string) $item->size));
+            $productSize = ProductSize::query()
+                ->where('product_id', $item->product_id)
+                ->whereHas('size', fn ($query) => $query->whereIn('name', [$sizeCode, "Size {$sizeCode}"]))
+                ->first();
+            $toppingTotal = max(0, (int) collect($item->toppings ?? [])->sum('price'));
+            $fallbackExtra = ['S' => 0, 'M' => 5000, 'L' => 10000][$sizeCode] ?? 0;
+            $sizeExtra = $productSize
+                ? 0
+                : ProductSizePrice::sizeExtra(
+                    (int) $item->product->price,
+                    max(0, (int) $item->unit_price - $toppingTotal),
+                    $fallbackExtra
+                );
             $cart[$key] = [
                 'product_id' => $item->product_id, 'name' => $item->product->name,
                 'base_price' => (int) $item->product->price, 'price' => $item->unit_price,
-                'size' => $item->size, 'size_label' => 'Size '.$item->size,
-                'size_extra' => max(0, $item->unit_price - (int) $item->product->price - (int) collect($item->toppings ?? [])->sum('price')),
+                'product_size_id' => $productSize?->id,
+                'size' => $sizeCode, 'size_label' => 'Size '.$sizeCode,
+                'size_extra' => $sizeExtra,
                 'sugar_level' => $item->sugar_level, 'ice_level' => $item->ice_level,
-                'toppings' => $item->toppings ?? [], 'topping_total' => collect($item->toppings ?? [])->sum('price'),
+                'toppings' => $item->toppings ?? [], 'topping_total' => $toppingTotal,
                 'image' => $item->product->image_url, 'sku' => $item->product->sku,
                 'category' => $item->product->category?->name, 'quantity' => $item->quantity,
                 'group_member_name' => $item->member->name ?? null, 'note' => $item->note,

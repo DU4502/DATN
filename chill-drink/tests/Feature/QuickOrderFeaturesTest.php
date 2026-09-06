@@ -10,6 +10,8 @@ use App\Models\GroupOrderMessage;
 use App\Models\Branch;
 use App\Models\BranchProductStatus;
 use App\Models\Product;
+use App\Models\ProductSize;
+use App\Models\Size;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -404,14 +406,18 @@ class QuickOrderFeaturesTest extends TestCase
         [$group, $owner] = $this->openGroup();
         $member = GroupOrderMember::create(['group_order_id' => $group->id, 'user_id' => $owner->id, 'name' => 'Chủ nhóm', 'member_token' => 'checkout-owner']);
         $product = Product::factory()->create(['status' => true, 'price' => 40000]);
+        $size = Size::create(['name' => 'S', 'multiplier' => 1]);
+        $productSize = ProductSize::create(['product_id' => $product->id, 'size_id' => $size->id, 'price' => 47000]);
         $branch = $this->activeBranch();
         GroupOrderItem::create(['group_order_id' => $group->id, 'group_order_member_id' => $member->id,
-            'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 40000, 'toppings' => []]);
+            'product_id' => $product->id, 'size' => 'S', 'quantity' => 3, 'unit_price' => 1,
+            'toppings' => [['name' => 'Kem cheese', 'price' => 7000]]]);
         $personalCart = ['saved-personal' => ['product_id' => $product->id, 'quantity' => 1, 'price' => 1000]];
         $scheduledAt = now()->addHours(2)->startOfMinute();
 
         $this->actingAs($owner)->withSession(['cart' => $personalCart])->post(route('group-orders.close', $group->code));
         $this->assertDatabaseHas('group_orders', ['id' => $group->id, 'status' => 'closed']);
+        $this->assertSame(54000, $group->items()->firstOrFail()->unit_price);
         $response = $this->post(route('checkout.process'), [
             'payment_method' => 'vnpay', 'shipping_method_ui' => 'standard',
             'shipping_phone_ui' => '0901234567',
@@ -431,6 +437,14 @@ class QuickOrderFeaturesTest extends TestCase
         $this->assertSame('closed', $group->status);
         $this->assertSame('awaiting_payment', $group->order->status);
         $this->assertTrue($group->order->scheduled_at->equalTo($scheduledAt));
+        $this->assertDatabaseHas('order_items', [
+            'order_id' => $group->order_id,
+            'product_id' => $product->id,
+            'product_size_id' => $productSize->id,
+            'quantity' => 3,
+            'unit_price' => 54000,
+            'total_price' => 162000,
+        ]);
         $this->assertSame($personalCart, session('cart'));
         $response->assertRedirect(route('vnpay.payment', $group->order));
     }
