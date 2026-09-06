@@ -27,7 +27,10 @@ class StaffGroupOrderController extends Controller
         $filters = [
             'q'      => trim((string) $request->query('q', '')),
             'status' => trim((string) $request->query('status', '')),
+            'scope'  => trim((string) $request->query('scope', '')),
         ];
+
+        $filters['scope'] = $filters['scope'] === 'active' ? 'active' : '';
 
         $groups = $this->applyBranchScope(GroupOrder::query())
             ->with(['owner', 'order'])
@@ -43,6 +46,8 @@ class StaffGroupOrderController extends Controller
             })
             ->when(in_array($filters['status'], ['open', 'closed', 'ordered', 'cancelled'], true),
                 fn ($q) => $q->where('status', $filters['status']))
+            ->when($filters['scope'] === 'active' && $filters['status'] === '',
+                fn ($q) => $q->whereIn('status', ['open', 'closed']))
             ->latest()
             ->paginate(15)
             ->withQueryString();

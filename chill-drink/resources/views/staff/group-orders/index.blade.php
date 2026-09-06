@@ -12,6 +12,13 @@
     </div>
 </div>
 
+@if(($filters['scope'] ?? '') === 'active')
+<div class="alert alert-info border-0 rounded-4 d-flex justify-content-between align-items-center gap-3" role="status">
+    <span><i class="bi bi-funnel me-2"></i>Đang hiển thị dữ liệu: <strong>Đơn nhóm đang mở hoặc chờ xử lý</strong></span>
+    <a href="{{ route('staff.group-orders.index') }}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+</div>
+@endif
+
 <!-- Thống kê nhanh -->
 <div class="row g-3 mb-4">
     @php
@@ -24,7 +31,7 @@
     @endphp
     @foreach($statItems as $stat)
     <div class="col-6 col-lg-3">
-        <a href="{{ route('staff.group-orders.index', array_merge(request()->query(), ['status' => $stat['status']])) }}"
+        <a href="{{ route('staff.group-orders.index', array_merge(request()->except('scope'), ['status' => $stat['status']])) }}"
            class="admin-card p-3 d-flex align-items-center justify-content-between text-decoration-none"
            style="color:inherit;border-left:4px solid {{ $stat['color'] }};">
             <div>
@@ -39,6 +46,7 @@
 
 <!-- Bộ lọc -->
 <form method="GET" action="{{ route('staff.group-orders.index') }}" class="mb-4">
+    @if(($filters['scope'] ?? '') === 'active')<input type="hidden" name="scope" value="active">@endif
     <div class="row g-3 align-items-end">
         <div class="col-md-4">
             <label class="admin-kicker mb-2 d-block">Tìm kiếm</label>

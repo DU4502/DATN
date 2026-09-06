@@ -4,6 +4,16 @@
 @section('hide-topbar-search', true)
 
 @section('content')
+<style>
+    .staff-metric-card{color:inherit;text-decoration:none;cursor:pointer;position:relative;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+    .staff-metric-card:hover{color:inherit;transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,75,59,.10);border-color:rgba(0,168,112,.32)}
+    .staff-metric-card:focus-visible{outline:3px solid rgba(0,168,112,.25);outline-offset:3px}
+    .staff-metric-card::after{content:'Xem chi tiết';font-size:.7rem;font-weight:700;color:#00966a;opacity:0;transition:opacity .18s ease}
+    .staff-metric-card:hover::after,.staff-metric-card:focus-visible::after{opacity:1}
+    .dashboard-order-detail{background:#f8fbfa;border-top:1px dashed #d9e8e3}
+    .dashboard-order-item{display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px dashed #e0ebe7}
+    .dashboard-order-item:last-child{border-bottom:0}
+</style>
 <div class="mb-4">
     <h2 class="h3 fw-bold text-dark mb-1">Xin chào, {{ auth()->user()->name }}!</h2>
     <p class="text-secondary mb-0">
@@ -15,68 +25,68 @@
 <!-- Thống kê nhanh -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3">
-        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+        <a href="{{ route('staff.orders.index', ['scope' => 'work']) }}" class="admin-card staff-metric-card p-4 h-100 d-flex flex-column gap-2" aria-label="Xem công việc hiện tại">
             <div class="d-flex align-items-center justify-content-between">
                 <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">CÔNG VIỆC HIỆN TẠI</span>
                 <span style="width:36px;height:36px;border-radius:10px;background:#e6f7f2;display:flex;align-items:center;justify-content:center;color:#00a870;"><i class="bi bi-receipt"></i></span>
             </div>
             <span class="fw-bold" style="font-size:1.8rem;color:#111827;line-height:1;">{{ $totalWork }}</span>
-            <small class="text-secondary">đơn và đơn nhóm cần theo dõi</small>
-        </div>
+            <small class="text-secondary">đơn hàng cần theo dõi</small>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+        <a href="{{ route('staff.orders.index', ['scope' => 'new']) }}" class="admin-card staff-metric-card p-4 h-100 d-flex flex-column gap-2" aria-label="Xem đơn mới">
             <div class="d-flex align-items-center justify-content-between">
                 <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">ĐƠN MỚI</span>
                 <span style="width:36px;height:36px;border-radius:10px;background:#fff8e6;display:flex;align-items:center;justify-content:center;color:#d97706;"><i class="bi bi-hourglass-split"></i></span>
             </div>
             <span class="fw-bold" style="font-size:1.8rem;color:#d97706;line-height:1;">{{ $newOrders }}</span>
             <small class="text-secondary">đang chờ xác nhận</small>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+        <a href="{{ route('staff.orders.index', ['scope' => 'preparing']) }}" class="admin-card staff-metric-card p-4 h-100 d-flex flex-column gap-2" aria-label="Xem đơn đang chuẩn bị">
             <div class="d-flex align-items-center justify-content-between">
                 <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">ĐANG CHUẨN BỊ</span>
                 <span style="width:36px;height:36px;border-radius:10px;background:#edf7ff;display:flex;align-items:center;justify-content:center;color:#0284c7;"><i class="bi bi-cup-hot"></i></span>
             </div>
             <span class="fw-bold" style="font-size:1.8rem;color:#0284c7;line-height:1;">{{ $preparingOrders }}</span>
             <small class="text-secondary">đã xác nhận hoặc đang pha chế</small>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-3">
-        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+        <a href="{{ route('staff.orders.index', ['scope' => 'ready_delivery']) }}" class="admin-card staff-metric-card p-4 h-100 d-flex flex-column gap-2" aria-label="Xem đơn chờ bàn giao">
             <div class="d-flex align-items-center justify-content-between">
                 <span class="text-secondary" style="font-size:0.8rem;font-weight:600;letter-spacing:.04em;">CHỜ BÀN GIAO</span>
                 <span style="width:36px;height:36px;border-radius:10px;background:#f1f0ff;display:flex;align-items:center;justify-content:center;color:#7c3aed;"><i class="bi bi-box-seam"></i></span>
             </div>
             <span class="fw-bold" style="font-size:1.8rem;color:#7c3aed;line-height:1;">{{ $readyForDeliveryOrders }}</span>
             <small class="text-secondary">đơn đang chờ Shipper lấy</small>
-        </div>
+        </a>
     </div>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-4">
-        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+        <a href="{{ route('staff.orders.index', ['scope' => 'ready_pickup']) }}" class="admin-card staff-metric-card p-4 h-100 d-flex flex-column gap-2" aria-label="Xem đơn chờ khách lấy">
             <span class="text-secondary" style="font-size:0.8rem;font-weight:600;">CHỜ KHÁCH LẤY</span>
             <span class="fw-bold text-success" style="font-size:1.8rem;line-height:1;">{{ $readyForPickupOrders }}</span>
             <small class="text-secondary">đơn tự lấy đã chuẩn bị xong</small>
-        </div>
+        </a>
     </div>
     <div class="col-6 col-lg-4">
-        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+        <a href="{{ route('staff.group-orders.index', ['scope' => 'active']) }}" class="admin-card staff-metric-card p-4 h-100 d-flex flex-column gap-2" aria-label="Xem đơn nhóm đang hoạt động">
             <span class="text-secondary" style="font-size:0.8rem;font-weight:600;">ĐƠN NHÓM</span>
             <span class="fw-bold" style="font-size:1.8rem;color:#7c3aed;line-height:1;">{{ $groupOrdersToHandle }}</span>
             <small class="text-secondary">đang mở hoặc chờ xử lý</small>
-        </div>
+        </a>
     </div>
     <div class="col-12 col-lg-4">
-        <div class="admin-card p-4 h-100 d-flex flex-column gap-2">
+        <a href="{{ route('staff.orders.index', ['scope' => 'today']) }}" class="admin-card staff-metric-card p-4 h-100 d-flex flex-column gap-2" aria-label="Xem đơn trong ngày">
             <span class="text-secondary" style="font-size:0.8rem;font-weight:600;">ĐƠN TRONG NGÀY</span>
             <span class="fw-bold" style="font-size:1.8rem;color:#111827;line-height:1;">{{ $todayOrders }}</span>
             <small class="text-secondary">tại chi nhánh của bạn</small>
-        </div>
+        </a>
     </div>
 </div>
 
@@ -96,6 +106,8 @@
         $nextStatus = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
         $canCancel = $order->status === \App\Support\OrderStatus::PENDING;
     @endphp
+    @php($dashboardDetailId = 'dashboard-order-detail-'.$order->id)
+    <div data-dashboard-order-container="{{ $order->id }}">
     <div class="p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3"
         data-staff-dashboard-order
         data-order-id="{{ $order->id }}"
@@ -113,6 +125,9 @@
         </div>
         <div class="d-flex align-items-center gap-3">
             <span class="fw-bold text-primary">{{ number_format($order->total ?? 0, 0, ',', '.') }}đ</span>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#{{ $dashboardDetailId }}" aria-expanded="false" aria-controls="{{ $dashboardDetailId }}">
+                <i class="bi bi-eye me-1"></i>Chi tiết
+            </button>
             @if($nextStatus)
             <form action="{{ route('staff.orders.updateStatus', $order->id) }}" method="POST" class="mb-0" data-dashboard-status-form>
                 @csrf
@@ -135,6 +150,55 @@
             </button>
             @endif
         </div>
+    </div>
+    <div class="collapse dashboard-order-detail" id="{{ $dashboardDetailId }}" data-dashboard-order-detail="{{ $order->id }}">
+        <div class="p-4">
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <div class="admin-kicker mb-2">Chi tiết món</div>
+                    @forelse($order->orderItems as $item)
+                        <div class="dashboard-order-item">
+                            <div>
+                                <strong>{{ $item->quantity }}× {{ $item->product?->name ?? 'Sản phẩm đã xóa' }}</strong>
+                                <div class="small text-secondary">
+                                    Size {{ $item->productSize?->size?->name ?? '?' }}
+                                    · Đường {{ (int) $item->sugar_level }}%
+                                    · Đá {{ (int) $item->ice_level }}%
+                                </div>
+                                @if($item->toppingLines->isNotEmpty())
+                                    <div class="small text-secondary">Topping: {{ $item->toppingLines->pluck('topping.name')->filter()->implode(', ') }}</div>
+                                @endif
+                                @if(filled($item->item_note))
+                                    <div class="small text-primary"><i class="bi bi-chat-left-text me-1"></i>{{ $item->item_note }}</div>
+                                @endif
+                            </div>
+                            <strong class="text-nowrap">{{ number_format($item->getSubtotal(), 0, ',', '.') }}đ</strong>
+                        </div>
+                    @empty
+                        <div class="text-secondary small">Chưa có thông tin món trong đơn.</div>
+                    @endforelse
+                </div>
+                <div class="col-lg-5">
+                    <div class="admin-kicker mb-2">Thông tin đơn hàng</div>
+                    <div class="d-grid gap-2 small">
+                        <div><i class="bi bi-person me-2 text-secondary"></i><strong>{{ $order->customerName() ?: 'Khách hàng' }}</strong></div>
+                        <div><i class="bi bi-telephone me-2 text-secondary"></i>{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</div>
+                        <div><i class="bi bi-geo-alt me-2 text-secondary"></i>{{ $order->fulfillment_type === 'pickup' ? 'Khách nhận tại quán' : $order->getShippingAddress() }}</div>
+                        <div><i class="bi bi-credit-card me-2 text-secondary"></i>{{ $order->payment_method === 'vnpay' ? 'VNPay' : 'Tiền mặt (COD)' }} · {{ $order->payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán' }}</div>
+                        @if($order->delivery_type === 'scheduled' && ($order->scheduled_delivery_time || $order->scheduled_at))
+                            <div class="text-info-emphasis"><i class="bi bi-clock-history me-2"></i>Giao sau lúc {{ ($order->scheduled_delivery_time ?? $order->scheduled_at)->format('H:i · d/m/Y') }}</div>
+                        @endif
+                        @if($order->groupOrder)
+                            <div class="text-primary"><i class="bi bi-people me-2"></i>Đơn nhóm: {{ $order->groupOrder->name }}</div>
+                        @endif
+                        @if($order->customerNote())
+                            <div class="alert alert-warning border-0 py-2 px-3 mb-0"><strong>Ghi chú:</strong> {{ $order->customerNote() }}</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
     @empty
     <div class="p-5 text-center text-secondary" data-staff-dashboard-empty>
@@ -218,6 +282,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const nextStatus = payload.next_status || null;
         const updateUrl = payload.status_update_url || `{{ url('staff/orders') }}/${orderId}/status`;
+        const detailUrl = payload.url || `{{ route('staff.orders.index') }}?q=${encodeURIComponent(payload.order_code || orderId)}`;
         const row = document.createElement('div');
         row.className = 'p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3';
         row.dataset.staffDashboardOrder = '';
@@ -237,6 +302,7 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
             <div class="d-flex align-items-center gap-3">
                 <span class="fw-bold text-primary">${escapeHtml(payload.total_formatted || '')}</span>
+                <a href="${escapeHtml(detailUrl)}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye me-1"></i>Chi tiết</a>
                 ${nextStatus ? `
                     <form action="${escapeHtml(updateUrl)}" method="POST" class="mb-0" data-dashboard-status-form>
                         @csrf

@@ -58,17 +58,25 @@ class StaffDashboardController extends Controller
         ];
 
         $recentOrders = (clone $orderQuery)
-            ->with(['user', 'branch'])
+            ->with([
+                'user',
+                'branch',
+                'address',
+                'groupOrder',
+                'orderItems.product',
+                'orderItems.productSize.size',
+                'orderItems.toppingLines.topping',
+            ])
             ->whereIn('status', $workStatuses)
             ->oldest()
             ->take(8)
             ->get();
 
+        // Đơn nhóm đã có một ô riêng, không cộng lặp vào tổng công việc đơn hàng.
         $totalWork = $newOrders
             + $preparingOrders
             + $readyForDeliveryOrders
-            + $readyForPickupOrders
-            + $groupOrdersToHandle;
+            + $readyForPickupOrders;
 
         return view('staff.dashboard', compact(
             'todayOrders',

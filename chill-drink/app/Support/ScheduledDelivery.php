@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 class ScheduledDelivery
 {
     public const PICKUP_PREPARATION_MINUTES = 30;
-    public const DELIVERY_OPERATION_MINUTES = 60;
+    public const DELIVERY_OPERATION_MINUTES = 30;
     public const PAYMENT_WINDOW_MINUTES = 15;
     public const OPEN_TIME = '07:00';
     public const CLOSE_TIME = '22:00';

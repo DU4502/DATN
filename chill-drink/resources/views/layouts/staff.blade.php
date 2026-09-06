@@ -32,9 +32,6 @@
             <a href="{{ route('staff.products.availability.index') }}" class="nav-link {{ request()->routeIs('staff.products.availability.*') ? 'active' : '' }}">
                 <i class="bi bi-box-seam"></i> Tình trạng sản phẩm
             </a>
-            <a href="{{ route('staff.group-orders.index') }}" class="nav-link {{ request()->routeIs('staff.group-orders.*') ? 'active' : '' }}">
-                <i class="bi bi-people-fill"></i> Đơn nhóm
-            </a>
             <a href="{{ route('staff.chat.index') }}" class="nav-link {{ request()->routeIs('staff.chat.*') ? 'active' : '' }}">
                 <i class="bi bi-chat-dots"></i> Chat hỗ trợ
                 @php

@@ -300,6 +300,60 @@ class CheckoutController extends Controller
         ])->header('Cache-Control', 'no-store');
     }
 
+    /**
+     * Validate a manually entered voucher before it is selected in checkout.
+     */
+    public function validateVoucher(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'fulfillment_type' => ['nullable', Rule::in(['delivery', 'pickup'])],
+            'shipping_fee' => ['nullable', 'integer', 'min:0'],
+        ], [
+            'code.required' => 'Vui lòng nhập mã voucher.',
+            'code.max' => 'Mã voucher không được dài quá 50 ký tự.',
+            'code.regex' => 'Mã voucher chỉ được gồm chữ, số, dấu gạch ngang hoặc gạch dưới.',
+        ]);
+
+        $code = strtoupper(trim($validated['code']));
+        $fullCart = session()->get('cart', []);
+        $selectedKeys = session()->get('checkout_cart_keys');
+        $cart = $this->normalizeCartForCheckout($this->cartForCheckout($fullCart, $selectedKeys));
+        $cart = $this->hydrateCheckoutCart($cart);
+
+        if (empty($cart)) {
+            return response()->json(['message' => 'Giỏ hàng không còn sản phẩm để áp dụng voucher.'], 422);
+        }
+
+        try {
+            [$voucher, $discount] = $this->resolveVoucher($code, $this->cartSubtotal($cart));
+
+            $isShipping = $this->isShippingVoucher($voucher);
+            if ($isShipping && ($validated['fulfillment_type'] ?? 'delivery') === 'pickup') {
+                throw new \RuntimeException('Đơn nhận tại quán không áp dụng voucher miễn phí vận chuyển.');
+            }
+            if ($isShipping && (int) ($validated['shipping_fee'] ?? 0) <= 0) {
+                throw new \RuntimeException('Đơn hàng hiện không có phí vận chuyển để áp dụng voucher này.');
+            }
+
+            return response()->json([
+                'valid' => true,
+                'message' => 'Mã voucher hợp lệ.',
+                'voucher' => [
+                    'code' => $voucher->code,
+                    'label' => $voucher->code.' - '.($isShipping ? 'Miễn phí vận chuyển' : 'Giảm '.$voucher->formattedValue()),
+                    'type' => $isShipping ? 'shipping' : 'discount',
+                    'discount' => $discount,
+                ],
+            ]);
+        } catch (\RuntimeException $exception) {
+            return response()->json([
+                'valid' => false,
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+    }
+
     public function process(Request $request)
     {
         $groupMemberUserIds = collect();
@@ -364,8 +418,8 @@ class CheckoutController extends Controller
                 'integer',
                 Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
             ],
-            'voucher_code' => 'nullable|string|max:50',
-            'shipping_voucher_code' => 'nullable|string|max:50',
+            'voucher_code' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'shipping_voucher_code' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9_-]+$/'],
             'note' => 'nullable|string|max:500',
             'delivery_note' => 'nullable|string|max:1000',
             'delivery_type' => ['nullable', Rule::in(['now', 'scheduled'])],
@@ -389,6 +443,8 @@ class CheckoutController extends Controller
             'fulfillment_type.in' => 'Phương thức nhận hàng không hợp lệ.',
             'branch_id.required' => 'Vui lòng chọn chi nhánh.',
             'branch_id.exists' => 'Chi nhánh được chọn không tồn tại.',
+            'voucher_code.regex' => 'Mã voucher giảm giá không đúng định dạng.',
+            'shipping_voucher_code.regex' => 'Mã voucher vận chuyển không đúng định dạng.',
             'latitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra lộ trình không quá 15 km.',
             'longitude.required_if' => 'Vui lòng xác định vị trí giao hàng để kiểm tra lộ trình không quá 15 km.',
         ]);

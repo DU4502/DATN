@@ -121,7 +121,7 @@ class DeliveryBundleDispatchTest extends TestCase
         $this->travelBack();
     }
 
-    public function test_scheduled_order_becomes_dispatchable_sixty_minutes_before_delivery(): void
+    public function test_scheduled_order_becomes_dispatchable_thirty_minutes_before_delivery(): void
     {
         Notification::fake();
         $this->travelTo('2026-08-29 09:00:00');
@@ -132,8 +132,8 @@ class DeliveryBundleDispatchTest extends TestCase
         $order->update([
             'delivery_type' => 'scheduled',
             'fulfillment_type' => 'delivery',
-            'scheduled_delivery_time' => now()->addMinutes(60),
-            'scheduled_at' => now()->addMinutes(60),
+            'scheduled_delivery_time' => now()->addMinutes(30),
+            'scheduled_at' => now()->addMinutes(30),
         ]);
         $this->mockRouting();
 

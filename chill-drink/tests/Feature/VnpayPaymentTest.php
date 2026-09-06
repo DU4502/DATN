@@ -63,7 +63,7 @@ class VnpayPaymentTest extends TestCase
         $response = $this->actingAs($user)->get(route('vnpay.payment', $order));
         parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $params);
 
-        $this->assertSame('20260830100000', $params['vnp_ExpireDate']);
+        $this->assertSame('20260830103000', $params['vnp_ExpireDate']);
         $this->travelBack();
     }
 
@@ -170,8 +170,8 @@ class VnpayPaymentTest extends TestCase
             'status' => 'awaiting_payment',
             'delivery_type' => 'scheduled',
             'fulfillment_type' => 'delivery',
-            'scheduled_delivery_time' => now()->addMinutes(30),
-            'scheduled_at' => now()->addMinutes(30),
+            'scheduled_delivery_time' => now()->addMinutes(29),
+            'scheduled_at' => now()->addMinutes(29),
         ]);
         $params = $this->signedParams([
             'vnp_Amount' => $order->total * 100,

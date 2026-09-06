@@ -224,6 +224,56 @@ class OrderIssueReportTest extends TestCase
         $this->assertSame('open', $issue->fresh()->status);
     }
 
+    public function test_branch_admin_cannot_move_an_issue_back_after_waiting_for_customer_confirmation(): void
+    {
+        [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-NO-BACK-BRANCH');
+        $issue = $this->createIssue($order, $customer, [
+            'status' => 'awaiting_confirmation',
+            'resolution_type' => 'other',
+            'resolution_value' => 'Đã thống nhất phương án hỗ trợ.',
+            'approved_at' => now(),
+        ]);
+        $admin = User::factory()->create(['role_id' => 2, 'branch_id' => $branch->id]);
+
+        $this->actingAs($admin)
+            ->from(route('admin.order-issues.index'))
+            ->patch(route('admin.order-issues.update', $issue), $this->adminPayload('processing', 'other'))
+            ->assertRedirect(route('admin.order-issues.index'))
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('awaiting_confirmation', $issue->fresh()->status);
+        $this->actingAs($admin)
+            ->get(route('admin.order-issues.index'))
+            ->assertOk()
+            ->assertDontSee('<option value="processing"', false)
+            ->assertSee('aria-label="Trạng thái đã khóa"', false);
+    }
+
+    public function test_super_admin_cannot_move_an_issue_back_after_waiting_for_customer_confirmation(): void
+    {
+        [$customer, $order] = $this->createCustomerOrder('ISSUE-NO-BACK-ROOT');
+        $issue = $this->createIssue($order, $customer, [
+            'status' => 'awaiting_confirmation',
+            'resolution_type' => 'other',
+            'resolution_value' => 'Đã thống nhất phương án hỗ trợ.',
+            'approved_at' => now(),
+        ]);
+        $superAdmin = User::factory()->create(['role_id' => 3, 'branch_id' => null]);
+
+        $this->actingAs($superAdmin)
+            ->from(route('admin.super-admin.manage.order-issues.index'))
+            ->patch(route('admin.super-admin.manage.order-issues.update', $issue), $this->adminPayload('processing', 'other'))
+            ->assertRedirect(route('admin.super-admin.manage.order-issues.index'))
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('awaiting_confirmation', $issue->fresh()->status);
+        $this->actingAs($superAdmin)
+            ->get(route('admin.super-admin.manage.order-issues.index'))
+            ->assertOk()
+            ->assertDontSee('<option value="processing"', false)
+            ->assertSee('aria-label="Trạng thái đã khóa"', false);
+    }
+
     public function test_rejected_issue_is_rendered_as_a_detailed_read_only_result(): void
     {
         [$customer, $order, $branch] = $this->createCustomerOrder('ISSUE-REJECTED');

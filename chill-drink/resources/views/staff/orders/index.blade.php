@@ -29,13 +29,20 @@
     </p>
 </div>
 
+@if(($filters['scope'] ?? '') !== '')
+<div class="alert alert-info border-0 rounded-4 d-flex justify-content-between align-items-center gap-3" role="status">
+    <span><i class="bi bi-funnel me-2"></i>Đang hiển thị dữ liệu: <strong>{{ $dashboardScopes[$filters['scope']] }}</strong></span>
+    <a href="{{ route('staff.orders.index') }}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+</div>
+@endif
+
 <!-- Tabs trạng thái -->
 <div class="d-flex flex-wrap gap-2 mb-4 pb-4 border-bottom">
     @php $currentStatus = $filters['status'] ?? ''; @endphp
-    <a href="{{ route('staff.orders.index', array_merge(request()->query(), ['status' => ''])) }}"
+    <a href="{{ route('staff.orders.index', array_merge(request()->except('scope'), ['status' => ''])) }}"
        class="status-pill {{ $currentStatus === '' ? 'active' : '' }}">Tất cả</a>
     @foreach(\App\Support\OrderStatus::adminLabels() as $value => $label)
-        <a href="{{ route('staff.orders.index', array_merge(request()->query(), ['status' => $value])) }}"
+        <a href="{{ route('staff.orders.index', array_merge(request()->except('scope'), ['status' => $value])) }}"
            class="status-pill {{ $currentStatus === $value ? 'active' : '' }}">{{ $label }}</a>
     @endforeach
 </div>
@@ -43,12 +50,21 @@
 <!-- Bộ lọc -->
 <form method="GET" action="{{ route('staff.orders.index') }}">
     <input type="hidden" name="status" value="{{ $currentStatus }}">
+    @if(($filters['scope'] ?? '') !== '')<input type="hidden" name="scope" value="{{ $filters['scope'] }}">@endif
     <section class="row g-3 align-items-end mb-4">
-        <div class="col-md-3">
+        <div class="col-md-6 col-xl-3">
             <label class="admin-kicker mb-2 d-block">Tìm kiếm</label>
             <input class="admin-input" type="text" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Mã đơn, tên hoặc email">
         </div>
-        <div class="col-md-2">
+        <div class="col-md-3 col-xl-2">
+            <label class="admin-kicker mb-2 d-block">Loại đơn</label>
+            <select class="admin-filter" name="order_type">
+                @foreach($orderTypeOptions as $value => $label)
+                    <option value="{{ $value }}" @selected(($filters['order_type'] ?? '') === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-3 col-xl-2">
             <label class="admin-kicker mb-2 d-block">Thanh toán</label>
             <select class="admin-filter" name="payment_status">
                 <option value="" @selected(($filters['payment_status'] ?? '') === '')>Tất cả</option>
@@ -57,7 +73,7 @@
                 <option value="failed" @selected(($filters['payment_status'] ?? '') === 'failed')>Thất bại</option>
             </select>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-8 col-xl-3">
             <label class="admin-kicker mb-2 d-block">Khoảng ngày</label>
             <div class="d-flex gap-2 align-items-center">
                 <input class="admin-input flex-grow-1" type="date" name="date_from" value="{{ $filters['date_from'] ?? '' }}">
@@ -65,7 +81,7 @@
                 <input class="admin-input flex-grow-1" type="date" name="date_to" value="{{ $filters['date_to'] ?? '' }}">
             </div>
         </div>
-        <div class="col-md-3 d-flex gap-2 justify-content-end">
+        <div class="col-md-4 col-xl-2 d-flex gap-2 justify-content-end">
             <button class="btn btn-primary px-4" type="submit">Lọc</button>
             <a href="{{ route('staff.orders.index') }}" class="btn btn-outline-primary px-4">Làm mới</a>
         </div>
@@ -108,6 +124,10 @@
                                     <i class="bi bi-people-fill me-1"></i>{{ $order->groupOrder->name }}
                                 </a>
                             </div>
+                        @elseif($order->delivery_type === 'scheduled')
+                            <div class="mt-1"><span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-clock-history me-1"></i>Giao sau{{ $order->scheduled_delivery_time ? ' · '.$order->scheduled_delivery_time->format('H:i d/m') : '' }}</span></div>
+                        @else
+                            <div class="mt-1"><span class="badge bg-light text-secondary border"><i class="bi bi-bag me-1"></i>Đơn thường</span></div>
                         @endif
                     </td>
                     <td class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</td>

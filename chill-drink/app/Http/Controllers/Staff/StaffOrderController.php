@@ -39,7 +39,31 @@ class StaffOrderController extends Controller
             'payment_status' => trim((string) $request->query('payment_status', '')),
             'date_from'      => trim((string) $request->query('date_from', '')),
             'date_to'        => trim((string) $request->query('date_to', '')),
+            'scope'          => trim((string) $request->query('scope', '')),
+            'order_type'     => trim((string) $request->query('order_type', '')),
         ];
+
+        $orderTypeOptions = [
+            '' => 'Tất cả loại đơn',
+            'regular' => 'Đơn thường',
+            'scheduled' => 'Đơn giao sau',
+            'group' => 'Đơn nhóm',
+        ];
+        if (! array_key_exists($filters['order_type'], $orderTypeOptions)) {
+            $filters['order_type'] = '';
+        }
+
+        $dashboardScopes = [
+            'work' => 'Công việc hiện tại',
+            'new' => 'Đơn mới',
+            'preparing' => 'Đang chuẩn bị',
+            'ready_delivery' => 'Chờ bàn giao',
+            'ready_pickup' => 'Chờ khách lấy',
+            'today' => 'Đơn trong ngày',
+        ];
+        if (! isset($dashboardScopes[$filters['scope']])) {
+            $filters['scope'] = '';
+        }
 
         $statusOptions = OrderStatus::filterOptions();
 
@@ -51,6 +75,7 @@ class StaffOrderController extends Controller
                 'orderItems.product',
                 'orderItems.productSize.size',
                 'orderItems.toppingLines.topping',
+                'groupOrder',
                 'statusChangedBy',
                 'statusHistories.actor',
             ])
@@ -76,6 +101,41 @@ class StaffOrderController extends Controller
             ->when($filters['payment_status'] !== '',
                 fn ($q) => $q->where('payment_status', $filters['payment_status']));
 
+        match ($filters['order_type']) {
+            'group' => $orders->whereHas('groupOrder'),
+            'scheduled' => $orders
+                ->whereDoesntHave('groupOrder')
+                ->where('delivery_type', 'scheduled'),
+            'regular' => $orders
+                ->whereDoesntHave('groupOrder')
+                ->where(fn ($query) => $query
+                    ->whereNull('delivery_type')
+                    ->orWhere('delivery_type', '!=', 'scheduled')),
+            default => null,
+        };
+
+        if ($filters['status'] === '') {
+            match ($filters['scope']) {
+                'work' => $orders->whereIn('status', [
+                    OrderStatus::PENDING,
+                    OrderStatus::CONFIRMED,
+                    OrderStatus::PREPARING,
+                    OrderStatus::READY_FOR_DELIVERY,
+                    OrderStatus::READY_FOR_PICKUP,
+                ]),
+                'new' => $orders->where('status', OrderStatus::PENDING),
+                'preparing' => $orders->whereIn('status', [OrderStatus::CONFIRMED, OrderStatus::PREPARING]),
+                'ready_delivery' => $orders
+                    ->where('fulfillment_type', 'delivery')
+                    ->where('status', OrderStatus::READY_FOR_DELIVERY),
+                'ready_pickup' => $orders
+                    ->where('fulfillment_type', 'pickup')
+                    ->where('status', OrderStatus::READY_FOR_PICKUP),
+                'today' => $orders->whereDate('created_at', today()),
+                default => null,
+            };
+        }
+
         if (Schema::hasColumn('orders', 'created_at')) {
             if ($filters['date_from'] !== '' && $filters['date_to'] !== '') {
                 $orders->whereBetween('created_at', [$filters['date_from'] . ' 00:00:00', $filters['date_to'] . ' 23:59:59']);
@@ -88,7 +148,7 @@ class StaffOrderController extends Controller
 
         $orders = $this->applyBranchScope($orders)->latest()->paginate(12)->withQueryString();
 
-        return view('staff.orders.index', compact('orders', 'filters', 'statusOptions'));
+        return view('staff.orders.index', compact('orders', 'filters', 'statusOptions', 'dashboardScopes', 'orderTypeOptions'));
     }
 
     public function pendingAlerts(): JsonResponse

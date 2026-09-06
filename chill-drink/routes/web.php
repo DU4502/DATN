@@ -397,6 +397,7 @@ Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name(
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('verified')->name('checkout.index');
     Route::get('/checkout/availability', [CheckoutController::class, 'availability'])->middleware('verified')->name('checkout.availability');
+    Route::post('/checkout/voucher/validate', [CheckoutController::class, 'validateVoucher'])->middleware(['verified', 'throttle:6,1'])->name('checkout.voucher.validate');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->middleware('verified')->name('checkout.process');
     Route::post('/checkout/addresses', [CheckoutController::class, 'storeAddress'])->middleware('verified')->name('checkout.addresses.store');
     Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->middleware('verified')->name('checkout.addresses.update');

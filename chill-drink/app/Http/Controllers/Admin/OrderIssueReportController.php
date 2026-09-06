@@ -102,17 +102,9 @@ class OrderIssueReportController extends Controller
                 return [$lockedIssue->fresh(['order', 'user']), false];
             }
 
-            $allowedTransitions = [
-                'open' => ['open', 'processing', 'rejected'],
-                'processing' => ['processing', 'awaiting_confirmation', 'rejected'],
-                'awaiting_confirmation' => ['awaiting_confirmation', 'processing'],
-                'resolved' => ['resolved'],
-                'rejected' => ['rejected'],
-            ];
-
-            if (! in_array($data['status'], $allowedTransitions[$lockedIssue->status] ?? [$lockedIssue->status], true)) {
+            if (! $lockedIssue->canAdminTransitionTo($data['status'])) {
                 throw ValidationException::withMessages([
-                    'status' => 'Không thể chuyển lùi hoặc bỏ qua bước xử lý của yêu cầu.',
+                    'status' => 'Không thể chuyển yêu cầu về trạng thái trước hoặc bỏ qua bước xử lý.',
                 ]);
             }
 

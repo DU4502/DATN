@@ -513,6 +513,83 @@ class CheckoutVoucherTest extends TestCase
         ]);
     }
 
+    public function test_customer_can_validate_a_manual_voucher_before_selecting_it(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        Voucher::factory()->create([
+            'code' => 'MANUAL10',
+            'type' => Voucher::TYPE_PERCENT,
+            'value' => 10,
+            'max_discount' => 20000,
+            'min_order' => 50000,
+            'usage_limit' => 100,
+            'status' => true,
+            'point_cost' => 0,
+            'is_redeemable' => false,
+        ]);
+        $cart = [
+            'manual-voucher-item' => [
+                'product_id' => $product->id,
+                'product_size_id' => $productSize->id,
+                'name' => $product->name,
+                'price' => 100000,
+                'quantity' => 1,
+                'size' => 'M',
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->withSession(['cart' => $cart])
+            ->postJson(route('checkout.voucher.validate'), [
+                'code' => 'manual10',
+                'fulfillment_type' => 'delivery',
+                'shipping_fee' => 20000,
+            ])
+            ->assertOk()
+            ->assertJsonPath('valid', true)
+            ->assertJsonPath('voucher.code', 'MANUAL10')
+            ->assertJsonPath('voucher.type', 'discount')
+            ->assertJsonPath('voucher.discount', 10000);
+
+        $this->postJson(route('checkout.voucher.validate'), [
+            'code' => 'NHAP-BUA-123',
+            'fulfillment_type' => 'delivery',
+            'shipping_fee' => 20000,
+        ])->assertUnprocessable()->assertJsonPath('valid', false);
+
+        $this->postJson(route('checkout.voucher.validate'), [
+            'code' => 'MA KHONG HOP LE!',
+        ])->assertUnprocessable()->assertJsonValidationErrors('code');
+    }
+
+    public function test_manual_voucher_validation_is_rate_limited(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $cart = [
+            'rate-limit-voucher-item' => [
+                'product_id' => $product->id,
+                'product_size_id' => $productSize->id,
+                'name' => $product->name,
+                'price' => 100000,
+                'quantity' => 1,
+                'size' => 'M',
+            ],
+        ];
+
+        $this->actingAs($user)->withSession(['cart' => $cart]);
+        foreach (range(1, 6) as $attempt) {
+            $this->postJson(route('checkout.voucher.validate'), [
+                'code' => 'RANDOM'.$attempt,
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson(route('checkout.voucher.validate'), [
+            'code' => 'RANDOM7',
+        ])->assertTooManyRequests();
+    }
+
     public function test_redeemed_voucher_does_not_deduct_points_again_at_checkout(): void
     {
         $user = $this->customer();

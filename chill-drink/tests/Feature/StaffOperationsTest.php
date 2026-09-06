@@ -7,6 +7,12 @@ use App\Models\Branch;
 use App\Models\Conversation;
 use App\Models\GroupOrder;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderItemTopping;
+use App\Models\Product;
+use App\Models\ProductSize;
+use App\Models\Size;
+use App\Models\Topping;
 use App\Models\User;
 use App\Services\ShipperDispatchService;
 use App\Support\OrderStatus;
@@ -40,6 +46,163 @@ class StaffOperationsTest extends TestCase
             ->assertDontSee('DOANH THU')
             ->assertDontSee('/admin/', false)
             ->assertDontSee('/shipper/', false);
+    }
+
+    public function test_dashboard_metric_cards_open_the_exact_branch_scoped_records(): void
+    {
+        $branch = $this->branch('STAFF-METRICS');
+        $otherBranch = $this->branch('STAFF-METRICS-OTHER');
+        $staff = $this->staff($branch);
+        $customer = User::factory()->create(['role_id' => 1]);
+
+        $pending = $this->order($customer, $branch, 'METRIC-PENDING');
+        $confirmed = $this->order($customer, $branch, 'METRIC-CONFIRMED');
+        $confirmed->update(['status' => OrderStatus::CONFIRMED]);
+        $preparing = $this->order($customer, $branch, 'METRIC-PREPARING');
+        $preparing->update(['status' => OrderStatus::PREPARING]);
+        $readyDelivery = $this->order($customer, $branch, 'METRIC-READY-DELIVERY');
+        $readyDelivery->update(['status' => OrderStatus::READY_FOR_DELIVERY]);
+        $readyPickup = $this->order($customer, $branch, 'METRIC-READY-PICKUP', 'pickup');
+        $readyPickup->update(['status' => OrderStatus::READY_FOR_PICKUP]);
+        $completedToday = $this->order($customer, $branch, 'METRIC-TODAY');
+        $completedToday->update(['status' => OrderStatus::COMPLETED]);
+        $completedYesterday = $this->order($customer, $branch, 'METRIC-YESTERDAY');
+        $completedYesterday->forceFill([
+            'status' => OrderStatus::COMPLETED,
+            'created_at' => now()->subDay(),
+        ])->save();
+        $otherOrder = $this->order($customer, $otherBranch, 'METRIC-OTHER-BRANCH');
+
+        $openGroup = $this->groupOrder($customer, $branch, 'METRIC-GROUP-OPEN');
+        $closedGroup = $this->groupOrder($customer, $branch, 'METRIC-GROUP-CLOSED');
+        $closedGroup->update(['status' => 'closed']);
+        $orderedGroup = $this->groupOrder($customer, $branch, 'METRIC-GROUP-ORDERED');
+        $orderedGroup->update(['status' => 'ordered']);
+
+        $this->actingAs($staff)
+            ->get(route('staff.dashboard'))
+            ->assertOk()
+            ->assertViewHas('totalWork', 5)
+            ->assertSee(route('staff.orders.index', ['scope' => 'work']), false)
+            ->assertSee(route('staff.orders.index', ['scope' => 'new']), false)
+            ->assertSee(route('staff.orders.index', ['scope' => 'preparing']), false)
+            ->assertSee(route('staff.orders.index', ['scope' => 'ready_delivery']), false)
+            ->assertSee(route('staff.orders.index', ['scope' => 'ready_pickup']), false)
+            ->assertSee(route('staff.orders.index', ['scope' => 'today']), false)
+            ->assertSee(route('staff.group-orders.index', ['scope' => 'active']), false);
+
+        $this->get(route('staff.orders.index', ['scope' => 'new']))
+            ->assertOk()->assertSee($pending->order_code)->assertDontSee($confirmed->order_code);
+        $this->get(route('staff.orders.index', ['scope' => 'preparing']))
+            ->assertOk()->assertSee($confirmed->order_code)->assertSee($preparing->order_code)->assertDontSee($pending->order_code);
+        $this->get(route('staff.orders.index', ['scope' => 'ready_delivery']))
+            ->assertOk()->assertSee($readyDelivery->order_code)->assertDontSee($readyPickup->order_code);
+        $this->get(route('staff.orders.index', ['scope' => 'ready_pickup']))
+            ->assertOk()->assertSee($readyPickup->order_code)->assertDontSee($readyDelivery->order_code);
+        $this->get(route('staff.orders.index', ['scope' => 'work']))
+            ->assertOk()->assertSee($pending->order_code)->assertSee($readyPickup->order_code)
+            ->assertDontSee($completedToday->order_code)->assertDontSee($otherOrder->order_code);
+        $this->get(route('staff.orders.index', ['scope' => 'today']))
+            ->assertOk()->assertSee($completedToday->order_code)->assertDontSee($completedYesterday->order_code)
+            ->assertDontSee($otherOrder->order_code);
+        $this->get(route('staff.group-orders.index', ['scope' => 'active']))
+            ->assertOk()->assertSee($openGroup->code)->assertSee($closedGroup->code)->assertDontSee($orderedGroup->code);
+    }
+
+    public function test_staff_can_filter_regular_scheduled_and_group_orders_from_one_order_page(): void
+    {
+        $branch = $this->branch('STAFF-ORDER-TYPES');
+        $otherBranch = $this->branch('STAFF-ORDER-TYPES-OTHER');
+        $staff = $this->staff($branch);
+        $customer = User::factory()->create(['role_id' => 1]);
+
+        $regular = $this->order($customer, $branch, 'TYPE-REGULAR');
+        $regular->update(['delivery_type' => 'now']);
+        $scheduled = $this->order($customer, $branch, 'TYPE-SCHEDULED');
+        $scheduled->update([
+            'delivery_type' => 'scheduled',
+            'scheduled_delivery_time' => now()->addHour(),
+            'scheduled_at' => now()->addHour(),
+        ]);
+        $groupOrderRecord = $this->order($customer, $branch, 'TYPE-GROUP');
+        $group = $this->groupOrder($customer, $branch, 'TYPE-GROUP-ROOM');
+        $group->update(['status' => 'ordered', 'order_id' => $groupOrderRecord->id]);
+        $otherOrder = $this->order($customer, $otherBranch, 'TYPE-OTHER-BRANCH');
+
+        $this->actingAs($staff)
+            ->get(route('staff.orders.index'))
+            ->assertOk()
+            ->assertSee('name="order_type"', false)
+            ->assertSee('Đơn thường')
+            ->assertSee('Đơn giao sau')
+            ->assertSee('Đơn nhóm')
+            ->assertDontSee('href="'.route('staff.group-orders.index').'"', false);
+
+        $this->get(route('staff.orders.index', ['order_type' => 'regular']))
+            ->assertOk()->assertSee($regular->order_code)
+            ->assertDontSee($scheduled->order_code)->assertDontSee($groupOrderRecord->order_code)
+            ->assertDontSee($otherOrder->order_code);
+        $this->get(route('staff.orders.index', ['order_type' => 'scheduled']))
+            ->assertOk()->assertSee($scheduled->order_code)
+            ->assertDontSee($regular->order_code)->assertDontSee($groupOrderRecord->order_code)
+            ->assertDontSee($otherOrder->order_code);
+        $this->get(route('staff.orders.index', ['order_type' => 'group']))
+            ->assertOk()->assertSee($groupOrderRecord->order_code)->assertSee($group->code)
+            ->assertDontSee($regular->order_code)->assertDontSee($scheduled->order_code)
+            ->assertDontSee($otherOrder->order_code);
+    }
+
+    public function test_dashboard_processing_order_has_expandable_real_order_details(): void
+    {
+        $branch = $this->branch('STAFF-DASH-DETAIL');
+        $staff = $this->staff($branch);
+        $customer = User::factory()->create([
+            'role_id' => 1,
+            'phone' => '0901234567',
+        ]);
+        $order = $this->order($customer, $branch, 'DASHBOARD-DETAIL');
+        $order->update([
+            'status' => OrderStatus::PREPARING,
+            'note' => 'Gọi khách trước khi giao.',
+        ]);
+        $product = Product::factory()->create(['name' => 'Trà sữa kiểm thử']);
+        $size = Size::create(['name' => 'L', 'multiplier' => 1]);
+        $productSize = ProductSize::create([
+            'product_id' => $product->id,
+            'size_id' => $size->id,
+            'price' => 55000,
+        ]);
+        $item = OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_size_id' => $productSize->id,
+            'ice_level' => 50,
+            'sugar_level' => 30,
+            'quantity' => 2,
+            'unit_price' => 62000,
+            'total_price' => 124000,
+            'item_note' => 'Không dùng ống hút.',
+        ]);
+        $topping = Topping::create(['name' => 'Trân châu đen', 'price' => 7000, 'status' => true]);
+        OrderItemTopping::create([
+            'order_item_id' => $item->id,
+            'topping_id' => $topping->id,
+            'price' => 7000,
+        ]);
+
+        $this->actingAs($staff)
+            ->get(route('staff.dashboard'))
+            ->assertOk()
+            ->assertSee('data-dashboard-order-detail="'.$order->id.'"', false)
+            ->assertSee('Chi tiết món')
+            ->assertSee('2× Trà sữa kiểm thử')
+            ->assertSee('Size L')
+            ->assertSee('Đường 30%')
+            ->assertSee('Đá 50%')
+            ->assertSee('Trân châu đen')
+            ->assertSee('Không dùng ống hút.')
+            ->assertSee('0901234567')
+            ->assertSee('Gọi khách trước khi giao.');
     }
 
     public function test_staff_order_transitions_follow_store_and_pickup_workflows(): void

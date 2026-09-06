@@ -2227,7 +2227,10 @@
             <div class="modal-body">
                 <div class="voucher-search-box d-flex flex-column flex-md-row align-items-md-center gap-3 mb-3">
                     <label for="voucherCodeInput" class="fw-semibold text-secondary flex-shrink-0">Mã ưu đãi</label>
-                    <input id="voucherCodeInput" type="text" class="form-control" placeholder="Nhập mã ưu đãi Chill Drink" value="{{ $selectedVoucherCode }}">
+                    <div class="flex-grow-1">
+                        <input id="voucherCodeInput" type="text" class="form-control" placeholder="Nhập mã ưu đãi Chill Drink" value="{{ $selectedVoucherCode }}" maxlength="50" pattern="[A-Za-z0-9_-]+" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="voucherCodeFeedback">
+                        <div id="voucherCodeFeedback" class="small mt-1 d-none" role="status" aria-live="polite"></div>
+                    </div>
                     <button type="button" class="btn voucher-apply-btn" id="voucherManualApply">Áp dụng</button>
                 </div>
 
@@ -4822,40 +4825,106 @@
             }
         });
 
-        document.getElementById('voucherManualApply')?.addEventListener('click', function () {
+        const voucherManualApply = document.getElementById('voucherManualApply');
+        const voucherCodeFeedback = document.getElementById('voucherCodeFeedback');
+        const voucherCodePattern = /^[A-Z0-9_-]+$/;
+
+        function setVoucherCodeFeedback(message = '', type = 'error') {
+            if (!voucherCodeFeedback) return;
+            voucherCodeFeedback.textContent = message;
+            voucherCodeFeedback.classList.toggle('d-none', !message);
+            voucherCodeFeedback.classList.toggle('text-danger', Boolean(message) && type === 'error');
+            voucherCodeFeedback.classList.toggle('text-success', Boolean(message) && type === 'success');
+            voucherCodeInput?.classList.toggle('is-invalid', Boolean(message) && type === 'error');
+            voucherCodeInput?.classList.toggle('is-valid', Boolean(message) && type === 'success');
+        }
+
+        voucherCodeInput?.addEventListener('input', () => {
+            const normalized = voucherCodeInput.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 50);
+            if (voucherCodeInput.value !== normalized) voucherCodeInput.value = normalized;
+            setVoucherCodeFeedback();
+        });
+
+        voucherCodeInput?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                voucherManualApply?.click();
+            }
+        });
+
+        voucherManualApply?.addEventListener('click', async function () {
             const code = voucherCodeInput.value.trim().toUpperCase();
 
             if (!code) {
+                setVoucherCodeFeedback('Vui lòng nhập mã voucher.');
                 voucherCodeInput.focus();
                 return;
             }
 
-            const matchedCard = Array.from(document.querySelectorAll('[data-voucher-code]'))
-                .find((item) => item.dataset.voucherCode === code);
-
-            if (matchedCard) {
-                if (matchedCard.dataset.voucherDisabled === '1') {
-                    voucherCodeInput.focus();
-                    return;
-                }
-
-                setVoucherActive(matchedCard);
-                commitVoucherSelection();
+            if (!voucherCodePattern.test(code)) {
+                setVoucherCodeFeedback('Mã chỉ được gồm chữ, số, dấu gạch ngang hoặc gạch dưới.');
+                voucherCodeInput.focus();
                 return;
             }
 
-            const manualType = /SHIP|FREE/.test(code) ? 'shipping' : 'discount';
-            document.querySelectorAll(`[data-voucher-card][data-voucher-type="${manualType}"]`).forEach((item) => {
-                item.classList.remove('active');
-                item.querySelector('.voucher-radio')?.classList.remove('active');
-                item.querySelector('.voucher-radio')?.setAttribute('aria-pressed', 'false');
-            });
-            pendingVouchers[manualType] = {
-                code,
-                label: `${code} - Mã nhập thủ công`,
-                discount: 0,
-            };
-            commitVoucherSelection();
+            this.disabled = true;
+            setVoucherCodeFeedback('Đang kiểm tra mã...', 'success');
+
+            try {
+                const response = await fetch(@json(route('checkout.voucher.validate')), {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        code,
+                        fulfillment_type: document.querySelector('input[name="fulfillment_type"]:checked')?.value || 'delivery',
+                        shipping_fee: Math.max(0, Math.round(Number(shippingConfig.fixedShippingFee || 0))),
+                    }),
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok || !data.valid) {
+                    const validationMessage = Object.values(data.errors || {}).flat()[0];
+                    const errorMessage = response.status === 429
+                        ? 'Bạn đã thử quá nhiều mã. Vui lòng chờ một phút rồi thử lại.'
+                        : (validationMessage || data.message || 'Mã voucher không hợp lệ.');
+                    throw new Error(errorMessage);
+                }
+
+                const voucher = data.voucher || {};
+                const matchedCard = Array.from(document.querySelectorAll('[data-voucher-code]'))
+                    .find((item) => item.dataset.voucherCode === voucher.code);
+
+                if (matchedCard && matchedCard.dataset.voucherDisabled !== '1') {
+                    setVoucherActive(matchedCard);
+                } else {
+                    const type = voucher.type === 'shipping' ? 'shipping' : 'discount';
+                    document.querySelectorAll(`[data-voucher-card][data-voucher-type="${type}"]`).forEach((item) => {
+                        item.classList.remove('active');
+                        item.querySelector('.voucher-radio')?.classList.remove('active');
+                        item.querySelector('.voucher-radio')?.setAttribute('aria-pressed', 'false');
+                    });
+                    pendingVouchers[type] = {
+                        code: voucher.code,
+                        label: voucher.label,
+                        discount: Number(voucher.discount || 0),
+                    };
+                }
+
+                voucherCodeInput.value = voucher.code;
+                setVoucherCodeFeedback(data.message || 'Mã voucher hợp lệ.', 'success');
+                commitVoucherSelection();
+            } catch (error) {
+                setVoucherCodeFeedback(error.message || 'Không thể kiểm tra mã voucher lúc này.');
+                voucherCodeInput.focus();
+            } finally {
+                this.disabled = false;
+            }
         });
 
         document.getElementById('confirmVoucher')?.addEventListener('click', function () {
