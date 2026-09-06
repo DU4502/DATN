@@ -328,7 +328,7 @@ class ShipperDispatchService
 
             /** @var Shipper|null $shipper */
             $shipper = Shipper::query()->with('user')->whereKey($evaluation['shipper']->id)->lockForUpdate()->first();
-            if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'busy' || ! $this->hasFreshPresence($shipper)) {
+            if (! $this->isEligibleLockedShipper($shipper) || $shipper->status !== 'busy') {
                 return ['status' => 'waiting', 'shipper' => null, 'message' => 'Chuyến ghép vừa thay đổi trạng thái.'];
             }
 

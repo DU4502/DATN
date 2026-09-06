@@ -122,7 +122,6 @@ class ShipperBundleService
         $shippers = Shipper::query()
             ->with('user')
             ->where('status', 'busy')
-            ->when(Schema::hasColumn('shippers', 'last_active_at'), fn ($query) => $query->where('last_active_at', '>=', now()->subMinutes(max(1, (int) config('shipper_dispatch.presence.active_ttl_minutes', 3)))))
             ->whereNotNull('current_latitude')
             ->whereNotNull('current_longitude')
             ->whereHas('user', fn ($query) => $query

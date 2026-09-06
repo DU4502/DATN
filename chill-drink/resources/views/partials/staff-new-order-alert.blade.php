@@ -273,6 +273,7 @@
         let bellLoopPlayCount = 0;
         let lastAudioNoticeAt = 0;
         let lastAnnouncedOrderId = null;
+        let confirmBusy = false;
         const pollIntervalMs = 5000;
         const bellLoopMs = 8000;
         const bellLoopMaxPlays = 3;
@@ -290,6 +291,14 @@
             } catch {
                 return {};
             }
+        };
+        const activeSnoozeIds = () => {
+            const now = Date.now();
+            const values = snoozes();
+            return Object.entries(values)
+                .filter(([, expiresAt]) => Number(expiresAt || 0) > now)
+                .map(([orderId]) => orderId)
+                .slice(0, 30);
         };
         const setEnabled = value => {
             localStorage.setItem(enabledKey, value ? '1' : '0');
@@ -415,14 +424,16 @@
         };
 
         async function loadPending(forceShow = false) {
-            if (!enabled()) return;
+            if (!enabled() || confirmBusy) return;
             if (requestBusy) {
                 refreshQueued = refreshQueued || forceShow;
                 return;
             }
             requestBusy = true;
             try {
-                const response = await fetch(pendingUrl, {
+                const url = new URL(pendingUrl, window.location.origin);
+                activeSnoozeIds().forEach(orderId => url.searchParams.append('muted_order_ids[]', orderId));
+                const response = await fetch(url, {
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest'
@@ -432,9 +443,7 @@
                 });
                 if (!response.ok) return;
                 const data = await response.json();
-                const now = Date.now();
-                const muted = snoozes();
-                const order = (data.orders || []).find(candidate => Number(candidate.branch_id) === branchId && Number(muted[candidate.order_id] || 0) <= now);
+                const order = (data.orders || []).find(candidate => Number(candidate.branch_id) === branchId);
                 if (order && (forceShow || root.hidden)) render(order);
                 else if (!order) {
                     activeOrder = null;
@@ -469,7 +478,8 @@
             loadPending(true);
         });
         root.querySelector('[data-alert-confirm]').addEventListener('click', async function() {
-            if (!activeOrder?.status_update_url || !activeOrder.can_confirm) return;
+            if (confirmBusy || !activeOrder?.status_update_url || !activeOrder.can_confirm) return;
+            confirmBusy = true;
             const original = this.innerHTML;
             this.disabled = true;
             this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xác nhận';
@@ -504,6 +514,8 @@
                 window.showRealtimeToast?.(error.message, 'warning');
                 this.disabled = false;
                 this.innerHTML = original;
+            } finally {
+                confirmBusy = false;
             }
         });
         document.addEventListener('order:created', event => {

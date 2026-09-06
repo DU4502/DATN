@@ -481,6 +481,37 @@ class DeliveryBundleDispatchTest extends TestCase
         ]);
     }
 
+    public function test_stale_busy_shipper_can_still_receive_bundle_before_pickup(): void
+    {
+        Notification::fake();
+
+        $branch = $this->createBranch('BND-STALE-PRE-PICKUP', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'BUSY-STALE-PRE-PICKUP', 'busy');
+        $shipper->forceFill(['last_active_at' => now()->subMinutes(10)])->save();
+        $primary = $this->createOrder($branch, 'STALE-PRE-PICKUP-PRIMARY', $shipper);
+        $newOrder = $this->createOrder($branch, 'STALE-PRE-PICKUP-MERGED');
+        $shipment = Shipment::create([
+            'order_id' => $primary->id,
+            'shipper_id' => $shipper->id,
+            'status' => 'accepted',
+            'assigned_at' => now(),
+        ]);
+        ShipmentHistory::create([
+            'shipment_id' => $shipment->id,
+            'status' => 'accepted',
+        ]);
+
+        $this->mockBundleRouting();
+
+        $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($newOrder);
+
+        $this->assertSame('assigned', $result['status']);
+        $this->assertSame('bundle', $result['dispatch_mode']);
+        $this->assertSame($shipper->id, $newOrder->fresh()->shipper_id);
+        $this->assertDatabaseHas('delivery_bundle_trip_orders', ['order_id' => $primary->id]);
+        $this->assertDatabaseHas('delivery_bundle_trip_orders', ['order_id' => $newOrder->id]);
+    }
+
     public function test_bundle_dispatch_stops_after_shipper_leaves_store_200m_after_pickup(): void
     {
         Notification::fake();

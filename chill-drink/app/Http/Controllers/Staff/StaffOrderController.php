@@ -93,6 +93,12 @@ class StaffOrderController extends Controller
     {
         $user = auth()->user();
         abort_unless($user?->isStaffOnly() && is_numeric($user->branch_id), 403);
+        $mutedOrderIds = collect((array) request()->query('muted_order_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->take(30)
+            ->values();
 
         $baseQuery = Order::query()
             ->where('branch_id', (int) $user->branch_id)
@@ -100,6 +106,7 @@ class StaffOrderController extends Controller
             ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
 
         $orders = (clone $baseQuery)
+            ->when($mutedOrderIds->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $mutedOrderIds->all()))
             ->with([
                 'user',
                 'branch',
@@ -109,7 +116,7 @@ class StaffOrderController extends Controller
                 'orderItems.toppingLines.topping',
             ])
             ->oldest('created_at')
-            ->limit(6)
+            ->limit(1)
             ->get()
             ->map(fn (Order $order) => $this->pendingAlertPayload($order))
             ->values();
