@@ -53,8 +53,23 @@ class CartController extends Controller
             ->get();
         $cartAvailability = $availability->mapFor($cartProducts, $branch);
 
+        $cartProductIds = collect($cart)
+            ->pluck('product_id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
         $suggestions = Product::query()
             ->where('status', true)
+            ->when($branch, function ($query) use ($branch) {
+                $query->whereHas('branchStatuses', function ($statusQuery) use ($branch) {
+                    $statusQuery->where('branch_id', $branch->id)
+                        ->where('is_available', true);
+                });
+            })
+            ->when(! empty($cartProductIds), fn ($query) => $query->whereNotIn('id', $cartProductIds))
             ->with(['category', 'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->inRandomOrder()
             ->limit(4)
