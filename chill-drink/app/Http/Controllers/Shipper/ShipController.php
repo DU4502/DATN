@@ -14,6 +14,7 @@ use App\Services\ShipperDispatchService;
 use App\Services\ShipperReturnService;
 use App\Support\AddressLearning;
 use App\Support\OrderStatus;
+use App\Support\OrderDistancePolicy;
 use App\Support\RealtimeOrderNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -154,6 +155,35 @@ class ShipController extends Controller
         }
         $assignmentTimestamp = $assignedAt ? strtotime((string) $assignedAt) : optional($latest?->created_at)->timestamp;
 
+        $assignmentDetails = null;
+        if ($latest) {
+            $latest->loadMissing(['orderItems', 'branch', 'address']);
+            $bundleTrip = app(ShipperBundleService::class)->activeTripForOrder($latest);
+            $distanceKm = null;
+            $destinationLatitude = $latest->shipping_latitude ?? $latest->address?->latitude;
+            $destinationLongitude = $latest->shipping_longitude ?? $latest->address?->longitude;
+            foreach ([$latest->note, $latest->delivery_note] as $text) {
+                if (is_string($text) && preg_match('/khoảng cách\s+([0-9]+(?:[.,][0-9]+)?)\s*km/iu', $text, $matches)) {
+                    $distanceKm = (float) str_replace(',', '.', $matches[1]);
+                    break;
+                }
+            }
+            if ($distanceKm === null && $latest->branch && is_numeric($destinationLatitude) && is_numeric($destinationLongitude)) {
+                $distanceKm = OrderDistancePolicy::distanceFromBranch($latest->branch, $destinationLatitude, $destinationLongitude);
+            }
+            $assignmentDetails = [
+                'customer_name' => $latest->customerName() ?: 'Khách hàng',
+                'customer_phone' => $latest->customerPhone() ?: '',
+                'shipping_address' => $latest->getShippingAddress(),
+                'total_formatted' => number_format((int) ($latest->total ?? $latest->total_price ?? 0), 0, ',', '.').'đ',
+                'item_lines' => $latest->orderItems->count(),
+                'total_cups' => (int) $latest->orderItems->sum('quantity'),
+                'distance_km' => $distanceKm,
+                'bundle_order_count' => $bundleTrip ? count($bundleTrip['order_ids'] ?? []) : 1,
+                'bundle_total_cups' => $bundleTrip ? (int) ($bundleTrip['total_cups'] ?? 0) : (int) $latest->orderItems->sum('quantity'),
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'pending_count' => count($pendingIds),
@@ -166,6 +196,9 @@ class ShipController extends Controller
                 'status_label' => OrderStatus::label((string) $latest->status),
                 'show_url' => route('shipper.orders.show', $latest->id),
                 'map_url' => route('shipper.map', ['id' => $latest->id]),
+                'branch_name' => $latest->branch?->name ?? 'Chi nhánh',
+                'distance_km' => $distanceKm,
+                'details' => $assignmentDetails,
             ] : null,
         ]);
     }
@@ -276,7 +309,7 @@ class ShipController extends Controller
 
     /**
      * "Nhận đơn" chỉ là xác nhận đã thấy và tiếp nhận nhiệm vụ.
-     * Hệ thống đã gán order.shipper_id ngay khi quán xác nhận đơn.
+     * Hệ thống chỉ gán order.shipper_id khi quán chuyển đơn sang Sẵn sàng giao.
      */
     public function acceptOrder($id)
     {
@@ -383,6 +416,10 @@ class ShipController extends Controller
         }
 
         $order = $result['order'];
+
+        // Accepting a shipment changes the customer-facing journey/driver card
+        // even though the canonical order status remains unchanged.
+        RealtimeOrderNotifier::orderTrackingUpdated($order);
 
         return redirect()->route('shipper.map', ['id' => $order->id])
             ->with(
@@ -1337,9 +1374,16 @@ class ShipController extends Controller
         ]);
     }
 
-    public function markAllNotificationsRead(Request $request): RedirectResponse
+    public function markAllNotificationsRead(Request $request)
     {
         $request->user()->unreadNotifications->markAsRead();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã đánh dấu toàn bộ thông báo là đã đọc.',
+            ]);
+        }
 
         return back()->with('success', 'Đã đánh dấu toàn bộ thông báo là đã đọc.');
     }
@@ -1388,6 +1432,15 @@ class ShipController extends Controller
         $isReturning = app(ShipperReturnService::class)->currentReturn($shipper) !== null;
 
         if (($hasActiveOrder || $isReturning) && $validated['status'] === 'offline') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $isReturning
+                        ? 'Bạn đang được điều về chi nhánh nên chưa thể chuyển Offline.'
+                        : 'Bạn đang có chuyến hoạt động nên chưa thể chuyển Offline.',
+                ], 422);
+            }
+
             return back()->with('error', $isReturning
                 ? 'Bạn đang được điều về chi nhánh nên chưa thể chuyển Offline.'
                 : 'Bạn đang có chuyến hoạt động nên chưa thể chuyển Offline.');
@@ -1401,6 +1454,15 @@ class ShipController extends Controller
             if (($summary['assigned'] ?? 0) > 0) {
                 $suffix = ' Engine điều phối đã xử lý '.(int) $summary['assigned'].' đơn đang chờ.';
             }
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'status' => $shipper->status,
+                'is_active' => $shipper->status === 'online',
+                'message' => 'Đã cập nhật trạng thái shipper.'.$suffix,
+            ]);
         }
 
         return back()->with('success', 'Đã cập nhật trạng thái shipper.'.$suffix);

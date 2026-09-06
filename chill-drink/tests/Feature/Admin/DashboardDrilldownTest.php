@@ -332,7 +332,7 @@ class DashboardDrilldownTest extends TestCase
         $this->assertStringContainsString('config.branchId', $modal);
         $this->assertStringContainsString('config.productId', $modal);
         $this->assertStringContainsString('aspect-ratio:8/5', $modal);
-        $this->assertStringContainsString('per_page:6', $modal);
+        $this->assertStringContainsString('per_page:20', $modal);
         $this->assertStringContainsString('dashboard-trace-results', $modal);
         $this->assertStringContainsString('compactFormula', $modal);
         $this->assertStringContainsString('Cách tính nhanh', $modal);

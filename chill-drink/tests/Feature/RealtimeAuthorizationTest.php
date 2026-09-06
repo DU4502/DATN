@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\GroupOrderGroupMessageSent;
 use App\Events\MessageSent;
 use App\Events\OrderStatusUpdated;
+use App\Events\OrderCreated;
 use App\Models\Branch;
 use App\Models\Conversation;
 use App\Models\GroupOrder;
@@ -12,6 +13,7 @@ use App\Models\GroupOrderMember;
 use App\Models\GroupOrderMessage;
 use App\Models\Message;
 use App\Models\Order;
+use App\Models\Shipper;
 use App\Models\User;
 use App\Support\OrderStatus;
 use Illuminate\Broadcasting\PrivateChannel;
@@ -119,6 +121,18 @@ class RealtimeAuthorizationTest extends TestCase
         $this->authorizeChannel($superAdmin, 'private-admin-notifications')->assertOk();
         $this->authorizeChannel($superAdmin, 'private-admin-notifications.'.$branch->id)->assertOk();
         $this->authorizeChannel($superAdmin, 'private-admin-notifications.'.$otherBranch->id)->assertOk();
+
+        $this->authorizeChannel($staff, 'private-staff-orders.'.$branch->id)->assertOk();
+        $this->authorizeChannel($staff, 'private-staff-orders.'.$otherBranch->id)->assertForbidden();
+        $this->authorizeChannel($admin, 'private-staff-orders.'.$branch->id)->assertForbidden();
+        $this->authorizeChannel($superAdmin, 'private-super-admin-orders')->assertOk();
+        $this->authorizeChannel($admin, 'private-super-admin-orders')->assertForbidden();
+
+        $shipper = User::factory()->create(['role_id' => User::SHIPPER_ROLE_ID, 'branch_id' => $branch->id]);
+        $otherShipper = User::factory()->create(['role_id' => User::SHIPPER_ROLE_ID, 'branch_id' => $branch->id]);
+        $this->authorizeChannel($shipper, 'private-shipper-orders.'.$shipper->id)->assertOk();
+        $this->authorizeChannel($otherShipper, 'private-shipper-orders.'.$shipper->id)->assertForbidden();
+        $this->authorizeChannel($admin, 'private-shipper-orders.'.$shipper->id)->assertForbidden();
     }
 
     public function test_private_user_channel_only_allows_the_matching_authenticated_user(): void
@@ -213,13 +227,31 @@ class RealtimeAuthorizationTest extends TestCase
             'payment_status' => 'pending',
             'status' => OrderStatus::CONFIRMED,
         ]);
+        $shipperUser = User::factory()->create([
+            'role_id' => User::SHIPPER_ROLE_ID,
+            'branch_id' => $branch->id,
+        ]);
+        $shipper = Shipper::create([
+            'user_id' => $shipperUser->id,
+            'code' => 'RT-SHIPPER-'.uniqid(),
+            'phone' => '0900000001',
+            'status' => 'available',
+        ]);
+        $order->update(['shipper_id' => $shipper->id]);
         $orderEvent = new OrderStatusUpdated($order);
         $orderChannels = $this->privateChannelNames($orderEvent->broadcastOn());
 
         $this->assertSame('order.status.updated', $orderEvent->broadcastAs());
         $this->assertContains('private-admin-notifications.'.$branch->id, $orderChannels);
         $this->assertContains('private-user.'.$customer->id, $orderChannels);
+        $this->assertContains('private-order.'.$order->id, $orderChannels);
+        $this->assertContains('private-shipper-orders.'.$shipperUser->id, $orderChannels);
         $this->assertNotContains('private-admin-notifications', $orderChannels);
+
+        $createdChannels = $this->privateChannelNames((new OrderCreated($order))->broadcastOn());
+        $this->assertContains('private-staff-orders.'.$branch->id, $createdChannels);
+        $this->assertContains('private-super-admin-orders', $createdChannels);
+        $this->assertContains('private-admin-notifications.'.$branch->id, $createdChannels);
     }
 
     private function authorizeChannel(User $user, string $channel)

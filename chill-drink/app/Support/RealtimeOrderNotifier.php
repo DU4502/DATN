@@ -57,6 +57,26 @@ class RealtimeOrderNotifier
     }
 
     /**
+     * Refresh tracking data when shipment state changes without changing the
+     * canonical order status (for example, a shipper accepts an assignment).
+     */
+    public static function orderTrackingUpdated(Order $order): void
+    {
+        if (! self::isConfigured()) {
+            return;
+        }
+
+        try {
+            event(new OrderStatusUpdated($order->fresh(['user'])));
+        } catch (\Throwable $exception) {
+            Log::warning('Không thể broadcast cập nhật theo dõi đơn hàng.', [
+                'order_id' => $order->id,
+                'message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Gửi lời xin lỗi riêng cho khách khi sự cố thuộc về tài xế/chuyến giao.
      * Luồng sự cố phía khách không gọi method này để không làm lộ yêu cầu nội bộ.
      */

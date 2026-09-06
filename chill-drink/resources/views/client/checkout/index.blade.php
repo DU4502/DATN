@@ -3897,7 +3897,9 @@
             }
         };
 
+        let branchOptionsSequence = 0;
         async function renderBranchOptions(userLat = null, userLon = null) {
+            const sequence = ++branchOptionsSequence;
             const branchSelect = document.getElementById('branch_id');
 
             if (!branchSelect) {
@@ -3967,6 +3969,7 @@
                     branchSelectNote.classList.remove('d-none');
                     branchSelectNote.textContent = 'Vui lòng xác định vị trí giao hàng để tính quãng đường đường bộ.';
                 }
+                window.updateShippingSummary?.();
                 return;
             }
 
@@ -3980,6 +3983,7 @@
                 const response = await fetch(url, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
                 const payload = await response.json();
                 if (!response.ok || !payload.success) throw new Error(payload.message || 'Không tải được chi nhánh.');
+                if (sequence !== branchOptionsSequence) return;
 
                 writeOptions(Array.isArray(payload.data) ? payload.data : [], true);
                 if (branchSelectNote) {
@@ -3987,6 +3991,7 @@
                     branchSelectNote.textContent = 'Chỉ hiển thị chi nhánh cách địa chỉ giao hàng không quá 15 km theo lộ trình đường bộ.';
                 }
             } catch (error) {
+                if (sequence !== branchOptionsSequence) return;
                 // UI fallback chỉ để vẫn chọn được chi nhánh; backend vẫn kiểm tra road-route khi đặt đơn.
                 writeOptions(localBranches, false);
                 if (branchSelectNote) {
@@ -3994,12 +3999,22 @@
                     branchSelectNote.textContent = 'Chưa tải được tuyến đường. Hệ thống sẽ kiểm tra lại chính xác khi đặt đơn.';
                 }
             } finally {
-                branchSelect.disabled = false;
-                window.updateShippingSummary?.();
+                if (sequence === branchOptionsSequence) {
+                    branchSelect.disabled = false;
+                    window.updateShippingSummary?.();
+                }
             }
         }
 
         window.renderCheckoutBranchOptions = renderBranchOptions;
+        window.refreshCheckoutBranches = async (branches) => {
+            const select = document.getElementById('branch_id');
+            if (!select || isGroupCheckout) return;
+            const previous = select.value;
+            select.dataset.branches = JSON.stringify(Array.isArray(branches) ? branches : []);
+            await renderBranchOptions(select.dataset.userLatitude, select.dataset.userLongitude);
+            if (previous !== select.value) select.dispatchEvent(new Event('change', { bubbles: true }));
+        };
 
         document.querySelector('[data-find-nearest-branch]')?.addEventListener('click', function () {
             const button = this;
@@ -5298,4 +5313,5 @@
         });
     })();
 </script>
+@include('components.branch-availability-sync')
 @endsection

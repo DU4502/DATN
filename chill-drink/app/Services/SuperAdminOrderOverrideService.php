@@ -184,11 +184,7 @@ class SuperAdminOrderOverrideService
 
         $dispatchResult = null;
         if (($updated->fulfillment_type ?? 'delivery') === 'delivery'
-            && in_array($newStatus, [
-                OrderStatus::CONFIRMED,
-                OrderStatus::PREPARING,
-                OrderStatus::READY_FOR_DELIVERY,
-            ], true)
+            && $newStatus === OrderStatus::READY_FOR_DELIVERY
             && ! $updated->shipper_id) {
             $dispatchResult = $this->dispatch->dispatchConfirmedOrder($updated->fresh(['branch']));
             $updated->refresh();

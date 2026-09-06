@@ -6,6 +6,7 @@ use App\Models\Branch;
 use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
 
 class BranchManagementTest extends TestCase
@@ -55,5 +56,35 @@ class BranchManagementTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('branches', ['id' => $branch->id]);
+    }
+
+    public function test_super_admin_can_set_branch_status_explicitly(): void
+    {
+        Event::fake();
+
+        $superAdmin = User::factory()->create(['role_id' => 3]);
+        $branch = Branch::create([
+            'name' => 'Realtime Branch',
+            'code' => 'REALTIME-BRANCH',
+            'address' => 'Test address',
+            'latitude' => 19.807157,
+            'longitude' => 105.776156,
+            'status' => false,
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->patchJson(route('admin.branches.toggle-status', $branch), ['status' => true])
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('status', true);
+
+        $this->assertTrue($branch->fresh()->status);
+
+        $this->actingAs($superAdmin)
+            ->patchJson(route('admin.branches.toggle-status', $branch), ['status' => true])
+            ->assertOk()
+            ->assertJsonPath('status', true);
+
+        $this->assertTrue($branch->fresh()->status);
     }
 }

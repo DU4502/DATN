@@ -2131,7 +2131,7 @@ function normalizeLegacyAnalyticsForm(form) {
                             $presence = $isCurrentAccount || ($minutesSinceLogin !== null && $minutesSinceLogin <= 5) ? 'online' : ($minutesSinceLogin !== null && $minutesSinceLogin <= 30 ? 'away' : 'offline');
                             $presenceLabel = ['online' => 'Online', 'away' => 'Away', 'offline' => 'Offline'][$presence];
                         @endphp
-                        <tr data-admin-id="{{ $adminUser->id }}">
+                        <tr data-admin-id="{{ $adminUser->id }}" data-instant-row>
                             <td>
                                 <div class="sa-admin-cell">
                                     <span class="sa-avatar">
@@ -2157,7 +2157,7 @@ function normalizeLegacyAnalyticsForm(form) {
                             </td>
                             <td>{{ $adminUser->last_login_at?->format('d/m/Y H:i') ?? ($isCurrentAccount ? 'Phiên hiện tại' : 'Chưa đăng nhập') }}</td>
                             <td><span class="sa-presence sa-presence-{{ $presence }}">{{ $presenceLabel }}</span></td>
-                            <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}">{{ $adminUser->is_active ? 'Hoạt động' : 'Đã khóa' }}</span></td>
+                            <td><span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}" data-instant-status-badge>{{ $adminUser->is_active ? 'Hoạt động' : 'Đã khóa' }}</span></td>
                             <td>
                                 <div class="sa-actions" @if($adminUser->isSuperAdmin()) data-admin-actions-locked="{{ $adminUser->id }}" @endif>
                                     @if($adminUser->isSuperAdmin())
@@ -2411,14 +2411,32 @@ function normalizeLegacyAnalyticsForm(form) {
                                     <div style="padding: 0.75rem; background: #f8faf9; border-radius: 6px;">
                                         <div style="font-size: 0.82rem; color: #6b7280; font-weight: 800; text-transform: uppercase; margin-bottom: 0.3rem;">Trạng thái tài khoản</div>
                                         <div>
-                                            <span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}" style="font-size: 0.75rem;">{{ $adminUser->is_active ? '✓ Hoạt động' : '✕ Đã khóa' }}</span>
+                                            <span class="sa-state {{ $adminUser->is_active ? 'sa-state-active' : 'sa-state-locked' }}" style="font-size: 0.75rem;" data-instant-status-badge>{{ $adminUser->is_active ? 'Hoạt động' : 'Đã khóa' }}</span>
                                         </div>
                                     </div>
-                                    <form method="POST" action="{{ route('admin.users.toggle-status', $adminUser) }}" style="margin: 0;">
+                                    <form method="POST" action="{{ route('admin.users.toggle-status', $adminUser) }}" style="margin: 0;"
+                                          data-instant-form
+                                          data-instant-toggle-status
+                                          data-instant-admin-id="{{ $adminUser->id }}"
+                                          data-confirm="{{ $adminUser->is_active ? 'Khóa tài khoản này?' : 'Mở khóa tài khoản này?' }}"
+                                          data-active-confirm="Khóa tài khoản này?"
+                                          data-inactive-confirm="Mở khóa tài khoản này?"
+                                          data-active-label="Hoạt động"
+                                          data-inactive-label="Đã khóa"
+                                          data-active-badge-class="sa-state sa-state-active"
+                                          data-inactive-badge-class="sa-state sa-state-locked"
+                                          data-active-button-class="btn btn-danger btn-sm"
+                                          data-inactive-button-class="btn btn-success btn-sm"
+                                          data-active-title="Khóa tài khoản"
+                                          data-inactive-title="Mở khóa tài khoản"
+                                          data-active-button-label="Khóa tài khoản"
+                                          data-inactive-button-label="Mở khóa tài khoản"
+                                          data-active-icon="bi bi-lock"
+                                          data-inactive-icon="bi bi-unlock">
                                         @csrf
                                         @method('PATCH')
-                                        <button class="btn btn-{{ $adminUser->is_active ? 'danger' : 'success' }} btn-sm" type="submit" style="width: 100%;">
-                                            <i class="bi {{ $adminUser->is_active ? 'bi-lock' : 'bi-unlock' }}" style="margin-right: 0.4rem;"></i>{{ $adminUser->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}
+                                        <button class="btn btn-{{ $adminUser->is_active ? 'danger' : 'success' }} btn-sm" type="submit" style="width: 100%;" title="{{ $adminUser->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}" data-instant-submit>
+                                            <i class="bi {{ $adminUser->is_active ? 'bi-lock' : 'bi-unlock' }}" style="margin-right: 0.4rem;" data-instant-status-icon></i>{{ $adminUser->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}
                                         </button>
                                     </form>
                                 </div>
@@ -2586,7 +2604,7 @@ function normalizeLegacyAnalyticsForm(form) {
             ? 'createStaffModal'
             : (old('form_type') === 'branch'
                 ? 'createBranchModal'
-                : (old('form_type') === 'branch-edit' && old('branch_modal_id') ? 'branchEditModal'.old('branch_modal_id') : null)));
+                : (old('form_type') === 'branch-edit' && old('branch_modal_id') ? 'branchRankingEditModal'.old('branch_modal_id') : null)));
 @endphp
 
 @php
@@ -2698,18 +2716,27 @@ function clearLoginHistoryFilter(adminId) {
     renderLoginHistory(adminId);
 }
 
-function renderBranchStatusToggle(branchId) {
-    const input = document.querySelector(`[data-branch-status-input="${branchId}"]`);
-    const button = document.querySelector(`[data-branch-status-toggle="${branchId}"]`);
+function renderBranchStatusToggle(branchId, scope = document) {
+    scope.querySelectorAll(`[data-branch-status-toggle="${branchId}"]`).forEach((button) => {
+        const form = button.closest('form');
+        const input = form?.querySelector(`[data-branch-status-input="${branchId}"]`);
 
-    if (!input || !button) {
-        return;
-    }
+        if (!input) {
+            return;
+        }
 
-    const isActive = input.value === '1';
-    button.classList.toggle('btn-success', isActive);
-    button.classList.toggle('btn-danger', !isActive);
-    button.innerHTML = `<i class="bi bi-${isActive ? 'toggle-on' : 'toggle-off'} me-1"></i><span data-branch-status-label="${branchId}">${isActive ? 'Đóng chi nhánh' : 'Mở chi nhánh'}</span>`;
+        const isActive = input.value === '1';
+        const statusBadge = form?.querySelector(`[data-branch-current-status="${branchId}"]`);
+
+        button.classList.toggle('btn-danger', isActive);
+        button.classList.toggle('btn-success', !isActive);
+        button.innerHTML = `<i class="bi bi-${isActive ? 'pause-circle' : 'play-circle'} me-1"></i><span data-branch-status-label="${branchId}">${isActive ? 'Tạm ngưng chi nhánh' : 'Mở lại chi nhánh'}</span>`;
+
+        if (statusBadge) {
+            statusBadge.className = `badge rounded-pill ${isActive ? 'text-bg-success' : 'text-bg-danger'}`;
+            statusBadge.textContent = isActive ? 'Hoạt động' : 'Tạm ngưng';
+        }
+    });
 }
 
 function showSuperAdminToast(message, tone = 'success') {
@@ -2780,7 +2807,7 @@ function syncBranchEditModal(form, branch) {
     if (longitudeInput) longitudeInput.value = branch.longitude ?? '';
     if (statusInput) statusInput.value = branch.status ? '1' : '0';
 
-    renderBranchStatusToggle(branchId);
+    renderBranchStatusToggle(branchId, form);
 }
 
 function syncBranchRankingRow(branch) {
@@ -2793,7 +2820,10 @@ function syncBranchRankingRow(branch) {
 
     const nameCell = row.querySelector('[data-branch-name-cell]');
     if (nameCell) {
-        nameCell.textContent = branch.name ?? '';
+        const nameText = nameCell.querySelector('[data-branch-name-text]');
+        if (nameText) {
+            nameText.textContent = branch.name ?? '';
+        }
     }
 
     const statusCell = row.querySelector('[data-branch-status-cell]');
@@ -2801,6 +2831,51 @@ function syncBranchRankingRow(branch) {
         statusCell.innerHTML = branch.status
             ? `<span class="sa-state sa-state-active" data-branch-status-badge="${branchId}"><i class="bi bi-check-circle"></i> Hoạt động</span>`
             : `<span class="sa-state" style="background: #fef2f2; color: #991b1b;" data-branch-status-badge="${branchId}"><i class="bi bi-pause-circle"></i> Tạm ngưng</span>`;
+    }
+}
+
+function syncBranchStatusRealtime(payload) {
+    if (!payload || payload.id === undefined || payload.id === null) {
+        return;
+    }
+
+    const branchId = String(payload.id);
+    const isActive = payload.status === true || payload.status === 1 || payload.status === '1';
+    const branch = { ...payload, id: branchId, status: isActive };
+
+    document.querySelectorAll(`[data-branch-status-input="${branchId}"]`).forEach((input) => {
+        input.value = isActive ? '1' : '0';
+        input.defaultValue = input.value;
+    });
+
+    syncBranchRankingRow(branch);
+    renderBranchStatusToggle(branchId);
+
+    document.querySelectorAll(`[data-branch-status-badge="${branchId}"]`).forEach((badge) => {
+        badge.closest('tr')?.animate(
+            [
+                { backgroundColor: 'rgba(13, 147, 115, 0.16)' },
+                { backgroundColor: 'transparent' },
+            ],
+            { duration: 1200, easing: 'ease-out' }
+        );
+    });
+}
+
+function bootBranchStatusRealtime() {
+    if (!window.Echo || window.__superAdminBranchStatusRealtimeBooted) {
+        return;
+    }
+
+    window.__superAdminBranchStatusRealtimeBooted = true;
+    window.Echo.channel('branches').listen('BranchStatusUpdated', syncBranchStatusRealtime);
+}
+
+function notifyBranchAvailabilityChanged() {
+    try {
+        localStorage.setItem('branch-availability-changed', String(Date.now()));
+    } catch (error) {
+        console.warn('Không thể phát tín hiệu cập nhật chi nhánh.', error);
     }
 }
 
@@ -2860,6 +2935,7 @@ async function submitBranchEditForm(form) {
         const branch = data.branch || {};
         syncBranchEditModal(form, branch);
         syncBranchRankingRow(branch);
+        notifyBranchAvailabilityChanged();
         hideBranchEditModal(form);
         showSuperAdminToast(data?.message || 'Cập nhật chi nhánh thành công!', 'success');
     } catch (error) {
@@ -2888,22 +2964,52 @@ document.addEventListener('submit', function(e) {
     submitBranchEditForm(form);
 }, true);
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', async function(e) {
     const toggleButton = e.target.closest('[data-branch-status-toggle]');
     if (!toggleButton) {
         return;
     }
 
     const branchId = toggleButton.getAttribute('data-branch-status-toggle');
-    const input = document.querySelector(`[data-branch-status-input="${branchId}"]`);
+    const form = toggleButton.closest('form');
+    const input = form?.querySelector(`[data-branch-status-input="${branchId}"]`);
 
-    if (!input) {
+    if (!form || !input || toggleButton.disabled) {
         return;
     }
 
-    input.value = input.value === '1' ? '0' : '1';
-    renderBranchStatusToggle(branchId);
+    const saveButton = form?.querySelector('[type="submit"]');
+    toggleButton.disabled = true;
+    if (saveButton) saveButton.disabled = true;
+    toggleButton.textContent = 'Đang cập nhật…';
+    try {
+        const url = @json(route('admin.branches.toggle-status', ['branch' => '__BRANCH__'])).replace('__BRANCH__', branchId);
+        const response = await fetch(url, {
+            method: 'PATCH',
+            headers: {
+                'Accept': 'application/json', 'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': form.querySelector('[name="_token"]').value,
+            },
+            body: JSON.stringify({ status: input.value !== '1' }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Không thể đổi trạng thái.');
+        input.value = data.status ? '1' : '0';
+        input.defaultValue = input.value;
+        syncBranchStatusRealtime(data.branch);
+        showSuperAdminToast(data.message, 'success');
+        notifyBranchAvailabilityChanged();
+    } catch (error) {
+        showSuperAdminToast(error.message || 'Không thể kết nối máy chủ.', 'danger');
+    } finally {
+        renderBranchStatusToggle(branchId, form);
+        toggleButton.disabled = false;
+        if (saveButton) saveButton.disabled = false;
+    }
 });
+
+document.addEventListener('DOMContentLoaded', bootBranchStatusRealtime);
+bootBranchStatusRealtime();
 
 async function loadAdminsRegion(url) {
     const targetUrl = new URL(url, window.location.origin);
@@ -3125,9 +3231,9 @@ document.addEventListener('show.bs.modal', function(e) {
         return;
     }
 
-    if (e.target && e.target.id.startsWith('branchEditModal')) {
-        const branchId = e.target.id.replace('branchEditModal', '');
-        renderBranchStatusToggle(branchId);
+    if (e.target && e.target.matches('[data-branch-edit-modal]')) {
+        const branchId = e.target.getAttribute('data-branch-edit-modal');
+        renderBranchStatusToggle(branchId, e.target);
     }
 });
 

@@ -151,6 +151,27 @@
         /* Map/navigation: ưu tiên bản đồ, các panel desktop tự rơi xuống dưới. */
         .shipper-navigation-page{padding:0!important}.shipper-navigation-page .nav-map-card{border-radius:22px!important;overflow:hidden!important}.shipper-navigation-page .navigation-summary{border-radius:17px!important;margin:9px!important;left:0!important;right:0!important;top:0!important}.shipper-navigation-page .shipper-map-canvas{min-height:410px!important;height:52vh!important;max-height:570px!important}.shipper-navigation-page .map-bottom-controls{padding:8px!important}.shipper-navigation-page .map-bottom-controls>div{flex-wrap:wrap!important;overflow:visible}.shipper-navigation-page .map-bottom-controls .btn{font-size:10px;min-height:36px}.shipper-navigation-page .route-source-pill{font-size:9px!important;white-space:normal}.shipper-navigation-page .card-body{padding:13px!important}
 
+        .shipper-assignment-force{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom));z-index:2200;width:min(calc(100vw - 24px),456px);transform:translateX(-50%) translateY(120%);opacity:0;pointer-events:none;transition:transform .22s ease,opacity .22s ease}
+        .shipper-assignment-force.is-visible{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+        .shipper-assignment-card{overflow:hidden;border:1px solid rgba(21,154,103,.22);border-radius:26px;background:linear-gradient(180deg,#ffffff 0%,#f3fbf7 100%);box-shadow:0 24px 54px rgba(14,55,43,.28)}
+        .shipper-assignment-top{display:grid;grid-template-columns:50px minmax(0,1fr) 58px;gap:12px;align-items:center;padding:14px 14px 12px}
+        .shipper-assignment-icon{width:50px;height:50px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#17b982,var(--ship-green-dark));color:#fff;box-shadow:0 12px 26px rgba(21,154,103,.3)}
+        .shipper-assignment-copy{min-width:0}.shipper-assignment-kicker{display:block;color:var(--ship-green-dark);font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}.shipper-assignment-title{margin-top:3px;color:var(--ship-ink);font-size:15px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.shipper-assignment-meta{margin-top:3px;color:var(--ship-muted);font-size:11px;font-weight:750}
+        .shipper-assignment-address{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;align-items:start;margin:0 14px 10px;padding:10px 11px;border:1px solid #d9eee6;border-radius:14px;background:#f7fbfa;color:var(--ship-muted);font-size:10px;line-height:1.4}
+        .shipper-assignment-address>i{margin-top:2px;color:var(--ship-green-dark);text-align:center}
+        .shipper-assignment-address strong{display:block;margin-bottom:2px;color:var(--ship-ink);font-size:11px;font-weight:900}
+        .shipper-assignment-address small{display:block;margin-top:3px;color:#7a8c86;font-size:9px}
+        .shipper-assignment-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:0 14px 12px}
+        .shipper-assignment-detail{min-width:0;padding:9px 8px;border:1px solid #d9eee6;border-radius:13px;background:#f7fcfa;color:var(--ship-muted);font-size:9px;line-height:1.3;text-align:left}
+        .shipper-assignment-detail i{display:inline-block;width:16px;color:var(--ship-green-dark);text-align:center}
+        .shipper-assignment-detail strong{display:block;margin-top:3px;color:var(--ship-ink);font-size:12px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .shipper-assignment-start{position:relative;width:calc(100% - 28px);min-height:56px;margin:0 14px 14px;border:0;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--ship-green),#17b982);color:#fff;font-size:13px;font-weight:950;overflow:hidden;box-shadow:0 10px 20px rgba(21,154,103,.2)}
+        .shipper-assignment-start::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.24),transparent);transform:translateX(-120%);animation:assignmentShine 1.5s ease-in-out infinite}
+        .shipper-assignment-start::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.24),transparent);transform:translateX(-120%);animation:assignmentShine 1.15s ease-in-out infinite;z-index:1}
+        .shipper-assignment-start>span,.shipper-assignment-start>i{position:relative;z-index:2}.shipper-assignment-start:active{filter:brightness(.96)}
+        @media(max-width:360px){.shipper-assignment-details{gap:5px;margin-left:10px;margin-right:10px}.shipper-assignment-address{margin-left:10px;margin-right:10px}.shipper-assignment-detail{padding-left:6px;padding-right:6px}.shipper-assignment-detail strong{font-size:11px}}
+        @keyframes assignmentShine{to{transform:translateX(120%)}}
+
         /* Profile cũ vẫn thuần mobile. */
         .profile-page .page-header{margin-bottom:12px!important}.profile-page .page-header .back-btn{display:none!important}.profile-page .profile-main-card,.profile-page .info-card,.profile-page .form-card{border-radius:20px!important}.profile-page .profile-cover{height:72px!important}.profile-page .shipper-avatar,.profile-page .avatar-default{width:88px!important;height:88px!important}.profile-page .profile-content{margin-top:-42px!important}.profile-page .form-body{padding:16px 16px 112px!important}.profile-page .form-footer{padding:12px 14px calc(12px + env(safe-area-inset-bottom))!important;position:sticky;bottom:74px;background:rgba(255,255,255,.97);backdrop-filter:blur(14px);z-index:8;box-shadow:0 -10px 24px rgba(18,52,42,.08)}
 
@@ -295,16 +316,225 @@
     </div>
 </div>
 
+@php
+    $shipperRouteOrder = request()->route('order') ?? request()->route('id') ?? request()->query('id');
+    $shipperRouteOrderId = is_object($shipperRouteOrder)
+        ? (int) ($shipperRouteOrder->id ?? 0)
+        : (is_numeric($shipperRouteOrder) ? (int) $shipperRouteOrder : 0);
+@endphp
+@if(\App\Support\RealtimeOrderNotifier::isConfigured() && $shipperLayoutUser?->isShipper())
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.Echo || window.__chillShipperOrderRealtimeBooted) return;
+    window.__chillShipperOrderRealtimeBooted = true;
+
+    const channel = window.Echo.private('shipper-orders.' + @json((int) $shipperLayoutUser->id));
+    const isOrderListWorkspace = @json(request()->routeIs('shipper.dashboard') || (request()->routeIs('shipper.orders*') && !request()->routeIs('shipper.orders.show')));
+    const isOrderWorkspace = @json(request()->routeIs('shipper.orders.show') || request()->routeIs('shipper.map*'));
+    const currentOrderId = Number(@json($shipperRouteOrderId));
+    const terminalStatuses = new Set(['delivered', 'completed', 'cancelled']);
+    const activeStatuses = new Set(['confirmed', 'preparing', 'ready_for_delivery', 'shipper_picked_up', 'delivering']);
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    })[char]);
+    const cleanTel = value => String(value || '').replace(/[^0-9+]/g, '');
+    const badgeTone = status => {
+        if (['confirmed', 'preparing'].includes(status)) return 'info';
+        if (['ready_for_delivery', 'shipper_picked_up', 'delivering'].includes(status)) return 'warn';
+        if (status === 'cancelled') return 'danger';
+        if (['delivered', 'completed'].includes(status)) return 'success';
+        return '';
+    };
+    const showToast = (message, type = 'info') => {
+        if (typeof window.showRealtimeToast === 'function') {
+            window.showRealtimeToast(message, type);
+            return;
+        }
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-primary shadow-sm mb-0';
+        alert.style.cssText = 'position:fixed;top:76px;left:50%;transform:translateX(-50%);z-index:2400;width:min(calc(100vw - 24px),420px);border-radius:16px;font-size:12px;';
+        alert.textContent = message;
+        document.body.appendChild(alert);
+        window.setTimeout(() => alert.remove(), 4200);
+    };
+    const orderCardHtml = order => {
+        const status = String(order.status || '');
+        const tone = badgeTone(status);
+        const phone = order.customer_phone || '';
+        const tel = cleanTel(phone);
+        return `
+            <article class="ship-order-card is-new" data-shipper-order="${escapeHtml(order.id)}">
+                <div class="ship-order-top">
+                    <div>
+                        <div class="ship-order-code">${escapeHtml(order.code || ('Đơn #' + order.id))}</div>
+                        <div class="ship-order-time">Vừa cập nhật</div>
+                    </div>
+                    <span class="ship-badge ${tone}" data-shipper-order-status>${escapeHtml(order.status_label || status || 'Mới giao')}</span>
+                </div>
+                <div class="ship-order-customer">
+                    <span class="mini-avatar"><i class="fa-solid fa-user"></i></span>
+                    <div class="min-w-0 flex-grow-1">
+                        <b>${escapeHtml(order.customer_name || 'Khách hàng')}</b>
+                        <span>${escapeHtml(phone || 'Chưa có số điện thoại')}</span>
+                    </div>
+                    ${tel ? `<a href="tel:${escapeHtml(tel)}" class="btn btn-light btn-sm" aria-label="Gọi khách"><i class="fa-solid fa-phone"></i></a>` : ''}
+                </div>
+                <div class="ship-address"><i class="fa-solid fa-location-dot"></i><span>${escapeHtml(order.shipping_address || '')}</span></div>
+                <div class="ship-order-actions">
+                    <a href="${escapeHtml(order.show_url || '#')}" class="btn btn-outline-secondary"><i class="fa-solid fa-receipt me-1"></i>Chi tiết</a>
+                    <a href="${escapeHtml(order.map_url || order.show_url || '#')}" class="btn btn-success"><i class="fa-solid fa-location-arrow me-1"></i>Dẫn đường</a>
+                </div>
+            </article>
+        `;
+    };
+    const upsertOrderCard = order => {
+        if (!isOrderListWorkspace || !order?.id) return;
+        const list = document.querySelector('.ship-order-list');
+        if (!list) return;
+        const existingEmpty = list.querySelector('.ship-empty');
+        const existingCard = list.querySelector(`[data-shipper-order="${order.id}"]`);
+        if (terminalStatuses.has(String(order.status || ''))) {
+            existingCard?.remove();
+            return;
+        }
+        if (existingCard) return;
+        existingEmpty?.remove();
+        list.insertAdjacentHTML('afterbegin', orderCardHtml(order));
+    };
+
+    channel.listen('.order.status.updated', payload => {
+        const orderId = Number(payload?.order_id || 0);
+        const status = String(payload?.status || '');
+        if (!orderId || !status) return;
+
+        const shipperOrder = payload.shipper_order || {
+            id: orderId,
+            code: payload.order_code,
+            status,
+            status_label: payload.status_label,
+            show_url: payload.show_url,
+            map_url: payload.map_url,
+        };
+        upsertOrderCard(shipperOrder);
+
+        const cards = Array.from(document.querySelectorAll(`[data-shipper-order="${orderId}"]`));
+        cards.forEach(card => {
+            if (terminalStatuses.has(status)) {
+                card.remove();
+                return;
+            }
+            const badge = card.querySelector('[data-shipper-order-status]');
+            if (!badge) return;
+            badge.classList.remove('info', 'warn', 'danger', 'success');
+            const tone = badgeTone(status);
+            if (tone) badge.classList.add(tone);
+            badge.textContent = payload.status_label || status;
+            card.querySelector('.ship-order-time')?.replaceChildren(document.createTextNode('Vừa cập nhật'));
+        });
+
+        document.dispatchEvent(new CustomEvent('shipper:order-status-updated', {detail: payload}));
+
+        if (status === 'ready_for_delivery' && payload.shipper_order && typeof window.ChillShipperAssignmentPrompt === 'function') {
+            window.ChillShipperAssignmentBellLoop?.(payload.shipper_order.assignment_key || payload.order_id);
+            window.ChillShipperAssignmentPrompt(payload.shipper_order);
+        }
+
+        if (status === 'ready_for_delivery') {
+            showToast(`Đơn ${payload.order_code || orderId} đã sẵn sàng giao.`, 'success');
+        } else if (isOrderWorkspace && currentOrderId === orderId) {
+            showToast(`Đơn ${payload.order_code || orderId} đã chuyển sang: ${payload.status_label || status}.`, 'info');
+        }
+    });
+});
+</script>
+@endif
+
 <script>
 (() => {
     const pulseUrl = @json(route('shipper.assignments.pulse'));
-    const storageKey = 'chilldrink_shipper_last_assignment_notice';
-    const initializedKey = 'chilldrink_shipper_assignment_pulse_initialized';
-    const assignmentTsKey = 'chilldrink_shipper_last_assignment_ts';
     const pendingSoundKey = 'chilldrink_shipper_pending_assignment_sound';
+    const startedAssignmentKey = 'chilldrink_shipper_started_assignment';
+    const assignmentBellIntervalMs = 5000;
     let audioContext = null;
     let lastPendingSoundAttemptAt = 0;
+    let assignmentBellTimer = null;
+    let activeAssignmentKey = '';
     if (!pulseUrl) return;
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        })[char]);
+    }
+
+    function navigateToAssignment(url) {
+        if (!url) return;
+        window.location.href = new URL(url, window.location.origin).href;
+    }
+
+    function showAssignmentStart(order) {
+        const targetUrl = order.map_url || order.show_url;
+        if (!targetUrl) return;
+
+        const target = new URL(targetUrl, location.origin);
+        if (location.pathname === target.pathname && location.search === target.search) return;
+
+        const orderKey = String(order.assignment_key || order.id);
+        if (activeAssignmentKey === orderKey) return;
+        activeAssignmentKey = orderKey;
+        let panel = document.getElementById('shipperAssignmentForce');
+        if (!panel) {
+            panel = document.createElement('section');
+            panel.id = 'shipperAssignmentForce';
+            panel.className = 'shipper-assignment-force';
+            panel.setAttribute('aria-live', 'assertive');
+            document.body.appendChild(panel);
+        }
+
+        panel.innerHTML = `
+            <div class="shipper-assignment-card">
+                <div class="shipper-assignment-top">
+                    <div class="shipper-assignment-icon"><i class="fa-solid fa-route"></i></div>
+                    <div class="shipper-assignment-copy">
+                        <span class="shipper-assignment-kicker">Đơn đã được nhận</span>
+                        <div class="shipper-assignment-title">${escapeHtml(order.code || ('Đơn #' + order.id))}</div>
+                        <div class="shipper-assignment-meta">${escapeHtml(order.status_label || 'Mở dẫn đường để xử lý')}</div>
+                    </div>
+                </div>
+                <div class="shipper-assignment-address"><i class="fa-solid fa-location-dot"></i><span><strong>${escapeHtml(order.details?.customer_name || 'Khách hàng')}</strong>${escapeHtml(order.details?.shipping_address || 'Địa chỉ giao hàng đang cập nhật')}<small>${escapeHtml(order.details?.customer_phone || 'Chưa có số điện thoại')}</small></span></div>
+                <div class="shipper-assignment-details">
+                    <div class="shipper-assignment-detail"><i class="fa-solid fa-location-dot"></i>Khoảng cách<strong>${escapeHtml(Number.isFinite(Number(order.distance_km ?? order.details?.distance_km)) ? `${order.distance_km ?? order.details?.distance_km} km` : 'Đang tính')}</strong></div>
+                    <div class="shipper-assignment-detail"><i class="fa-solid fa-layer-group"></i>Quy mô đơn<strong>${escapeHtml(order.details?.bundle_order_count > 1 ? `Ghép ${order.details.bundle_order_count} đơn` : 'Đơn lẻ')}</strong></div>
+                    <div class="shipper-assignment-detail"><i class="fa-solid fa-mug-hot"></i>Số lượng<strong>${escapeHtml(order.details?.bundle_total_cups || order.details?.total_cups || 0)} cốc · ${escapeHtml(order.details?.item_lines || 0)} món</strong></div>
+                    <div class="shipper-assignment-detail"><i class="fa-solid fa-money-bill-wave"></i>Tổng tiền<strong>${escapeHtml(order.details?.total_formatted || 'Xem chi tiết')}</strong></div>
+                </div>
+                <button type="button" class="shipper-assignment-start" data-assignment-start style="--assignment-progress:100%">
+                    <i class="fa-solid fa-location-arrow"></i>
+                    <span>Bắt đầu</span>
+                </button>
+            </div>
+        `;
+
+        const startButton = panel.querySelector('[data-assignment-start]');
+        startButton?.addEventListener('click', () => {
+            stopAssignmentBellLoop();
+            sessionStorage.setItem(startedAssignmentKey, orderKey);
+            panel.remove();
+            activeAssignmentKey = '';
+            navigateToAssignment(target.href);
+        });
+
+        requestAnimationFrame(() => panel.classList.add('is-visible'));
+    }
+    window.ChillShipperAssignmentPrompt = showAssignmentStart;
 
     function getAudioContext() {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -323,53 +553,56 @@
             return false;
         }
 
-        const compressor = context.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-22, context.currentTime);
-        compressor.knee.setValueAtTime(18, context.currentTime);
-        compressor.ratio.setValueAtTime(8, context.currentTime);
-        compressor.attack.setValueAtTime(0.004, context.currentTime);
-        compressor.release.setValueAtTime(0.18, context.currentTime);
-        compressor.connect(context.destination);
-
-        const playBell = (start, frequency) => {
+        const masterGain = context.createGain();
+        masterGain.gain.setValueAtTime(0.16, context.currentTime);
+        masterGain.connect(context.destination);
+        const playNote = (start, frequency) => {
             const oscillator = context.createOscillator();
             const gain = context.createGain();
-            oscillator.type = 'square';
+            oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(frequency, start);
-            oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.18, start + 0.12);
             gain.gain.setValueAtTime(0.001, start);
-            gain.gain.exponentialRampToValueAtTime(1.0, start + 0.014);
-            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.42);
+            gain.gain.exponentialRampToValueAtTime(0.42, start + 0.025);
+            gain.gain.exponentialRampToValueAtTime(0.001, start + 0.24);
             oscillator.connect(gain);
-            gain.connect(compressor);
+            gain.connect(masterGain);
             oscillator.start(start);
-            oscillator.stop(start + 0.44);
+            oscillator.stop(start + 0.26);
         };
 
         const now = context.currentTime + 0.03;
-        [
-            1046.5, 1318.5, 1568.0, 1318.5,
-            1046.5, 1568.0, 1760.0, 1568.0,
-            1318.5, 1046.5
-        ].forEach((frequency, index) => {
-            playBell(now + index * 0.32, frequency);
-        });
+        playNote(now, 880);
+        playNote(now + 0.16, 1174.66);
 
         return true;
     }
 
-    async function announceNewOrder(orderId = '', keepPending = false) {
+    async function announceNewOrder(orderId = '') {
         if (navigator.vibrate) navigator.vibrate([180, 90, 180, 90, 180, 120, 220]);
 
         try {
             if (orderId) sessionStorage.setItem(pendingSoundKey, orderId);
             const played = await playAssignmentBell();
-            if (played && !keepPending) sessionStorage.removeItem(pendingSoundKey);
+            if (played) sessionStorage.removeItem(pendingSoundKey);
             return played;
         } catch (_) {
             return false;
         }
     }
+
+    function stopAssignmentBellLoop() {
+        if (assignmentBellTimer) window.clearInterval(assignmentBellTimer);
+        assignmentBellTimer = null;
+    }
+
+    function startAssignmentBellLoop(orderId) {
+        stopAssignmentBellLoop();
+        if (!orderId) return;
+        const ring = () => announceNewOrder(orderId);
+        ring();
+        assignmentBellTimer = window.setInterval(ring, assignmentBellIntervalMs);
+    }
+    window.ChillShipperAssignmentBellLoop = startAssignmentBellLoop;
 
     async function unlockAudioAndReplayPending() {
         const pendingOrderId = sessionStorage.getItem(pendingSoundKey);
@@ -381,68 +614,50 @@
     }
     window.addEventListener('pointerdown', unlockAudioAndReplayPending, {passive:true});
     window.addEventListener('keydown', unlockAudioAndReplayPending);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) unlockAudioAndReplayPending();
+    });
+    window.addEventListener('focus', unlockAudioAndReplayPending);
 
     async function pollAssignment() {
-        if (document.hidden) return;
         try {
             const response = await fetch(pulseUrl, {headers:{'Accept':'application/json'}, cache:'no-store'});
             if (!response.ok) return;
             const data = await response.json();
             if (!data.success) return;
             if (!data.order) {
-                sessionStorage.setItem(initializedKey, '1');
+                stopAssignmentBellLoop();
+                sessionStorage.removeItem(pendingSoundKey);
                 return;
             }
-            const legacyOrderId = String(data.order.id);
             const orderId = String(data.order.assignment_key || data.order.id);
-            const assignmentTs = Number(data.order.assignment_ts || 0);
-            if ([orderId, legacyOrderId].includes(sessionStorage.getItem(pendingSoundKey))) {
-                const now = Date.now();
-                if (now - lastPendingSoundAttemptAt > 8000) {
-                    lastPendingSoundAttemptAt = now;
-                    announceNewOrder(orderId);
-                }
-            }
-            if ([orderId, legacyOrderId].includes(sessionStorage.getItem(storageKey))) return;
-
-            if (!sessionStorage.getItem(initializedKey)) {
-                sessionStorage.setItem(initializedKey, '1');
-                sessionStorage.setItem(storageKey, orderId);
-                if (assignmentTs) sessionStorage.setItem(assignmentTsKey, String(assignmentTs));
+            if (sessionStorage.getItem(startedAssignmentKey) === orderId) {
+                stopAssignmentBellLoop();
                 return;
             }
 
-            const lastAssignmentTs = Number(sessionStorage.getItem(assignmentTsKey) || 0);
-            if (assignmentTs && lastAssignmentTs && assignmentTs < lastAssignmentTs) {
-                sessionStorage.setItem(storageKey, orderId);
-                return;
-            }
-
-            sessionStorage.setItem(storageKey, orderId);
-            if (assignmentTs) sessionStorage.setItem(assignmentTsKey, String(assignmentTs));
-            const targetUrl = data.order.map_url || data.order.show_url;
-            let willRedirect = false;
-            if (targetUrl) {
-                const target = new URL(targetUrl, location.origin);
-                willRedirect = location.pathname !== target.pathname || location.search !== target.search;
-                announceNewOrder(orderId, willRedirect);
-                if (willRedirect) setTimeout(() => { location.href = target.href; }, 1200);
-            } else {
-                announceNewOrder(orderId);
+            if (activeAssignmentKey !== orderId) {
+                startAssignmentBellLoop(orderId);
+                showAssignmentStart(data.order);
+            } else if (!assignmentBellTimer) {
+                startAssignmentBellLoop(orderId);
             }
         } catch (_) {}
     }
 
     pollAssignment();
     unlockAudioAndReplayPending();
-    setInterval(pollAssignment, 4000);
+    setInterval(pollAssignment, assignmentBellIntervalMs);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) pollAssignment(); });
 })();
 </script>
 <script>
 (() => {
-    const sliders = document.querySelectorAll('[data-swipe-submit]');
-    sliders.forEach(slider => {
+    const initSwipeSubmit = (root = document) => {
+        const sliders = root.querySelectorAll ? root.querySelectorAll('[data-swipe-submit]') : [];
+        sliders.forEach(slider => {
+        if (slider.dataset.swipeReady === '1') return;
+        slider.dataset.swipeReady = '1';
         const knob = slider.querySelector('[data-swipe-knob]');
         const fill = slider.querySelector('[data-swipe-fill]');
         const label = slider.querySelector('[data-swipe-label]');
@@ -520,8 +735,25 @@
         slider.addEventListener('pointercancel', reset);
         slider.addEventListener('lostpointercapture', () => { if (dragging) reset(); });
     });
+    };
+
+    window.ChillDrinkInitSwipeSubmit = initSwipeSubmit;
+    initSwipeSubmit();
+    new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (!(node instanceof Element)) return;
+                if (node.matches?.('[data-swipe-submit]')) {
+                    initSwipeSubmit({querySelectorAll: selector => selector === '[data-swipe-submit]' ? [node] : []});
+                } else {
+                    initSwipeSubmit(node);
+                }
+            });
+        });
+    }).observe(document.body, {childList:true, subtree:true});
 })();
 </script>
+@include('partials.instant-actions')
 @stack('scripts')
 </body>
 </html>

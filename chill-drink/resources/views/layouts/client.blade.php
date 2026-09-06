@@ -108,6 +108,7 @@
         }
 
         .modal-dialog {
+            width: min(var(--bs-modal-width, 500px), calc(100vw - 1.5rem));
             max-width: calc(100vw - 1.5rem);
         }
 
@@ -2731,6 +2732,7 @@
     </script>
     @include('partials.realtime')
     @include('partials.client-notifications')
+    @include('partials.instant-actions')
     @stack('scripts')
 </body>
 

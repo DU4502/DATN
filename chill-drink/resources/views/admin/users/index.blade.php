@@ -90,7 +90,7 @@
                         $avatarUrl = $avatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null;
                         $roleName = $roleOptions[(int) $user->role_id] ?? ($user->isCskh() ? 'Vai trò legacy' : 'Không rõ');
                     @endphp
-                    <tr>
+                    <tr data-instant-row>
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <span class="admin-avatar" style="width:48px;height:48px;" aria-label="Avatar {{ $user->name }}">
@@ -115,9 +115,9 @@
                         </td>
                         <td>
                             @if($user->is_active)
-                                <span class="badge badge-soft-primary">Hoạt động</span>
+                                <span class="badge badge-soft-primary" data-instant-status-badge>Hoạt động</span>
                             @else
-                                <span class="badge badge-soft-danger">Đã khóa</span>
+                                <span class="badge badge-soft-danger" data-instant-status-badge>Đã khóa</span>
                             @endif
                         </td>
                         <td class="text-secondary">{{ optional($user->created_at)->format('d/m/Y') ?: '-' }}</td>
@@ -127,11 +127,24 @@
                                 <i class="bi bi-pencil"></i>
                             </button>
                             @if($user->id !== auth()->id())
-                                <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ $user->is_active ? 'Khóa tài khoản này?' : 'Mở khóa tài khoản này?' }}');">
+                                <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="d-inline"
+                                      data-instant-form
+                                      data-instant-toggle-status
+                                      data-confirm="{{ $user->is_active ? 'Khóa tài khoản này?' : 'Mở khóa tài khoản này?' }}"
+                                      data-active-confirm="Khóa tài khoản này?"
+                                      data-inactive-confirm="Mở khóa tài khoản này?"
+                                      data-active-label="Hoạt động"
+                                      data-inactive-label="Đã khóa"
+                                      data-active-badge-class="badge badge-soft-primary"
+                                      data-inactive-badge-class="badge badge-soft-danger"
+                                      data-active-title="Khóa tài khoản"
+                                      data-inactive-title="Mở khóa tài khoản"
+                                      data-active-icon="bi bi-lock"
+                                      data-inactive-icon="bi bi-unlock">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="admin-action" title="{{ $user->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}" style="color: {{ $user->is_active ? 'var(--a-danger)' : 'var(--a-primary)' }};">
-                                        <i class="bi {{ $user->is_active ? 'bi-lock' : 'bi-unlock' }}"></i>
+                                    <button type="submit" class="admin-action" title="{{ $user->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}" style="color: {{ $user->is_active ? 'var(--a-danger)' : 'var(--a-primary)' }};" data-instant-submit>
+                                        <i class="bi {{ $user->is_active ? 'bi-lock' : 'bi-unlock' }}" data-instant-status-icon></i>
                                     </button>
                                 </form>
                             @endif

@@ -10,6 +10,7 @@ use App\Support\OrderStatus;
 use App\Support\RealtimeOrderNotifier;
 use App\Support\ScheduledDelivery;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -90,6 +91,90 @@ class StaffOrderController extends Controller
         return view('staff.orders.index', compact('orders', 'filters', 'statusOptions'));
     }
 
+    public function pendingAlerts(): JsonResponse
+    {
+        $user = auth()->user();
+        abort_unless($user?->isStaffOnly() && is_numeric($user->branch_id), 403);
+
+        $baseQuery = Order::query()
+            ->where('branch_id', (int) $user->branch_id)
+            ->where('status', OrderStatus::PENDING)
+            ->where('status', '!=', OrderStatus::AWAITING_EMAIL_CONFIRMATION);
+
+        $orders = (clone $baseQuery)
+            ->with([
+                'user',
+                'branch',
+                'address',
+                'orderItems.product',
+                'orderItems.productSize.size',
+                'orderItems.toppingLines.topping',
+            ])
+            ->oldest('created_at')
+            ->limit(6)
+            ->get()
+            ->map(fn (Order $order) => $this->pendingAlertPayload($order))
+            ->values();
+
+        return response()->json([
+            'orders' => $orders,
+            'pending_count' => (int) $baseQuery->count(),
+            'generated_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    private function pendingAlertPayload(Order $order): array
+    {
+        $currentStatus = OrderStatus::normalize((string) $order->status);
+        $canConfirm = $currentStatus === OrderStatus::PENDING
+            && ! ($order->payment_method === 'vnpay' && $order->payment_status !== 'paid');
+
+        return [
+            'order_id' => (int) $order->id,
+            'order_code' => $order->displayCode(),
+            'branch_id' => is_numeric($order->branch_id) ? (int) $order->branch_id : null,
+            'branch_name' => $order->branch?->name ?? 'Chưa gán',
+            'customer_name' => $order->customerName() ?: 'Khách hàng',
+            'customer_email' => $order->customerEmail() ?: '',
+            'customer_phone' => $order->customerPhone() ?: '',
+            'payment_method' => $order->payment_method,
+            'payment_method_label' => match ($order->payment_method) {
+                'cod' => 'COD',
+                'bank_transfer' => 'Chuyển khoản',
+                'vnpay' => 'VNPay',
+                'momo' => 'MoMo',
+                'card' => 'Thẻ',
+                'wallet' => 'Ví điện tử',
+                default => ucfirst((string) $order->payment_method),
+            },
+            'payment_status' => $order->payment_status,
+            'payment_status_label' => match ($order->payment_status) {
+                'pending' => 'Chưa thanh toán',
+                'paid' => 'Đã thanh toán',
+                'failed' => 'Thất bại',
+                default => ucfirst((string) $order->payment_status),
+            },
+            'total_formatted' => number_format((int) ($order->total ?? $order->total_price ?? 0), 0, ',', '.').'đ',
+            'shipping_address' => $order->getShippingAddress(),
+            'note' => $order->note ?: $order->delivery_note,
+            'created_at' => $order->created_at?->format('d/m/Y H:i'),
+            'can_confirm' => $canConfirm,
+            'confirm_block_reason' => $canConfirm ? null : 'Đơn VNPay phải thanh toán thành công trước khi xác nhận.',
+            'status_update_url' => route('staff.orders.updateStatus', $order->id),
+            'url' => route('staff.orders.index', ['q' => $order->displayCode()]),
+            'items' => $order->orderItems->map(fn ($item) => [
+                'product_name' => $item->product?->name ?? 'Sản phẩm đã xóa',
+                'size_name' => $item->productSize?->size?->name ?? 'Chưa chọn',
+                'ice_level' => (int) $item->ice_level,
+                'sugar_level' => (int) $item->sugar_level,
+                'quantity' => (int) $item->quantity,
+                'item_note' => $item->item_note,
+                'toppings' => $item->toppingLines->map(fn ($line) => $line->topping?->name)->filter()->values()->all(),
+                'total_formatted' => number_format((int) $item->getSubtotal(), 0, ',', '.').'đ',
+            ])->values()->all(),
+        ];
+    }
+
     public function updateStatus(Request $request, $id)
     {
         $request->validate([
@@ -109,21 +194,42 @@ class StaffOrderController extends Controller
         $fulfillmentType = $order->fulfillment_type ?? 'delivery';
 
         if ($newStatus === OrderStatus::CANCELLED && empty($request->cancellation_reason)) {
-            return redirect()->back()->with('error', 'Vui lòng nhập lý do hủy đơn hàng.');
+            $message = 'Vui lòng nhập lý do hủy đơn hàng.';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message], 422)
+                : redirect()->back()->with('error', $message);
         }
 
         if (!OrderStatus::canStoreAdvanceTo((string) $order->status, $newStatus, $fulfillmentType)) {
-            return redirect()->back()->with('error', 'Quán chỉ được xử lý đơn giao hàng tới bước Sẵn sàng giao. Các bước sau thuộc tài xế.');
+            $message = 'Quán chỉ được xử lý đơn giao hàng tới bước Sẵn sàng giao. Các bước sau thuộc tài xế.';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message], 422)
+                : redirect()->back()->with('error', $message);
+        }
+
+        if ($newStatus === OrderStatus::CONFIRMED
+            && OrderStatus::normalize((string) $order->status) === OrderStatus::CONFIRMED) {
+            $message = 'Đơn hàng đã được nhân viên khác nhận hoặc trạng thái đã thay đổi.';
+
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message], 409)
+                : redirect()->back()->with('error', $message);
         }
 
         if ($newStatus === OrderStatus::CONFIRMED &&
             $order->payment_method === 'vnpay' &&
             $order->payment_status !== 'paid') {
-            return redirect()->back()->with('error', 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.');
+            $message = 'Đơn hàng VNPay phải được thanh toán trước khi xác nhận.';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message], 422)
+                : redirect()->back()->with('error', $message);
         }
 
         if ($newStatus === OrderStatus::PREPARING && ! ScheduledDelivery::canStartPreparation($order)) {
-            return redirect()->back()->with('error', ScheduledDelivery::preparationBlockedMessage($order));
+            $message = ScheduledDelivery::preparationBlockedMessage($order);
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message], 422)
+                : redirect()->back()->with('error', $message);
         }
 
         $oldStatus = $order->status;
@@ -135,6 +241,28 @@ class StaffOrderController extends Controller
                 $user
             );
             $order = $cancelResult['order'];
+        } elseif ($newStatus === OrderStatus::CONFIRMED) {
+            $updated = DB::transaction(function () use ($order, $newStatus, $oldStatus, $user) {
+                return Order::query()
+                    ->whereKey($order->id)
+                    ->where('status', $oldStatus)
+                    ->update([
+                        'status' => $newStatus,
+                        'status_changed_at' => now(),
+                        'status_changed_by' => $user->id,
+                        'updated_at' => now(),
+                    ]);
+            });
+
+            if ($updated !== 1) {
+                $message = 'Đơn hàng đã được nhân viên khác nhận hoặc trạng thái đã thay đổi.';
+
+                return $request->expectsJson()
+                    ? response()->json(['success' => false, 'message' => $message], 409)
+                    : redirect()->back()->with('error', $message);
+            }
+
+            $order->refresh();
         } else {
             DB::transaction(function () use ($order, $newStatus, $oldStatus, $user) {
                 $order->status            = $newStatus;
@@ -151,8 +279,8 @@ class StaffOrderController extends Controller
 
 
         $dispatchResult = null;
-        if ($newStatus === OrderStatus::CONFIRMED
-            && $oldStatus !== OrderStatus::CONFIRMED
+        if ($newStatus === OrderStatus::READY_FOR_DELIVERY
+            && OrderStatus::normalize((string) $oldStatus) !== OrderStatus::READY_FOR_DELIVERY
             && ($order->fulfillment_type ?? 'delivery') === 'delivery') {
             $dispatchResult = app(ShipperDispatchService::class)
                 ->dispatchConfirmedOrder($order->fresh(['branch']));
@@ -190,6 +318,37 @@ class StaffOrderController extends Controller
             $message .= ' Chưa có shipper rảnh phù hợp, đơn đang chờ hệ thống điều phối.';
         } elseif (($dispatchResult['status'] ?? null) === 'error') {
             $message .= ' Điều phối shipper chưa thành công, vui lòng kiểm tra lại.';
+        }
+
+        if ($request->expectsJson()) {
+            $freshOrder = $order->fresh();
+            $freshStatus = OrderStatus::normalize((string) $freshOrder->status);
+            $freshFulfillmentType = $freshOrder->fulfillment_type ?? 'delivery';
+            $freshOptions = OrderStatus::storeStepwiseOptions($freshStatus, $freshFulfillmentType);
+
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => [
+                    'id' => (int) $freshOrder->id,
+                    'order_id' => (int) $freshOrder->id,
+                    'order_code' => $freshOrder->displayCode(),
+                    'customer_name' => $freshOrder->customerName() ?: 'Khách hàng',
+                    'created_at' => $freshOrder->created_at?->format('H:i · d/m/Y'),
+                    'fulfillment_type' => $freshFulfillmentType,
+                    'total_formatted' => number_format((int) ($freshOrder->total ?? $freshOrder->total_price ?? 0), 0, ',', '.').'đ',
+                    'status' => $freshStatus,
+                    'status_label' => OrderStatus::label($freshStatus),
+                    'status_class' => 'status-text-'.$freshStatus,
+                    'status_options' => $freshOptions,
+                    'next_status' => OrderStatus::storeNextStatus($freshStatus, $freshFulfillmentType),
+                    'status_update_url' => route('staff.orders.updateStatus', $freshOrder->id),
+                    'can_update' => count($freshOptions) > 1,
+                    'updated_at' => $freshOrder->updated_at?->toIso8601String(),
+                    'status_changed_at' => $freshOrder->status_changed_at?->format('d/m H:i'),
+                    'status_changed_by_name' => $user->name,
+                ],
+            ]);
         }
 
         return redirect()->back()->with('success', $message);

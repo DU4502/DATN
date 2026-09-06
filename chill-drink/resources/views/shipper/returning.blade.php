@@ -212,12 +212,15 @@
             if (data.return_state?.arrived) {
                 stageEl.textContent = data.return_state.message;
                 metaEl.textContent = data.new_assignment
-                    ? 'Vừa có nhiệm vụ mới. Đang mở đơn được hệ thống điều phối...'
+                    ? 'Vừa có nhiệm vụ mới. Bấm Bắt đầu hoặc chờ đếm ngược để mở dẫn đường.'
                     : 'Đã về home branch.';
                 distanceEl.textContent = '0 m';
                 etaEl.textContent = 'Đã tới';
-                const nextUrl = data.new_assignment?.show_url || @json(route('shipper.dashboard'));
-                setTimeout(() => location.href = nextUrl, 900);
+                if (data.new_assignment && typeof window.ChillShipperAssignmentPrompt === 'function') {
+                    window.ChillShipperAssignmentPrompt(data.new_assignment);
+                } else {
+                    setTimeout(() => location.href = @json(route('shipper.dashboard')), 900);
+                }
                 return;
             }
             if (data.return_state?.message) metaEl.textContent = data.return_state.message;

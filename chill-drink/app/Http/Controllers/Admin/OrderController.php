@@ -632,8 +632,8 @@ class OrderController extends Controller
                 });
             }
 
-            if ($newStatus === OrderStatus::CONFIRMED
-                && $oldStatus !== OrderStatus::CONFIRMED
+            if ($newStatus === OrderStatus::READY_FOR_DELIVERY
+                && $oldStatus !== OrderStatus::READY_FOR_DELIVERY
                 && ($order->fulfillment_type ?? 'delivery') === 'delivery') {
                 $dispatchResult = app(ShipperDispatchService::class)
                     ->dispatchConfirmedOrder($order->fresh(['branch']));

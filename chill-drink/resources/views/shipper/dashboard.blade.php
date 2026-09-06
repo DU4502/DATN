@@ -31,13 +31,29 @@
         <p>{{ $homeBranchName }} · {{ now()->format('d/m/Y') }}</p>
     </div>
     <div class="text-end">
-        <span class="ship-status-pill {{ $statusClass }}"><span class="ship-status-dot"></span>{{ $statusLabel }}</span>
+        <span class="ship-status-pill {{ $statusClass }}" data-instant-status-badge><span class="ship-status-dot"></span>{{ $statusLabel }}</span>
         @if(!$returnPlan && in_array($shipperInfo->status, ['online', 'offline'], true))
-            <form action="{{ route('shipper.status.update') }}" method="POST" class="mt-2">
+            <form action="{{ route('shipper.status.update') }}" method="POST" class="mt-2"
+                  data-instant-form
+                  data-instant-toggle-status
+                  data-active-label="Sẵn sàng"
+                  data-inactive-label="Offline"
+                  data-active-badge-class="ship-status-pill"
+                  data-inactive-badge-class="ship-status-pill offline"
+                  data-active-button-class="btn btn-sm btn-outline-secondary"
+                  data-inactive-button-class="btn btn-sm btn-success"
+                  data-active-title="Ngừng nhận đơn"
+                  data-inactive-title="Bắt đầu nhận đơn"
+                  data-active-button-label="Ngừng nhận đơn"
+                  data-inactive-button-label="Bắt đầu nhận đơn"
+                  data-active-icon="fa-solid fa-circle-pause me-1"
+                  data-inactive-icon="fa-solid fa-play me-1"
+                  data-next-active-value="online"
+                  data-next-inactive-value="offline">
                 @csrf
                 <input type="hidden" name="status" value="{{ $shipperInfo->status === 'online' ? 'offline' : 'online' }}">
-                <button type="submit" class="btn btn-sm {{ $shipperInfo->status === 'online' ? 'btn-outline-secondary' : 'btn-success' }}">
-                    <i class="fa-solid {{ $shipperInfo->status === 'online' ? 'fa-circle-pause' : 'fa-play' }} me-1"></i>
+                <button type="submit" class="btn btn-sm {{ $shipperInfo->status === 'online' ? 'btn-outline-secondary' : 'btn-success' }}" title="{{ $shipperInfo->status === 'online' ? 'Ngừng nhận đơn' : 'Bắt đầu nhận đơn' }}" data-instant-submit>
+                    <i class="fa-solid {{ $shipperInfo->status === 'online' ? 'fa-circle-pause' : 'fa-play' }} me-1" data-instant-status-icon></i>
                     {{ $shipperInfo->status === 'online' ? 'Ngừng nhận đơn' : 'Bắt đầu nhận đơn' }}
                 </button>
             </form>
@@ -116,13 +132,13 @@
             };
             $phone = $order->customerPhone();
         @endphp
-        <article class="ship-order-card {{ $isNew ? 'is-new' : '' }}">
+        <article class="ship-order-card {{ $isNew ? 'is-new' : '' }}" data-shipper-order="{{ $order->id }}">
             <div class="ship-order-top">
                 <div>
                     <div class="ship-order-code">{{ $order->displayCode() }}</div>
                     <div class="ship-order-time">Cập nhật {{ $order->updated_at?->diffForHumans() }}</div>
                 </div>
-                <span class="ship-badge {{ $badgeClass }}">{{ $isNew ? 'Mới giao' : $label }}</span>
+                <span class="ship-badge {{ $badgeClass }}" data-shipper-order-status>{{ $isNew ? 'Mới giao' : $label }}</span>
             </div>
 
             <div class="ship-order-customer">

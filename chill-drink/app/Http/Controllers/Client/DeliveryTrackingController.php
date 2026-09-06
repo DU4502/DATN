@@ -659,21 +659,23 @@ class DeliveryTrackingController extends Controller
                 'stage' => 'Đơn đang chờ quán xác nhận',
                 'message' => 'Quán đang xem và xác nhận đơn hàng của bạn.',
             ],
-            in_array($status, [OrderStatus::CONFIRMED, OrderStatus::PREPARING, OrderStatus::READY_FOR_DELIVERY], true) && ! $hasShipper => [
+            in_array($status, [OrderStatus::CONFIRMED, OrderStatus::PREPARING], true) && ! $hasShipper => [
+                'state' => 'pending_confirmation',
+                'label' => OrderStatus::label($status),
+                'stage' => 'Quán đang chuẩn bị đơn',
+                'message' => 'Tài xế sẽ được gán khi quán chuyển đơn sang Sẵn sàng giao.',
+            ],
+            $status === OrderStatus::READY_FOR_DELIVERY && ! $hasShipper => [
                 'state' => 'finding_shipper',
                 'label' => 'Đang tìm tài xế',
-                'stage' => 'Quán đã xác nhận, đang tìm tài xế',
-                'message' => 'Quán đã xác nhận đơn. Hệ thống đang tìm shipper rảnh phù hợp.',
+                'stage' => 'Đơn đã sẵn sàng, đang tìm tài xế',
+                'message' => 'Đồ uống đã sẵn sàng. Hệ thống đang tìm shipper rảnh phù hợp.',
             ],
-            in_array($status, [OrderStatus::CONFIRMED, OrderStatus::PREPARING, OrderStatus::READY_FOR_DELIVERY], true) && $shipperAccepted => [
+            $status === OrderStatus::READY_FOR_DELIVERY && $shipperAccepted => [
                 'state' => 'shipper_assigned',
                 'label' => 'Tài xế đã nhận đơn',
-                'stage' => $status === OrderStatus::READY_FOR_DELIVERY
-                    ? 'Tài xế đang tới cửa hàng'
-                    : 'Tài xế đã nhận đơn, quán đang chuẩn bị',
-                'message' => $status === OrderStatus::READY_FOR_DELIVERY
-                    ? 'Tài xế đang di chuyển tới cửa hàng để lấy đơn.'
-                    : 'Tài xế đã nhận đơn. Quán đang pha chế song song và chuẩn bị bàn giao.',
+                'stage' => 'Tài xế đang tới cửa hàng',
+                'message' => 'Tài xế đang di chuyển tới cửa hàng để lấy đơn.',
             ],
             $status === OrderStatus::SHIPPER_PICKED_UP => [
                 'state' => 'shipper_picked_up',

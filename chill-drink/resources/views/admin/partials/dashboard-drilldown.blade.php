@@ -32,8 +32,9 @@
     .dashboard-trace-overview,
     .dashboard-trace-modal [data-trace-search-form] { margin-bottom:0 !important; }
     .dashboard-trace-results { min-height:0; overflow:hidden; position:relative; }
-    .dashboard-trace-table-wrap { width:100%; height:100%; overflow-x:auto; overflow-y:hidden; }
+    .dashboard-trace-table-wrap { width:100%; height:100%; overflow:auto; }
     .dashboard-trace-table { min-width:900px; }
+    .dashboard-trace-table thead th { position:sticky; top:0; z-index:1; }
     .dashboard-trace-table th { height:34px; padding:.35rem .5rem; white-space:nowrap; font-size:.75rem; color:#64748b; }
     .dashboard-trace-table td { height:34px; max-width:190px; padding:.35rem .5rem; overflow:hidden; font-size:.82rem; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
     .dashboard-trace-table td .small { display:inline; margin-left:.35rem; }
@@ -173,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const requestParams = (page = 1) => {
         const params = new URLSearchParams();
-        const merged = {...defaults, ...active, page, per_page:6, search:modalEl.querySelector('[data-trace-search]').value.trim()};
+        const merged = {...defaults, ...active, page, per_page:20, search:modalEl.querySelector('[data-trace-search]').value.trim()};
         Object.entries(merged).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== '') params.set(key, key === 'from' || key === 'to' ? localSqlDate(value) : value);
         });

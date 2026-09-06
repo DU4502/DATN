@@ -566,10 +566,10 @@
             ...baseTileOptions,
             subdomains: 'abc',
         });
-        const fallbackTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        const fallbackTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
             ...baseTileOptions,
-            subdomains: 'abcd',
-            r: window.devicePixelRatio > 1 ? '@2x' : '',
+            subdomains: 'abc',
+            attribution: '&copy; OpenStreetMap contributors, Tiles style by HOT',
         });
 
         let tileFallbackSwapped = false;

@@ -156,7 +156,7 @@
                         <tr data-branch-row="{{ $branch['branch_id'] }}" @if($branch['rank'] === 1) style="background-color:#f0fdf4;" @endif>
                             <td style="font-weight:800; color:var(--sa-green);">{{ $branch['rank'] }}</td>
                             <td data-branch-name-cell style="min-width: 250px;">
-                                <div style="font-weight:800; color:var(--sa-ink);">{{ $branch['branch_name'] }}</div>
+                                <div data-branch-name-text style="font-weight:800; color:var(--sa-ink);">{{ $branch['branch_name'] }}</div>
                                 <div style="margin-top:0.16rem; color:var(--sa-muted); font-size:0.7rem; line-height:1.35;">
                                     @if($branch['admin_id'])
                                         {{ $branch['admin_name'] ?? 'Chưa gán admin' }}
@@ -177,7 +177,7 @@
                             </td>
                             <td @if($branch['top_product_id']) tabindex="0" role="button" data-drilldown="product_sales" data-product-id="{{ $branch['top_product_id'] }}" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" title="Nhấn để xem dữ liệu sản phẩm bán chạy" @else aria-disabled="true" title="Chi nhánh chưa có sản phẩm bán ra trong kỳ này" @endif style="font-weight:700; white-space:nowrap;">{{ number_format($branch['top_product_quantity']) }}</td>
                             <td tabindex="0" role="button" data-drilldown="cancellation_rate" data-branch-id="{{ $branch['branch_id'] }}" data-from="{{ $branchComparison['current_start'] ?? '' }}" data-to="{{ $branchComparison['current_end'] ?? '' }}" title="Nhấn để xem cách tính và các đơn đã hủy" style="font-weight:800; white-space:nowrap; color:{{ $branch['cancellation_rate'] > 0 ? '#b91c1c' : 'var(--sa-muted)' }};">{{ number_format($branch['cancellation_rate'], 1) }}%</td>
-                            <td>
+                            <td data-branch-status-cell>
                                 @if($branchStatusValue)
                                     <span class="sa-state sa-state-active" data-branch-status-badge="{{ $branch['branch_id'] }}"><i class="bi bi-check-circle"></i> Hoạt động</span>
                                 @else
@@ -186,7 +186,7 @@
                             </td>
                             <td>
                                 <div class="sa-actions">
-                                    <button class="sa-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#branchEditModal{{ $branch['branch_id'] }}" title="Sửa chi nhánh">
+                                    <button class="sa-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#branchRankingEditModal{{ $branch['branch_id'] }}" title="Sửa chi nhánh">
                                         <i class="bi bi-gear"></i>
                                     </button>
                                 </div>
@@ -207,7 +207,7 @@
             </div>
         </div>
         @foreach($branchRows as $branch)
-            <div class="modal fade" id="branchEditModal{{ $branch['branch_id'] }}" tabindex="-1" aria-labelledby="branchEditModalLabel{{ $branch['branch_id'] }}" aria-hidden="true">
+            <div class="modal fade" id="branchRankingEditModal{{ $branch['branch_id'] }}" tabindex="-1" aria-labelledby="branchRankingEditModalLabel{{ $branch['branch_id'] }}" aria-hidden="true" data-branch-edit-modal="{{ $branch['branch_id'] }}">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <form class="modal-content branch-edit-form" method="POST" action="{{ route('admin.branches.update', ['branch' => $branch['branch_id']], false) }}" data-branch-id="{{ $branch['branch_id'] }}" style="border:0;border-radius:8px;">
                         @csrf
@@ -215,7 +215,7 @@
                         <input type="hidden" name="form_type" value="branch-edit">
                         <input type="hidden" name="branch_modal_id" value="{{ $branch['branch_id'] }}">
                         <div class="modal-header">
-                            <h2 class="modal-title fs-6 fw-bold" id="branchEditModalLabel{{ $branch['branch_id'] }}">Sửa chi nhánh</h2>
+                            <h2 class="modal-title fs-6 fw-bold" id="branchRankingEditModalLabel{{ $branch['branch_id'] }}">Sửa chi nhánh</h2>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                         </div>
                         <div class="modal-body">
@@ -250,7 +250,7 @@
                                 @error('address', 'editBranch')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             @include('admin.partials.branch-map-link', [
-                                'pickerId' => 'super-admin-edit-branch-map-link-'.$branch['branch_id'],
+                                'pickerId' => 'super-admin-ranking-edit-branch-map-link-'.$branch['branch_id'],
                                 'label' => 'Link Google Maps',
                                 'hint' => 'Dán link Google Maps có chứa tọa độ để cập nhật latitude/longitude cho chi nhánh.',
                                 'addressTarget' => '#branch_address_'.$branch['branch_id'],
@@ -263,15 +263,20 @@
                             ])
                             <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
                                 <input type="hidden" name="status" value="{{ $branchStatusValue ? 1 : 0 }}" data-branch-status-input="{{ $branch['branch_id'] }}">
+                                <span class="small text-secondary">Trạng thái hiện tại:</span>
+                                <span
+                                    class="badge rounded-pill {{ $branchStatusValue ? 'text-bg-success' : 'text-bg-danger' }}"
+                                    data-branch-current-status="{{ $branch['branch_id'] }}"
+                                >{{ $branchStatusValue ? 'Hoạt động' : 'Tạm ngưng' }}</span>
                                 <button
                                     type="button"
-                                    class="btn btn-sm px-3 fw-semibold {{ $branchStatusValue ? 'btn-success' : 'btn-danger' }}"
+                                    class="btn btn-sm px-3 fw-semibold {{ $branchStatusValue ? 'btn-danger' : 'btn-success' }}"
                                     data-branch-status-toggle="{{ $branch['branch_id'] }}"
                                 >
-                                    <i class="bi bi-{{ $branchStatusValue ? 'toggle-on' : 'toggle-off' }} me-1"></i>
-                                    <span data-branch-status-label="{{ $branch['branch_id'] }}">{{ $branchStatusValue ? 'Đóng chi nhánh' : 'Mở chi nhánh' }}</span>
+                                    <i class="bi bi-{{ $branchStatusValue ? 'pause-circle' : 'play-circle' }} me-1"></i>
+                                    <span data-branch-status-label="{{ $branch['branch_id'] }}">{{ $branchStatusValue ? 'Tạm ngưng chi nhánh' : 'Mở lại chi nhánh' }}</span>
                                 </button>
-                                <small class="text-secondary">Nhấn để đổi trạng thái chi nhánh</small>
+                                <small class="text-secondary">Đóng/mở được lưu ngay. Chi nhánh cần có tọa độ Google Maps để hiện ở checkout.</small>
                             </div>
                         </div>
                         <div class="modal-footer" style="gap: 0.75rem;">

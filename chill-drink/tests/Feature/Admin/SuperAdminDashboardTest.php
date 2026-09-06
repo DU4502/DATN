@@ -179,6 +179,16 @@ class SuperAdminDashboardTest extends TestCase
             'email' => User::SUPER_ADMIN_EMAIL,
             'role_id' => 3,
         ]);
+        Branch::create([
+            'name' => 'Hải Thượng Lãn Ông',
+            'code' => 'CN1',
+            'email' => 'branch@example.com',
+            'phone' => '0383765225',
+            'address' => '02, Quảng Thắng',
+            'latitude' => 19.779164,
+            'longitude' => 105.772611,
+            'status' => true,
+        ]);
 
         $content = $this->actingAs($superAdmin)
             ->get('/admin/super-admin')
@@ -190,6 +200,13 @@ class SuperAdminDashboardTest extends TestCase
             $content
         );
         $this->assertStringContainsString("formData.set('_token', csrfToken);", $content);
+        $this->assertStringContainsString('const input = form?.querySelector(`[data-branch-status-input="${branchId}"]`);', $content);
+        $this->assertStringContainsString('data-branch-current-status', $content);
+        $this->assertStringContainsString('branchRankingEditModal', $content);
+        $this->assertStringContainsString('data-branch-edit-modal', $content);
+        $this->assertStringNotContainsString('id="branchEditModal', $content);
+        $this->assertStringNotContainsString('data-bs-target="#branchEditModal', $content);
+        $this->assertStringNotContainsString('const input = document.querySelector(`[data-branch-status-input="${branchId}"]`);', $content);
         $this->assertStringNotContainsString(
             "document.querySelectorAll('.branch-edit-form').forEach",
             $content
