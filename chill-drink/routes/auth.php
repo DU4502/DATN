@@ -3,12 +3,13 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use App\Http\Controllers\Auth\EmailVerificationCodeController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
-use App\Http\Controllers\Auth\FacebookController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\PhoneAuthController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,14 @@ Route::middleware('guest')->group(function () {
         ->name('register');
 
     Route::post('register', [RegisteredUserController::class, 'store']);
+
+    Route::post('register/email-code', [EmailVerificationCodeController::class, 'sendRegistrationCode'])
+        ->middleware('throttle:3,1')
+        ->name('register.email-code.send');
+
+    Route::post('register/email-code/verify', [EmailVerificationCodeController::class, 'verifyRegistrationCode'])
+        ->middleware('throttle:6,1')
+        ->name('register.email-code.verify');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
@@ -30,11 +39,8 @@ Route::middleware('guest')->group(function () {
     Route::get('auth/google/callback', [GoogleController::class, 'callback'])
         ->name('auth.google.callback');
 
-    Route::get('auth/facebook/redirect', [FacebookController::class, 'redirect'])
-        ->name('auth.facebook.redirect');
-
-    Route::get('auth/facebook/callback', [FacebookController::class, 'callback'])
-        ->name('auth.facebook.callback');
+    Route::post('auth/phone/verify', [PhoneAuthController::class, 'verifyPhone'])
+        ->name('auth.phone.verify');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
@@ -60,6 +66,14 @@ Route::middleware('auth')->group(function () {
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')
         ->name('verification.send');
+
+    Route::post('email/verification-code', [EmailVerificationCodeController::class, 'send'])
+        ->middleware('throttle:3,1')
+        ->name('verification.code.send');
+
+    Route::post('verify-email/code', [EmailVerificationCodeController::class, 'verify'])
+        ->middleware('throttle:6,1')
+        ->name('verification.code.verify');
 
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])
         ->name('password.confirm');

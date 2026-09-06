@@ -1,14 +1,14 @@
-@extends('layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
-@section('page-title', 'Voucher')
+@section('page-title', 'Phiếu ưu đãi')
 @section('hide-topbar-search', true)
 
 @section('content')
 <section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
     <div>
         <p class="admin-kicker mb-1">Quản lý khuyến mãi</p>
-        <h2 class="h2 fw-bold mb-1">Voucher</h2>
-        <p class="text-secondary mb-0">Quản lý mã giảm giá, mã theo rank và mã đổi điểm.</p>
+        <h2 class="h2 fw-bold mb-1">Phiếu ưu đãi</h2>
+        <p class="text-secondary mb-0">Quản lý mã giảm giá và mã đổi điểm.</p>
     </div>
     <a href="{{ route('admin.vouchers.create') }}" class="btn btn-primary align-self-start align-self-lg-auto">
         <i class="bi bi-plus-lg me-1"></i>Thêm mã
@@ -73,7 +73,6 @@
                     <th>Mô tả</th>
                     <th>Giá trị</th>
                     <th>Giảm tối đa</th>
-                    <th>Rank</th>
                     <th>Điểm đổi</th>
                     <th>Sử dụng</th>
                     <th>Trạng thái</th>
@@ -103,7 +102,6 @@
                         <td class="fw-bold">
                             {{ $voucher->max_discount ? number_format($voucher->max_discount, 0, ',', '.') . 'đ' : '-' }}
                         </td>
-                        <td><span class="badge badge-soft-muted">{{ $voucher->rankLabel() }}</span></td>
                         <td class="fw-bold">
                             {{ $voucher->point_cost > 0 ? number_format($voucher->point_cost, 0, ',', '.') . ' điểm' : '-' }}
                         </td>
@@ -133,7 +131,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="text-center text-secondary py-5">
+                        <td colspan="9" class="text-center text-secondary py-5">
                             <div class="fw-bold text-dark mb-1">Chưa có voucher phù hợp</div>
                             <div>Hãy tạo mã mới hoặc xóa bộ lọc hiện tại.</div>
                         </td>

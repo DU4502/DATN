@@ -7,7 +7,9 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\Review;
+use App\Models\Favorite;
 use App\Support\ProductCatalog;
+use App\Services\ProductAvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
@@ -19,7 +21,17 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::query()->with('category');
+        if ($request->query('from') === 'checkout') {
+            session()->put('checkout_return_active', true);
+        }
+
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
+        $query = Product::query()->with([
+            'category',
+            'sizes',
+            'toppings',
+            'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id)),
+        ]);
         $this->onlyVisibleProducts($query);
 
         $hasSkuColumn = Schema::hasColumn('products', 'sku');
@@ -50,13 +62,14 @@ class ProductController extends Controller
                 $categoryLookup->orWhere('name', $categoryValue);
             });
 
-            $category = $categoryQuery->first();
+            $category = $categoryQuery->withTrashed()->first();
 
             if ($category) {
                 $query->where('category_id', $category->id);
             } else {
                 $query->whereHas('category', function ($categoryQuery) use ($categoryValue, $hasCategorySlugColumn) {
-                    $categoryQuery->where('name', 'like', '%'.$categoryValue.'%');
+                    $categoryQuery->withTrashed()
+                        ->where('name', 'like', '%'.$categoryValue.'%');
 
                     if ($hasCategorySlugColumn) {
                         $categoryQuery->orWhere('slug', 'like', '%'.$categoryValue.'%');
@@ -89,6 +102,15 @@ class ProductController extends Controller
             });
         }
 
+        // Filter by price range
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', (int) $request->input('min_price'));
+        }
+        
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', (int) $request->input('max_price'));
+        }
+
         match ($request->input('sort')) {
             'newest' => $query->latest('id'),
             'price_asc' => $query->orderBy('price'),
@@ -97,7 +119,10 @@ class ProductController extends Controller
         };
 
         $products = $query->paginate(12)->withQueryString();
-        $categories = Category::withCount([
+        $favoriteProductIds = auth()->check()
+            ? Favorite::where('user_id', auth()->id())->pluck('product_id')
+            : collect();
+        $categories = Category::withTrashed()->withCount([
             'products' => fn ($query) => $this->onlyVisibleProducts($query),
         ])
             ->orderBy('id')
@@ -131,7 +156,33 @@ class ProductController extends Controller
             $demoProducts = collect();
         }
 
-        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts'));
+        // Get active vouchers for display on products page (admin controlled)
+        $featuredVouchers = \App\Models\Voucher::query()
+            ->where('status', true)
+            ->where('show_on_products', true) // Admin can control which vouchers to show
+            ->where(function ($query) {
+                $query->whereNull('starts_at')
+                    ->orWhere('starts_at', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>=', now());
+            })
+            ->where(function ($query) {
+                $query->where('usage_limit', '<=', 0)
+                    ->orWhereRaw('used_count < usage_limit');
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit(4)
+            ->get();
+
+        $latestProduct = Product::query()
+            ->with(['category', 'branchStatuses'])
+            ->where('status', true)
+            ->latest('id')
+            ->first();
+
+        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers', 'branch', 'latestProduct'));
     }
 
     /**
@@ -139,10 +190,24 @@ class ProductController extends Controller
      */
     public function show(Request $request, string $slug)
     {
+        $branch = app(ProductAvailabilityService::class)->currentBranch();
+        $legacySlugAliases = [
+            'cam-vat-nguyen-chat' => 'nuoc-ep-cam',
+        ];
+
+        if (isset($legacySlugAliases[$slug])) {
+            return redirect()->route('products.show', $legacySlugAliases[$slug], 301);
+        }
+
         $hasReviewsTable = Schema::hasTable('reviews');
         $productQuery = Product::where('slug', $slug)
             ->where('status', true)
-            ->with('category');
+            ->with([
+                'category',
+                'sizes',
+                'toppings',
+                'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id)),
+            ]);
 
         if ($hasReviewsTable) {
             $productQuery->with([
@@ -236,7 +301,7 @@ class ProductController extends Controller
                 'image_url' => $item['image'],
                 'gallery_images' => [$item['image']],
                 'description' => $item['description'],
-                'stock' => 20,
+                'is_available' => null,
                 'category' => (object) ['name' => $item['category']],
             ];
 
@@ -248,12 +313,14 @@ class ProductController extends Controller
                 'message' => 'Sản phẩm demo chưa hỗ trợ đánh giá.',
                 'remaining_reviews' => 0,
             ];
+            $isFavorite = false;
 
-            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState'));
+            return view('client.products.show', compact('product', 'relatedProducts', 'approvedReviews', 'reviewSummary', 'reviewFormState', 'branch', 'isFavorite'));
         }
 
         // Get related products
         $relatedProducts = Product::where('category_id', $product->category_id)
+            ->with(['branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->where('id', '!=', $product->id)
             ->where('status', true)
             ->take(4)
@@ -267,13 +334,21 @@ class ProductController extends Controller
                 'message' => 'Tính năng đánh giá chưa sẵn sàng.',
                 'remaining_reviews' => 0,
             ];
+        $isFavorite = $request->user()
+            ? Favorite::query()
+                ->where('user_id', $request->user()->id)
+                ->where('product_id', $product->id)
+                ->exists()
+            : false;
 
         return view('client.products.show', compact(
             'product',
             'relatedProducts',
             'approvedReviews',
             'reviewSummary',
-            'reviewFormState'
+            'reviewFormState',
+            'branch',
+            'isFavorite'
         ));
     }
 

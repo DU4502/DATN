@@ -91,6 +91,11 @@ class VoucherController extends Controller
 
     public function destroy(Voucher $voucher): RedirectResponse
     {
+        if ($voucher->userVouchers()->exists()) {
+            return redirect()->route('admin.vouchers.index')
+                ->with('error', 'Không thể xóa! Voucher này đã được khách hàng lưu/đổi vào ví. Vui lòng chuyển trạng thái sang Tắt.');
+        }
+
         $voucher->delete();
 
         return redirect()
@@ -100,8 +105,13 @@ class VoucherController extends Controller
 
     private function validatedData(Request $request, ?Voucher $voucher = null): array
     {
+        if ($request->has('code')) {
+            $request->merge([
+                'code' => strtoupper(trim((string) $request->input('code'))),
+            ]);
+        }
+
         $voucherId = $voucher?->id;
-        $rankKeys = array_keys(Voucher::RANK_LABELS);
 
         $validator = Validator::make($request->all(), [
             'code' => [
@@ -116,7 +126,6 @@ class VoucherController extends Controller
             'max_discount' => ['nullable', 'integer', 'min:0'],
             'min_order' => ['nullable', 'integer', 'min:0'],
             'usage_limit' => ['nullable', 'integer', 'min:0'],
-            'required_rank' => ['nullable', Rule::in($rankKeys)],
             'point_cost' => ['nullable', 'integer', 'min:0'],
             'starts_at' => ['nullable', 'date'],
             'expires_at' => ['nullable', 'date'],
@@ -131,6 +140,13 @@ class VoucherController extends Controller
         ]);
 
         $validator->after(function ($validator) use ($request, $voucher) {
+            if ($voucher && $request->filled('usage_limit')) {
+                $newLimit = (int) $request->input('usage_limit');
+                if ($newLimit > 0 && $newLimit < (int) $voucher->used_count) {
+                    $validator->errors()->add('usage_limit', "Giới hạn sử dụng không thể nhỏ hơn số lượt đã dùng hiện tại ({$voucher->used_count}).");
+                }
+            }
+
             if ($request->input('type') === Voucher::TYPE_PERCENT && (int) $request->input('value') > 100) {
                 $validator->errors()->add('value', 'Voucher phần trăm không được lớn hơn 100%.');
             }
@@ -188,9 +204,9 @@ class VoucherController extends Controller
             'starts_at' => $data['starts_at'] ?? now(),
             'expires_at' => $data['expires_at'] ?? null,
             'status' => $request->boolean('status'),
-            'required_rank' => $data['required_rank'] ?? null,
             'point_cost' => (int) ($data['point_cost'] ?? 0),
             'is_redeemable' => $request->boolean('is_redeemable'),
+            'show_on_products' => $request->boolean('show_on_products'),
         ];
     }
 
@@ -223,7 +239,6 @@ class VoucherController extends Controller
                 Voucher::TYPE_FIXED => 'Giảm cố định (VNĐ)',
                 Voucher::TYPE_PERCENT => 'Giảm theo phần trăm',
             ],
-            'rankOptions' => Voucher::RANK_LABELS,
         ];
     }
 

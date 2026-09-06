@@ -14,14 +14,14 @@
                         <p class="small text-secondary mb-4">Liên kết có hiệu lực trong 60 phút.</p>
 
                         @if(session('status'))
-                            <div class="alert alert-success">{{ session('status') }}</div>
+                            <div class="alert alert-success">{{ __((string) session('status')) }}</div>
                         @endif
 
                         <form method="POST" action="{{ route('password.email') }}">
                             @csrf
 
                             <div class="mb-4">
-                                <label for="email" class="form-label">Email</label>
+                                <label for="email" class="form-label">Địa chỉ email</label>
                                 <input id="email" type="email" name="email" value="{{ old('email') }}" class="form-control @error('email') is-invalid @enderror" placeholder="name@example.com" required autofocus>
                                 @error('email')
                                     <div class="invalid-feedback">{{ $message }}</div>

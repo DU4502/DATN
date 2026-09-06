@@ -35,7 +35,8 @@
         box-shadow: 0 18px 42px rgba(7, 52, 58, 0.08);
         aspect-ratio: 4 / 3;
         min-height: 420px;
-        max-height: 560px;
+        max-height: none;
+        flex: 1 1 auto;
     }
 
     .detail-photo-card img {
@@ -43,8 +44,16 @@
         height: 100%;
         object-fit: contain !important;
         object-position: center;
-        padding: 0.65rem;
-        transition: opacity 0.18s ease;
+        padding: clamp(1.5rem, 2.5vw, 2.5rem);
+        opacity: 1;
+        transform: scale(1);
+        transition: opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1), transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: opacity, transform;
+    }
+
+    .detail-photo-card img.is-changing {
+        opacity: 0.62;
+        transform: scale(0.992);
     }
 
     .detail-gallery-nav {
@@ -83,6 +92,9 @@
         top: 104px;
         width: 100%;
         max-width: 680px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
         z-index: 1;
     }
 
@@ -91,7 +103,9 @@
         gap: 0.65rem;
         margin-top: 0.85rem;
         overflow-x: auto;
-        padding-bottom: 0.2rem;
+        padding: 0.15rem 0.15rem 0.35rem;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(13, 147, 115, 0.35) transparent;
     }
 
     .detail-thumb {
@@ -146,9 +160,16 @@
         min-width: 0;
     }
 
+    .detail-media-panel {
+        height: auto;
+        align-self: start;
+    }
+
     .detail-summary {
         max-width: 760px;
         width: 100%;
+        height: auto;
+        min-height: 0;
     }
 
     .detail-summary h1 {
@@ -172,15 +193,55 @@
 
     .option-card {
         max-width: 760px;
+        order: 4;
+        min-height: 0;
+    }
+
+    .product-preferences-panel {
+        width: 100%;
+        margin-top: -1rem;
+        padding: 0.6rem 0.85rem 0.68rem !important;
+        border: 1px solid #e1ece8;
+        border-top: 0;
+        border-radius: 0 0 18px 18px;
+        background: #ffffff;
+        box-shadow: 0 14px 32px rgba(17, 62, 52, .07);
+    }
+
+    .persistent-size-panel {
+        width: 100%;
+        padding: 0.6rem 0.85rem 0.52rem !important;
+        border: 1px solid #e1ece8;
+        border-bottom: 0;
+        border-radius: 18px 18px 0 0;
+        background: #ffffff;
+        box-shadow: 0 -5px 24px rgba(17, 62, 52, .035);
     }
 
     .option-block {
-        margin-bottom: 0.9rem;
+        margin-bottom: 0.52rem;
+    }
+
+    .product-preferences-panel .option-block:last-child { margin-bottom: 0; }
+
+    .persistent-size-panel .option-label,
+    .product-preferences-panel .option-label {
+        margin-bottom: 0.32rem !important;
+    }
+
+    .persistent-size-panel [data-size-group] {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.4rem !important;
+        padding: 0.35rem;
+        border: 1px solid #e6eeeb;
+        border-radius: 15px;
+        background: #f4f8f7;
     }
 
     .option-label {
         color: var(--c-ink, #111827);
-        font-size: 0.82rem;
+        font-size: 0.8rem;
         font-weight: 800;
         letter-spacing: 0;
         text-transform: none;
@@ -219,9 +280,27 @@
     }
 
     .size-choice {
+        min-height: 46px;
         min-width: 0;
         flex: 1 1 0;
         text-align: center;
+        border-color: transparent;
+        border-radius: 11px;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .size-choice:hover {
+        border-color: #c9ded8;
+        background: rgba(255, 255, 255, .8);
+        box-shadow: none;
+    }
+
+    .size-choice.active {
+        border-color: var(--c-primary, #0d9373);
+        background: #ffffff;
+        box-shadow: 0 5px 14px rgba(13, 147, 115, .12), inset 0 0 0 1px var(--c-primary, #0d9373);
+        transform: none;
     }
 
     .size-choice small {
@@ -237,7 +316,31 @@
         border: 1px solid var(--c-border, #e5e7eb);
         border-radius: var(--radius-full, 999px);
         background: #ffffff;
-        padding: 0.38rem 0.7rem;
+        padding: 0.42rem 0.75rem;
+        box-shadow: 0 8px 22px rgba(17, 62, 52, .06);
+    }
+
+    .qty-control [data-qty-value] {
+        width: 3.5rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--c-ink, #111827);
+        text-align: center;
+        font-size: 1.05rem;
+        font-weight: 800;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        outline: none;
+        box-shadow: none;
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    .qty-control [data-qty-value]::-webkit-outer-spin-button,
+    .qty-control [data-qty-value]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
     }
 
     .detail-action-row {
@@ -253,19 +356,179 @@
         gap: 0.8rem;
     }
 
+    .detail-action-content {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 50px;
+        gap: 0.8rem;
+        align-items: stretch;
+    }
+
+    .detail-action-content form {
+        min-width: 0;
+        margin: 0;
+    }
+
+    .detail-favorite-btn {
+        width: 50px;
+        height: 50px;
+        min-width: 50px;
+        min-height: 50px;
+        padding: 0 !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 100% !important;
+        font-size: 1.15rem;
+        flex-shrink: 0;
+        aspect-ratio: 1;
+        line-height: 1;
+        box-sizing: border-box;
+        transition: color .18s ease, border-color .18s ease, background-color .18s ease, transform .18s ease, opacity .18s ease;
+    }
+
+    .detail-favorite-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .detail-favorite-btn.is-active,
+    .detail-favorite-btn.is-active:hover,
+    .detail-favorite-btn.is-active:focus {
+        color: #fff;
+        border-color: #e83e5b;
+        background: #e83e5b;
+    }
+
+    .detail-favorite-btn.is-loading {
+        opacity: .58;
+        pointer-events: none;
+    }
+
     .product-detail-actions {
+        order: 5;
+        margin-top: 0.35rem;
         border-top: 0;
-        padding-top: 0.35rem;
+        padding-top: 0;
+        padding: .2rem 0;
+        background: transparent;
     }
 
     .product-detail-actions .btn-primary {
-        min-height: 50px;
+        min-height: 54px;
+    }
+
+    .detail-action-row.is-choosing {
+        grid-template-columns: 1fr;
+        margin-top: 0;
+    }
+
+    .detail-action-row.is-choosing .qty-control {
+        justify-self: start;
+    }
+
+    .detail-action-content.is-hidden { display: none; }
+
+    .product-option-panel[hidden] { display: none !important; }
+
+    .product-option-panel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 1061;
+        width: min(640px, calc(100vw - 2rem));
+        max-height: calc(100vh - 2rem);
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 1.25rem !important;
+        border: 1px solid #dce9e5;
+        border-radius: 20px;
+        background: #ffffff;
+        box-shadow: 0 28px 80px rgba(7, 30, 28, 0.28);
+        transform: translate(-50%, -50%);
+        animation: optionPanelIn .22s ease-out;
+    }
+
+    body.product-options-open { overflow: hidden; }
+
+    body.product-options-open::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 1060;
+        background: rgba(9, 24, 22, 0.48);
+        backdrop-filter: blur(2px);
+    }
+
+    .option-panel-head,
+    .option-confirm-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .option-panel-head { margin-bottom: .9rem; }
+    .option-confirm-row { padding-top: 1rem; border-top: 1px solid var(--c-border, #e5e7eb); }
+    .option-confirm-row .btn-primary { min-width: min(100%, 300px); min-height: 50px; }
+
+    @keyframes optionPanelIn {
+        from { opacity: 0; transform: translate(-50%, calc(-50% - 10px)) scale(.98); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
     }
 
     .detail-buy-btn {
-        min-height: 50px;
+        min-height: 54px;
         border-radius: var(--radius-full, 999px);
         font-weight: 800;
+    }
+
+    .product-detail-actions .qty-control,
+    .product-detail-actions .detail-favorite-btn {
+        min-height: 54px;
+    }
+
+    .detail-quick-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.7rem;
+        margin-top: 0.2rem;
+    }
+
+    .detail-quick-action {
+        width: 100%;
+        height: 48px;
+        min-width: 0;
+        padding: 0.7rem 1.15rem;
+        box-sizing: border-box;
+        border: 1px solid var(--c-border, #e5e7eb);
+        border-radius: var(--radius-full, 999px);
+        background: #fff;
+        color: var(--c-ink, #17211f);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.55rem;
+        font-weight: 800;
+        text-decoration: none;
+        box-shadow: 0 8px 22px rgba(22, 45, 39, 0.07);
+        transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .detail-quick-action i {
+        font-size: 1.2rem;
+    }
+
+    .detail-quick-action:hover {
+        color: var(--c-primary-dark, #067a5f);
+        border-color: var(--c-primary, #0a9b80);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(10, 155, 128, 0.12);
+    }
+
+    .detail-quick-action.is-featured {
+        border: 2px solid var(--c-primary, #0a9b80);
+        padding: calc(0.7rem - 1px) calc(1.15rem - 1px);
     }
 
     .detail-info-card {
@@ -286,15 +549,42 @@
         background: var(--c-primary-light, #e6f7f2);
         color: var(--c-primary-dark, #067a5f);
         font-weight: 800;
+        cursor: pointer;
+        touch-action: manipulation;
+        user-select: none;
     }
 
     .topping-choice {
-        flex: 1 1 calc(33.333% - 0.5rem);
-        min-width: 150px;
+        width: 100%;
+        min-width: 0;
+        min-height: 46px;
         display: flex;
         align-items: center;
         gap: 0.55rem;
         text-align: left;
+        padding: 0.38rem 0.62rem;
+        border-color: #e2ebe8;
+        border-radius: 12px;
+        background: #f9fbfa;
+        box-shadow: none;
+    }
+
+    [data-topping-group] {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.55rem !important;
+    }
+
+    .topping-choice:hover {
+        border-color: #b9d8cf;
+        background: #f1faf7;
+        box-shadow: none;
+    }
+
+    .topping-choice.active {
+        background: #eaf8f4;
+        box-shadow: inset 0 0 0 1px var(--c-primary, #0d9373);
+        transform: none;
     }
 
     .topping-choice::before {
@@ -327,17 +617,17 @@
 
     .compact-select-toggle {
         width: 100%;
-        min-height: 48px;
+        min-height: 43px;
         border: 1.5px solid var(--c-border, #e5e7eb);
-        border-radius: var(--radius-sm, 8px);
-        padding: 0.55rem 0.9rem;
+        border-radius: 12px;
+        padding: 0.45rem 0.75rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 0.75rem;
         color: var(--c-ink, #111827);
         font-weight: 800;
-        background: var(--c-surface, #fff);
+        background: #f9fbfa;
         cursor: pointer;
         transition: border-color 0.16s ease, box-shadow 0.16s ease;
     }
@@ -350,16 +640,12 @@
     }
 
     .compact-select-title {
-        color: var(--c-primary-dark, #067a5f);
-        font-size: 0.68rem;
-        font-weight: 800;
-        line-height: 1;
-        text-transform: uppercase;
+        display: none;
     }
 
     .compact-select-value {
         color: var(--c-ink, #111827);
-        font-size: 0.94rem;
+        font-size: 0.9rem;
         font-weight: 850;
         line-height: 1.2;
     }
@@ -424,6 +710,13 @@
         background: var(--c-bg-warm, #f0fdf9);
         padding: 0.75rem;
     }
+
+    .related-card { position: relative; }
+    .related-card .card-body { min-height: 112px; padding-right: 5rem; }
+    .related-add-form { position: absolute; right: 1rem; bottom: 1rem; z-index: 4; margin: 0; }
+    .related-add-btn { display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border: 0; border-radius: 50%; color: #fff; background: #079b7d; box-shadow: 0 12px 26px rgba(7, 139, 112, .28); transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
+    .related-add-btn:hover { color: #fff; background: #06735f; transform: scale(1.08); box-shadow: 0 15px 30px rgba(7, 115, 95, .34); }
+    .related-add-btn i { font-size: 1.35rem; line-height: 1; }
 
     .review-shell {
         border: 1px solid var(--c-border, #e5e7eb);
@@ -508,7 +801,124 @@
         transform: translateY(-1px);
     }
 
+    @media (min-width: 992px) {
+        .product-detail-wrap {
+            padding-top: 0.5rem;
+        }
+
+        .product-detail-wrap .breadcrumb-soft {
+            margin-bottom: 0.85rem !important;
+        }
+
+        .detail-layout {
+            height: auto;
+            min-height: 600px;
+        }
+
+        .detail-summary {
+            gap: 0.6rem !important;
+        }
+
+        .detail-summary > div:first-child .detail-pill {
+            margin-bottom: 0.45rem !important;
+            padding: 0.32rem 0.72rem;
+        }
+
+        .detail-summary h1 {
+            margin-bottom: 0.3rem !important;
+        }
+
+        .detail-summary > div:first-child .font-monospace {
+            margin-bottom: 0.3rem !important;
+        }
+
+        .detail-summary .detail-desc {
+            line-height: 1.4;
+        }
+
+        .detail-quick-actions {
+            gap: 0.55rem;
+            margin-top: 0;
+        }
+
+        .detail-quick-action {
+            height: 42px;
+            padding: 0.5rem 0.8rem;
+        }
+
+        .detail-quick-action.is-featured {
+            padding: calc(0.5rem - 1px) calc(0.8rem - 1px);
+        }
+
+        .option-card {
+            overflow: visible;
+        }
+
+        .option-block {
+            margin-bottom: 0.45rem;
+        }
+
+        .option-label.mb-3 {
+            margin-bottom: 0.4rem !important;
+        }
+
+        .choice-btn,
+        .compact-select-toggle {
+            min-height: 42px;
+            padding: 0.4rem 0.75rem;
+        }
+
+        .size-choice { min-height: 52px; }
+
+        .compact-select-toggle { min-height: 50px; }
+
+        .topping-choice {
+            min-height: 50px;
+        }
+
+        .product-detail-actions {
+            padding-top: 0;
+        }
+
+        .detail-buy-btn,
+        .product-detail-actions .btn-primary {
+            min-height: 46px;
+        }
+
+        .detail-favorite-btn {
+            width: 46px;
+            height: 46px;
+            min-width: 46px;
+            min-height: 46px;
+        }
+
+        .detail-action-content {
+            grid-template-columns: minmax(0, 1fr) 46px;
+        }
+
+        .product-option-panel {
+            width: calc(100vw - 1.25rem);
+            max-height: calc(100vh - 1.25rem);
+            padding: 1rem !important;
+            border-radius: 18px;
+        }
+        .option-confirm-row { align-items: stretch; flex-direction: column-reverse; }
+        .option-confirm-row .btn { width: 100%; }
+
+        .detail-thumb {
+            width: 76px;
+            height: 62px;
+        }
+
+        .detail-thumbs {
+            margin-top: 0.6rem;
+        }
+    }
+
     @media (max-width: 991.98px) {
+        .detail-gallery,
+        .detail-media-panel { height: auto; }
+
         .detail-layout {
             grid-template-columns: 1fr;
             gap: 1.75rem;
@@ -518,22 +928,99 @@
             height: auto;
             min-height: 0;
             aspect-ratio: 4 / 3;
+            flex: none;
         }
 
         .detail-gallery {
             position: static;
+            height: auto;
         }
 
         .detail-summary,
         .option-card {
             max-width: none;
         }
+
+        .detail-summary {
+            height: auto;
+        }
+    }
+
+    @media (min-width: 768px) and (max-width: 991.98px) {
+        .product-detail-wrap { padding-top: .75rem; }
+        .product-detail-wrap .breadcrumb-soft { margin-bottom: .75rem !important; }
+        .detail-layout {
+            grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+            gap: 1.25rem;
+        }
+        .detail-photo-card { aspect-ratio: 1; }
+        .detail-thumbs { margin-top: .55rem; }
+        .detail-thumb { width: 58px; height: 50px; }
+        .detail-summary { gap: .55rem !important; }
+        .detail-summary h1 { font-size: 1.65rem !important; }
+        .detail-summary .detail-desc { font-size: .82rem; line-height: 1.4; }
+        .detail-info-card.p-4 { padding: 0 !important; }
+        .detail-quick-actions { gap: .45rem; }
+        .detail-quick-action { height: 40px; padding: .4rem .45rem; font-size: .72rem; }
+        .choice-btn,
+        .compact-select-toggle { min-height: 42px; padding: .4rem .55rem; }
+        .size-choice,
+        .topping-choice { min-height: 48px; }
+        .product-preferences-panel { padding: .55rem .7rem !important; }
+        [data-topping-group] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .detail-action-row { grid-template-columns: 104px minmax(0, 1fr); gap: .45rem; }
+        .detail-action-content { grid-template-columns: minmax(0, 1fr) 38px; gap: .4rem; }
+        .detail-button-row { gap: .4rem; }
+        .product-detail-actions .qty-control { min-height: 42px; }
+        .qty-control button { width: 30px; height: 30px; }
+        .qty-control [data-qty-value] { width: 36px; font-size: .9rem; }
+        .detail-buy-btn,
+        .product-detail-actions .btn-primary {
+            min-height: 42px;
+            padding: .4rem .35rem;
+            font-size: .68rem;
+            white-space: nowrap;
+        }
+        .detail-favorite-btn,
+        .product-detail-actions .detail-favorite-btn {
+            width: 38px;
+            height: 42px;
+            min-width: 38px;
+            min-height: 42px;
+            font-size: .9rem;
+        }
+        .detail-related-grid > .col-sm-6 { width: 25%; }
     }
 
     @media (max-width: 575.98px) {
+        [data-topping-group] {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.35rem !important;
+        }
+
+        .persistent-size-panel,
+        .product-preferences-panel {
+            padding-left: 0.85rem !important;
+            padding-right: 0.85rem !important;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .product-detail-wrap {
+            padding-top: 0.6rem;
+            padding-bottom: 1.75rem;
+        }
+
+        .product-detail-wrap .breadcrumb-soft {
+            margin-bottom: 0.75rem !important;
+            font-size: 0.72rem;
+        }
+
+        .detail-layout { gap: 1rem; }
+
         .detail-photo-card {
             border-radius: 10px;
-            aspect-ratio: 1 / 1;
+            aspect-ratio: 4 / 3;
         }
 
         .detail-photo-card img {
@@ -541,22 +1028,147 @@
         }
 
         .detail-thumb {
-            width: 68px;
-            height: 68px;
+            width: 54px;
+            height: 54px;
         }
 
         .related-card img {
-            height: 220px;
+            height: 130px;
         }
 
-        .detail-action-row,
-        .detail-button-row {
+        .detail-action-row {
             grid-template-columns: 1fr;
+        }
+
+        .detail-button-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.4rem;
         }
 
         .qty-control {
             width: 100%;
         }
+
+        .detail-quick-actions {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.35rem;
+            margin-top: 0.1rem;
+        }
+
+        .detail-quick-action {
+            height: 40px;
+            padding: 0.35rem 0.2rem;
+            gap: 0.25rem;
+            border-radius: 12px;
+            font-size: 0.68rem;
+            line-height: 1;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(22, 45, 39, 0.06);
+        }
+
+        .detail-quick-action i {
+            flex: 0 0 auto;
+            font-size: 0.95rem;
+        }
+
+        .persistent-size-panel,
+        .product-preferences-panel {
+            padding: 0.48rem 0.55rem !important;
+        }
+
+        .persistent-size-panel [data-size-group] {
+            gap: 0.25rem !important;
+            padding: 0.25rem;
+            border-radius: 12px;
+        }
+
+        .persistent-size-panel .option-label,
+        .product-preferences-panel .option-label {
+            margin-bottom: 0.25rem !important;
+            font-size: 0.7rem;
+        }
+
+        .size-choice {
+            min-height: 40px;
+            padding: 0.3rem 0.15rem;
+            border-radius: 9px;
+            font-size: 0.72rem;
+            line-height: 1;
+        }
+
+        .size-choice small {
+            margin-top: 0.12rem;
+            font-size: 0.58rem;
+            line-height: 1.05;
+            white-space: nowrap;
+        }
+
+        .product-preferences-panel > .row.option-block {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.4rem;
+            margin: 0 0 0.45rem;
+        }
+
+        .product-preferences-panel > .row.option-block > [class*="col-"] {
+            width: auto;
+            min-width: 0;
+            padding: 0;
+        }
+
+        .compact-select-toggle {
+            min-height: 40px;
+            padding: 0.35rem 0.5rem;
+            gap: 0.25rem;
+            border-radius: 10px;
+        }
+
+        .compact-select-value {
+            overflow: hidden;
+            font-size: 0.72rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .compact-select-toggle i {
+            flex: 0 0 auto;
+            font-size: 0.72rem;
+        }
+
+        .compact-select-option {
+            padding: 0.55rem 0.6rem;
+            font-size: 0.75rem;
+        }
+
+        .topping-choice {
+            min-height: 42px;
+            padding: 0.35rem 0.45rem;
+            gap: 0.35rem;
+            font-size: 0.68rem;
+        }
+
+        .topping-choice::before { width: 14px; height: 14px; }
+        .topping-choice small { font-size: 0.58rem; white-space: nowrap; }
+
+        .qty-control {
+            min-height: 42px;
+            padding: 0.3rem 0.55rem;
+        }
+        .qty-control button { width: 30px; height: 30px; }
+        .detail-buy-btn,
+        .product-detail-actions .btn-primary { min-height: 42px; font-size: 0.72rem; }
+        .detail-buy-btn i { margin-right: 0.25rem !important; }
+
+        .detail-related-grid {
+            --bs-gutter-x: 0.6rem;
+            --bs-gutter-y: 0.6rem;
+        }
+        .detail-related-grid > .col-sm-6 { width: 50%; }
+        .related-card .card-body { min-height: 88px; padding: 0.6rem 2.7rem 0.6rem 0.6rem; }
+        .related-card .card-body .h5 { font-size: 0.76rem; }
+        .related-add-form { right: 0.5rem; bottom: 0.5rem; }
+        .related-add-btn { width: 34px; height: 34px; }
+        .related-add-btn i { font-size: 0.9rem; }
     }
 </style>
 
@@ -578,58 +1190,62 @@
                 ? $product->gallery_images
                 : ($product->gallery_images ?? []);
 
+                $detailGalleryImages = collect($detailGalleryImages)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                $detailMainImage = $detailGalleryImages[0]
+                        ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
                 if (empty($detailGalleryImages)) {
-                $detailGalleryImages = $uiGetProductGallery(
-                $product->sku ?? null,
-                $detailCategory,
-                $product->name,
-                6,
-                $product->image_url ?? $product->image ?? null
-                );
+                    $detailGalleryImages = [$detailMainImage];
                 }
 
-                    $detailMainImage = $detailGalleryImages[0]
-                        ?? $uiResolveProductImage($product->sku ?? null, $detailCategory, $product->name, 1000);
                     $detailFallbackImage = $uiPlaceholderImage($product->name, $detailCategory);
                     $productNameLower = mb_strtolower($product->name ?? '');
                     $categoryLower = mb_strtolower($detailCategory ?? '');
-                    $detailToppings = match (true) {
-                        str_contains($productNameLower, 'matcha') => [
-                            ['Trân châu đen', 5000],
-                            ['Kem cheese', 7000],
-                            ['Thạch matcha', 6000],
-                        ],
-                        str_contains($categoryLower, 'trà sữa') || str_contains($productNameLower, 'trà sữa') => [
-                            ['Trân châu đen', 5000],
-                            ['Pudding trứng', 7000],
-                            ['Thạch phô mai', 8000],
-                        ],
-                        str_contains($categoryLower, 'cà phê') || str_contains($productNameLower, 'cà phê') => [
-                            ['Kem mặn', 7000],
-                            ['Shot espresso', 10000],
-                            ['Caramel', 6000],
-                        ],
-                        str_contains($categoryLower, 'sinh tố') || str_contains($productNameLower, 'sinh tố') => [
-                            ['Hạt chia', 5000],
-                            ['Sữa chua', 7000],
-                            ['Nha đam', 6000],
-                        ],
-                        str_contains($categoryLower, 'nước ép') || str_contains($productNameLower, 'nước ép') => [
-                            ['Nha đam', 6000],
-                            ['Hạt chia', 5000],
-                            ['Soda', 7000],
-                        ],
-                        str_contains($categoryLower, 'soda') || str_contains($productNameLower, 'soda') => [
-                            ['Thạch trái cây', 6000],
-                            ['Nha đam', 6000],
-                            ['Trân châu trắng', 7000],
-                        ],
-                        default => [
-                            ['Trân châu trắng', 7000],
-                            ['Thạch nha đam', 6000],
-                            ['Kem cheese', 7000],
-                        ],
-                    };
+                    if (isset($product) && $product instanceof \App\Models\Product && $product->relationLoaded('toppings') && $product->toppings->isNotEmpty()) {
+                        $detailToppings = $product->toppings->map(fn($t) => [$t->name, (int) $t->price])->toArray();
+                    } else {
+                        $detailToppings = match (true) {
+                            str_contains($productNameLower, 'matcha') => [
+                                ['Trân châu đen', 5000],
+                                ['Kem cheese', 7000],
+                                ['Thạch matcha', 6000],
+                            ],
+                            str_contains($categoryLower, 'trà sữa') || str_contains($productNameLower, 'trà sữa') => [
+                                ['Trân châu đen', 5000],
+                                ['Pudding trứng', 7000],
+                                ['Thạch phô mai', 8000],
+                            ],
+                            str_contains($categoryLower, 'cà phê') || str_contains($productNameLower, 'cà phê') => [
+                                ['Kem mặn', 7000],
+                                ['Shot espresso', 10000],
+                                ['Caramel', 6000],
+                            ],
+                            str_contains($categoryLower, 'sinh tố') || str_contains($productNameLower, 'sinh tố') => [
+                                ['Hạt chia', 5000],
+                                ['Sữa chua', 7000],
+                                ['Nha đam', 6000],
+                            ],
+                            str_contains($categoryLower, 'nước ép') || str_contains($productNameLower, 'nước ép') => [
+                                ['Nha đam', 6000],
+                                ['Hạt chia', 5000],
+                                ['Soda', 7000],
+                            ],
+                            str_contains($categoryLower, 'soda') || str_contains($productNameLower, 'soda') => [
+                                ['Thạch trái cây', 6000],
+                                ['Nha đam', 6000],
+                                ['Trân châu trắng', 7000],
+                            ],
+                            default => [
+                                ['Trân châu trắng', 7000],
+                                ['Thạch nha đam', 6000],
+                                ['Kem cheese', 7000],
+                            ],
+                        };
+                    }
                 @endphp
                 <div class="detail-gallery">
                     <div class="detail-photo-card">
@@ -648,19 +1264,18 @@
                         </button>
                         @endif
                     </div>
-                    @if(count($detailGalleryImages) > 1)
                     <div class="detail-thumbs" aria-label="Ảnh sản phẩm">
                         @foreach($detailGalleryImages as $index => $image)
                         <button
                             type="button"
                             class="detail-thumb {{ $index === 0 ? 'active' : '' }}"
                             data-detail-thumb="{{ $image }}"
+                            aria-pressed="{{ $index === 0 ? 'true' : 'false' }}"
                             aria-label="Xem ảnh {{ $index + 1 }}">
                             <img src="{{ $image }}" alt="{{ $product->name }} ảnh {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $detailFallbackImage }}';">
                         </button>
                         @endforeach
                     </div>
-                    @endif
                 </div>
             </div>
 
@@ -669,10 +1284,7 @@
                     <div>
                         <span class="detail-pill mb-3">{{ $product->category->name ?? 'Đồ uống' }}</span>
                         <h1 class="display-5 fw-bold mb-3">{{ $product->name }}</h1>
-                        @if(!empty($product->sku))
-                        <p class="text-secondary small font-monospace mb-2">Mã sản phẩm: {{ $product->sku }}</p>
-                        @endif
-                        <p class="h2 text-primary fw-bold mb-0">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
+                        <p class="h2 text-primary fw-bold mb-0" data-detail-price-display data-base-price="{{ (int)($product->price ?? 0) }}">{{ number_format($product->price ?? 0, 0, ',', '.') }}đ</p>
                     </div>
 
                     <div class="detail-info-card p-4">
@@ -681,25 +1293,117 @@
                         </p>
                     </div>
 
-                    <div class="option-card p-4">
-                        <div class="option-block">
-                            <label class="option-label d-block mb-3">Size</label>
+                    <div data-product-availability="{{ $product->id ?? '' }}" data-branch-id="{{ $branch?->id }}">
+                        <x-product-availability-badge :product="$product" :branch="$branch" />
+                    </div>
+
+                    @if($product instanceof \App\Models\Product && $product->availabilityAt($branch) === true)
+                    <div class="detail-quick-actions" aria-label="Tiện ích đặt hàng">
+                        <a href="{{ route('group-orders.create') }}" class="detail-quick-action" aria-label="Đặt đơn nhóm">
+                            <i class="bi bi-people"></i>
+                            <span>Đơn nhóm</span>
+                        </a>
+                        <button type="submit" name="delivery_intent" value="scheduled" form="productOrderForm" class="detail-quick-action" title="Chọn thời gian nhận ở bước thanh toán" aria-label="Đặt giao sau">
+                            <i class="bi bi-calendar2-check"></i>
+                            <span>Giao sau</span>
+                        </button>
+                        <button type="button" class="detail-quick-action" data-share-product data-share-title="{{ $product->name }}" data-share-url="{{ route('products.show', $product->slug) }}">
+                            <i class="bi bi-share"></i>
+                            <span data-share-label>Chia sẻ</span>
+                        </button>
+                    </div>
+                    @endif
+
+                    <div class="option-card persistent-size-panel">
+                        <div class="option-block mb-0">
+                            <label class="option-label d-block mb-3">Kích cỡ</label>
                             <div class="d-flex flex-wrap gap-2" data-size-group>
-                                <button type="button" class="choice-btn size-choice" data-size-option="S" data-size-extra="0">
+                                @php
+                                    $basePrice = (int) ($product->price ?? 0);
+                                    $productSizesMap = isset($product) && $product->relationLoaded('sizes')
+                                        ? $product->sizes->keyBy(fn($s) => strtoupper(trim($s->name)))
+                                        : collect();
+                                @endphp
+
+                                <button type="button" class="choice-btn size-choice active" data-size-option="S" data-size-extra="0">
                                     S
                                     <small>Giá gốc</small>
                                 </button>
-                                <button type="button" class="choice-btn size-choice active" data-size-option="M" data-size-extra="5000">
-                                    M
-                                    <small>+5.000đ</small>
-                                </button>
-                                <button type="button" class="choice-btn size-choice" data-size-option="L" data-size-extra="10000">
-                                    L
-                                    <small>+10.000đ</small>
-                                </button>
+
+                                @foreach(['M', 'L'] as $szName)
+                                    @php
+                                        $sizeObj = $productSizesMap->get($szName);
+                                        $defaultExtra = $szName === 'M' ? 5000 : 10000;
+                                        $rawSizePrice = $sizeObj ? (int) $sizeObj->pivot->price : null;
+                                        $extraPrice = \App\Support\ProductSizePrice::sizeExtra($basePrice, $rawSizePrice, $defaultExtra);
+                                    @endphp
+                                    <button type="button" class="choice-btn size-choice" data-size-option="{{ $szName }}" data-size-extra="{{ $extraPrice }}">
+                                        {{ $szName }}
+                                        <small>+{{ number_format($extraPrice, 0, ',', '.') }}đ</small>
+                                    </button>
+                                @endforeach
                             </div>
                         </div>
+                    </div>
 
+                    <div class="product-detail-actions detail-action-row">
+                        <div class="qty-control d-flex align-items-center justify-content-between" data-qty-control>
+                            <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
+                            <input
+                                type="text"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                autocomplete="off"
+                                spellcheck="false"
+                                class="h5 fw-bold mb-0"
+                                value="1"
+                                data-qty-value
+                                aria-label="Số lượng"
+                            >
+                            <button type="button" data-qty-plus aria-label="Tăng số lượng">+</button>
+                        </div>
+
+                    @if($product instanceof \App\Models\Product && $product->availabilityAt($branch) === true)
+                        <div class="detail-action-content" data-product-availability="{{ $product->id }}" data-branch-id="{{ $branch?->id }}">
+                            <form id="productOrderForm" action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
+                                @csrf
+                                <input type="hidden" name="size" value="S" data-size-input>
+                                <input type="hidden" name="sugar_level" value="100" data-choice-input="sugar">
+                                <input type="hidden" name="ice_level" value="100" data-choice-input="ice">
+                                <input type="hidden" name="toppings" value="" data-topping-input>
+                                <input type="hidden" name="quantity" value="1" data-qty-input>
+                                <div class="detail-button-row">
+                                    <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill" data-product-action data-availability-label>
+                                        <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
+                                    </button>
+                                    <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill" data-product-action>Mua ngay</button>
+                                </div>
+                            </form>
+                            @auth
+                            <form action="{{ route('favorites.toggle', $product) }}" method="POST" data-detail-favorite-form>
+                                @csrf
+                                <button
+                                    type="submit"
+                                    class="btn btn-outline-danger detail-favorite-btn {{ $isFavorite ? 'is-active' : '' }}"
+                                    aria-label="{{ $isFavorite ? 'Bỏ khỏi món yêu thích' : 'Thêm vào món yêu thích' }}"
+                                    aria-pressed="{{ $isFavorite ? 'true' : 'false' }}"
+                                    title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}"
+                                    data-detail-favorite-button
+                                >
+                                    <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
+                                </button>
+                                <span class="visually-hidden" aria-live="polite" data-detail-favorite-status></span>
+                            </form>
+                            @endauth
+                        </div>
+                        @else
+                        <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">
+                            {{ $product instanceof \App\Models\Product && $product->availabilityAt($branch) === false ? 'Hết hàng' : 'Chưa phục vụ' }}
+                        </span>
+                        @endif
+                    </div>
+
+                    <div class="option-card product-preferences-panel">
                         <div class="row g-3 option-block">
                             <div class="col-md-6">
                                 <label class="option-label d-block mb-3">Mức đường</label>
@@ -707,7 +1411,7 @@
                                     <button type="button" class="compact-select-toggle">
                                         <span class="compact-select-text">
                                             <span class="compact-select-title">Mức đường</span>
-                                            <span class="compact-select-value" data-compact-label>100% (Tiêu chuẩn)</span>
+                                            <span class="compact-select-value" data-compact-label>100%</span>
                                         </span>
                                         <i class="bi bi-chevron-down"></i>
                                     </button>
@@ -716,7 +1420,7 @@
                                         <button type="button" class="compact-select-option" data-value="30">30%</button>
                                         <button type="button" class="compact-select-option" data-value="50">50%</button>
                                         <button type="button" class="compact-select-option" data-value="70">70%</button>
-                                        <button type="button" class="compact-select-option active" data-value="100">100% (Tiêu chuẩn)</button>
+                                        <button type="button" class="compact-select-option active" data-value="100">100%</button>
                                     </div>
                                 </div>
                             </div>
@@ -726,21 +1430,21 @@
                                     <button type="button" class="compact-select-toggle">
                                         <span class="compact-select-text">
                                             <span class="compact-select-title">Mức đá</span>
-                                            <span class="compact-select-value" data-compact-label>100% (Tiêu chuẩn)</span>
+                                            <span class="compact-select-value" data-compact-label>100%</span>
                                         </span>
                                         <i class="bi bi-chevron-down"></i>
                                     </button>
                                     <div class="compact-select-menu">
                                         <button type="button" class="compact-select-option" data-value="0">Không đá</button>
                                         <button type="button" class="compact-select-option" data-value="50">Ít đá</button>
-                                        <button type="button" class="compact-select-option active" data-value="100">100% (Tiêu chuẩn)</button>
+                                        <button type="button" class="compact-select-option active" data-value="100">100%</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="option-block">
-                            <label class="option-label d-block mb-3">Thêm topping</label>
+                            <label class="option-label d-block mb-3">Thêm món kèm <small class="text-secondary fw-normal">(tối đa 3 món)</small></label>
                             <div class="d-flex flex-wrap gap-2" data-topping-group>
                                 @foreach($detailToppings as $topping)
                                     <button type="button" class="choice-btn topping-choice" data-topping-name="{{ $topping[0] }}" data-topping-price="{{ $topping[1] }}">
@@ -751,33 +1455,6 @@
                                     </button>
                                 @endforeach
                             </div>
-                        </div>
-
-                        <div class="product-detail-actions detail-action-row">
-                            <div class="qty-control d-flex align-items-center justify-content-between">
-                                <button type="button" data-qty-minus aria-label="Giảm số lượng">-</button>
-                                <span class="h5 fw-bold mb-0" data-qty-value>1</span>
-                                <button type="button" data-qty-plus aria-label="Tăng số lượng">+</button>
-                            </div>
-
-                            @if(($product->stock ?? 1) > 0)
-                                <form action="{{ route('cart.add', $product->id) }}" method="POST" data-ajax-cart>
-                                    @csrf
-                                    <input type="hidden" name="size" value="M" data-size-input>
-                                    <input type="hidden" name="sugar_level" value="100" data-choice-input="sugar">
-                                    <input type="hidden" name="ice_level" value="100" data-choice-input="ice">
-                                    <input type="hidden" name="toppings" value="" data-topping-input>
-                                    <input type="hidden" name="quantity" value="1" data-qty-input>
-                                    <div class="detail-button-row">
-                                        <button type="submit" class="btn btn-outline-primary detail-buy-btn flex-fill">
-                                            <i class="bi bi-cart-plus me-2"></i>Thêm vào giỏ
-                                        </button>
-                                        <button type="submit" name="buy_now" value="1" class="btn btn-primary detail-buy-btn flex-fill">Mua ngay</button>
-                                    </div>
-                                </form>
-                            @else
-                            <span class="btn btn-outline-danger btn-lg disabled flex-grow-1">Hết hàng</span>
-                            @endif
                         </div>
 
                     </div>
@@ -940,7 +1617,7 @@
             </div>
         </section>
 
-        <section class="mt-5 pt-4">
+        <section class="mt-5 pt-4 detail-related-section">
             <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
                 <div>
                     <h2 class="section-title h2 mb-2">Sản phẩm liên quan</h2>
@@ -949,10 +1626,13 @@
                 <a href="{{ route('products.index') }}" class="btn btn-outline-primary">Xem tất cả</a>
             </div>
 
-            <div class="row g-4">
+            <div class="row g-4 detail-related-grid">
                 @forelse($relatedProducts as $item)
                 <div class="col-sm-6 col-lg-3">
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
+                        @if($item->availabilityAt($branch) === true)
+                        <form action="{{ route('cart.add', $item->id) }}" method="POST" class="related-add-form" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="related-add-btn" aria-label="Thêm {{ $item->name }} vào giỏ" title="Thêm vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
+                        @endif
                         <a href="{{ route('products.show', $item->slug) }}">
                             <x-product-image
                                 :src="$item->image_url ?? null"
@@ -980,8 +1660,9 @@
                 ] as $item)
                 <div class="col-sm-6 col-lg-3">
                     <div class="related-card drink-card card border-0 h-100 overflow-hidden">
+                        <form action="{{ route('cart.add', 'demo-'.$item[3]) }}" method="POST" class="related-add-form" data-ajax-cart>@csrf<input type="hidden" name="size" value="S"><input type="hidden" name="sugar_level" value="100"><input type="hidden" name="ice_level" value="100"><input type="hidden" name="toppings" value="[]"><button type="submit" class="related-add-btn" aria-label="Thêm {{ $item[0] }} vào giỏ" title="Thêm vào giỏ"><i class="bi bi-plus-lg"></i></button></form>
                         <a href="{{ route('products.show', $item[3]) }}">
-                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top">
+                            <img src="{{ $item[2] }}" alt="{{ $item[0] }}" class="card-img-top" loading="lazy" decoding="async">
                         </a>
                         <div class="card-body">
                             <h3 class="h5">
@@ -1061,30 +1742,199 @@
             }
         });
 
+        const updateDetailTotal = function () {
+            const priceDisplay = document.querySelector('[data-detail-price-display]');
+            if (!priceDisplay) return;
+            const basePrice = Number(priceDisplay.dataset.basePrice || 0);
+            const activeSize = document.querySelector('[data-size-group] .size-choice.active');
+            const sizeExtra = Number(activeSize?.dataset.sizeExtra || 0);
+            const activeToppings = Array.from(document.querySelectorAll('[data-topping-group] .topping-choice.active'));
+            const toppingTotal = activeToppings.reduce((sum, btn) => sum + Number(btn.dataset.toppingPrice || 0), 0);
+            const qtyVal = Number(document.querySelector('[data-qty-value]')?.value || 1);
+
+            const totalUnit = basePrice + sizeExtra + toppingTotal;
+            const totalPrice = totalUnit * qtyVal;
+            priceDisplay.textContent = totalPrice.toLocaleString('vi-VN') + 'đ';
+        };
+
         const minus = document.querySelector('[data-qty-minus]');
         const plus = document.querySelector('[data-qty-plus]');
         const value = document.querySelector('[data-qty-value]');
         const qtyInput = document.querySelector('[data-qty-input]');
+        const qtyControl = document.querySelector('[data-qty-control]');
 
         if (minus && plus && value) {
             let qty = 1;
+            let repeatTimer = null;
+            let repeatInterval = null;
+
+            const clampQty = function(nextQty) {
+                const normalized = Number.parseInt(String(nextQty), 10);
+                return Number.isFinite(normalized) && normalized > 0 ? normalized : 1;
+            };
+
             const render = function() {
-                value.textContent = qty;
+                value.value = String(qty);
                 if (qtyInput) {
-                    qtyInput.value = qty;
+                    qtyInput.value = String(qty);
+                }
+                updateDetailTotal();
+            };
+
+            const setQty = function(nextQty) {
+                qty = clampQty(nextQty);
+                render();
+            };
+
+            const stepQty = function(delta) {
+                setQty(qty + delta);
+            };
+
+            const stopRepeat = function() {
+                if (repeatTimer) {
+                    window.clearTimeout(repeatTimer);
+                    repeatTimer = null;
+                }
+                if (repeatInterval) {
+                    window.clearInterval(repeatInterval);
+                    repeatInterval = null;
                 }
             };
 
-            minus.addEventListener('click', function() {
-                qty = Math.max(1, qty - 1);
-                render();
+            const startRepeat = function(delta) {
+                stopRepeat();
+                stepQty(delta);
+                repeatTimer = window.setTimeout(function() {
+                    repeatInterval = window.setInterval(function() {
+                        stepQty(delta);
+                    }, 75);
+                }, 260);
+            };
+
+            minus.addEventListener('pointerdown', function(event) {
+                event.preventDefault();
+                startRepeat(-1);
             });
 
-            plus.addEventListener('click', function() {
-                qty += 1;
-                render();
+            plus.addEventListener('pointerdown', function(event) {
+                event.preventDefault();
+                startRepeat(1);
             });
+
+            [minus, plus].forEach(function(button) {
+                button.addEventListener('pointerup', stopRepeat);
+                button.addEventListener('pointercancel', stopRepeat);
+                button.addEventListener('lostpointercapture', stopRepeat);
+            });
+
+            if (qtyControl && value) {
+                qtyControl.addEventListener('click', function(event) {
+                    if (event.target.closest('button')) {
+                        return;
+                    }
+
+                    value.focus();
+                    value.select();
+                });
+            }
+
+            value.addEventListener('input', function() {
+                const digitsOnly = String(value.value || '').replace(/[^\d]/g, '');
+                if (value.value !== digitsOnly) {
+                    value.value = digitsOnly;
+                }
+
+                if (digitsOnly === '') {
+                    return;
+                }
+
+                setQty(digitsOnly);
+            });
+
+            value.addEventListener('blur', function() {
+                if (String(value.value || '').trim() === '') {
+                    setQty(1);
+                    return;
+                }
+
+                setQty(value.value);
+            });
+
+            value.addEventListener('keydown', function(event) {
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    stepQty(1);
+                } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    stepQty(-1);
+                }
+            });
+
+            plus.addEventListener('click', function(event) {
+                if (event.detail !== 0) {
+                    return;
+                }
+                stepQty(1);
+            });
+
+            minus.addEventListener('click', function(event) {
+                if (event.detail !== 0) {
+                    return;
+                }
+                stepQty(-1);
+            });
+
+            render();
         }
+
+        const optionPanel = document.querySelector('[data-product-option-panel]');
+        const actionRow = document.querySelector('.detail-action-row');
+        const actionContent = actionRow?.querySelector('.detail-action-content');
+        const optionConfirm = optionPanel?.querySelector('[data-option-confirm]');
+
+        function openProductOptions(mode) {
+            if (!optionPanel || !optionConfirm) return;
+            optionPanel.hidden = false;
+            document.body.classList.add('product-options-open');
+            actionRow?.classList.add('is-choosing');
+            actionContent?.classList.add('is-hidden');
+
+            if (mode === 'buy') {
+                optionConfirm.name = 'buy_now';
+                optionConfirm.value = '1';
+                optionConfirm.innerHTML = '<i class="bi bi-bag-check me-2"></i>Xác nhận mua ngay';
+            } else {
+                optionConfirm.removeAttribute('name');
+                optionConfirm.removeAttribute('value');
+                optionConfirm.innerHTML = '<i class="bi bi-cart-plus me-2"></i>Xác nhận thêm vào giỏ';
+            }
+
+            optionPanel.scrollTop = 0;
+        }
+
+        function closeProductOptions() {
+            if (!optionPanel) return;
+            optionPanel.hidden = true;
+            document.body.classList.remove('product-options-open');
+            actionRow?.classList.remove('is-choosing');
+            actionContent?.classList.remove('is-hidden');
+        }
+
+        document.querySelectorAll('[data-open-product-options]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                openProductOptions(button.dataset.openProductOptions || 'cart');
+            });
+        });
+
+        document.querySelectorAll('[data-close-product-options]').forEach(function (button) {
+            button.addEventListener('click', closeProductOptions);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && optionPanel && !optionPanel.hidden) {
+                closeProductOptions();
+            }
+        });
 
         // If user navigated with #reviews, scroll to review form and focus
         if (window.location.hash === '#reviews') {
@@ -1118,8 +1968,89 @@
                         item.classList.remove('active');
                     });
                     button.classList.add('active');
-                    sizeInput.value = button.dataset.sizeOption || 'M';
+                    sizeInput.value = button.dataset.sizeOption || 'S';
+                    updateDetailTotal();
                 });
+            });
+        }
+
+        const shareButton = document.querySelector('[data-share-product]');
+
+        const favoriteForm = document.querySelector('[data-detail-favorite-form]');
+
+        if (favoriteForm) {
+            const favoriteButton = favoriteForm.querySelector('[data-detail-favorite-button]');
+            const favoriteIcon = favoriteButton?.querySelector('i');
+            const favoriteStatus = favoriteForm.querySelector('[data-detail-favorite-status]');
+
+            favoriteForm.addEventListener('submit', async function (event) {
+                event.preventDefault();
+
+                if (!favoriteButton || favoriteButton.classList.contains('is-loading')) return;
+
+                favoriteButton.classList.add('is-loading');
+                favoriteButton.disabled = true;
+
+                try {
+                    const response = await fetch(favoriteForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: new FormData(favoriteForm),
+                    });
+                    const result = await response.json();
+
+                    if (!response.ok || typeof result.favorited !== 'boolean') {
+                        throw new Error('favorite_failed');
+                    }
+
+                    const favorited = result.favorited;
+                    const label = favorited ? 'Bỏ khỏi món yêu thích' : 'Thêm vào món yêu thích';
+
+                    favoriteButton.classList.toggle('is-active', favorited);
+                    favoriteButton.setAttribute('aria-pressed', favorited ? 'true' : 'false');
+                    favoriteButton.setAttribute('aria-label', label);
+                    favoriteButton.title = favorited ? 'Bỏ yêu thích' : 'Yêu thích';
+                    if (favoriteIcon) favoriteIcon.className = `bi ${favorited ? 'bi-heart-fill' : 'bi-heart'}`;
+                    if (favoriteStatus) favoriteStatus.textContent = favorited
+                        ? 'Đã thêm vào món yêu thích.'
+                        : 'Đã bỏ khỏi món yêu thích.';
+                } catch (error) {
+                    if (favoriteStatus) favoriteStatus.textContent = 'Không thể cập nhật món yêu thích. Vui lòng thử lại.';
+                } finally {
+                    favoriteButton.classList.remove('is-loading');
+                    favoriteButton.disabled = false;
+                }
+            });
+        }
+
+        if (shareButton) {
+            shareButton.addEventListener('click', async function () {
+                const label = shareButton.querySelector('[data-share-label]');
+                const shareData = {
+                    title: shareButton.dataset.shareTitle || document.title,
+                    text: `Xem ${shareButton.dataset.shareTitle || 'sản phẩm này'} tại Chill Drink`,
+                    url: shareButton.dataset.shareUrl || window.location.href,
+                };
+
+                try {
+                    if (navigator.share) {
+                        await navigator.share(shareData);
+                        return;
+                    }
+
+                    await navigator.clipboard.writeText(shareData.url);
+                    if (label) label.textContent = 'Đã sao chép';
+                    setTimeout(function () {
+                        if (label) label.textContent = 'Chia sẻ';
+                    }, 1800);
+                } catch (error) {
+                    if (error?.name !== 'AbortError') {
+                        window.prompt('Sao chép liên kết sản phẩm:', shareData.url);
+                    }
+                }
             });
         }
 
@@ -1136,10 +2067,25 @@
                 });
 
                 toppingInput.value = JSON.stringify(toppings);
+                updateDetailTotal();
             };
 
             toppingGroup.querySelectorAll('.topping-choice').forEach(function (button) {
                 button.addEventListener('click', function () {
+                    const isAlreadyActive = button.classList.contains('active');
+                    const activeCount = toppingGroup.querySelectorAll('.topping-choice.active').length;
+
+                    if (!isAlreadyActive && activeCount >= 3) {
+                        if (typeof window.showToast === 'function') {
+                            window.showToast('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.', 'warning');
+                        } else if (typeof showToast === 'function') {
+                            showToast('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.', 'warning');
+                        } else {
+                            alert('Mỗi ly tối đa 3 topping để đảm bảo hương vị và dung tích ly.');
+                        }
+                        return;
+                    }
+
                     button.classList.toggle('active');
                     syncToppings();
                 });
@@ -1147,10 +2093,34 @@
         }
 
         const mainImage = document.getElementById('detailMainImage');
+        const detailGallery = document.querySelector('.detail-gallery');
+        const detailPhotoCard = document.querySelector('.detail-photo-card');
+        const detailThumbs = document.querySelector('.detail-thumbs');
+        const detailSummary = document.querySelector('.detail-summary');
         const thumbs = document.querySelectorAll('[data-detail-thumb]');
         const prevButton = document.querySelector('[data-gallery-prev]');
         const nextButton = document.querySelector('[data-gallery-next]');
         let activeImageIndex = 0;
+        let galleryTimer = null;
+        let galleryTransitionTimer = null;
+
+        const balanceDetailColumns = function () {
+            if (!detailPhotoCard || !detailSummary) return;
+            if (window.matchMedia('(max-width: 991.98px)').matches) {
+                detailPhotoCard.style.height = '';
+                return;
+            }
+
+            const thumbsHeight = detailThumbs ? detailThumbs.getBoundingClientRect().height + 14 : 0;
+            const targetHeight = Math.max(420, detailSummary.getBoundingClientRect().height - thumbsHeight);
+            detailPhotoCard.style.height = `${Math.round(targetHeight)}px`;
+        };
+
+        balanceDetailColumns();
+        window.addEventListener('resize', balanceDetailColumns);
+        if (window.ResizeObserver && detailSummary) {
+            new ResizeObserver(balanceDetailColumns).observe(detailSummary);
+        }
 
         const setActiveImage = function(index) {
             if (!mainImage || !thumbs.length) {
@@ -1161,36 +2131,79 @@
 
             thumbs.forEach(function(item) {
                 item.classList.remove('active');
+                item.setAttribute('aria-pressed', 'false');
             });
 
             const activeThumb = thumbs[activeImageIndex];
             activeThumb.classList.add('active');
-            mainImage.style.opacity = '0';
+            activeThumb.setAttribute('aria-pressed', 'true');
+            mainImage.classList.add('is-changing');
 
-            setTimeout(function() {
+            if (galleryTransitionTimer) {
+                window.clearTimeout(galleryTransitionTimer);
+            }
+
+            galleryTransitionTimer = window.setTimeout(function() {
                 mainImage.onerror = function() {
                     mainImage.onerror = null;
                     mainImage.src = mainImage.dataset.detailFallback || '';
                 };
                 mainImage.src = activeThumb.dataset.detailThumb;
-                mainImage.style.opacity = '1';
-            }, 120);
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        mainImage.classList.remove('is-changing');
+                    });
+                });
+            }, 220);
+        };
+
+        const stopGalleryAutoPlay = function () {
+            if (galleryTimer) {
+                window.clearInterval(galleryTimer);
+                galleryTimer = null;
+            }
+        };
+
+        const startGalleryAutoPlay = function () {
+            stopGalleryAutoPlay();
+            if (thumbs.length < 2 || document.hidden || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            galleryTimer = window.setInterval(function () {
+                setActiveImage(activeImageIndex + 1);
+            }, 3500);
+        };
+
+        const restartGalleryAutoPlay = function () {
+            stopGalleryAutoPlay();
+            startGalleryAutoPlay();
         };
 
         if (mainImage && thumbs.length) {
             thumbs.forEach(function(thumb, index) {
                 thumb.addEventListener('click', function() {
                     setActiveImage(index);
+                    restartGalleryAutoPlay();
                 });
             });
 
             prevButton?.addEventListener('click', function() {
                 setActiveImage(activeImageIndex - 1);
+                restartGalleryAutoPlay();
             });
 
             nextButton?.addEventListener('click', function() {
                 setActiveImage(activeImageIndex + 1);
+                restartGalleryAutoPlay();
             });
+
+            detailGallery?.addEventListener('mouseenter', stopGalleryAutoPlay);
+            detailGallery?.addEventListener('mouseleave', startGalleryAutoPlay);
+            detailGallery?.addEventListener('focusin', stopGalleryAutoPlay);
+            detailGallery?.addEventListener('focusout', startGalleryAutoPlay);
+            document.addEventListener('visibilitychange', function () {
+                if (document.hidden) stopGalleryAutoPlay();
+                else startGalleryAutoPlay();
+            });
+            startGalleryAutoPlay();
         }
 
         const reviewForm = document.querySelector('[data-review-form]');

@@ -1,0 +1,90 @@
+<?php
+
+namespace App\Http\Controllers\Staff;
+
+use App\Http\Controllers\Controller;
+use App\Models\GroupOrder;
+use Illuminate\Http\Request;
+
+class StaffGroupOrderController extends Controller
+{
+    private function applyBranchScope($query)
+    {
+        $user = auth()->user();
+
+        if (!$user->branch_id) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Đơn nhóm thuộc chi nhánh (qua order.branch_id) hoặc chưa có order
+        return $query->where('branch_id', $user->branch_id);
+    }
+
+    public function index(Request $request)
+    {
+        GroupOrder::closeExpiredOrders();
+
+        $filters = [
+            'q'      => trim((string) $request->query('q', '')),
+            'status' => trim((string) $request->query('status', '')),
+        ];
+
+        $groups = $this->applyBranchScope(GroupOrder::query())
+            ->with(['owner', 'order'])
+            ->withCount(['members', 'items'])
+            ->when($filters['q'] !== '', function ($query) use ($filters) {
+                $keyword = $filters['q'];
+                $query->where(function ($sub) use ($keyword) {
+                    $sub->where('name', 'like', '%' . $keyword . '%')
+                        ->orWhere('code', 'like', '%' . $keyword . '%')
+                        ->orWhereHas('owner', fn ($o) => $o->where('name', 'like', '%' . $keyword . '%')
+                            ->orWhere('email', 'like', '%' . $keyword . '%'));
+                });
+            })
+            ->when(in_array($filters['status'], ['open', 'closed', 'ordered', 'cancelled'], true),
+                fn ($q) => $q->where('status', $filters['status']))
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $stats = [
+            'all'     => $this->applyBranchScope(GroupOrder::query())->count(),
+            'open'    => $this->applyBranchScope(GroupOrder::query()->where('status', 'open'))->count(),
+            'closed'  => $this->applyBranchScope(GroupOrder::query()->where('status', 'closed'))->count(),
+            'ordered' => $this->applyBranchScope(GroupOrder::query()->where('status', 'ordered'))->count(),
+        ];
+
+        return view('staff.group-orders.index', compact('groups', 'filters', 'stats'));
+    }
+
+    public function show(GroupOrder $groupOrder)
+    {
+        $groupOrder->closeIfExpired();
+
+        $user = auth()->user();
+        if (!$user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
+            abort(403, 'Bạn không có quyền xem đơn nhóm này.');
+        }
+
+        $groupOrder->load(['owner', 'order', 'members.items.product.category']);
+
+        return view('staff.group-orders.show', compact('groupOrder'));
+    }
+
+    /**
+     * Endpoint cũ được giữ để chặn an toàn các request thủ công từ giao diện cũ.
+     */
+    public function updateStatus(Request $request, GroupOrder $groupOrder)
+    {
+        $user = auth()->user();
+
+        if (!$user->branch_id || (int) $groupOrder->branch_id !== (int) $user->branch_id) {
+            abort(403, 'Bạn không có quyền cập nhật đơn nhóm này.');
+        }
+
+        return redirect()->back()->with(
+            'error',
+            'Trạng thái đơn nhóm do hệ thống và kết quả thanh toán quyết định; nhân viên không thể sửa thủ công.'
+        );
+    }
+}

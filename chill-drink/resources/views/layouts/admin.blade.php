@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>Admin - {{ config('app.name', 'Chill Drink') }}</title>
@@ -10,621 +10,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/css/bootstrap-local.css', 'resources/js/app.js'])
 
-    <style>
-        /* ─── Admin Design Tokens ─── */
-        :root {
-            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            --a-primary: #0D9373;
-            --a-primary-dark: #067A5F;
-            --a-primary-light: #E6F7F2;
-            --a-primary-glow: rgba(13, 147, 115, 0.1);
-            --a-accent: #10B981;
-            --a-surface: #FFFFFF;
-            --a-bg: #F8FAFB;
-            --a-bg-subtle: #F1F5F4;
-            --a-ink: #111827;
-            --a-ink-secondary: #374151;
-            --a-muted: #6B7280;
-            --a-subtle: #9CA3AF;
-            --a-border: #E5E7EB;
-            --a-border-light: #F3F4F6;
-            --a-danger: #EF4444;
-            --a-warning: #F59E0B;
-            --a-success: #10B981;
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 20px;
-            --radius-full: 9999px;
-            --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03);
-            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
-            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.06), 0 4px 6px -4px rgba(0,0,0,0.03);
-        }
-
-        /* ─── Base ─── */
-        *, *::before, *::after { box-sizing: border-box; }
-
-        body {
-            margin: 0;
-            color: var(--a-ink);
-            background: var(--a-bg);
-            font-family: var(--font-sans);
-            font-size: 14px;
-            line-height: 1.6;
-            letter-spacing: -0.011em;
-            -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
-        }
-
-        body, button, input, select, textarea, table {
-            font-family: var(--font-sans) !important;
-            letter-spacing: -0.011em !important;
-        }
-
-        h1, h2, h3, h4, h5, h6,
-        .h1, .h2, .h3, .h4, .h5, .h6 {
-            color: var(--a-ink);
-            font-weight: 700;
-            letter-spacing: -0.025em !important;
-            line-height: 1.25;
-        }
-
-        h1, .h1 { font-size: 1.75rem; }
-        h2, .h2 { font-size: 1.375rem; }
-        h3, .h3, .h4 { font-size: 1.0625rem; }
-
-        p { line-height: 1.6; font-weight: 400; color: var(--a-ink-secondary); }
-
-        small, .small {
-            font-size: 0.8125rem;
-            line-height: 1.45;
-            letter-spacing: -0.011em !important;
-        }
-
-        label, th, .badge { letter-spacing: -0.011em !important; }
-
-        /* ─── Layout ─── */
-        .admin-shell { min-height: 100vh; padding-left: 260px; }
-
-        .admin-sidebar {
-            position: fixed; inset: 0 auto 0 0;
-            z-index: 50; width: 260px;
-            background: var(--a-surface);
-            border-right: 1px solid var(--a-border);
-            display: flex; flex-direction: column;
-            padding: 20px 12px;
-        }
-
-        /* ─── Logo ─── */
-        .admin-logo {
-            display: flex; align-items: center; gap: 10px;
-            padding: 0 12px 24px;
-            color: var(--a-ink); text-decoration: none;
-        }
-
-        .admin-logo-mark, .admin-avatar, .admin-icon-dot {
-            display: inline-flex; align-items: center; justify-content: center;
-        }
-
-        .admin-logo-mark {
-            width: 48px; height: 48px;
-            border-radius: var(--radius-md);
-            background: var(--a-surface);
-            border: 1.5px solid var(--a-border);
-            box-shadow: var(--shadow-sm);
-            font-size: 1rem; font-weight: 800;
-        }
-
-        .admin-logo-title {
-            margin: 0; font-size: 1.15rem;
-            font-weight: 800; line-height: 1.1;
-            color: var(--a-ink);
-        }
-
-        .admin-logo-subtitle {
-            margin: 0; color: var(--a-muted);
-            font-size: 0.6875rem; font-weight: 500;
-        }
-
-        /* ─── Sidebar Nav ─── */
-        .admin-sidebar .nav-link {
-            display: flex; align-items: center; gap: 10px;
-            margin: 1px 0;
-            padding: 10px 14px;
-            border-radius: var(--radius-sm);
-            color: var(--a-muted);
-            font-weight: 600; font-size: 0.8125rem;
-            text-decoration: none;
-            transition: all 0.15s ease;
-        }
-
-        .admin-sidebar .nav-link i {
-            width: 20px;
-            display: inline-flex; justify-content: center;
-            font-size: 1rem;
-        }
-
-        .admin-sidebar .nav-link:hover {
-            color: var(--a-ink);
-            background: var(--a-bg-subtle);
-        }
-
-        .admin-sidebar .nav-link.active {
-            color: var(--a-primary);
-            background: var(--a-primary-light);
-            font-weight: 700;
-        }
-
-        .admin-sidebar-footer {
-            margin-top: auto;
-            padding: 16px 4px 0;
-            border-top: 1px solid var(--a-border-light);
-        }
-
-        /* ─── Content ─── */
-        .admin-content { min-width: 0; }
-
-        .admin-topbar {
-            position: sticky; top: 0; z-index: 40;
-            display: flex; align-items: center; justify-content: space-between;
-            gap: 16px;
-            padding: 12px 28px;
-            background: rgba(248, 250, 251, 0.88);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--a-border);
-        }
-
-        .admin-topbar-actions {
-            display: flex; align-items: center;
-            gap: 10px; flex: 0 0 auto; white-space: nowrap;
-        }
-
-        .admin-topbar-actions .btn {
-            min-height: 36px;
-            display: inline-flex; align-items: center; justify-content: center;
-            padding: 0.4rem 0.9rem; line-height: 1;
-        }
-
-        /* ─── Search ─── */
-        .admin-search { position: relative; width: min(380px, 32vw); }
-
-        .admin-search input, .admin-filter, .admin-input {
-            width: 100%;
-            border: 1.5px solid var(--a-border);
-            border-radius: var(--radius-sm);
-            background: var(--a-surface);
-            color: var(--a-ink);
-            font-weight: 500; font-size: 0.8125rem;
-            padding: 0.55rem 0.85rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .admin-filter:focus, .admin-input:focus, .admin-search input:focus {
-            border-color: var(--a-primary);
-            box-shadow: 0 0 0 3px var(--a-primary-glow);
-            outline: none;
-            background: var(--a-surface);
-        }
-
-        .admin-search input { padding-left: 2.5rem; }
-
-        .admin-search-icon {
-            position: absolute; left: 0.85rem; top: 50%;
-            transform: translateY(-50%);
-            color: var(--a-subtle); font-size: 0.85rem;
-        }
-
-        /* ─── Empty State ─── */
-        .admin-empty-state {
-            border: 1.5px dashed var(--a-border);
-            border-radius: var(--radius-lg);
-            background: var(--a-bg-subtle);
-            color: var(--a-muted);
-            padding: 2rem; text-align: center;
-        }
-
-        /* ─── Avatar ─── */
-        .admin-avatar {
-            width: 36px; height: 36px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #A7F3D0, var(--a-primary));
-            color: #fff; font-weight: 700; font-size: 0.75rem;
-            overflow: hidden; flex: 0 0 auto;
-        }
-
-        .admin-avatar img {
-            width: 100%; height: 100%;
-            display: block; object-fit: cover;
-        }
-
-        /* ─── Page ─── */
-        .admin-page { padding: 28px 28px 40px; max-width: 1400px; }
-
-        /* ─── Cards ─── */
-        .admin-card {
-            border: 1px solid var(--a-border);
-            border-radius: var(--radius-lg);
-            background: var(--a-surface);
-            box-shadow: var(--shadow-xs);
-        }
-
-        .admin-table-card, .admin-table-card .table-responsive {
-            overflow: visible;
-        }
-
-        .admin-sticky-tools {
-            position: sticky;
-            top: 61px;
-            z-index: 35;
-            margin: -28px -28px 1.5rem;
-            padding: 18px 28px;
-            background: rgba(248, 250, 251, 0.94);
-            border-bottom: 1px solid var(--a-border);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-        }
-
-        /* ─── Metrics ─── */
-        .admin-metric {
-            padding: 20px; min-height: 140px;
-            transition: all 0.2s ease;
-        }
-
-        .admin-metric:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .admin-icon-dot {
-            width: 40px; height: 40px;
-            border-radius: var(--radius-sm);
-            background: var(--a-primary-light);
-            color: var(--a-primary);
-            font-size: 1rem;
-        }
-
-        .admin-kicker {
-            color: var(--a-muted);
-            font-size: 0.6875rem; font-weight: 600;
-            letter-spacing: 0.04em !important;
-            text-transform: uppercase;
-        }
-
-        .admin-value {
-            color: var(--a-ink);
-            font-size: 1.5rem; font-weight: 800;
-            line-height: 1.2;
-            letter-spacing: -0.03em !important;
-        }
-
-        /* ─── Tables ─── */
-        .admin-table { margin: 0; }
-
-        .admin-table thead th {
-            background: var(--a-bg-subtle);
-            color: var(--a-muted);
-            font-size: 0.6875rem; font-weight: 700;
-            letter-spacing: 0.04em !important;
-            text-transform: uppercase;
-            white-space: nowrap;
-            padding: 0.75rem 1.1rem;
-            border-bottom: 1px solid var(--a-border);
-        }
-
-        .admin-table tbody td {
-            color: var(--a-ink);
-            font-size: 0.8125rem; font-weight: 500;
-            padding: 0.75rem 1.1rem;
-            vertical-align: middle;
-            border-bottom: 1px solid var(--a-border-light);
-        }
-
-        .admin-table tbody tr { transition: background-color 0.15s ease; }
-        .admin-table tbody tr:hover { background: var(--a-bg-subtle); }
-
-        .pagination {
-            align-items: center;
-            gap: 0.3rem;
-            margin-bottom: 0;
-        }
-
-        .pagination .page-link {
-            min-width: 36px;
-            height: 36px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: var(--radius-full) !important;
-            border: 1.5px solid var(--a-border);
-            color: var(--a-primary);
-            font-weight: 700;
-            line-height: 1;
-            box-shadow: none;
-        }
-
-        .pagination .page-link svg {
-            width: 1rem !important;
-            height: 1rem !important;
-            max-width: 1rem !important;
-            max-height: 1rem !important;
-            display: block;
-            flex: 0 0 auto;
-        }
-
-        .pagination .page-item.active .page-link,
-        .pagination .page-link:hover {
-            color: #ffffff;
-            background: var(--a-primary);
-            border-color: var(--a-primary);
-        }
-
-        .pagination .page-item.disabled .page-link {
-            color: var(--a-subtle);
-            background: var(--a-bg-subtle);
-            border-color: var(--a-border-light);
-        }
-
-        /* ─── Thumbnails ─── */
-        .admin-thumb {
-            width: 48px; height: 48px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--a-border);
-            background: var(--a-bg-subtle);
-            overflow: hidden;
-        }
-
-        .admin-thumb img, .admin-thumb .product-image {
-            width: 100%; height: 100%;
-            object-fit: contain !important; object-position: center;
-            padding: 0.2rem; background: #fff; box-sizing: border-box;
-        }
-
-        .admin-form-image-preview, .admin-review-thumb {
-            width: 80px; height: 80px;
-            display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
-            border: 1px solid var(--a-border);
-            border-radius: var(--radius-md);
-            background: var(--a-bg-subtle);
-            color: var(--a-muted); flex: 0 0 auto;
-        }
-
-        .admin-form-image-preview img, .admin-review-thumb img {
-            width: 100%; height: 100%;
-            object-fit: contain !important; object-position: center;
-            padding: 0.2rem; background: #fff; box-sizing: border-box;
-        }
-
-        .admin-gallery-preview {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-        }
-
-        .admin-gallery-preview img {
-            width: 72px;
-            height: 72px;
-            border: 1px solid var(--a-border);
-            border-radius: var(--radius-sm);
-            object-fit: contain;
-            object-position: center;
-            padding: 0.18rem;
-            background: #fff;
-        }
-
-        .admin-review-thumb {
-            width: 48px; height: 48px;
-            border-radius: var(--radius-sm);
-            color: var(--a-primary);
-        }
-
-        /* ─── Period Tabs ─── */
-        .admin-period-tabs {
-            display: flex; flex-wrap: nowrap; gap: 6px;
-            overflow-x: auto; padding-bottom: 2px;
-        }
-
-        .admin-period-pill {
-            min-height: 36px;
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 0.4rem 0.85rem;
-            border: 1.5px solid var(--a-border);
-            border-radius: var(--radius-full);
-            color: var(--a-muted); background: var(--a-surface);
-            font-weight: 600; font-size: 0.75rem;
-            white-space: nowrap;
-            transition: all 0.15s ease;
-        }
-
-        .admin-period-pill.active {
-            color: #fff;
-            background: var(--a-primary);
-            border-color: var(--a-primary);
-        }
-
-        .admin-period-card {
-            height: 100%; padding: 18px;
-            border: 1px solid var(--a-border);
-            border-radius: var(--radius-md);
-            background: var(--a-surface);
-        }
-
-        /* ─── Rating ─── */
-        .admin-rating {
-            display: inline-flex; align-items: center; gap: 4px;
-            color: #92400E; background: #FEF3C7;
-            border-radius: var(--radius-full);
-            padding: 0.3rem 0.65rem;
-            font-weight: 700; font-size: 0.75rem;
-            white-space: nowrap;
-        }
-
-        /* ─── Actions ─── */
-        .admin-action {
-            width: 34px; height: 34px;
-            display: inline-flex; align-items: center; justify-content: center;
-            border: 0; border-radius: var(--radius-sm);
-            color: var(--a-muted); background: transparent;
-            transition: all 0.15s ease;
-        }
-
-        .admin-action:hover {
-            background: var(--a-primary-light);
-            color: var(--a-primary);
-        }
-
-        /* ─── Dropdown ─── */
-        .admin-dropdown-menu {
-            min-width: 180px; padding: 0.3rem;
-            border: 1px solid var(--a-border);
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-lg);
-            z-index: 1085;
-        }
-
-        .admin-dropdown-menu .dropdown-item {
-            display: flex; align-items: center; gap: 0.5rem;
-            min-height: 34px;
-            border-radius: var(--radius-sm);
-            color: var(--a-ink); font-weight: 600;
-            font-size: 0.8125rem;
-        }
-
-        .admin-dropdown-menu .dropdown-item:hover {
-            color: var(--a-primary); background: var(--a-primary-light);
-        }
-
-        .admin-dropdown-menu .dropdown-item.danger:hover {
-            color: var(--a-danger); background: #FEF2F2;
-        }
-
-        /* ─── Review Filters ─── */
-        .admin-review-filters { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-
-        .admin-filter-pill {
-            min-height: 32px;
-            display: inline-flex; align-items: center; justify-content: center;
-            border: 1.5px solid var(--a-border);
-            border-radius: var(--radius-full);
-            padding: 0.35rem 0.75rem;
-            color: var(--a-muted); background: var(--a-surface);
-            font-size: 0.75rem; font-weight: 700;
-            line-height: 1; white-space: nowrap;
-        }
-
-        .admin-filter-pill.active {
-            color: var(--a-primary);
-            background: var(--a-primary-light);
-            border-color: var(--a-primary-light);
-        }
-
-        /* ─── Buttons ─── */
-        .btn {
-            border-radius: var(--radius-full);
-            font-weight: 600; font-size: 0.8125rem;
-            letter-spacing: -0.011em !important;
-            min-height: 36px;
-            padding-inline: 1rem;
-            transition: all 0.15s ease;
-        }
-
-        .btn:active { transform: scale(0.97); }
-
-        .btn-primary {
-            --bs-btn-bg: var(--a-primary);
-            --bs-btn-border-color: var(--a-primary);
-            --bs-btn-hover-bg: var(--a-primary-dark);
-            --bs-btn-hover-border-color: var(--a-primary-dark);
-            box-shadow: 0 1px 3px rgba(13,147,115,0.2);
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 4px 12px rgba(13,147,115,0.25);
-            transform: translateY(-1px);
-        }
-
-        .btn-outline-primary {
-            --bs-btn-color: var(--a-primary);
-            --bs-btn-border-color: var(--a-border);
-            --bs-btn-hover-bg: var(--a-primary);
-            --bs-btn-hover-border-color: var(--a-primary);
-            --bs-btn-hover-color: #fff;
-            background: var(--a-surface);
-        }
-
-        /* ─── Badges ─── */
-        .badge {
-            border-radius: var(--radius-full);
-            font-weight: 600; font-size: 0.6875rem;
-            padding: 0.3rem 0.65rem;
-        }
-
-        .badge-soft-primary {
-            color: var(--a-primary-dark); background: var(--a-primary-light);
-        }
-
-        .badge-soft-muted {
-            color: var(--a-ink-secondary); background: var(--a-bg-subtle);
-        }
-
-        .badge-soft-danger {
-            color: #991B1B; background: #FEE2E2;
-        }
-
-        .badge-soft-info {
-            color: #1D4ED8; background: #DBEAFE;
-        }
-
-        .text-primary { color: var(--a-primary) !important; }
-
-        /* ─── Responsive ─── */
-        @media (max-width: 991.98px) {
-            .admin-shell { padding-left: 0; }
-            .admin-sidebar {
-                position: static; width: 100%; height: auto;
-                border-right: 0; border-bottom: 1px solid var(--a-border);
-                padding: 12px;
-            }
-            .admin-sidebar .nav {
-                flex-direction: row !important;
-                overflow-x: auto; gap: 4px;
-            }
-            .admin-sidebar .nav-link { white-space: nowrap; }
-            .admin-topbar {
-                flex-direction: column; align-items: stretch;
-            }
-            .admin-sticky-tools {
-                position: sticky;
-                top: 0;
-                margin: -20px -20px 1.25rem;
-                padding: 14px 20px;
-                z-index: 35;
-            }
-            .admin-search { width: 100%; }
-            .admin-page { padding: 20px; }
-            .admin-table-card .table-responsive {
-                overflow-x: auto; overflow-y: visible;
-            }
-        }
-
-        /* ─── Page Transition ─── */
-        .admin-page { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-    </style>
+    @include('admin.partials.styles')
 </head>
 <body>
+    @php
+        $currentAdminUser = auth()->user();
+        $adminPreviewMode = $currentAdminUser?->isViewingAdminWorkspace() ?? false;
+        $adminPreviewBranchId = $currentAdminUser?->adminWorkspaceBranchId();
+        $adminRouteParams = $adminPreviewMode && $adminPreviewBranchId
+            ? ['branch_id' => $adminPreviewBranchId]
+            : [];
+    @endphp
     <div class="admin-shell">
         <aside class="admin-sidebar">
-            <a href="{{ route('admin.dashboard') }}" class="admin-logo">
+            <button type="button" class="admin-sidebar-close" data-admin-sidebar-close aria-label="Đóng menu quản trị">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <a href="{{ route('admin.dashboard', $adminRouteParams) }}" class="admin-logo">
                 <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="admin-logo-mark" style="object-fit: contain; padding: 2px;">
                 <span>
                     <span class="admin-logo-title d-block">Chill Drink</span>
@@ -633,48 +37,100 @@
             </a>
 
             <nav class="nav flex-column">
-                <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-grid-1x2"></i> Tổng quát</a>
-                <a href="{{ route('admin.vouchers.index') }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Voucher</a>
-                <a href="{{ route('admin.products.index') }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
-                <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
-                <a href="{{ route('admin.orders.index') }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
-                <a href="{{ route('admin.reviews.index') }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
-                <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
+                <a href="{{ route('admin.dashboard', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><i class="bi bi-grid-1x2"></i> Tổng quát</a>
+                <a href="{{ route('admin.vouchers.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}"><i class="bi bi-ticket-perforated"></i> Phiếu ưu đãi</a>
+                <a href="{{ route('admin.toppings.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.toppings.*') ? 'active' : '' }}"><i class="bi bi-egg-fried"></i> Topping</a>
+                <a href="{{ route('admin.products.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"><i class="bi bi-cup-hot"></i> Sản phẩm</a>
+                <a href="{{ route('admin.categories.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}"><i class="bi bi-folder2"></i> Danh mục</a>
+                <a href="{{ route('admin.orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}"><i class="bi bi-receipt"></i> Đơn hàng</a>
+                <a href="{{ route('admin.shipper-incidents.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.shipper-incidents.*') ? 'active' : '' }}"><i class="bi bi-exclamation-triangle"></i> Sự cố giao vận</a>
+                <a href="{{ route('admin.group-orders.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.group-orders.*') ? 'active' : '' }}"><i class="bi bi-people-fill"></i> Đơn nhóm</a>
+                <a href="{{ route('admin.reviews.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><i class="bi bi-chat-square-text"></i> Đánh giá</a>
+                <a href="{{ route('admin.users.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><i class="bi bi-people"></i> Khách hàng</a>
+                <a href="{{ route('admin.staff.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.staff.*') ? 'active' : '' }}"><i class="bi bi-person-badge"></i> Quản lý Staff</a>
+                @if($currentAdminUser?->isSuperAdmin() && ! $adminPreviewMode)
+                    <a href="{{ route('admin.super-admin') }}" class="nav-link {{ request()->routeIs('admin.super-admin') ? 'active' : '' }}"><i class="bi bi-shield-lock-fill"></i> Quản trị cấp cao</a>
+                @endif
+                <a href="{{ route('admin.chat.index', $adminRouteParams) }}" class="nav-link {{ request()->routeIs('admin.chat.*') ? 'active' : '' }}">
+                    <i class="bi bi-chat-dots"></i> Chat CSKH
+                    @php
+                        $unreadChatMessages = $currentAdminUser?->unreadConversationMessagesCount() ?? 0;
+                    @endphp
+                    <span id="sidebar-chat-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size: 0.72rem;{{ $unreadChatMessages > 0 ? '' : 'display:none;' }}">{{ $unreadChatMessages > 99 ? '99+' : $unreadChatMessages }}</span>
+                </a>
+                <a href="{{ route($currentAdminUser?->isCskh() ? 'admin.chat.order-issues.index' : 'admin.order-issues.index') }}" class="nav-link {{ request()->routeIs('admin.order-issues.*', 'admin.chat.order-issues.*') ? 'active' : '' }}"><i class="bi bi-headset"></i> Yêu cầu hỗ trợ <span id="sidebar-order-issue-badge" class="badge rounded-pill bg-danger ms-auto" style="font-size:.72rem;{{ ($pendingOrderIssueCount ?? 0) > 0 ? '' : 'display:none;' }}">{{ min(99, $pendingOrderIssueCount ?? 0) }}</span></a>
             </nav>
 
-            <div class="admin-sidebar-footer">
-                <a href="{{ route('home') }}" class="nav-link mb-1"><i class="bi bi-arrow-left-square"></i> Về trang chủ</a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-primary w-100 btn-sm">
-                        <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
-                    </button>
-                </form>
-            </div>
+            @if($adminPreviewMode)
+                <div class="admin-sidebar-footer">
+                    <a href="{{ route('admin.preview-admin.exit') }}" class="nav-link mb-1"><i class="bi bi-arrow-counterclockwise"></i> Quay lại cấp cao</a>
+                </div>
+            @endif
         </aside>
-
+        <div class="admin-sidebar-backdrop" data-admin-sidebar-backdrop></div>
         <div class="admin-content">
             <header class="admin-topbar">
                 <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <button type="button" class="admin-mobile-toggle" data-admin-sidebar-toggle aria-label="Mở menu quản trị">
+                        <i class="bi bi-list"></i>
+                    </button>
                     <h1 class="h4 fw-bold mb-0" style="font-size: 1rem;">@yield('page-title', 'Tổng quát')</h1>
-                    <div class="admin-search">
-                        <span class="admin-search-icon"><i class="bi bi-search"></i></span>
-                        <input type="search" placeholder="@yield('search-placeholder', 'Tìm kiếm...')">
-                    </div>
+                    @if($adminPreviewMode)
+                        <a href="{{ route('admin.preview-admin.exit') }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                            <i class="bi bi-arrow-left me-1"></i>Quay lại cấp cao
+                        </a>
+                    @endif
+
+
+                    @unless(View::hasSection('hide-topbar-search'))
+                        <form method="GET" action="@yield('topbar-search-action', url()->current())" class="admin-search" role="search">
+                            @foreach(request()->except(['q', 'page']) as $key => $value)
+                                @if(is_array($value))
+                                    @foreach($value as $item)
+                                        <input type="hidden" name="{{ $key }}[]" value="{{ $item }}">
+                                    @endforeach
+                                @else
+                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                @endif
+                            @endforeach
+                            <span class="admin-search-icon"><i class="bi bi-search"></i></span>
+                            <input type="search" name="q" value="{{ request('q') }}" placeholder="@yield('search-placeholder', 'Tìm kiếm...')" aria-label="@yield('search-placeholder', 'Tìm kiếm...')">
+                        </form>
+                    @endunless
+
                 </div>
                 <div class="admin-topbar-actions">
+                    @include('partials.shipper-incident-center')
                     <span class="text-secondary fw-medium d-none d-lg-inline" style="font-size: 0.8125rem;">{{ Auth::user()->name }}</span>
                     @php
                         $adminAvatar = Auth::user()->avatar;
                         $adminAvatarIsImage = $adminAvatar && ! str_starts_with($adminAvatar, 'preset-');
-                        $adminAvatarUrl = $adminAvatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($adminAvatar) : null;
+                        $adminAvatarUrl = $adminAvatarIsImage ? asset('storage/' . $adminAvatar) : null;
                     @endphp
-                    <div class="admin-avatar" aria-label="Tài khoản">
-                        @if($adminAvatarUrl)
-                            <img src="{{ $adminAvatarUrl }}" alt="{{ Auth::user()->name }}">
-                        @else
-                            {{ mb_substr(Auth::user()->name, 0, 1) }}
-                        @endif
+                    <div class="dropdown" data-admin-account-menu>
+                        <button type="button" class="admin-avatar border-0 p-0" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mở menu tài khoản" data-admin-avatar-toggle>
+                            @if($adminAvatarUrl)
+                                <img src="{{ $adminAvatarUrl }}" alt="{{ Auth::user()->name }}">
+                            @else
+                                {{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}
+                            @endif
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end admin-dropdown-menu mt-2">
+                            <div class="px-3 py-2">
+                                <strong class="d-block text-truncate" style="max-width:220px;">{{ Auth::user()->name }}</strong>
+                                <span class="text-secondary small">{{ $currentAdminUser?->isSuperAdmin() ? 'Quản trị cấp cao' : 'Quản trị chi nhánh' }}</span>
+                            </div>
+                            <div class="dropdown-divider my-1"></div>
+                            <a class="dropdown-item" href="{{ route('home') }}"><i class="bi bi-house-door"></i>Về trang chủ</a>
+                            @if($adminPreviewMode)
+                                <a class="dropdown-item" href="{{ route('admin.preview-admin.exit') }}"><i class="bi bi-arrow-counterclockwise"></i>Quay lại cấp cao</a>
+                            @endif
+                            <div class="dropdown-divider my-1"></div>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="dropdown-item danger text-danger"><i class="bi bi-box-arrow-right"></i>Đăng xuất</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -693,7 +149,92 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function () {
+            function cleanupOrphanModalBackdrop() {
+                if (document.querySelector('.modal.show')) return;
+                document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+                document.body.classList.remove('modal-open');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('padding-right');
+            }
+
+            window.addEventListener('pageshow', cleanupOrphanModalBackdrop);
+            document.addEventListener('hidden.bs.modal', () => window.setTimeout(cleanupOrphanModalBackdrop, 80));
+        })();
+    </script>
+    <script>
+        window.showRealtimeToast = function (message, type = 'info') {
+            const containerId = 'realtimeToastContainer';
+            let container = document.getElementById(containerId);
+
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.cssText = 'position:fixed;top:80px;right:20px;z-index:10001;width:360px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+
+            const alert = document.createElement('div');
+            const alertType = type === 'success' ? 'success' : (type === 'warning' ? 'warning' : 'primary');
+            alert.className = `alert alert-${alertType} shadow-sm mb-0`;
+            alert.style.borderRadius = '12px';
+            alert.innerHTML = `
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-bell-fill mt-1"></i>
+                    <div class="flex-grow-1">${message}</div>
+                    <button type="button" class="btn-close" aria-label="Đóng"></button>
+                </div>
+            `;
+
+            alert.querySelector('.btn-close')?.addEventListener('click', () => alert.remove());
+            container.appendChild(alert);
+
+            window.setTimeout(() => {
+                alert.style.transition = 'opacity .3s ease';
+                alert.style.opacity = '0';
+                window.setTimeout(() => alert.remove(), 300);
+            }, 6000);
+        };
+    </script>
+    @include('partials.realtime')
+    @include('partials.instant-actions')
+    <script>
+        // Cập nhật badge chat sidebar mỗi 5 giây
+        (function () {
+            const badge = document.getElementById('sidebar-chat-badge');
+            if (!badge) return;
+
+            const unreadUrl = '{{ route('admin.chat.unread-count') }}';
+
+            const updateChatBadge = async () => {
+                try {
+                    const res = await fetch(unreadUrl, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const count = data.count ?? 0;
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.style.display = '';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                } catch (e) {
+                    // bỏ qua lỗi mạng
+                }
+            };
+
+            // Cập nhật ngay khi admin vừa đọc tin
+            document.addEventListener('chat:messages-read', updateChatBadge);
+
+            updateChatBadge();
+            setInterval(() => {
+                if (!document.hidden) updateChatBadge();
+            }, 5000);
+        })();
+    </script>
     <script>
         document.querySelectorAll('[data-image-input]').forEach((input) => {
             input.addEventListener('change', () => {
@@ -739,6 +280,45 @@
                 });
             });
         });
+
+        const filterToggle = document.querySelector('[data-admin-filter-toggle]');
+        const filterPanel = document.querySelector('[data-admin-filter-panel]');
+
+        if (filterToggle && filterPanel) {
+            filterToggle.addEventListener('click', () => {
+                const isHidden = filterPanel.classList.contains('d-none');
+                filterPanel.classList.toggle('d-none', !isHidden ? true : false);
+                filterToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            });
+        }
+
+        const adminSidebar = document.querySelector('.admin-sidebar');
+        const adminSidebarToggle = document.querySelector('[data-admin-sidebar-toggle]');
+        const adminSidebarClose = document.querySelector('[data-admin-sidebar-close]');
+        const adminSidebarBackdrop = document.querySelector('[data-admin-sidebar-backdrop]');
+
+        const setAdminSidebarOpen = (open) => {
+            if (!adminSidebar) return;
+            adminSidebar.classList.toggle('open', open);
+            adminSidebarBackdrop?.classList.toggle('show', open);
+            document.body.classList.toggle('admin-sidebar-open', open);
+            adminSidebarToggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+
+        adminSidebarToggle?.addEventListener('click', () => setAdminSidebarOpen(true));
+        adminSidebarClose?.addEventListener('click', () => setAdminSidebarOpen(false));
+        adminSidebarBackdrop?.addEventListener('click', () => setAdminSidebarOpen(false));
+        adminSidebar?.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => setAdminSidebarOpen(false));
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') setAdminSidebarOpen(false);
+        });
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 992) setAdminSidebarOpen(false);
+        });
     </script>
+    @include('partials.order-issue-notification-badge')
+    @stack('scripts')
 </body>
 </html>

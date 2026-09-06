@@ -10,13 +10,13 @@ use App\Models\ProductSize;
 use App\Models\Review;
 use App\Models\Size;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ProductReviewTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_customer_with_completed_order_can_create_review(): void
     {
@@ -135,6 +135,7 @@ class ProductReviewTest extends TestCase
             'password' => Hash::make('password'),
             'role_id' => 1,
             'is_active' => 1,
+            'email_verified_at' => now(),
         ]);
     }
 
@@ -155,7 +156,6 @@ class ProductReviewTest extends TestCase
             'name' => 'Trà sữa review test',
             'slug' => $productSlug,
             'price' => 45000,
-            'stock' => 100,
             'status' => true,
         ]);
 

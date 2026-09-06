@@ -10,7 +10,7 @@ class CategoryApiController extends Controller
 {
     public function index(): JsonResponse
     {
-        $categories = Category::query()
+        $categories = Category::withTrashed()
             ->select(['id', 'name', 'slug', 'description', 'image', 'status'])
             ->where('status', true)
             ->orderBy('name')

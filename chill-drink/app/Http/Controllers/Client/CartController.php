@@ -3,8 +3,15 @@
 namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\Favorite;
+use App\Models\GroupOrder;
+use App\Services\ProductAvailabilityService;
+use App\Support\ProductSizePrice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class CartController extends Controller
 {
@@ -37,17 +44,42 @@ class CartController extends Controller
      */
     public function index()
     {
+        $availability = app(ProductAvailabilityService::class);
+        $branch = $availability->currentBranch();
         $cart = $this->refreshCartItems(session()->get('cart', []));
         session()->put('cart', $cart);
+        $cartProducts = Product::query()
+            ->whereIn('id', collect($cart)->pluck('product_id')->filter(fn ($id) => is_numeric($id))->unique())
+            ->get();
+        $cartAvailability = $availability->mapFor($cartProducts, $branch);
+
+        $cartProductIds = collect($cart)
+            ->pluck('product_id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
 
         $suggestions = Product::query()
             ->where('status', true)
-            ->with('category')
+            ->when($branch, function ($query) use ($branch) {
+                $query->whereHas('branchStatuses', function ($statusQuery) use ($branch) {
+                    $statusQuery->where('branch_id', $branch->id)
+                        ->where('is_available', true);
+                });
+            })
+            ->when(! empty($cartProductIds), fn ($query) => $query->whereNotIn('id', $cartProductIds))
+            ->with(['category', 'branchStatuses' => fn ($query) => $query->when($branch, fn ($statusQuery) => $statusQuery->where('branch_id', $branch->id))])
             ->inRandomOrder()
             ->limit(4)
             ->get();
 
-        return view('client.cart.index', compact('cart', 'suggestions'));
+        $favoriteProductIds = auth()->check()
+            ? Favorite::where('user_id', auth()->id())->pluck('product_id')
+            : collect();
+
+        return view('client.cart.index', compact('cart', 'suggestions', 'favoriteProductIds', 'branch', 'cartAvailability'));
     }
 
     private function cartPayload(string $message): array
@@ -89,7 +121,7 @@ class CartController extends Controller
             return $cart;
         }
 
-        $products = Product::with('category')
+        $products = Product::with(['category', 'sizes'])
             ->whereIn('id', $productIds)
             ->get()
             ->keyBy('id');
@@ -102,12 +134,24 @@ class CartController extends Controller
             }
 
             $product = $products->get((int) $productId);
+            $sizeCode = strtoupper((string) ($item['size'] ?? 'M'));
+            $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
+            $defaultExtra = $sizeCode === 'S' ? 0 : ($sizeCode === 'M' ? 5000 : 10000);
+            $storedSizePrice = $sizeObj && isset($sizeObj->pivot->price)
+                ? (int) $sizeObj->pivot->price
+                : (is_numeric($item['size_extra'] ?? null) ? (int) $item['size_extra'] : null);
+            $basePrice = max(0, (int) $product->price);
+            $sizeUnitPrice = ProductSizePrice::unitPrice($basePrice, $storedSizePrice, $defaultExtra);
+            $sizeExtra = ProductSizePrice::sizeExtra($basePrice, $storedSizePrice, $defaultExtra);
+            $toppingTotal = max(0, (int) ($item['topping_total'] ?? 0));
+
             $cart[$key]['name'] = $product->name;
             $cart[$key]['image'] = $product->image_url;
             $cart[$key]['sku'] = $product->sku ?? null;
             $cart[$key]['category'] = $product->category?->name;
-            $cart[$key]['base_price'] = (int) $product->price;
-            $cart[$key]['price'] = (int) $product->price + (int) ($item['size_extra'] ?? 0) + (int) ($item['topping_total'] ?? 0);
+            $cart[$key]['base_price'] = $basePrice;
+            $cart[$key]['size_extra'] = $sizeExtra;
+            $cart[$key]['price'] = $sizeUnitPrice + $toppingTotal;
         }
 
         return $cart;
@@ -118,15 +162,63 @@ class CartController extends Controller
      */
     public function add(Request $request, $id)
     {
+        if ($activeGroup = $this->activeOpenGroupForCurrentUser()) {
+            $message = 'Bạn đang tham gia phòng "'.$activeGroup->name.'". Hãy quay lại để chọn món, hoặc rời/hủy phòng trước khi mua riêng.';
+            $redirectUrl = route('group-orders.show', $activeGroup->code);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'redirect_url' => $redirectUrl,
+                    'redirect_label' => 'Về phòng nhóm',
+                ], 409);
+            }
+
+            return redirect($redirectUrl)->with('error', $message);
+        }
+
         $demoProducts = $this->demoProducts();
         $product = isset($demoProducts[$id])
-            ? (object) $demoProducts[$id]
+            ? $this->resolveOrCreatePayableProduct($demoProducts[$id], $id)
             : Product::findOrFail($id);
+
+        $availability = app(ProductAvailabilityService::class);
+        $branch = $availability->currentBranch();
+
+        if (! $branch) {
+            abort(422, 'Hiện chưa có chi nhánh hoạt động để phục vụ sản phẩm.');
+        }
+
+        try {
+            $availability->assertAvailable($product, $branch);
+        } catch (\RuntimeException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $exception->getMessage()], 422);
+            }
+
+            return back()->with('error', $exception->getMessage());
+        }
         
         $cart = session()->get('cart', []);
         $sizes = $this->sizeOptions();
         $sizeCode = strtoupper((string) $request->input('size', 'M'));
+        if (! in_array($sizeCode, ['S', 'M', 'L'], true)) {
+            $sizeCode = 'M';
+        }
         $size = $sizes[$sizeCode] ?? $sizes['M'];
+
+        $sizeExtra = (int) $size['extra'];
+        $sizeObj = null;
+        if ($product instanceof Product) {
+            $product->loadMissing('sizes');
+            $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
+        }
+        $basePrice = max(0, (int) ($product->price ?? 0));
+        $storedSizePrice = $sizeObj && isset($sizeObj->pivot->price) ? (int) $sizeObj->pivot->price : null;
+        $sizeUnitPrice = ProductSizePrice::unitPrice($basePrice, $storedSizePrice, $sizeExtra);
+        $sizeExtra = ProductSizePrice::sizeExtra($basePrice, $storedSizePrice, $sizeExtra);
+
         $sugarLevel = max(0, min(100, (int) $request->input('sugar_level', 100)));
         $iceLevel = max(0, min(100, (int) $request->input('ice_level', 100)));
         $toppings = collect(json_decode((string) $request->input('toppings', '[]'), true) ?: [])
@@ -141,7 +233,9 @@ class CartController extends Controller
         $toppingKey = collect($toppings)->pluck('name')->implode(',');
         $cartKey = $id . ':' . $sizeCode . ':' . $sugarLevel . ':' . $iceLevel . ':' . md5($toppingKey);
         $basePrice = (int) ($product->price ?? 0);
+        $productId = $product instanceof Product ? (int) $product->id : $id;
         $quantity = max(1, min(99, (int) $request->input('quantity', 1)));
+        $itemNote = mb_substr(trim((string) $request->input('note')), 0, 500);
         
         // If the same product and size already exist, increase quantity.
         if (isset($cart[$cartKey])) {
@@ -153,13 +247,13 @@ class CartController extends Controller
                 : ($product->image ?? \App\Support\ProductImage::forCategory(null, crc32((string) $id)));
 
             $cart[$cartKey] = [
-                'product_id' => $id,
+                'product_id' => $productId,
                 'name' => $product->name,
                 'base_price' => $basePrice,
-                'price' => $basePrice + $size['extra'] + $toppingTotal,
+                'price' => $sizeUnitPrice + $toppingTotal,
                 'size' => $sizeCode,
-                'size_label' => $size['label'],
-                'size_extra' => $size['extra'],
+                'size_label' => 'Size ' . $sizeCode,
+                'size_extra' => $sizeExtra,
                 'sugar_level' => $sugarLevel,
                 'ice_level' => $iceLevel,
                 'toppings' => $toppings,
@@ -167,21 +261,97 @@ class CartController extends Controller
                 'image' => $image,
                 'sku' => $product instanceof Product ? ($product->sku ?? null) : null,
                 'category' => $product instanceof Product ? $product->category?->name : null,
+                'branch_id' => (int) $branch->id,
+                'branch_name' => $branch->name,
                 'quantity' => $quantity,
+                'note' => $itemNote !== '' ? $itemNote : null,
             ];
         }
         
         session()->put('cart', $cart);
+        if (session()->has('checkout_group_order_id')) {
+            session()->put('group_cart_keys', collect(session('group_cart_keys', []))->push($cartKey)->unique()->values()->all());
+            session()->put('checkout_cart_keys', collect(session('checkout_cart_keys', []))->push($cartKey)->unique()->values()->all());
+        }
 
         if ($request->expectsJson()) {
             return response()->json($this->cartPayload('Đã thêm sản phẩm vào giỏ hàng!'));
         }
 
-        if ($request->boolean('buy_now')) {
-            return redirect()->route('checkout.index', ['items' => [$cartKey]]);
+        $isScheduledIntent = $request->input('delivery_intent') === 'scheduled';
+        if ($request->boolean('buy_now') || $isScheduledIntent) {
+            $route = auth()->check() ? 'checkout.index' : 'checkout.guest.index';
+
+            session()->put('checkout_delivery_type', $isScheduledIntent ? 'scheduled' : 'now');
+
+            if (! auth()->check()) {
+                session(['guest_checkout_require_location' => true]);
+            }
+
+            return redirect()->route($route, ['items' => [$cartKey]]);
         }
         
         return redirect()->back();
+    }
+
+    private function activeOpenGroupForCurrentUser(): ?GroupOrder
+    {
+        if (! auth()->check() || session()->has('checkout_group_order_id')) {
+            return null;
+        }
+
+        return GroupOrder::query()
+            ->where(function ($query) {
+                $query->where('owner_id', auth()->id())
+                    ->orWhereHas('members', fn ($members) => $members->where('user_id', auth()->id()));
+            })
+            ->where('status', 'open')
+            ->where('closes_at', '>', now())
+            ->latest('id')
+            ->first();
+    }
+
+    private function resolveOrCreatePayableProduct(array $demoProduct, string $demoId): Product
+    {
+        $name = trim((string) ($demoProduct['name'] ?? ''));
+        $slug = Str::slug($name !== '' ? $name : $demoId);
+        $price = max(0, (int) ($demoProduct['price'] ?? 0));
+
+        $product = Product::query()
+            ->where(function ($query) use ($name, $slug) {
+                $query->where('name', $name);
+
+                if ($slug !== '') {
+                    $query->orWhere('slug', $slug);
+                }
+            })
+            ->first();
+
+        if ($product) {
+            return $product;
+        }
+
+        $categoryName = trim((string) ($demoProduct['category'] ?? ''));
+        $category = null;
+
+        if (Schema::hasTable('categories') && $categoryName !== '') {
+            $category = Category::query()->firstOrCreate(
+                ['name' => $categoryName],
+                ['slug' => Str::slug($categoryName), 'status' => true]
+            );
+        }
+
+        return Product::create([
+            'category_id' => $category?->id,
+            'name' => $name !== '' ? $name : 'Sản phẩm demo',
+            'slug' => $slug,
+            'price' => $price,
+            'status' => true,
+            'description' => trim((string) ($demoProduct['description'] ?? '')) !== ''
+                ? $demoProduct['description']
+                : 'Sản phẩm được tạo tự động để hỗ trợ thanh toán.',
+            'image' => $demoProduct['image'] ?? null,
+        ]);
     }
 
     /**
@@ -213,6 +383,8 @@ class CartController extends Controller
         if (isset($cart[$id])) {
             unset($cart[$id]);
             session()->put('cart', $cart);
+            session()->put('group_cart_keys', collect(session('group_cart_keys', []))->reject(fn ($key) => (string) $key === (string) $id)->values()->all());
+            session()->put('checkout_cart_keys', collect(session('checkout_cart_keys', []))->reject(fn ($key) => (string) $key === (string) $id)->values()->all());
         }
 
         if ($request->expectsJson()) {
@@ -227,6 +399,7 @@ class CartController extends Controller
      */
     public function clear(Request $request)
     {
+        abort_if(session()->has('checkout_group_order_id'), 422, 'Không thể xóa giỏ đơn nhóm. Hãy hủy đơn nhóm nếu không muốn tiếp tục.');
         session()->forget('cart');
 
         if ($request->expectsJson()) {

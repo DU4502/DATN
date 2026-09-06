@@ -6,11 +6,12 @@ use App\Support\ProductCatalog;
 use App\Support\ProductImage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Schema;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -26,7 +27,7 @@ class Product extends Model
         'gallery_images',
         'price',
         'description',
-        'stock',
+        'serving_temperature',
         'status',
     ];
 
@@ -88,7 +89,7 @@ class Product extends Model
      */
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class)->withTrashed();
     }
 
     /**
@@ -105,6 +106,48 @@ class Product extends Model
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function toppings()
+    {
+        return $this->belongsToMany(Topping::class, 'product_toppings', 'product_id', 'topping_id');
+    }
+
+    public function sizes()
+    {
+        return $this->belongsToMany(Size::class, 'product_sizes', 'product_id', 'size_id')
+            ->withPivot('price');
+    }
+
+    public function productSizes()
+    {
+        return $this->hasMany(ProductSize::class, 'product_id');
+    }
+
+    public function branchStatuses()
+    {
+        return $this->hasMany(BranchProductStatus::class);
+    }
+
+    public function branches()
+    {
+        return $this->belongsToMany(Branch::class, 'branch_product_statuses')
+            ->withPivot('is_available')
+            ->withTimestamps();
+    }
+
+    public function availabilityAt(Branch|int|null $branch): ?bool
+    {
+        if (! $branch) {
+            return null;
+        }
+
+        $branchId = $branch instanceof Branch ? $branch->id : $branch;
+        $status = $this->relationLoaded('branchStatuses')
+            ? $this->branchStatuses->firstWhere('branch_id', $branchId)
+            : $this->branchStatuses()->where('branch_id', $branchId)->first();
+
+        return $status?->is_available;
     }
 
     /**
@@ -142,7 +185,7 @@ class Product extends Model
 
         $mainImage = $this->image_url;
 
-        if (! empty($this->image) || ! empty($manualImages)) {
+        if (! empty($manualImages)) {
             return collect([$mainImage])
                 ->merge($manualImages)
                 ->filter()
@@ -151,18 +194,6 @@ class Product extends Model
                 ->all();
         }
 
-        $generatedImages = ProductImage::gallery(
-            $this->image,
-            $this->category?->name,
-            $this->id,
-            1000,
-        );
-
-        return collect([$mainImage])
-            ->merge($generatedImages)
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        return [$mainImage];
     }
 }

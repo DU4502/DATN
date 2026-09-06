@@ -30,6 +30,60 @@ class AuthenticationTest extends TestCase
         $response->assertRedirect(route('home', absolute: false));
     }
 
+    public function test_customer_returns_to_group_order_after_login(): void
+    {
+        $user = User::factory()->create();
+        $groupOrderUrl = '/group-orders/join/TEST-CODE';
+
+        $response = $this
+            ->withSession(['url.intended' => $groupOrderUrl])
+            ->post('/login', [
+                'email' => $user->email,
+                'password' => 'password',
+            ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect($groupOrderUrl);
+    }
+
+    public function test_admin_is_redirected_to_admin_dashboard_after_login(): void
+    {
+        $admin = User::factory()->create(['role_id' => 2]);
+
+        $response = $this->post('/login', [
+            'email' => $admin->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticatedAs($admin);
+        $response->assertRedirect(route('admin.dashboard', absolute: false));
+    }
+
+    public function test_super_admin_is_redirected_to_super_admin_workspace_after_login(): void
+    {
+        $superAdmin = User::factory()->create([
+            'email' => User::SUPER_ADMIN_EMAIL,
+            'role_id' => 3,
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => $superAdmin->email,
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticatedAs($superAdmin);
+        $response->assertRedirect(route('admin.super-admin', absolute: false));
+    }
+
+    public function test_regular_admin_cannot_open_super_admin_workspace(): void
+    {
+        $admin = User::factory()->create(['role_id' => 2]);
+
+        $response = $this->actingAs($admin)->get('/admin/super-admin');
+
+        $response->assertRedirect(route('admin.dashboard', absolute: false));
+    }
+
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();

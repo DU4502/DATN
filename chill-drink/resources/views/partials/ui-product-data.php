@@ -8,75 +8,75 @@ use App\Support\ProductCatalog;
  */
 if (! view()->shared('ui.product.bootstrapped', false)) {
     $uiCategoryImages = [
-        'Trà Sữa' => 'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=80',
-        'Cà Phê' => 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=80',
-        'Sinh Tố' => 'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=700&q=80',
-        'Nước Ép' => 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=700&q=80',
-        'Trà Trái Cây' => 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=80',
-        'Soda' => 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=80',
-        'Đá Xay' => 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=700&q=80',
-        'Matcha' => 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=80',
+        'Trà Sữa' => asset('images/products/tra-sua-tran-chau-duong-den.webp'),
+        'Cà Phê' => asset('images/products/ca-phe-sua-da.png'),
+        'Sinh Tố' => asset('images/products/sinh-to-dau.png'),
+        'Nước Ép' => asset('images/products/nuoc-ep-cam.png'),
+        'Trà Trái Cây' => asset('images/products/tra-dao-cam-sa.png'),
+        'Soda' => asset('images/products/soda-blue-curacao.png'),
+        'Đá Xay' => asset('images/sinhtoxoai.png'),
+        'Matcha' => asset('images/matcha.png'),
     ];
 
     /** Mỗi danh mục nhiều ảnh — gán lần lượt cho từng SKU */
     $uiCategoryImagePools = [
         'Trà Sữa' => [
-            'https://images.unsplash.com/photo-1558857563-b371033873b8?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1564890379475-df9a556ad051?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1525385133512-4f3bdd81f6f4?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=700&q=80',
+            asset('images/products/tra-sua-tran-chau-duong-den.webp'),
+            asset('images/products/tra-sua-thai-xanh.jpg'),
+            asset('images/products/tra-sua-khoai-mon.jpg'),
+            asset('images/products/tra-sua-socola.jpg'),
+            asset('images/products/tra-sua-oolong-kem-cheese.jpg'),
+            asset('images/trasua.png'),
         ],
         'Cà Phê' => [
-            'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1461023058943-07fcbe16d930?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=700&q=80',
+            asset('images/products/ca-phe-sua-da.png'),
+            asset('images/products/ca-phe-den-da.png'),
+            asset('images/products/bac-xiu-da.jpg'),
+            asset('images/products/ca-phe-muoi.jpg'),
+            asset('images/products/ca-phe-u-lanh.png'),
+            asset('images/cafe.png'),
         ],
         'Sinh Tố' => [
-            'https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1559180900-446972b811b9?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1595475207225-428b62bda831?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1570197788417-0e82375c9371?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1502741224143-90386d7f8c82?auto=format&fit=crop&w=700&q=80',
+            asset('images/products/sinh-to-xoai.png'),
+            asset('images/products/sinh-to-bo.png'),
+            asset('images/products/sinh-to-dau.png'),
+            asset('images/products/sinh-to-viet-quat.png'),
+            asset('images/products/sinh-to-chuoi.jpg'),
+            asset('images/sinhtoxoai.png'),
         ],
         'Nước Ép' => [
-            'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1595475207225-428b62bda831?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1570197788417-0e82375c9371?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1613478263727-4d922f818f94?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1546171753-97d7676a4602?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1523371683702-5f0a2b1f1c35?auto=format&fit=crop&w=700&q=80',
+            asset('images/products/nuoc-ep-cam.png'),
+            asset('images/products/nuoc-ep-dua-hau.jpg'),
+            asset('images/products/nuoc-ep-ca-rot.jpg'),
+            asset('images/products/nuoc-ep-tac.jpg'),
+            asset('images/products/nuoc-ep-thom.jpg'),
+            asset('images/products/nuoc-ep-cam.png'),
         ],
         'Trà Trái Cây' => [
-            'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=700&q=80',
+            asset('images/products/tra-dao-cam-sa.png'),
+            asset('images/products/tra-dau.jpg'),
+            asset('images/products/tra-vai.png'),
+            asset('images/products/tra-xoai.png'),
+            asset('images/products/tra-nhiet-doi.png'),
+            asset('images/products/tra-dao-cam-sa.png'),
         ],
         'Soda' => [
-            'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1553906952-935eca5cdefd?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1546171753-97d7676a4602?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1576092768241-decf85352c69?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1488900128323-21503983a07e?auto=format&fit=crop&w=700&q=80',
+            asset('images/products/soda-blue-curacao.png'),
+            asset('images/products/soda-cam.webp'),
+            asset('images/products/soda-chanh-day.jpg'),
+            asset('images/products/soda-dua-leo.jpg'),
+            asset('images/products/soda-viet-quat.webp'),
+            asset('images/products/soda-blue-curacao.png'),
         ],
         'Đá Xay' => [
-            'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=700&q=80',
+            asset('images/sinhtoxoai.png'),
+            asset('images/products/sinh-to-xoai.png'),
+            asset('images/products/sinh-to-dau.png'),
         ],
         'Matcha' => [
-            'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=700&q=80',
-            'https://images.unsplash.com/photo-1563822249548-9a72b6353cd1?auto=format&fit=crop&w=700&q=80',
+            asset('images/matcha.png'),
+            asset('images/products/tra-sua-thai-xanh.jpg'),
+            asset('images/products/tra-sua-oolong-kem-cheese.jpg'),
         ],
     ];
 
@@ -116,11 +116,6 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
         $uiProductImageUrls[$sku] = $url;
         $uiProductImagesByName[$item['name']] = $url;
     }
-
-    $uiHomeFeaturedSkus = [
-        'CD-TS-001', 'CD-CF-001', 'CD-ST-001', 'CD-NE-001',
-        'CD-TC-001', 'CD-SD-001', 'CD-TS-002', 'CD-CF-002',
-    ];
 
     $uiDefaultImage = $uiCategoryImages['Soda'];
 
@@ -194,7 +189,7 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
         return $sku && in_array($sku, $uiDisplaySkus, true);
     };
 
-    $uiGetProductGallery = static function (?string $sku, ?string $category, ?string $name = null, int $limit = 4, ?string $uploadedImage = null) use ($uiProductImageUrls, $uiResolveProductImage, $uiImageVariant, $uiPlaceholderImage): array {
+    $uiGetProductGallery = static function (?string $sku, ?string $category, ?string $name = null, int $limit = 4, ?string $uploadedImage = null) use ($uiProductImageUrls, $uiResolveProductImage, $uiPlaceholderImage): array {
         $primary = $uploadedImage;
 
         if (! $primary && $sku && isset($uiProductImageUrls[$sku])) {
@@ -209,21 +204,11 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
             $primary = $uiPlaceholderImage($name, $category);
         }
 
-        $images = [
-            $uiImageVariant($primary, 1000, 0),
-            $uiImageVariant($primary, 1000, 1),
-            $uiImageVariant($primary, 1000, 2),
-            $uiImageVariant($primary, 1000, 3),
-        ];
-
-        $images[] = $uiPlaceholderImage($name, $category);
-
-        return array_values(array_slice(array_unique($images), 0, $limit));
+        return [$primary];
     };
 
     view()->share([
         'uiDisplaySkus' => $uiDisplaySkus,
-        'uiHomeFeaturedSkus' => $uiHomeFeaturedSkus,
         'uiCategoryImages' => $uiCategoryImages,
         'uiCategoryImagePools' => $uiCategoryImagePools,
         'uiProductImageUrls' => $uiProductImageUrls,
@@ -239,7 +224,6 @@ if (! view()->shared('ui.product.bootstrapped', false)) {
 
 return collect(view()->getShared())->only([
     'uiDisplaySkus',
-    'uiHomeFeaturedSkus',
     'uiCategoryImages',
     'uiCategoryImagePools',
     'uiProductImageUrls',

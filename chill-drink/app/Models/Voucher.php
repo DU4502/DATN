@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Voucher extends Model
 {
@@ -11,13 +13,6 @@ class Voucher extends Model
 
     public const TYPE_PERCENT = 'percent';
     public const TYPE_FIXED = 'fixed';
-
-    public const RANK_LABELS = [
-        'bronze' => 'Đồng',
-        'silver' => 'Bạc',
-        'gold' => 'Vàng',
-        'diamond' => 'Kim cương',
-    ];
 
     protected $table = 'coupons';
 
@@ -40,9 +35,9 @@ class Voucher extends Model
         'starts_at',
         'expires_at',
         'status',
-        'required_rank',
         'point_cost',
         'is_redeemable',
+        'show_on_products',
         'created_at',
     ];
 
@@ -57,8 +52,17 @@ class Voucher extends Model
         'created_at' => 'datetime',
         'status' => 'boolean',
         'is_redeemable' => 'boolean',
+        'show_on_products' => 'boolean',
         'max_discount' => 'integer',
     ];
+
+    /**
+     * Get the user vouchers for this voucher.
+     */
+    public function userVouchers(): HasMany
+    {
+        return $this->hasMany(UserVoucher::class, 'coupon_id', 'id');
+    }
 
     public function isValid(?int $subtotal = null): bool
     {
@@ -120,8 +124,11 @@ class Voucher extends Model
             . ($limit > 0 ? number_format($limit, 0, ',', '.') : '∞');
     }
 
-    public function rankLabel(): string
+    /**
+     * Voucher bồi hoàn từ khiếu nại là tài sản riêng của người được cấp.
+     */
+    public function isPersonalSupportVoucher(): bool
     {
-        return self::RANK_LABELS[$this->required_rank] ?? 'Tất cả';
+        return Str::startsWith(Str::upper((string) $this->code), 'HT');
     }
 }

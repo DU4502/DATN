@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Thêm voucher')
 @section('hide-topbar-search', true)
@@ -9,7 +9,7 @@
         <i class="bi bi-arrow-left"></i>
     </a>
     <div>
-        <p class="admin-kicker mb-1">Voucher</p>
+        <p class="admin-kicker mb-1">Phiếu ưu đãi</p>
         <h2 class="h2 fw-bold mb-0">Thêm mã giảm giá</h2>
     </div>
 </section>

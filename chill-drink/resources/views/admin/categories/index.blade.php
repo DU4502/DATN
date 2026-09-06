@@ -1,7 +1,6 @@
-@extends('layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Danh mục')
-@section('search-placeholder', 'Tìm danh mục đồ uống...')
 
 @section('content')
 @php extract(require resource_path('views/partials/ui-product-data.php')); @endphp
@@ -10,10 +9,35 @@
         <h2 class="h2 fw-bold mb-1">Danh mục đồ uống</h2>
         <p class="text-secondary mb-0">Nhóm sản phẩm để khách hàng tìm kiếm nhanh hơn.</p>
     </div>
-    <a href="{{ route('admin.categories.create') }}" class="btn btn-primary align-self-start align-self-lg-auto">
-        <i class="bi bi-plus-circle me-1"></i>Thêm danh mục
-    </a>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.categories.create') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Thêm danh mục
+        </a>
+        <a href="{{ route('admin.categories.trash') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-trash me-1"></i>Thùng rác
+        </a>
+    </div>
 </section>
+
+<!-- Search Form -->
+<form method="GET" action="{{ route('admin.categories.index') }}" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-8">
+            <label class="admin-kicker mb-2 d-block">Tìm kiếm danh mục</label>
+            <input class="admin-input" type="text" name="search" value="{{ request('search') }}" placeholder="Tìm theo tên danh mục...">
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button class="btn btn-primary flex-grow-1" type="submit">
+                <i class="bi bi-search me-1"></i>Tìm kiếm
+            </button>
+            @if(request('search'))
+                <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            @endif
+        </div>
+    </div>
+</form>
 
 <section class="row g-4 mb-4">
     <div class="col-md-4">

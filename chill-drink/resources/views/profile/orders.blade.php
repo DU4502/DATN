@@ -12,22 +12,19 @@
                 <p class="text-secondary mb-0">Theo dõi lịch sử mua hàng, trạng thái xử lý và tổng thanh toán.</p>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <a href="{{ route('profile.edit') }}" class="btn btn-outline-primary rounded-pill px-4">
-                    <i class="bi bi-person me-1"></i>Tài khoản
-                </a>
                 <a href="{{ route('products.index') }}" class="btn btn-primary rounded-pill px-4">
                     <i class="bi bi-cup-straw me-1"></i>Mua thêm
                 </a>
             </div>
         </div>
 
-        <nav class="profile-tabs" aria-label="Mục tài khoản">
-            <a href="{{ route('profile.edit') }}" class="profile-tab">Thông tin</a>
-            <a href="{{ route('profile.orders') }}" class="profile-tab active">Đơn hàng của tôi</a>
-        </nav>
+        @include('profile.partials.account-navigation', ['activeTab' => 'orders'])
 
         @if(session('success'))
             <div class="alert alert-success rounded-4 border-0 mb-4">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-warning rounded-4 border-0 mb-4"><i class="bi bi-info-circle me-1"></i>{{ session('error') }}</div>
         @endif
 
         @include('profile.partials.my-orders')

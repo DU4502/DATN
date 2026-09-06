@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Người dùng')
 @section('hide-topbar-search', true)
@@ -88,9 +88,9 @@
                         $avatar = $user->avatar;
                         $avatarIsImage = $avatar && ! str_starts_with($avatar, 'preset-');
                         $avatarUrl = $avatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null;
-                        $roleName = $roleOptions[(int) $user->role_id] ?? 'Không rõ';
+                        $roleName = $roleOptions[(int) $user->role_id] ?? ($user->isCskh() ? 'Vai trò legacy' : 'Không rõ');
                     @endphp
-                    <tr>
+                    <tr data-instant-row>
                         <td>
                             <div class="d-flex align-items-center gap-3">
                                 <span class="admin-avatar" style="width:48px;height:48px;" aria-label="Avatar {{ $user->name }}">
@@ -115,9 +115,9 @@
                         </td>
                         <td>
                             @if($user->is_active)
-                                <span class="badge badge-soft-primary">Hoạt động</span>
+                                <span class="badge badge-soft-primary" data-instant-status-badge>Hoạt động</span>
                             @else
-                                <span class="badge badge-soft-danger">Đã khóa</span>
+                                <span class="badge badge-soft-danger" data-instant-status-badge>Đã khóa</span>
                             @endif
                         </td>
                         <td class="text-secondary">{{ optional($user->created_at)->format('d/m/Y') ?: '-' }}</td>
@@ -127,11 +127,24 @@
                                 <i class="bi bi-pencil"></i>
                             </button>
                             @if($user->id !== auth()->id())
-                                <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ $user->is_active ? 'Khóa tài khoản này?' : 'Mở khóa tài khoản này?' }}');">
+                                <form action="{{ route('admin.users.toggle-status', $user) }}" method="POST" class="d-inline"
+                                      data-instant-form
+                                      data-instant-toggle-status
+                                      data-confirm="{{ $user->is_active ? 'Khóa tài khoản này?' : 'Mở khóa tài khoản này?' }}"
+                                      data-active-confirm="Khóa tài khoản này?"
+                                      data-inactive-confirm="Mở khóa tài khoản này?"
+                                      data-active-label="Hoạt động"
+                                      data-inactive-label="Đã khóa"
+                                      data-active-badge-class="badge badge-soft-primary"
+                                      data-inactive-badge-class="badge badge-soft-danger"
+                                      data-active-title="Khóa tài khoản"
+                                      data-inactive-title="Mở khóa tài khoản"
+                                      data-active-icon="bi bi-lock"
+                                      data-inactive-icon="bi bi-unlock">
                                     @csrf
                                     @method('PATCH')
-                                    <button type="submit" class="admin-action" title="{{ $user->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}" style="color: {{ $user->is_active ? 'var(--a-danger)' : 'var(--a-primary)' }};">
-                                        <i class="bi {{ $user->is_active ? 'bi-lock' : 'bi-unlock' }}"></i>
+                                    <button type="submit" class="admin-action" title="{{ $user->is_active ? 'Khóa tài khoản' : 'Mở khóa tài khoản' }}" style="color: {{ $user->is_active ? 'var(--a-danger)' : 'var(--a-primary)' }};" data-instant-submit>
+                                        <i class="bi {{ $user->is_active ? 'bi-lock' : 'bi-unlock' }}" data-instant-status-icon></i>
                                     </button>
                                 </form>
                             @endif
@@ -151,11 +164,30 @@
                                                 <div class="fw-bold mb-3">{{ $user->name }}</div>
 
                                                 <label for="role_id_{{ $user->id }}" class="form-label fw-semibold">Vai trò mới</label>
-                                                <select id="role_id_{{ $user->id }}" name="role_id" class="form-select" @disabled($user->id === auth()->id())>
+                                                <select id="role_id_{{ $user->id }}" name="role_id" class="form-select js-user-role-select" data-branch-roles="{{ implode(',', $branchRoleIds) }}" data-branch-target="staff_branch_{{ $user->id }}" @disabled($user->id === auth()->id())>
+                                                    @if(! array_key_exists((int) $user->role_id, $roleOptions))
+                                                        <option value="" selected disabled>Chọn vai trò thay thế</option>
+                                                    @endif
                                                     @foreach($roleOptions as $roleId => $roleName)
                                                         <option value="{{ $roleId }}" @selected((int) $user->role_id === (int) $roleId)>{{ $roleName }}</option>
                                                     @endforeach
                                                 </select>
+
+                                                @if($branches->isNotEmpty() || ($user->branch && ! $user->branch->status))
+                                                    <div id="staff_branch_{{ $user->id }}" class="mt-3">
+                                                        <label for="branch_id_{{ $user->id }}" class="form-label fw-semibold">Chi nhánh làm việc</label>
+                                                        <select id="branch_id_{{ $user->id }}" name="branch_id" class="form-select js-shipper-branch-select">
+                                                            <option value="">Chọn chi nhánh</option>
+                                                            @if($user->branch && ! $user->branch->status && ! $branches->contains('id', $user->branch->id))
+                                                                <option value="{{ $user->branch->id }}" selected>{{ $user->branch->name }} (Ngừng hoạt động - hiện tại)</option>
+                                                            @endif
+                                                            @foreach($branches as $branch)
+                                                                <option value="{{ $branch->id }}" @selected((int) $user->branch_id === (int) $branch->id)>{{ $branch->name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                        <small class="text-secondary d-block mt-2">Nhân viên và Shipper chỉ thao tác trong phạm vi chi nhánh này.</small>
+                                                    </div>
+                                                @endif
 
                                                 @if($user->id === auth()->id())
                                                     <input type="hidden" name="role_id" value="{{ $user->role_id }}">
@@ -186,11 +218,7 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-4 border-top" style="background: var(--admin-soft-2);">
         <p class="text-secondary mb-0">
             @if($users->total() > 0)
-<<<<<<< HEAD
                 Đang hiển thị {{ $users->firstItem() }}-{{ $users->lastItem() }} / {{ $users->total() }} người dùng
-=======
-                Đang hiển thị {{ $users->count() }} / {{ $users->total() }} người dùng
->>>>>>> 4a9bc450ef3924c98a3c5f140e8eb37dc51992ee
             @else
                 Chưa có người dùng phù hợp
             @endif
@@ -199,22 +227,26 @@
     </div>
 </section>
 
-<section class="row g-4 mt-4">
-    <div class="col-lg-8">
-        <div class="admin-card p-4">
-            <h3 class="h4 fw-bold text-primary mb-2">Phân tích khách hàng</h3>
-            <div class="admin-empty-state">
-                <span class="admin-icon-dot mx-auto mb-3"><i class="bi bi-graph-up"></i></span>
-                <div class="fw-bold text-dark mb-1">Chưa có thống kê hành vi thật</div>
-                <p class="mb-0">Không hiển thị chỉ số phân tích khi chưa có dữ liệu thật từ đơn hàng.</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="admin-card p-4 h-100">
-            <h3 class="h4 fw-bold mb-2">Ghi chú dữ liệu</h3>
-            <p class="text-secondary mb-0">Trang này chỉ hiển thị thông tin đang có trong bảng người dùng: tên, email, số điện thoại, vai trò và ngày tạo.</p>
-        </div>
-    </div>
-</section>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-user-role-select').forEach(function (roleSelect) {
+        const branchWrapper = document.getElementById(roleSelect.dataset.branchTarget);
+        if (!branchWrapper) return;
+
+        const branchSelect = branchWrapper.querySelector('.js-shipper-branch-select');
+        const syncBranchField = function () {
+            const needsBranch = roleSelect.dataset.branchRoles.split(',').includes(roleSelect.value);
+            branchWrapper.hidden = !needsBranch;
+            branchSelect.required = needsBranch;
+            branchSelect.disabled = !needsBranch;
+        };
+
+        roleSelect.addEventListener('change', syncBranchField);
+        syncBranchField();
+    });
+});
+</script>
+@endpush

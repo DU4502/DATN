@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -13,10 +14,26 @@ class CategoryController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Lấy danh sách kèm số lượng sản phẩm, phân trang 12 mục
-        $categories = Category::withCount('products')->latest()->paginate(12);
+        $search = trim((string) $request->query('search', ''));
+        
+        // Query with search filter
+        $categories = Category::withCount('products')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('description', 'like', '%' . $search . '%');
+                    
+                    // Search by slug if exists
+                    if (Schema::hasColumn('categories', 'slug')) {
+                        $subQuery->orWhere('slug', 'like', '%' . $search . '%');
+                    }
+                });
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
 
         return view('admin.categories.index', compact('categories'));
     }
@@ -34,6 +51,10 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+        if ($request->has('name')) {
+            $request->merge(['name' => trim((string) $request->input('name'))]);
+        }
+
         // Validation dữ liệu đầu vào (Đã bổ sung ràng buộc cho status và slug)
         $validated = $request->validate([
             'name'   => 'required|string|max:255|unique:categories,name',
@@ -43,7 +64,7 @@ class CategoryController extends Controller
             'status' => 'nullable|in:0,1',
         ]);
 
-        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['slug'] = ($validated['slug'] ?? null) ?: Str::slug($validated['name']);
         $validated['status'] = $request->boolean('status');
 
         if ($request->hasFile('image')) {
@@ -79,6 +100,9 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
+        if ($request->has('name')) {
+            $request->merge(['name' => trim((string) $request->input('name'))]);
+        }
         // Validation khi cập nhật (Bỏ qua trùng tên và trùng slug của chính bản ghi hiện tại)
         $validated = $request->validate([
             'name'   => 'required|string|max:255|unique:categories,name,' . $category->id,
@@ -88,7 +112,7 @@ class CategoryController extends Controller
             'status' => 'nullable|in:0,1',
         ]);
 
-        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['slug'] = ($validated['slug'] ?? null) ?: Str::slug($validated['name']);
         $validated['status'] = $request->boolean('status');
 
         if ($request->hasFile('image')) {
@@ -112,19 +136,68 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        // Kiểm tra nếu danh mục đang có sản phẩm thì không cho xóa
-        if ($category->products()->exists()) {
+        // Kiểm tra nếu danh mục đang có sản phẩm (kể cả trong thùng rác) thì không cho xóa
+        if ($category->products()->withTrashed()->exists()) {
             return redirect()->route('admin.categories.index')
-                ->with('error', 'Không thể xóa! Danh mục này đang chứa sản phẩm.');
+                ->with('error', 'Không thể xóa! Danh mục này đang chứa sản phẩm (kể cả sản phẩm trong thùng rác). Vui lòng xóa hết sản phẩm trước.');
+        }
+
+        // Soft delete instead of permanent delete
+        $category->delete();
+
+        return redirect()->route('admin.categories.index')
+            ->with('success', 'Danh mục đã được chuyển vào thùng rác!');
+    }
+
+    public function trash(Request $request)
+    {
+        $search = trim((string) $request->query('search', ''));
+        
+        $categories = Category::onlyTrashed()
+            ->withCount('products')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('description', 'like', '%' . $search . '%');
+                    
+                    if (Schema::hasColumn('categories', 'slug')) {
+                        $subQuery->orWhere('slug', 'like', '%' . $search . '%');
+                    }
+                });
+            })
+            ->latest('deleted_at')
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('admin.categories.trash', compact('categories'));
+    }
+
+    public function restore($id)
+    {
+        $category = Category::withTrashed()->findOrFail($id);
+        $category->restore();
+
+        return redirect()->route('admin.categories.trash')
+            ->with('success', 'Đã khôi phục danh mục thành công!');
+    }
+
+    public function forceDelete($id)
+    {
+        $category = Category::withTrashed()->findOrFail($id);
+
+        // Kiểm tra nếu danh mục đang có sản phẩm thì không cho xóa vĩnh viễn
+        if ($category->products()->withTrashed()->exists()) {
+            return redirect()->route('admin.categories.trash')
+                ->with('error', 'Không thể xóa vĩnh viễn! Danh mục này đang chứa sản phẩm (kể cả trong thùng rác).');
         }
 
         if ($category->image) {
             Storage::disk('public')->delete($category->image);
         }
 
-        $category->delete();
+        $category->forceDelete();
 
-        return redirect()->route('admin.categories.index')
-            ->with('success', 'Xóa danh mục thành công!');
+        return redirect()->route('admin.categories.trash')
+            ->with('success', 'Đã xóa vĩnh viễn danh mục!');
     }
 }

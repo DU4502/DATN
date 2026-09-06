@@ -7,13 +7,13 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ProductApiTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     public function test_categories_endpoint_returns_active_categories_only(): void
     {
@@ -59,7 +59,6 @@ class ProductApiTest extends TestCase
             'name' => $productName,
             'slug' => $productSlug,
             'price' => 49000,
-            'stock' => 30,
             'status' => true,
         ]);
 
@@ -68,7 +67,6 @@ class ProductApiTest extends TestCase
             'name' => 'Sản phẩm ẩn',
             'slug' => 'san-pham-an',
             'price' => 10000,
-            'stock' => 10,
             'status' => false,
         ]);
 
@@ -115,7 +113,6 @@ class ProductApiTest extends TestCase
             'name' => 'Cold Brew',
             'slug' => 'cold-brew',
             'price' => 55000,
-            'stock' => 20,
             'status' => true,
         ]);
 

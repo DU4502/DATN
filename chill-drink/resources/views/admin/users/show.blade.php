@@ -1,4 +1,4 @@
-@extends('layouts.admin')
+@extends(auth()->user()?->preferredAdminLayout() ?? 'layouts.admin')
 
 @section('page-title', 'Chi tiết người dùng')
 @section('hide-topbar-search', true)
@@ -8,7 +8,7 @@
     $avatar = $user->avatar;
     $avatarIsImage = $avatar && ! str_starts_with($avatar, 'preset-');
     $avatarUrl = $avatarIsImage ? \Illuminate\Support\Facades\Storage::disk('public')->url($avatar) : null;
-    $roleName = $roleOptions[(int) $user->role_id] ?? 'Không rõ';
+    $roleName = $roleOptions[(int) $user->role_id] ?? ($user->isCskh() ? 'Vai trò legacy' : 'Không rõ');
 @endphp
 
 <section class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">

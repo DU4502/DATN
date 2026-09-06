@@ -21,6 +21,8 @@ class ProfileUpdateRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string', 'max:255'],
             'area' => ['nullable', 'string', 'max:255'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'avatar' => ['nullable', 'string', 'max:255'],
             'avatar_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'email' => [
@@ -31,6 +33,23 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+        ];
+    }
+
+    /**
+     * Get custom validation messages.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'name.required'   => 'Vui lòng nhập họ tên.',
+            'email.required'  => 'Vui lòng nhập email.',
+            'email.lowercase' => 'Email phải viết thường.',
+            'email.email'     => 'Email không đúng định dạng.',
+            'email.max'       => 'Email không được vượt quá :max ký tự.',
+            'email.unique'    => 'Email đã được sử dụng.',
         ];
     }
 }

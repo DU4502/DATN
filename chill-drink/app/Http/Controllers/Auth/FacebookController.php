@@ -61,13 +61,42 @@ class FacebookController extends Controller
 
         Auth::login($user, true);
         request()->session()->regenerate();
-        request()->session()->forget('url.intended');
+
+        if ($user->isSuperAdmin()) {
+            request()->session()->forget('url.intended');
+
+            return redirect()->route('admin.super-admin');
+        }
 
         if ($user->isAdmin()) {
+            request()->session()->forget('url.intended');
+
             return redirect()->route('admin.dashboard');
         }
 
-        return redirect()->route('home');
+        if ($user->isCskh()) {
+            request()->session()->forget('url.intended');
+
+            return redirect()->route('admin.chat.index');
+        }
+
+        if ($user->isShipper()) {
+            request()->session()->forget('url.intended');
+
+            return redirect()->route('shipper.dashboard');
+        }
+
+        if ($user->isStaffOnly()) {
+            request()->session()->forget('url.intended');
+
+            return redirect()->route('staff.dashboard');
+        }
+
+        if (str_contains(session('url.intended', ''), '/chat')) {
+            request()->session()->forget('url.intended');
+        }
+
+        return redirect()->intended(route('home', absolute: false));
     }
 
     private function resolveUserFromFacebook(object $facebookUser): ?User

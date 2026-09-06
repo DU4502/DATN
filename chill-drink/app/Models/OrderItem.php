@@ -26,6 +26,7 @@ class OrderItem extends Model
         'price',
         'unit_price',
         'total_price',
+        'item_note',
     ];
 
     /**
@@ -58,6 +59,11 @@ class OrderItem extends Model
     public function productSize()
     {
         return $this->belongsTo(ProductSize::class, 'product_size_id');
+    }
+
+    public function toppingLines()
+    {
+        return $this->hasMany(OrderItemTopping::class, 'order_item_id');
     }
 
     /**
