@@ -968,221 +968,6 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
         box-shadow: 0 18px 42px rgba(79, 183, 168, 0.10);
     }
 
-    .quick-add-modal .modal-content {
-        border: 0;
-        border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(8, 42, 38, 0.22);
-        overflow: hidden;
-        max-height: calc(100vh - 2rem);
-        max-height: calc(100dvh - 2rem);
-    }
-
-    .quick-add-modal .modal-dialog { max-width: 780px; }
-    .quick-add-modal form {
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        max-height: calc(100vh - 2rem);
-        max-height: calc(100dvh - 2rem);
-    }
-    .quick-add-modal .modal-header { padding: 1.5rem 1.75rem 0.75rem; }
-    .quick-add-modal .modal-body {
-        min-height: 0;
-        overflow-y: auto;
-        padding: 0 1.75rem 1.25rem;
-        scrollbar-gutter: stable;
-    }
-    .quick-add-modal .modal-title { font-size: 1.85rem; }
-
-    .quick-product-summary {
-        display: flex;
-        gap: 0.9rem;
-        align-items: center;
-        padding: 0.65rem 0.9rem;
-        margin-bottom: 0.55rem;
-        border: 1px solid #d6ebe5;
-        border-radius: 16px;
-        background: #effbf8;
-    }
-
-    .quick-section {
-        padding: 0.55rem 0;
-        border-top: 1px solid #edf1f0;
-    }
-
-    .quick-section-label {
-        display: flex;
-        align-items: center;
-        gap: .45rem;
-        margin-bottom: .45rem;
-        font-weight: 800;
-        font-size: 0.92rem;
-    }
-
-    .quick-section-label i {
-        color: var(--drink-primary);
-    }
-
-    .quick-section-label small {
-        color: #7b858f;
-        font-weight: 500;
-        font-size: 0.8rem;
-    }
-
-    .quick-size-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: .5rem;
-    }
-
-    .quick-sugar-grid {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: .35rem;
-    }
-
-    .quick-ice-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: .35rem;
-    }
-
-    .quick-sugar-grid .quick-choice,
-    .quick-ice-grid .quick-choice {
-        padding: 0.42rem 0.2rem;
-        font-size: 0.86rem;
-        text-align: center;
-        justify-content: center;
-        white-space: nowrap;
-    }
-
-    .quick-topping-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: .5rem;
-    }
-
-    .quick-levels-grid {
-        display: grid;
-        grid-template-columns: 1.15fr 0.85fr;
-        gap: 1.25rem;
-        align-items: start;
-    }
-
-    .quick-actions {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        align-items: center;
-        gap: 0.85rem;
-        padding-top: .6rem;
-    }
-
-    .quick-actions-footer {
-        flex: 0 0 auto;
-        padding: 0.85rem 1.75rem 1.25rem;
-        border-top: 1px solid #edf1f0;
-        background: #ffffff;
-        box-shadow: 0 -10px 24px rgba(8, 42, 38, 0.05);
-    }
-
-    .quick-quantity {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        min-height: 48px;
-        padding: 0 0.85rem;
-        border: 1px solid var(--drink-border);
-        border-radius: 999px;
-    }
-
-    .quick-quantity button {
-        border: 0;
-        background: transparent;
-        color: var(--drink-primary);
-        font-size: 1.25rem;
-    }
-
-    .quick-submit {
-        min-height: 48px;
-        font-size: 1rem;
-        box-shadow: 0 6px 16px rgba(13, 147, 115, .2);
-    }
-
-    @media (max-width: 767.98px) {
-        .quick-add-modal .modal-dialog { margin: .65rem; }
-        .quick-add-modal .modal-content,
-        .quick-add-modal form {
-            max-height: calc(100vh - 1.3rem);
-            max-height: calc(100dvh - 1.3rem);
-        }
-        .quick-add-modal .modal-header { padding: 1.2rem 1.1rem .7rem; }
-        .quick-add-modal .modal-body { padding: 0 1.1rem 1.1rem; }
-        .quick-actions-footer { padding: .75rem 1.1rem 1.1rem; }
-        .quick-levels-grid { grid-template-columns: 1fr; gap: 0; }
-        .quick-topping-grid { grid-template-columns: 1fr; }
-        .quick-actions { grid-template-columns: 1fr; }
-    }
-
-    .quick-add-thumb {
-        width: 54px;
-        height: 54px;
-        border-radius: 12px;
-        object-fit: contain;
-        object-position: center;
-        background: #ffffff;
-        border: 1px solid var(--drink-border);
-        padding: 0.25rem;
-        flex: 0 0 auto;
-    }
-
-    .quick-topping-choice {
-        min-width: 0;
-        border-radius: 12px;
-        text-align: left;
-        padding: 0.4rem 0.6rem;
-        font-size: 0.85rem;
-    }
-
-    .quick-topping-choice small {
-        display: block;
-        margin-top: 0.05rem;
-        font-size: 0.72rem;
-        opacity: 0.85;
-    }
-
-    .quick-choice {
-        min-width: 0;
-        border: 1.5px solid var(--c-border, #e5e7eb) !important;
-        border-radius: 12px;
-        background: #ffffff !important;
-        color: var(--c-ink, #111827) !important;
-        font-weight: 700;
-        padding: 0.42rem 0.75rem;
-        cursor: pointer;
-        transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
-    }
-
-    .quick-choice:hover {
-        border-color: var(--c-primary, #0d9373) !important;
-        background: var(--c-primary-light, #e6f7f2) !important;
-        color: var(--c-primary-dark, #067a5f) !important;
-        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.13);
-    }
-
-    .quick-choice.active {
-        border-color: var(--c-primary, #0d9373) !important;
-        background: var(--c-primary-light, #e6f7f2) !important;
-        color: var(--c-primary-dark, #067a5f) !important;
-        box-shadow: 0 0 0 3px rgba(13, 147, 115, 0.12);
-        transform: translateY(-1px);
-    }
-
-    .quick-choice.active:hover {
-        background: var(--c-primary-light, #e6f7f2) !important;
-        border-color: var(--c-primary, #0d9373) !important;
-        color: var(--c-primary-dark, #067a5f) !important;
-    }
-
     .pager-dot {
         width: 42px;
         height: 42px;
@@ -1398,19 +1183,6 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
             --bs-gutter-y: 0.6rem;
         }
 
-        .quick-add-modal .modal-header { padding: 0.85rem 0.9rem 0.45rem; }
-        .quick-add-modal .modal-body { padding: 0 0.9rem 0.9rem; }
-        .quick-actions-footer { padding: 0.65rem 0.9rem 0.9rem; }
-        .quick-product-summary { padding: 0.6rem; }
-        .quick-add-thumb { width: 58px; height: 58px; border-radius: 12px; }
-        .quick-section { margin-top: 0.6rem; padding-top: 0.6rem; }
-        .quick-section-label { margin-bottom: 0.45rem; }
-        .quick-size-grid { gap: 0.35rem; }
-        .quick-choice { min-height: 40px; padding: 0.4rem; }
-        .quick-levels-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
-        .quick-topping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
-        .quick-actions { grid-template-columns: auto minmax(0, 1fr); gap: 0.5rem; }
-        .quick-submit { min-height: 44px; }
     }
 
     @media (min-width: 576px) and (max-width: 991.98px) {
@@ -1457,6 +1229,7 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
         }
     }
 </style>
+@include('client.partials.drink-customizer-styles')
 
 <section class="shop-page">
     <div class="container">
@@ -1714,7 +1487,12 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                                     @php
                                         $isFavorite = $favoriteProductIds->contains($product->id);
                                     @endphp
-                                    <form method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>@csrf<button type="submit" class="product-favorite-btn {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button><i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i></button></form>
+                                    <form class="home-product__favorite-form" method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>
+                                        @csrf
+                                        <button type="submit" class="home-product__favorite {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button>
+                                            <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
                                 @else
                                 <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
                                     <i class="bi bi-heart"></i>
@@ -1846,10 +1624,10 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
     </div>
 </section>
 
-<div class="modal fade quick-add-modal" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddTitle" aria-hidden="true">
+<div class="modal fade quick-add-modal drink-customizer" id="quickAddModal" tabindex="-1" aria-labelledby="quickAddTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="quickAddForm" method="POST" data-ajax-cart>
+            <form id="quickAddForm" class="drink-customizer__form" method="POST" data-ajax-cart>
                 @csrf
                 <input type="hidden" name="size" value="S" data-quick-size-input>
                 <input type="hidden" name="sugar_level" value="50" data-quick-sugar-input>
@@ -1857,64 +1635,64 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                 <input type="hidden" name="toppings" value="[]" data-quick-toppings-input>
                 <input type="hidden" name="quantity" value="1">
 
-                <div class="modal-header border-0 pb-1">
-                    <h2 class="modal-title h5 fw-bold mb-0" id="quickAddTitle">Tùy chọn đồ uống</h2>
+                <div class="modal-header drink-customizer__header border-0 pb-1">
+                    <h2 class="modal-title drink-customizer__title" id="quickAddTitle">Tùy chọn đồ uống</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
 
-                <div class="modal-body">
-                    <div class="quick-product-summary">
-                        <img src="{{ $uiPlaceholderImage('Sản phẩm', 'Đồ uống') }}" alt="Ảnh sản phẩm" class="quick-add-thumb" data-quick-image>
+                <div class="modal-body drink-customizer__body">
+                    <div class="quick-product-summary drink-customizer__summary">
+                        <img src="{{ $uiPlaceholderImage('Sản phẩm', 'Đồ uống') }}" alt="Ảnh sản phẩm" class="quick-add-thumb drink-customizer__thumb" data-quick-image>
                         <div>
                             <div class="fw-bold fs-5" data-quick-name></div>
                             <div class="text-primary fw-bold fs-5" data-quick-price></div>
                         </div>
                     </div>
 
-                    <div class="quick-section">
-                        <div class="quick-section-label"><i class="bi bi-cup-straw"></i> Chọn kích cỡ</div>
-                        <div class="quick-size-grid" data-quick-group="size">
-                            <button type="button" class="quick-choice active" data-value="S" data-extra-price="0">S<small class="d-block text-secondary">Giá gốc</small></button>
-                            <button type="button" class="quick-choice" data-value="M" data-extra-price="5000">M<small class="d-block text-secondary">+5.000đ</small></button>
-                            <button type="button" class="quick-choice" data-value="L" data-extra-price="10000">L<small class="d-block text-secondary">+10.000đ</small></button>
+                    <div class="quick-section drink-customizer__section">
+                        <div class="quick-section-label drink-customizer__section-title"><i class="bi bi-cup-straw"></i> Chọn kích cỡ</div>
+                        <div class="quick-size-grid drink-customizer__sizes" data-quick-group="size">
+                            <button type="button" class="quick-choice drink-customizer__choice drink-customizer__size active" data-value="S" data-extra-price="0">S<small class="d-block text-secondary">Giá gốc</small></button>
+                            <button type="button" class="quick-choice drink-customizer__choice drink-customizer__size" data-value="M" data-extra-price="5000">M<small class="d-block text-secondary">+5.000đ</small></button>
+                            <button type="button" class="quick-choice drink-customizer__choice drink-customizer__size" data-value="L" data-extra-price="10000">L<small class="d-block text-secondary">+10.000đ</small></button>
                         </div>
                     </div>
 
-                    <div class="quick-section quick-levels-grid">
+                    <div class="quick-section quick-levels-grid drink-customizer__section drink-customizer__levels">
                         <div>
-                            <div class="quick-section-label"><i class="bi bi-droplet"></i> Mức đường</div>
-                            <div class="quick-sugar-grid" data-quick-group="sugar">
-                                <button type="button" class="quick-choice" data-value="0">0%</button>
-                                <button type="button" class="quick-choice" data-value="30">30%</button>
-                                <button type="button" class="quick-choice" data-value="50">50%</button>
-                                <button type="button" class="quick-choice" data-value="70">70%</button>
-                                <button type="button" class="quick-choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
+                            <div class="quick-section-label drink-customizer__section-title"><i class="bi bi-droplet"></i> Mức đường</div>
+                            <div class="quick-sugar-grid drink-customizer__sugar" data-quick-group="sugar">
+                                <button type="button" class="quick-choice drink-customizer__choice" data-value="0">0%</button>
+                                <button type="button" class="quick-choice drink-customizer__choice" data-value="30">30%</button>
+                                <button type="button" class="quick-choice drink-customizer__choice" data-value="50">50%</button>
+                                <button type="button" class="quick-choice drink-customizer__choice" data-value="70">70%</button>
+                                <button type="button" class="quick-choice drink-customizer__choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
                             </div>
                         </div>
                         <div>
-                            <div class="quick-section-label"><i class="bi bi-snow"></i> Mức đá</div>
-                            <div class="quick-ice-grid" data-quick-group="ice">
-                                <button type="button" class="quick-choice" data-value="0">Không đá</button>
-                                <button type="button" class="quick-choice" data-value="50">Ít đá</button>
-                                <button type="button" class="quick-choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
+                            <div class="quick-section-label drink-customizer__section-title"><i class="bi bi-snow"></i> Mức đá</div>
+                            <div class="quick-ice-grid drink-customizer__ice" data-quick-group="ice">
+                                <button type="button" class="quick-choice drink-customizer__choice" data-value="0">Không đá</button>
+                                <button type="button" class="quick-choice drink-customizer__choice" data-value="50">Ít đá</button>
+                                <button type="button" class="quick-choice drink-customizer__choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="quick-section">
-                        <div class="quick-section-label"><i class="bi bi-plus-circle"></i> Thêm món kèm <small>(tối đa 3 món)</small></div>
-                        <div class="quick-topping-grid" data-quick-topping-group></div>
+                    <div class="quick-section drink-customizer__section">
+                        <div class="quick-section-label drink-customizer__section-title"><i class="bi bi-plus-circle"></i> Thêm món kèm <small>(tối đa 3 món)</small></div>
+                        <div class="quick-topping-grid drink-customizer__toppings" data-quick-topping-group></div>
                     </div>
 
                 </div>
 
-                <div class="quick-actions quick-actions-footer">
-                    <div class="quick-quantity" aria-label="Số lượng">
+                <div class="quick-actions quick-actions-footer drink-customizer__footer">
+                    <div class="quick-quantity drink-customizer__quantity" aria-label="Số lượng">
                         <button type="button" data-quick-qty-minus aria-label="Giảm số lượng">−</button>
                         <span class="fw-bold fs-5" data-quick-qty-display>1</span>
                         <button type="button" data-quick-qty-plus aria-label="Tăng số lượng">+</button>
                     </div>
-                    <button type="submit" class="btn btn-primary rounded-pill fw-bold quick-submit">
+                    <button type="submit" class="btn btn-primary rounded-pill fw-bold quick-submit drink-customizer__submit">
                         Thêm vào giỏ · <span data-quick-total>0đ</span>
                     </button>
                 </div>
@@ -2145,12 +1923,21 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                 options = toppingOptionsFor(name, category);
             }
 
-            fields.toppingGroup.innerHTML = options.map(([toppingName, price]) => `
-                <button type="button" class="quick-choice quick-topping-choice" data-topping-name="${toppingName}" data-topping-price="${price}">
-                    ${toppingName}
-                    <small>+${Number(price).toLocaleString('vi-VN')}đ</small>
-                </button>
-            `).join('');
+            fields.toppingGroup.replaceChildren(...options.map(([toppingName, price]) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'quick-choice quick-topping-choice drink-customizer__choice drink-customizer__topping';
+                button.dataset.toppingName = String(toppingName || 'Món kèm');
+                button.dataset.toppingPrice = String(Number(price || 0));
+                button.setAttribute('aria-pressed', 'false');
+                button.append(document.createTextNode(button.dataset.toppingName));
+
+                const priceLabel = document.createElement('small');
+                priceLabel.textContent = `+${Number(price || 0).toLocaleString('vi-VN')}đ`;
+                button.append(priceLabel);
+
+                return button;
+            }));
 
             syncQuickToppings();
         }
@@ -2257,6 +2044,7 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                 }
 
                 button.classList.toggle('active');
+                button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
                 syncQuickToppings();
             });
         }
