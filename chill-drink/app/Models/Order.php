@@ -128,6 +128,11 @@ class Order extends Model
         return $this->belongsTo(OrderIssueReport::class, 'support_issue_id');
     }
 
+    public function groupOrder()
+    {
+        return $this->hasOne(GroupOrder::class, 'order_id');
+    }
+
     /**
      * Khách chỉ được tạo yêu cầu hỗ trợ trong 2 giờ kể từ lúc đơn hoàn tất.
      */
@@ -361,8 +366,9 @@ class Order extends Model
 
     public function pointsEarnable(): int
     {
-        // 1 point per 10,000 VND spent
-        return LoyaltyPoint::calculatePointsFromAmount((int) $this->total);
+        // 1 point per 10,000 VND spent on drinks (excluding shipping fee)
+        $drinkAmount = max(0, (int) $this->subtotal - (int) ($this->order_discount ?? $this->discount));
+        return LoyaltyPoint::calculatePointsFromAmount($drinkAmount);
     }
 
     /**

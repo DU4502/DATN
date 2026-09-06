@@ -234,21 +234,25 @@ class GuestCheckoutController extends Controller
                 ->whereNull('user_id')
                 ->update(['user_id' => $user->id]);
 
-            // Calculate total accrued points
-            $linkedOrders = Order::where('user_id', $user->id)->get();
+            // Calculate total accrued points from completed orders
+            $linkedOrders = Order::where('user_id', $user->id)
+                ->where('status', \App\Support\OrderStatus::COMPLETED)
+                ->get();
             $totalPointsEarned = 0;
             foreach ($linkedOrders as $o) {
                 $totalPointsEarned += $o->pointsEarnable();
             }
 
-            // Sync with loyalty_points table
-            \App\Models\LoyaltyPoint::getOrCreateForUser($user->id)->addPoints(
-                points: $totalPointsEarned,
-                type: 'earn',
-                description: 'Tích điểm chuyển đổi thành viên',
-                referenceType: 'convert',
-                referenceId: $order->id
-            );
+            if ($totalPointsEarned > 0) {
+                // Sync with loyalty_points table
+                \App\Models\LoyaltyPoint::getOrCreateForUser($user->id)->addPoints(
+                    points: $totalPointsEarned,
+                    type: 'earn',
+                    description: 'Tích điểm chuyển đổi thành viên',
+                    referenceType: 'convert',
+                    referenceId: $order->id
+                );
+            }
 
             DB::commit();
 

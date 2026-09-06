@@ -37,16 +37,30 @@ class LoyaltyPoint extends Model
     }
 
     /**
+     * Ensure monthly points reflect the current month
+     */
+    public function checkAndResetMonthly(): self
+    {
+        $nowMonth = now()->format('Y-m');
+        if ($this->current_month !== $nowMonth) {
+            $this->monthly_points = 0;
+            $this->current_month = $nowMonth;
+            $this->save();
+        }
+
+        return $this;
+    }
+
+    /**
      * Add points to user account
      */
     public function addPoints(int $points, string $type = 'earn', ?string $description = null, ?string $referenceType = null, ?int $referenceId = null): void
     {
+        $this->checkAndResetMonthly();
+
         $this->total_points += $points;
         $this->monthly_points += $points;
         $this->lifetime_points += $points;
-        
-        // Update current month tracker
-        $this->current_month = now()->format('Y-m');
         
         $this->save();
         
@@ -111,7 +125,7 @@ class LoyaltyPoint extends Model
      */
     public static function getOrCreateForUser(int $userId): self
     {
-        return self::firstOrCreate(
+        $record = self::firstOrCreate(
             ['user_id' => $userId],
             [
                 'total_points' => 0,
@@ -120,5 +134,7 @@ class LoyaltyPoint extends Model
                 'current_month' => now()->format('Y-m'),
             ]
         );
+
+        return $record->checkAndResetMonthly();
     }
 }

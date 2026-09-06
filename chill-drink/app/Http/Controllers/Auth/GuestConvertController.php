@@ -73,7 +73,10 @@ class GuestConvertController extends Controller
                 'user_id' => $user->id,
             ]);
 
-            $this->awardLoyaltyPoints($user->id, $order);
+            $isCompleted = \App\Support\OrderStatus::normalize((string) $order->status) === \App\Support\OrderStatus::COMPLETED;
+            if ($isCompleted) {
+                $this->awardLoyaltyPoints($user->id, $order);
+            }
 
             return $user;
         });
@@ -90,9 +93,13 @@ class GuestConvertController extends Controller
             ]);
         }
 
+        $flashMessage = (\App\Support\OrderStatus::normalize((string) $order->status) === \App\Support\OrderStatus::COMPLETED)
+            ? 'Tài khoản đã được tạo! Điểm tích lũy từ đơn hàng vừa rồi đã được cộng vào tài khoản.'
+            : 'Tài khoản đã được tạo! Điểm tích lũy sẽ được tự động cộng vào tài khoản khi đơn hàng hoàn thành.';
+
         return redirect()
             ->route('orders.index')
-            ->with('success', 'Tài khoản đã được tạo! Điểm tích lũy từ đơn hàng vừa rồi đã được cộng vào tài khoản.');
+            ->with('success', $flashMessage);
     }
 
     private function awardLoyaltyPoints(int $userId, Order $order): void

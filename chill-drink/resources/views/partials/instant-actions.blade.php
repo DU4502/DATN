@@ -97,7 +97,7 @@
             icon.className = active ? form.dataset.activeIcon : form.dataset.inactiveIcon;
         }
 
-        const hiddenStatus = form.querySelector('input[name="status"][type="hidden"]');
+        const hiddenStatus = form.querySelector("input[name='status'][type='hidden']");
         if (hiddenStatus && form.dataset.nextActiveValue && form.dataset.nextInactiveValue) {
             hiddenStatus.value = active ? form.dataset.nextInactiveValue : form.dataset.nextActiveValue;
         }

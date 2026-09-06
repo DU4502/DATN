@@ -97,6 +97,13 @@
                     <td class="text-center">{{ $group->items_count }}</td>
                     <td class="text-center">
                         <span class="badge bg-{{ $statusColor }}-subtle text-{{ $statusColor }}-emphasis">{{ $statusLabel }}</span>
+                        @if($group->order)
+                            <div class="mt-1">
+                                <a href="{{ route('staff.orders.index', ['search' => $group->order->displayCode()]) }}" class="badge bg-primary-subtle text-primary border border-primary-subtle text-decoration-none" title="Xem đơn hàng">
+                                    <i class="bi bi-receipt me-1"></i>{{ $group->order->displayCode() }}
+                                </a>
+                            </div>
+                        @endif
                     </td>
                     <td class="text-center">
                         @if($changedBy)

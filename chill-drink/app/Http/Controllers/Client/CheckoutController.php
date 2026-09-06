@@ -72,7 +72,13 @@ class CheckoutController extends Controller
             );
         }
 
-        if ($request->query->has('items')) {
+        if ($groupCheckout) {
+            $groupCartKeys = session('group_cart_keys', []);
+            if (! empty($groupCartKeys)) {
+                $cart = array_intersect_key($cart, array_flip($groupCartKeys));
+            }
+            session(['checkout_cart_keys' => array_keys($cart)]);
+        } elseif ($request->query->has('items')) {
             $selectedKeys = $this->selectedCartKeys($request->query('items', []), $cart);
 
             if (! empty($selectedKeys)) {
@@ -175,7 +181,9 @@ class CheckoutController extends Controller
             ->get()
             ->filter(fn (Voucher $voucher) => $voucher->isActiveNow()
                 && $voucher->hasRemainingUses()
-                && ! $voucher->isPersonalSupportVoucher())
+                && ! $voucher->isPersonalSupportVoucher()
+                && ! $voucher->is_redeemable
+                && (int) ($voucher->point_cost ?? 0) <= 0)
             ->values();
 
         // Get user's received vouchers (vouchers they have claimed)
@@ -1070,6 +1078,17 @@ class CheckoutController extends Controller
 
     protected function assertVoucherRankAndPoints(Voucher $voucher): void
     {
+        // Nếu khách đã sở hữu voucher trong ví (đã đổi điểm trước đó), không cần kiểm tra số dư điểm hiện tại
+        if (auth()->check() && Schema::hasTable('user_vouchers')) {
+            $alreadyOwned = \App\Models\UserVoucher::where('user_id', auth()->id())
+                ->where('coupon_id', $voucher->id)
+                ->where('is_used', 0)
+                ->exists();
+            if ($alreadyOwned) {
+                return;
+            }
+        }
+
         $context = $this->loyaltyContext();
 
         if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost) {
@@ -1083,6 +1102,16 @@ class CheckoutController extends Controller
 
     protected function userCanUseVoucher(Voucher $voucher, array $context): bool
     {
+        if (auth()->check() && Schema::hasTable('user_vouchers')) {
+            $alreadyOwned = \App\Models\UserVoucher::where('user_id', auth()->id())
+                ->where('coupon_id', $voucher->id)
+                ->where('is_used', 0)
+                ->exists();
+            if ($alreadyOwned) {
+                return true;
+            }
+        }
+
         return ! ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost);
     }
 
@@ -1090,8 +1119,9 @@ class CheckoutController extends Controller
     {
         $voucher->increment('used_count');
 
+        $hadUserVoucher = false;
         if (auth()->check() && Schema::hasTable('user_vouchers')) {
-            \App\Models\UserVoucher::where('user_id', auth()->id())
+            $updated = \App\Models\UserVoucher::where('user_id', auth()->id())
                 ->where('coupon_id', $voucher->id)
                 ->where('is_used', 0)
                 ->limit(1)
@@ -1099,6 +1129,7 @@ class CheckoutController extends Controller
                     'is_used' => 1,
                     'used_at' => now(),
                 ]);
+            $hadUserVoucher = $updated > 0;
         }
 
         if (Schema::hasTable('user_coupon_usage')) {
@@ -1111,7 +1142,8 @@ class CheckoutController extends Controller
             ]);
         }
 
-        if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && Schema::hasTable('loyalty_points')) {
+        // Chỉ trừ điểm nếu khách CHƯA đổi voucher bằng điểm trước đó (tức chưa có bản ghi trong user_vouchers)
+        if (! $hadUserVoucher && $voucher->is_redeemable && (int) $voucher->point_cost > 0 && Schema::hasTable('loyalty_points')) {
             DB::table('loyalty_points')
                 ->where('user_id', auth()->id())
                 ->where('total_points', '>=', (int) $voucher->point_cost)
@@ -1265,6 +1297,12 @@ class CheckoutController extends Controller
 
             $unitPrice = $this->currentUnitPriceForCheckoutItem($item, $product);
 
+            $memberName = trim((string) ($item['group_member_name'] ?? ''));
+            $customNote = trim((string) ($item['note'] ?? ''));
+            $itemNote = $memberName !== ''
+                ? ($customNote !== '' ? "[{$memberName}] {$customNote}" : "[{$memberName}]")
+                : ($customNote !== '' ? $customNote : null);
+
             $items[] = [
                 'product_id' => (int) $productId,
                 'product_size_id' => $this->resolveProductSizeId((int) $productId, $item, $unitPrice),
@@ -1273,8 +1311,8 @@ class CheckoutController extends Controller
                 'total_price' => $unitPrice * $quantity,
                 'ice_level' => (int) ($item['ice_level'] ?? 100),
                 'sugar_level' => (int) ($item['sugar_level'] ?? 100),
-            'toppings' => $item['toppings'] ?? [],
-            'item_note' => $item['note'] ?? null,
+                'toppings' => $item['toppings'] ?? [],
+                'item_note' => $itemNote,
             ];
         }
 

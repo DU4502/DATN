@@ -18,7 +18,7 @@ class GroupOrderController extends Controller
         ];
 
         $groups = $this->applyBranchScope(GroupOrder::query())
-            ->with('owner')
+            ->with(['owner', 'order'])
             ->withCount(['members', 'items'])
             ->when($filters['q'] !== '', function ($query) use ($filters) {
                 $keyword = $filters['q'];

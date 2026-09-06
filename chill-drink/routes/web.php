@@ -72,6 +72,8 @@ Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear
 
 Route::get('/vnpay/ipn', [VnpayController::class, 'ipn'])->name('vnpay.ipn');
 Route::get('/vnpay/return', [VnpayController::class, 'return'])->name('vnpay.return');
+Route::get('/api/vouchers/received', [\App\Http\Controllers\Api\VoucherController::class, 'getReceived'])->name('vouchers.received');
+
 
 // Guest checkout (no authentication required)
 Route::prefix('checkout/guest')->name('checkout.guest.')->group(function () {
@@ -404,6 +406,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/group-orders/join/{code}/messages/read', [GroupOrderController::class, 'readMessages'])->name('group-orders.messages.read');
     Route::post('/group-orders/join/{code}', [GroupOrderController::class, 'join'])->name('group-orders.join');
     Route::post('/group-orders/join/{code}/items', [GroupOrderController::class, 'addItem'])->name('group-orders.items.store');
+    Route::put('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'updateItem'])->name('group-orders.items.update');
     Route::patch('/group-orders/join/{code}/items/{item}/increment', [GroupOrderController::class, 'incrementItem'])->name('group-orders.items.increment');
     Route::patch('/group-orders/join/{code}/items/{item}/decrement', [GroupOrderController::class, 'decrementItem'])->name('group-orders.items.decrement');
     Route::delete('/group-orders/join/{code}/items/{item}', [GroupOrderController::class, 'removeItem'])->name('group-orders.items.destroy');

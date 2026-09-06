@@ -100,7 +100,16 @@
                     $historyCount    = $order->statusHistories ? $order->statusHistories->count() : 0;
                 @endphp
                 <tr data-order-id="{{ $order->id }}" data-order-status="{{ \App\Support\OrderStatus::normalize((string) $order->status) }}">
-                    <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
+                    <td class="fw-bold text-primary">
+                        <div>{{ $order->displayCode() }}</div>
+                        @if($order->groupOrder)
+                            <div class="mt-1">
+                                <a href="{{ route('staff.group-orders.show', $order->groupOrder) }}" class="badge bg-success-subtle text-success text-decoration-none border border-success-subtle py-1 px-2" title="Xem phòng đơn nhóm">
+                                    <i class="bi bi-people-fill me-1"></i>{{ $order->groupOrder->name }}
+                                </a>
+                            </div>
+                        @endif
+                    </td>
                     <td class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
@@ -204,6 +213,12 @@
                                         <div><i class="bi bi-telephone me-2"></i>{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</div>
                                         <div><i class="bi bi-envelope me-2"></i>{{ $order->customerEmail() ?: 'Chưa cập nhật' }}</div>
                                         <div><i class="bi bi-geo-alt me-2"></i>{{ $order->getShippingAddress() }}</div>
+                                        @if(filled($order->note))
+                                        <div class="alert alert-warning border-0 py-2 px-3 mt-1 mb-0" style="border-radius:10px;font-size:.82rem;">
+                                            <i class="bi bi-chat-left-text-fill me-1 text-warning-emphasis"></i>
+                                            <strong>Ghi chú:</strong> {{ $order->note }}
+                                        </div>
+                                        @endif
                                     </div>
 
                                     @if($order->status_changed_at)
@@ -342,8 +357,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function normalizePayload(payload) {
         if (!payload || typeof payload !== 'object') return null;
-        const orderId = payload.order_id || payload.id;
         const data = payload.data && typeof payload.data === 'object' ? payload.data : payload;
+        const orderId = data.order_id || data.id || payload.order_id || payload.id;
         const status = String(data.status || payload.status || '');
         if (!orderId || !status) return null;
 
@@ -440,6 +455,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        const formData = new FormData(form);
+        if (requestedStatus) {
+            formData.set('status', requestedStatus);
+        }
+
         const loading = form.querySelector('[data-staff-order-status-loading]');
         pendingStatusUpdates.add(orderId);
         if (select) select.disabled = true;
@@ -448,7 +468,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const response = await fetch(form.action, {
                 method: 'POST',
-                body: new FormData(form),
+                body: formData,
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',

@@ -44,39 +44,174 @@
 
         @if($currentMember && $isOpen)
             <form method="POST" action="{{ route('group-orders.items.store', $group->code) }}" class="group-card group-order-form mb-5" data-group-async-action>@csrf
-                <div class="group-order-form-head"><div><div class="group-eyebrow mb-1">Món của bạn</div><h2 class="group-section-title mb-0">Chọn đồ uống cho {{ $currentMember->name }}</h2></div><span class="group-status is-open"><i class="bi bi-plus-circle"></i>Thêm nhiều món</span></div>
+                <div class="group-order-form-head">
+                    <div>
+                        <div class="group-eyebrow mb-1">Món của bạn</div>
+                        <h2 class="group-section-title mb-0">Chọn đồ uống cho {{ $currentMember->name }}</h2>
+                    </div>
+                    <span class="group-status is-open"><i class="bi bi-plus-circle"></i>Thêm nhiều món</span>
+                </div>
                 <div class="group-order-form-body">
-                <div class="row g-3 mb-3">
-                    @php($selectedProduct = $products->firstWhere('id', (int) old('product_id')))
-                    <div class="col-lg-6"><div class="group-field-panel"><label class="group-form-label" for="groupProductSearch">Đồ uống</label><div class="group-product-picker" data-product-picker><div class="group-product-search"><i class="bi bi-search"></i><input id="groupProductSearch" type="search" class="form-control group-input" value="{{ $selectedProduct?->name }}" placeholder="Tìm và chọn đồ uống..." autocomplete="off" required data-product-search><i class="bi bi-chevron-down"></i></div><input type="hidden" name="product_id" value="{{ old('product_id') }}" data-product-value><div class="group-product-menu" data-product-menu>
-                        @foreach($products as $product)
-                            <button type="button" class="group-product-option" data-product-option data-value="{{ $product->id }}" data-name="{{ $product->name }}" data-search="{{ $product->name }} {{ $product->sku }}" data-toppings="{{ $productToppingMap->get($product->id, collect())->implode(',') }}">
-                                <x-product-image :src="$product->image_url" :sku="$product->sku" :name="$product->name" :category="$product->category?->name" class="group-product-option-image" />
-                                <span class="group-product-option-copy"><strong>{{ $product->name }}</strong><span class="text-secondary small">{{ $product->category?->name }}</span></span>
-                                <small class="group-product-option-price">{{ number_format($product->price, 0, ',', '.') }}đ</small>
-                            </button>
-                        @endforeach
-                        <div class="group-search-empty" data-product-empty><i class="bi bi-exclamation-circle me-1"></i>Không tìm thấy đồ uống phù hợp.</div>
-                    </div></div></div></div>
-                    <div class="col-lg-6"><div class="group-field-panel"><div class="group-custom-grid"><div><label class="group-form-label">Kích cỡ</label><select name="size" class="form-select group-input"><option selected>S</option><option>M</option><option>L</option></select></div><div><label class="group-form-label">Mức đường</label><select name="sugar_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Mức đá</label><select name="ice_level" class="form-select group-input">@foreach([0,30,50,70,100] as $value)<option value="{{ $value }}" @selected($value === 100)>{{ $value }}%</option>@endforeach</select></div><div><label class="group-form-label">Số lượng</label><input type="number" name="quantity" value="1" min="1" max="20" class="form-control group-input text-center"></div></div></div></div>
-                    @if($toppings->isNotEmpty())
-                        @php($initialToppingIds = $selectedProduct ? $productToppingMap->get($selectedProduct->id, collect()) : collect())
-                        <div class="col-12" data-group-topping-section>
-                            <div class="group-option-box">
-                                <label class="group-form-label d-block mb-1">Món thêm phù hợp</label>
-                                <p class="text-secondary small mb-3" data-topping-help>{{ $selectedProduct ? 'Chỉ hiển thị topping dùng được với món đã chọn.' : 'Hãy chọn đồ uống trước để xem topping phù hợp.' }}</p>
-                                <div class="d-flex flex-wrap gap-2" data-group-toppings>
-                                    @foreach($toppings as $topping)
-                                        <label class="group-topping {{ $initialToppingIds->contains((int) $topping->id) ? '' : 'd-none' }}" data-topping-id="{{ $topping->id }}"><input class="form-check-input m-0" type="checkbox" name="toppings[]" value="{{ $topping->id }}"><span><strong>{{ $topping->name }}</strong> <small class="text-secondary">+{{ number_format($topping->price, 0, ',', '.') }}đ</small></span></label>
-                                    @endforeach
+                    @php
+                        $selectedProduct = $products->firstWhere('id', (int) old('product_id'));
+                    @endphp
+                    <div class="mb-3">
+                        <label class="group-form-label" for="groupProductSearch"><i class="bi bi-cup-hot me-1 text-primary"></i>Chọn đồ uống <span class="text-danger">*</span></label>
+                        <div class="group-product-picker" data-product-picker>
+                            {{-- Preview Card khi đã chọn món (tương tự modal Tùy chọn đồ uống) --}}
+                            <div class="group-selected-product-card mb-2 {{ $selectedProduct ? '' : 'd-none' }}" data-selected-product-preview>
+                                <img src="{{ $selectedProduct?->image_url }}" alt="{{ $selectedProduct?->name }}" class="group-selected-product-thumb" data-selected-product-image>
+                                <div class="group-selected-product-info">
+                                    <div class="group-selected-product-name" data-selected-product-name>{{ $selectedProduct?->name }}</div>
+                                    <div class="group-selected-product-price" data-selected-product-price>{{ $selectedProduct ? number_format($selectedProduct->price, 0, ',', '.') . 'đ' : '' }}</div>
                                 </div>
-                                <div class="text-secondary small {{ $selectedProduct ? 'd-none' : '' }}" data-choose-product-for-toppings><i class="bi bi-cup-straw me-1"></i>Chưa chọn đồ uống.</div>
-                                <div class="text-secondary small d-none" data-no-toppings><i class="bi bi-info-circle me-1"></i>Món này không có món thêm.</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary ms-auto rounded-pill px-3" data-change-product-btn>
+                                    <i class="bi bi-arrow-repeat me-1"></i>Đổi món
+                                </button>
+                            </div>
+
+                            <div class="group-product-search {{ $selectedProduct ? 'd-none' : '' }}" data-product-search-container>
+                                <i class="bi bi-search"></i>
+                                <input id="groupProductSearch" type="search" class="form-control group-input" value="{{ $selectedProduct?->name }}" placeholder="Tìm tên đồ uống (VD: Bạc xỉu, Trà sữa, Cà phê...)" autocomplete="off" required data-product-search>
+                                <i class="bi bi-chevron-down"></i>
+                            </div>
+                            <input type="hidden" name="product_id" value="{{ old('product_id') }}" data-product-value>
+                            <div class="group-product-menu" data-product-menu>
+                                @foreach($products as $product)
+                                    <button type="button" class="group-product-option" data-product-option 
+                                        data-value="{{ $product->id }}" 
+                                        data-name="{{ $product->name }}" 
+                                        data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
+                                        data-base-price="{{ (int) $product->price }}"
+                                        data-image="{{ $product->image_url }}"
+                                        data-sizes='@json($product->sizes->pluck("pivot.price", "name"))'
+                                        data-search="{{ $product->name }} {{ $product->sku }}" 
+                                        data-toppings="{{ $productToppingMap->get($product->id, collect())->implode(',') }}">
+                                        <x-product-image :src="$product->image_url" :sku="$product->sku" :name="$product->name" :category="$product->category?->name" class="group-product-option-image" />
+                                        <span class="group-product-option-copy"><strong>{{ $product->name }}</strong><span class="text-secondary small">{{ $product->category?->name }}</span></span>
+                                        <small class="group-product-option-price">{{ number_format($product->price, 0, ',', '.') }}đ</small>
+                                    </button>
+                                @endforeach
+                                <div class="group-search-empty" data-product-empty><i class="bi bi-exclamation-circle me-1"></i>Không tìm thấy đồ uống phù hợp.</div>
                             </div>
                         </div>
-                    @endif
-                </div>
-                <div class="group-submit-row"><div class="group-note"><label class="group-form-label">Ghi chú riêng</label><input name="note" maxlength="500" class="form-control group-input" placeholder="Ví dụ: Ít ngọt, không ống hút..."></div><button class="btn btn-primary group-btn group-add-button"><i class="bi bi-plus-circle me-2"></i>Thêm vào đơn nhóm</button></div>
+                    </div>
+
+                    {{-- Placeholder khi chưa chọn đồ uống --}}
+                    <div class="p-4 border rounded-4 text-center bg-light text-muted {{ $selectedProduct ? 'd-none' : '' }}" data-product-choice-placeholder>
+                        <i class="bi bi-cup-straw fs-2 text-primary d-block mb-2"></i>
+                        <span>Vui lòng tìm và chọn một đồ uống ở trên để mở các tùy chọn kích cỡ, khẩu vị và topping.</span>
+                    </div>
+
+                    {{-- Khung Tùy chọn (Kích cỡ, Khẩu vị, Topping, Ghi chú) CHỈ HIỆN KHI ĐÃ CHỌN ĐỒ UỐNG --}}
+                    <div class="{{ $selectedProduct ? '' : 'd-none' }}" data-product-options-section>
+                        {{-- 1. Chọn kích cỡ --}}
+                        <div class="mb-3">
+                            <label class="group-form-label d-block mb-2"><i class="bi bi-aspect-ratio me-1 text-primary"></i>Chọn kích cỡ</label>
+                            <div class="group-size-grid">
+                                <label class="group-size-pill">
+                                    <input type="radio" name="size" value="S" checked class="group-size-radio" data-size-input="S">
+                                    <span class="group-size-btn">
+                                        <span class="size-letter">S</span>
+                                        <span class="size-sub">Giá gốc</span>
+                                    </span>
+                                </label>
+                                <label class="group-size-pill">
+                                    <input type="radio" name="size" value="M" class="group-size-radio" data-size-input="M">
+                                    <span class="group-size-btn">
+                                        <span class="size-letter">M</span>
+                                        <span class="size-sub" data-size-sub="M">+5.000đ</span>
+                                    </span>
+                                </label>
+                                <label class="group-size-pill">
+                                    <input type="radio" name="size" value="L" class="group-size-radio" data-size-input="L">
+                                    <span class="group-size-btn">
+                                        <span class="size-letter">L</span>
+                                        <span class="size-sub" data-size-sub="L">+10.000đ</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- 2. Tùy chỉnh khẩu vị: Mức đường & Mức đá (Pill Buttons y hệt modal Tùy chọn đồ uống) --}}
+                        <div class="mb-3">
+                            <div class="row g-3">
+                                <div class="col-md-7 col-12">
+                                    <label class="group-form-label d-block mb-2"><i class="bi bi-droplet me-1 text-primary"></i>Mức đường</label>
+                                    <div class="group-level-pills-row" data-quick-group="sugar">
+                                        @foreach([0, 30, 50, 70, 100] as $sugar)
+                                            <label class="group-level-choice">
+                                                <input type="radio" name="sugar_level" value="{{ $sugar }}" @checked($sugar === 100)>
+                                                <span class="group-level-btn">{{ $sugar }}%</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="col-md-5 col-12">
+                                    <label class="group-form-label d-block mb-2"><i class="bi bi-snow me-1 text-info"></i>Mức đá</label>
+                                    <div class="group-level-pills-row" data-quick-group="ice">
+                                        <label class="group-level-choice">
+                                            <input type="radio" name="ice_level" value="0">
+                                            <span class="group-level-btn">Không đá</span>
+                                        </label>
+                                        <label class="group-level-choice">
+                                            <input type="radio" name="ice_level" value="50">
+                                            <span class="group-level-btn">Ít đá</span>
+                                        </label>
+                                        <label class="group-level-choice">
+                                            <input type="radio" name="ice_level" value="100" checked>
+                                            <span class="group-level-btn">100%</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- 3. Topping (Thêm món kèm) --}}
+                        @if($toppings->isNotEmpty())
+                            @php
+                                $initialToppingIds = $selectedProduct ? $productToppingMap->get($selectedProduct->id, collect()) : collect();
+                            @endphp
+                            <div class="mb-3" data-group-topping-section>
+                                <div class="group-option-box">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <label class="group-form-label mb-0"><i class="bi bi-plus-circle me-1 text-primary"></i>Thêm món kèm <small class="text-secondary fw-normal">(tối đa 3 món)</small></label>
+                                        <small class="text-secondary" data-topping-help>Chỉ hiển thị món thêm dùng được với đồ uống đã chọn.</small>
+                                    </div>
+                                    <div class="group-toppings-grid" data-group-toppings>
+                                        @foreach($toppings as $topping)
+                                            <label class="group-topping-card {{ $initialToppingIds->contains((int) $topping->id) ? '' : 'd-none' }}" data-topping-id="{{ $topping->id }}">
+                                                <input class="form-check-input m-0 group-topping-check" type="checkbox" name="toppings[]" value="{{ $topping->id }}">
+                                                <div class="group-topping-meta">
+                                                    <span class="group-topping-title">{{ $topping->name }}</span>
+                                                    <span class="group-topping-price">+{{ number_format($topping->price, 0, ',', '.') }}đ</span>
+                                                </div>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                    <div class="text-secondary small py-2 d-none" data-no-toppings><i class="bi bi-info-circle me-1"></i>Món này không có món thêm phù hợp.</div>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- 4. Ghi chú riêng cho ly này --}}
+                        <div class="mb-3">
+                            <label class="group-form-label mb-1"><i class="bi bi-chat-left-text me-1 text-primary"></i>Ghi chú riêng cho ly này</label>
+                            <input name="note" maxlength="500" class="form-control group-input" placeholder="Ví dụ: Ít ngọt, không lấy ống hút nhựa...">
+                        </div>
+
+                        {{-- 5. Số lượng & Nút Thêm vào đơn nhóm (Layout thanh ngang giống Modal) --}}
+                        <div class="group-actions-bottom d-flex align-items-center justify-content-between gap-3 pt-2">
+                            <div class="group-qty-widget" aria-label="Số lượng">
+                                <button type="button" class="group-qty-btn" data-group-qty-minus aria-label="Giảm"><i class="bi bi-dash"></i></button>
+                                <input type="number" name="quantity" value="1" min="1" max="20" class="form-control group-qty-input" readonly data-group-qty-input>
+                                <button type="button" class="group-qty-btn" data-group-qty-plus aria-label="Tăng"><i class="bi bi-plus"></i></button>
+                            </div>
+                            <button type="submit" class="btn btn-primary group-btn group-add-button flex-grow-1">
+                                <i class="bi bi-plus-circle me-2"></i>Thêm vào đơn nhóm <span data-group-total-price></span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </form>
         @endif
@@ -94,15 +229,110 @@
 
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3" data-group-order-heading><div><div class="group-eyebrow mb-1">Đơn hiện tại</div><h2 class="group-section-title mb-0">Mọi người đã chọn gì?</h2></div><span class="text-secondary">{{ $memberCount }}/{{ \App\Models\GroupOrder::MAX_MEMBERS }} thành viên · {{ $group->items->sum('quantity') }} món</span></div>
         <div class="row g-4 mb-4" data-group-members>
-            @forelse($group->members as $member)
-                <div class="col-lg-6"><article class="group-card member-card"><header class="member-head"><div class="d-flex align-items-center gap-2"><span class="member-avatar">{{ mb_strtoupper(mb_substr($member->name, 0, 1)) }}</span><div><h3 class="h6 fw-bold mb-0">{{ $member->name }}</h3><small class="text-secondary">{{ $member->items->sum('quantity') }} món</small></div></div><strong class="text-primary">{{ number_format($member->items->sum(fn($item) => $item->subtotal()), 0, ',', '.') }}đ</strong></header>
-                    @forelse($member->items as $item)
-                        <div class="member-item"><x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/><div class="flex-grow-1 min-w-0"><div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div><small class="text-secondary">Kích cỡ {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>@if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif</div><div class="text-end"><strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>@if($currentMember?->id === $member->id && $isOpen)<div class="group-item-actions"><div class="group-quantity-stepper"><form method="POST" action="{{ route('group-orders.items.decrement', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-stepper-button" aria-label="Giảm một phần {{ $item->product->name }}" title="Giảm 1 phần"><i class="bi bi-dash-lg"></i></button></form><span class="group-stepper-value" aria-label="Số lượng">{{ $item->quantity }}</span><form method="POST" action="{{ route('group-orders.items.increment', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-stepper-button is-add" aria-label="Thêm một phần {{ $item->product->name }}" title="Thêm 1 phần"><i class="bi bi-plus-lg"></i></button></form></div><form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item]) }}" data-group-async-action>@csrf @method('DELETE')<button class="group-item-action is-remove" aria-label="Xóa món" title="Xóa món"><i class="bi bi-trash3"></i></button></form></div>@endif</div></div>
-                    @empty<div class="p-4 text-center text-secondary"><i class="bi bi-cup-straw d-block fs-3 mb-2"></i>Chưa chọn món</div>@endforelse
-                </article></div>
-            @empty
+            @if($group->members->isNotEmpty())
+                @foreach($group->members as $member)
+                    <div class="col-lg-6"><article class="group-card member-card"><header class="member-head"><div class="d-flex align-items-center gap-2"><span class="member-avatar">{{ mb_strtoupper(mb_substr($member->name, 0, 1)) }}</span><div><h3 class="h6 fw-bold mb-0">{{ $member->name }}</h3><small class="text-secondary">{{ $member->items->sum('quantity') }} món</small></div></div><strong class="text-primary">{{ number_format($member->items->sum(fn($item) => $item->subtotal()), 0, ',', '.') }}đ</strong></header>
+                        @if($member->items->isNotEmpty())
+                            @foreach($member->items as $item)
+                                <div class="member-item">
+                                    <x-product-image :src="$item->product->image_url" :sku="$item->product->sku" :name="$item->product->name" :category="$item->product->category?->name" class="member-item-image" :width="160"/>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-bold">{{ $item->quantity }}× {{ $item->product->name }}</div>
+                                        <small class="text-secondary">Kích cỡ {{ $item->size }} · Đường {{ $item->sugar_level }}% · Đá {{ $item->ice_level }}%@if(!empty($item->toppings)) · {{ collect($item->toppings)->pluck('name')->implode(', ') }}@endif</small>
+                                        @if($item->note)<small class="d-block text-primary mt-1"><i class="bi bi-chat-left-text me-1"></i>{{ $item->note }}</small>@endif
+                                    </div>
+                                    <div class="text-end">
+                                        <strong>{{ number_format($item->subtotal(), 0, ',', '.') }}đ</strong>
+                                        @if($currentMember?->id === $member->id && $isOpen)
+                                            <div class="group-item-actions">
+                                                <div class="group-quantity-stepper">
+                                                    <form method="POST" action="{{ route('group-orders.items.decrement', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-stepper-button" aria-label="Giảm một phần {{ $item->product->name }}" title="Giảm 1 phần"><i class="bi bi-dash-lg"></i></button></form>
+                                                    <span class="group-stepper-value" aria-label="Số lượng">{{ $item->quantity }}</span>
+                                                    <form method="POST" action="{{ route('group-orders.items.increment', [$group->code, $item]) }}" data-group-async-action>@csrf @method('PATCH')<button class="group-stepper-button is-add" aria-label="Thêm một phần {{ $item->product->name }}" title="Thêm 1 phần"><i class="bi bi-plus-lg"></i></button></form>
+                                                </div>
+                                                <button type="button" class="group-item-action is-edit" data-bs-toggle="collapse" data-bs-target="#editItem{{ $item->id }}" aria-label="Sửa món" title="Sửa tùy chọn món"><i class="bi bi-pencil"></i></button>
+                                                <form method="POST" action="{{ route('group-orders.items.destroy', [$group->code, $item]) }}" data-group-async-action>@csrf @method('DELETE')<button class="group-item-action is-remove" aria-label="Xóa món" title="Xóa món"><i class="bi bi-trash3"></i></button></form>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if($currentMember?->id === $member->id && $isOpen)
+                                    <div class="collapse mb-3 p-3 bg-light rounded-4 border" id="editItem{{ $item->id }}">
+                                        <form method="POST" action="{{ route('group-orders.items.update', [$group->code, $item]) }}" data-group-async-action>
+                                            @csrf @method('PUT')
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <strong class="small text-primary"><i class="bi bi-pencil-square me-1"></i>Sửa món: {{ $item->product->name }}</strong>
+                                                <button type="button" class="btn-close btn-close-sm" data-bs-toggle="collapse" data-bs-target="#editItem{{ $item->id }}" aria-label="Đóng"></button>
+                                            </div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-4">
+                                                    <label class="form-label small text-secondary mb-1">Kích cỡ</label>
+                                                    <select name="size" class="form-select form-select-sm">
+                                                        @foreach(['S', 'M', 'L'] as $sizeOption)
+                                                            <option value="{{ $sizeOption }}" @selected($item->size === $sizeOption)>Size {{ $sizeOption }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small text-secondary mb-1">Mức đường</label>
+                                                    <select name="sugar_level" class="form-select form-select-sm">
+                                                        @foreach([0, 30, 50, 70, 100] as $sugar)
+                                                            <option value="{{ $sugar }}" @selected((int)$item->sugar_level === $sugar)>{{ $sugar }}%</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div class="col-4">
+                                                    <label class="form-label small text-secondary mb-1">Mức đá</label>
+                                                    <select name="ice_level" class="form-select form-select-sm">
+                                                        @foreach([0, 30, 50, 70, 100] as $ice)
+                                                            <option value="{{ $ice }}" @selected((int)$item->ice_level === $ice)>{{ $ice }}%</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-4">
+                                                    <label class="form-label small text-secondary mb-1">Số lượng</label>
+                                                    <input type="number" name="quantity" value="{{ $item->quantity }}" min="1" max="20" class="form-control form-control-sm text-center">
+                                                </div>
+                                                <div class="col-8">
+                                                    <label class="form-label small text-secondary mb-1">Ghi chú riêng</label>
+                                                    <input type="text" name="note" value="{{ $item->note }}" maxlength="500" class="form-control form-control-sm" placeholder="Ít ngọt, không đá...">
+                                                </div>
+                                            </div>
+                                            @php
+                                                $itemAllowedToppings = $productToppingMap->get($item->product_id, collect());
+                                                $currentItemToppingNames = collect($item->toppings ?? [])->pluck('name')->all();
+                                            @endphp
+                                            @if($itemAllowedToppings->isNotEmpty())
+                                                <div class="mb-2">
+                                                    <label class="form-label small text-secondary mb-1 d-block">Topping</label>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        @foreach($toppings->whereIn('id', $itemAllowedToppings) as $topping)
+                                                            <label class="badge bg-white text-dark border p-2 fw-normal d-flex align-items-center gap-1 cursor-pointer">
+                                                                <input type="checkbox" name="toppings[]" value="{{ $topping->id }}" @checked(in_array($topping->name, $currentItemToppingNames, true))>
+                                                                <span>{{ $topping->name }} (+{{ number_format($topping->price, 0, ',', '.') }}đ)</span>
+                                                            </label>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endif
+                                            <div class="d-flex justify-content-end gap-2 mt-2">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editItem{{ $item->id }}">Hủy</button>
+                                                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-check2 me-1"></i>Lưu thay đổi</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                @endif
+                            @endforeach
+                        @else
+                            <div class="p-4 text-center text-secondary"><i class="bi bi-cup-straw d-block fs-3 mb-2"></i>Chưa chọn món</div>
+                        @endif
+                    </article></div>
+                @endforeach
+            @else
                 <div class="col-12"><div class="group-card empty-group"><div class="empty-group-icon"><i class="bi bi-cup-straw"></i></div><h3 class="h5 fw-bold">Chưa có món nào</h3><p class="text-secondary mb-0">Hãy tham gia phòng và trở thành người chọn món đầu tiên.</p></div></div>
-            @endforelse
+            @endif
         </div>
 
         <div class="group-summary" data-group-summary>

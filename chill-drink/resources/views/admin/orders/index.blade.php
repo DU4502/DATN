@@ -258,7 +258,16 @@
                     $nextStatus = \App\Support\OrderStatus::orderManagementNextStatus((string) $order->status, $fulfillmentType);
                 @endphp
                 <tr data-order-id="{{ $order->id }}">
-                    <td class="fw-bold text-primary">{{ $order->displayCode() }}</td>
+                    <td class="fw-bold text-primary">
+                        <div>{{ $order->displayCode() }}</div>
+                        @if($order->groupOrder)
+                            <div class="mt-1">
+                                <a href="{{ route('admin.group-orders.show', $order->groupOrder) }}" class="badge bg-success-subtle text-success text-decoration-none border border-success-subtle py-1 px-2" title="Xem phòng đơn nhóm">
+                                    <i class="bi bi-people-fill me-1"></i>{{ $order->groupOrder->name }}
+                                </a>
+                            </div>
+                        @endif
+                    </td>
                     <td class="text-secondary">{{ optional($order->created_at)->format('d/m/Y H:i') }}</td>
                     <td>
                         @if($order->support_issue_id)
@@ -399,6 +408,12 @@
                                             <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1rem;"></i>
                                             <span>{{ $order->getShippingAddress() }}</span>
                                         </div>
+                                        @if(filled($order->note))
+                                            <div class="alert alert-warning border-0 py-2 px-3 mt-1 mb-0 rounded-3 small">
+                                                <i class="bi bi-chat-left-text-fill me-1 text-warning-emphasis"></i>
+                                                <strong>Ghi chú:</strong> {{ $order->note }}
+                                            </div>
+                                        @endif
                                     </div>
 
                                     @if(($order->fulfillment_type ?? 'delivery') === 'delivery')

@@ -551,6 +551,13 @@ $paymentLabels = $paymentLabels ?? [
                 <div class="fw-bold text-primary">{{ $order->displayCode() }}</div>
                 @if($order->support_issue_id)<span class="badge rounded-pill text-bg-info mt-1"><i class="bi bi-arrow-repeat me-1"></i>Đơn giao bù miễn phí</span>@endif
                 <div class="text-secondary small">{{ $order->created_at?->format('d/m/Y H:i') }}</div>
+                @if($order->groupOrder)
+                    <div class="mt-1">
+                        <a href="{{ route('group-orders.show', $order->groupOrder->code) }}" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle text-decoration-none py-1 px-2" title="Xem phòng đơn nhóm">
+                            <i class="bi bi-people-fill me-1"></i>Đơn nhóm: {{ $order->groupOrder->name }} ({{ $order->groupOrder->code }})
+                        </a>
+                    </div>
+                @endif
                 @if($order->scheduled_at)
                 <div class="small fw-semibold text-primary mt-1"><i class="bi bi-calendar-check me-1"></i>Nhận lúc {{ $order->scheduled_at->format('H:i · d/m/Y') }}</div>
                 @endif

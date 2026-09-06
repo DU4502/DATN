@@ -41,6 +41,13 @@
                     <td class="text-center fw-bold">{{ $group->items_count }}</td>
                     <td>
                         <span class="badge bg-{{ $status[1] }}-subtle text-{{ $status[1] }}-emphasis d-inline-block mb-1">{{ $status[0] }}</span>
+                        @if($group->order)
+                            <div class="mt-1">
+                                <a href="{{ route('admin.orders.index', ['search' => $group->order->displayCode()]) }}" class="badge bg-primary-subtle text-primary border border-primary-subtle text-decoration-none" title="Xem đơn hàng">
+                                    <i class="bi bi-receipt me-1"></i>{{ $group->order->displayCode() }}
+                                </a>
+                            </div>
+                        @endif
                         @if($group->status_changed_at)
                             @php
                                 $groupUpdater = $group->status_changed_by ? \App\Models\User::find($group->status_changed_by) : null;

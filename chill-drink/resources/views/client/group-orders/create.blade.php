@@ -35,18 +35,22 @@
                                 <div class="group-create-option-head"><span><i class="bi bi-shop"></i></span><label class="group-form-label mb-0" for="groupBranch">Chi nhánh phục vụ</label></div>
                                 <div data-vue-group-branch
                                      data-selected="{{ $selectedBranchId }}"
-                                     data-branches="{{ $branches->map(fn ($branch) => ['id' => $branch->id, 'name' => $branch->name, 'address' => $branch->address])->values()->toJson() }}">
+                                     data-branches="{{ $branches->map(fn ($branch) => ['id' => $branch->id, 'name' => $branch->name, 'address' => $branch->address, 'distance_km' => $branch->distance_km, 'is_nearest' => (bool)$branch->is_nearest, 'is_too_far' => (bool)$branch->is_too_far])->values()->toJson() }}">
                                     {{-- Fallback để vẫn chọn được chi nhánh nếu máy chưa build lại bundle Vue. --}}
                                     <select name="branch_id" class="form-select group-branch-fallback" aria-label="Chọn chi nhánh">
                                         <option value="">Chọn chi nhánh</option>
                                         @foreach($branches as $branch)
                                             <option value="{{ $branch->id }}" @selected((string) $selectedBranchId === (string) $branch->id)>
-                                                {{ $branch->name }}{{ $branch->address ? ' — '.$branch->address : '' }}
+                                                {{ $branch->name }}
+                                                @if($branch->distance_km !== null)
+                                                    ({{ $branch->distance_km }} km{{ $branch->is_nearest ? ' · Gần bạn nhất' : '' }})
+                                                @endif
+                                                {{ $branch->address ? ' — '.$branch->address : '' }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="form-text mt-2">Nơi chuẩn bị món của cả nhóm.</div>
+                                <div class="form-text mt-2 text-muted"><i class="bi bi-shop me-1"></i>Nơi chuẩn bị đồ uống cho cả nhóm.</div>
                             </div>
                         </div>
                         <div class="col-md-6">

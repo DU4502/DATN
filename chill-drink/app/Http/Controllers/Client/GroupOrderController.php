@@ -12,6 +12,7 @@ use App\Models\GroupOrderMember;
 use App\Models\GroupOrderMessage;
 use App\Models\Product;
 use App\Services\ProductAvailabilityService;
+use App\Support\ProductSizePrice;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -39,12 +40,41 @@ class GroupOrderController extends Controller
             return $response;
         }
 
+        $user = auth()->user();
+        $userLat = $user?->latitude ? (float) $user->latitude : null;
+        $userLng = $user?->longitude ? (float) $user->longitude : null;
+
+        if (! $userLat || ! $userLng) {
+            $userLat = session('user_latitude') ? (float) session('user_latitude') : null;
+            $userLng = session('user_longitude') ? (float) session('user_longitude') : null;
+        }
+
         $branches = Branch::query()
             ->where('status', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'address']);
+            ->get(['id', 'name', 'address', 'latitude', 'longitude'])
+            ->map(function ($branch) use ($userLat, $userLng) {
+                $dist = ($userLat && $userLng && $branch->latitude !== null && $branch->longitude !== null)
+                    ? round($branch->distanceTo($userLat, $userLng), 1)
+                    : null;
+                $branch->distance_km = $dist;
+                return $branch;
+            });
 
-        $selectedBranchId = old('branch_id');
+        $nearestBranchId = null;
+        $branchesWithDist = $branches->filter(fn ($b) => $b->distance_km !== null);
+        if ($branchesWithDist->isNotEmpty()) {
+            $nearest = $branchesWithDist->sortBy('distance_km')->first();
+            $nearestBranchId = $nearest?->id;
+        }
+
+        $branches = $branches->map(function ($branch) use ($nearestBranchId) {
+            $branch->is_nearest = ($branch->id === $nearestBranchId);
+            $branch->is_too_far = ($branch->distance_km !== null && $branch->distance_km > 15);
+            return $branch;
+        });
+
+        $selectedBranchId = old('branch_id', $nearestBranchId ?? $branches->first()?->id);
 
         return view('client.group-orders.create', compact('branches', 'selectedBranchId'));
     }
@@ -143,7 +173,7 @@ class GroupOrderController extends Controller
             $group->update(['owner_last_seen_at' => now()]);
         }
         $group->load(['owner', 'branch', 'members.items.product', 'items']);
-        $products = Product::with('category')
+        $products = Product::with(['category', 'sizes'])
             ->where('status', true)
             ->whereHas('branchStatuses', fn ($query) => $query
                 ->where('branch_id', $group->branch_id)
@@ -510,6 +540,60 @@ class GroupOrderController extends Controller
         return back()->with('success', 'Đã thêm món của bạn vào đơn nhóm.');
     }
 
+    public function updateItem(Request $request, string $code, GroupOrderItem $item)
+    {
+        $data = $request->validate([
+            'size' => ['required', 'in:S,M,L'],
+            'sugar_level' => ['required', 'integer', 'between:0,100'],
+            'ice_level' => ['required', 'integer', 'between:0,100'],
+            'quantity' => ['required', 'integer', 'between:1,20'],
+            'note' => ['nullable', 'string', 'max:500'],
+            'toppings' => ['nullable', 'array'],
+            'toppings.*' => ['integer', 'exists:toppings,id'],
+        ]);
+
+        DB::transaction(function () use ($code, $item, $data) {
+            $group = GroupOrder::where('code', $code)->lockForUpdate()->firstOrFail();
+            $group->closeIfExpired();
+            abort_unless($group->isOpen(), 422, 'Đơn nhóm đã đóng hoặc hết hạn.');
+            $member = $this->currentMember($group);
+            $lockedItem = GroupOrderItem::lockForUpdate()->findOrFail($item->id);
+            abort_unless(
+                $lockedItem->group_order_id === $group->id && $lockedItem->group_order_member_id === $member->id,
+                403
+            );
+
+            $product = Product::whereKey($lockedItem->product_id)->lockForUpdate()->firstOrFail();
+            abort_unless((bool) $product->status, 422, 'Sản phẩm hiện không còn bán.');
+            $branch = Branch::query()->whereKey($group->branch_id)->where('status', true)->firstOrFail();
+            try {
+                app(ProductAvailabilityService::class)->assertAvailable($product, $branch, true);
+            } catch (\RuntimeException $exception) {
+                abort(422, $exception->getMessage());
+            }
+
+            $selectedIds = collect($data['toppings'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+            $availableToppings = DB::table('toppings')->where('status', 1)->get(['id', 'name', 'price']);
+            $allowedIds = $this->toppingIdsForProduct($product->loadMissing('category'), $availableToppings);
+            if ($selectedIds->diff($allowedIds)->isNotEmpty()) {
+                abort(422, 'Topping đã chọn không áp dụng cho sản phẩm này.');
+            }
+            $selectedToppings = $selectedIds->isEmpty() ? collect() : DB::table('toppings')->whereIn('id', $selectedIds)->get(['name', 'price']);
+            abort_if($selectedToppings->count() !== $selectedIds->count(), 422, 'Topping không hợp lệ.');
+            $toppingPayload = $selectedToppings->map(fn ($topping) => ['name' => $topping->name, 'price' => (int) $topping->price])->values()->all();
+            unset($data['toppings']);
+
+            $lockedItem->update($data + [
+                'toppings' => $toppingPayload,
+                'unit_price' => $this->currentPrice($product, $data['size'], $toppingPayload),
+            ]);
+        });
+
+        $this->broadcastGroupUpdated(GroupOrder::where('code', $code)->firstOrFail(), 'item_updated');
+
+        return back()->with('success', 'Đã cập nhật món của bạn.');
+    }
+
     public function removeItem(string $code, GroupOrderItem $item)
     {
         DB::transaction(function () use ($code, $item) {
@@ -787,8 +871,20 @@ class GroupOrderController extends Controller
 
     private function currentPrice(Product $product, string $size, array $toppings): int
     {
-        $sizeExtra = ['S' => 0, 'M' => 5000, 'L' => 10000][$size] ?? 0;
-        return max(0, (int) $product->price + $sizeExtra + (int) collect($toppings)->sum('price'));
+        $product->loadMissing('sizes');
+        $sizeCode = strtoupper(trim($size));
+        $sizeObj = $product->sizes->first(fn ($s) => strtoupper(trim($s->name)) === $sizeCode);
+        $defaultExtra = match ($sizeCode) {
+            'S' => 0,
+            'M' => 5000,
+            'L' => 10000,
+            default => 0,
+        };
+        $storedSizePrice = $sizeObj && isset($sizeObj->pivot->price) ? (int) $sizeObj->pivot->price : null;
+        $basePrice = max(0, (int) $product->price);
+        $sizeUnitPrice = ProductSizePrice::unitPrice($basePrice, $storedSizePrice, $defaultExtra);
+
+        return max(0, $sizeUnitPrice + (int) collect($toppings)->sum('price'));
     }
 
     private function broadcastGroupUpdated(GroupOrder $group, string $action): void
@@ -816,9 +912,9 @@ class GroupOrderController extends Controller
         $allowedNames = match (true) {
             str_contains($text, 'matcha') => ['Trân châu đen', 'Kem cheese', 'Thạch matcha'],
             str_contains($text, 'trà sữa') => ['Trân châu đen', 'Pudding trứng', 'Thạch phô mai'],
-            str_contains($text, 'cà phê'), str_contains($text, 'bạc xỉu') => ['Kem cheese'],
-            str_contains($text, 'soda'), str_contains($text, 'nước ép'), str_contains($text, 'trà trái cây') => ['Trân châu trắng', 'Thạch nha đam'],
-            str_contains($text, 'sinh tố') => ['Trân châu trắng', 'Thạch nha đam'],
+            str_contains($text, 'cà phê'), str_contains($text, 'bạc xỉu') => ['Kem mặn', 'Shot espresso', 'Caramel', 'Kem cheese'],
+            str_contains($text, 'soda'), str_contains($text, 'nước ép'), str_contains($text, 'trà trái cây') => ['Trân châu trắng', 'Thạch nha đam', 'Thạch trái cây', 'Nha đam'],
+            str_contains($text, 'sinh tố') => ['Thạch nha đam', 'Thạch trái cây', 'Nha đam', 'Trân châu trắng'],
             default => ['Trân châu đen', 'Trân châu trắng', 'Kem cheese'],
         };
 

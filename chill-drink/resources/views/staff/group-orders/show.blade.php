@@ -56,6 +56,24 @@
     </div>
 </div>
 
+@if($groupOrder->order)
+    <div class="admin-card p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3 rounded-4" style="background: rgba(13, 147, 115, 0.06); border: 1px solid #0D9373;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background: #0D9373; color: white;">
+                <i class="bi bi-receipt fs-5"></i>
+            </div>
+            <div>
+                <div class="small text-secondary fw-semibold">ĐƠN HÀNG LIÊN KẾT</div>
+                <div class="fs-5 fw-bold text-dark">{{ $groupOrder->order->displayCode() }}</div>
+                <div class="small text-secondary">Trạng thái xử lý: <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ \App\Support\OrderStatus::label((string) $groupOrder->order->status) }}</span></div>
+            </div>
+        </div>
+        <a href="{{ route('staff.orders.index', ['search' => $groupOrder->order->displayCode()]) }}" class="btn btn-primary px-3 rounded-3">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Xem & Xử lý đơn hàng
+        </a>
+    </div>
+@endif
+
 <!-- Thông tin đổi trạng thái -->
 @if($groupOrder->status_changed_at)
 <div class="alert alert-info border-0 mb-4" style="border-radius:12px;">

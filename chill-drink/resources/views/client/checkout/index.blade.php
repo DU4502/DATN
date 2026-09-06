@@ -1732,8 +1732,18 @@
                     </div>
 
                     @if ($isGroupCheckout && $groupCheckoutBranch)
-                        {{-- Đơn nhóm đã chốt chi nhánh ở bước tạo phòng. Giữ select ẩn
-                             để các phép tính phí vẫn đọc được branch_id nhưng không cho chọn lại. --}}
+                        {{-- Đơn nhóm đã chốt chi nhánh ở bước tạo phòng. Hiển thị thông tin rõ ràng và giữ select ẩn để tính phí. --}}
+                        <div class="checkout-panel p-3 p-md-4 mb-4 rounded-4" style="background: rgba(13, 147, 115, 0.06); border: 1px solid #0D9373;">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="checkout-step" style="background: #0D9373; color: white;"><i class="bi bi-people-fill"></i></span>
+                                <div>
+                                    <div class="small fw-bold text-primary text-uppercase mb-0">Đơn nhóm: {{ $groupCheckoutGroup->name ?? 'Chill Drink Together' }}</div>
+                                    <h2 class="h5 fw-bold mb-1 text-dark">Chuẩn bị bởi: {{ $groupCheckoutBranch->name }}</h2>
+                                    <p class="text-secondary small mb-0"><i class="bi bi-geo-alt me-1"></i>{{ $groupCheckoutBranch->address ?: 'Địa chỉ chi nhánh phục vụ' }}</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="d-none" aria-hidden="true">
                             <select id="branch_id" name="branch_id" class="checkout-input" required
                                 data-branches='[]'
@@ -2217,16 +2227,15 @@
                 </div>
 
                 <!-- Received Vouchers Section -->
-                @if($receivedVouchers->isNotEmpty())
-                <div class="mb-4" id="receivedVouchersSection">
+                <div class="mb-4" id="receivedVouchersSection" style="{{ $receivedVouchers->isNotEmpty() ? '' : 'display: none;' }}">
                     <div class="d-flex align-items-center gap-2 mb-2">
                         <span class="voucher-kind" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 1px solid #fbbf24;">
                             <i class="bi bi-star-fill me-1"></i>Phiếu ưu đãi đã nhận
                         </span>
-                        <span class="small text-secondary">{{ $receivedVouchers->count() }} mã</span>
+                        <span class="small text-secondary" id="receivedVouchersCount">{{ $receivedVouchers->count() }} mã</span>
                     </div>
                     <div class="text-secondary small mb-3">Những voucher bạn đã nhận và có thể sử dụng ngay</div>
-                    <div class="vstack gap-3 mb-3">
+                    <div class="vstack gap-3 mb-3" id="receivedVouchersList">
                         @foreach($receivedVouchers as $userVoucher)
                             @php
                                 $voucher = $userVoucher->voucher;
@@ -2245,11 +2254,11 @@
                                     ? 'bi-truck'
                                     : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                 $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
+                                $hasPoints = true;
+                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder;
                                 $disabledReason = ! $hasMinimumOrder
                                     ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                    : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
+                                    : null;
                                 if ($voucherIsShipping) {
                                     if ($fulfillmentType === 'pickup') {
                                         $voucherUsable = false;
@@ -2328,7 +2337,6 @@
                     </div>
                     <hr class="my-4">
                 </div>
-                @endif
 
                 <div class="mb-3">
                     <div class="voucher-group-title">Mã có thể áp dụng</div>
@@ -2438,6 +2446,18 @@
                             <i class="bi bi-info-circle me-1"></i> Hiện chưa có voucher đang hoạt động.
                         </div>
                     @endif
+
+                    @auth
+                        <div class="mt-4 p-3 rounded-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="background: rgba(13, 147, 115, 0.08); border: 1px dashed #0D9373;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-gift-fill text-primary fs-5"></i>
+                                <span class="small fw-semibold text-dark">Bạn đang có điểm thưởng Chill Drink?</span>
+                            </div>
+                            <a href="{{ route('loyalty.index') }}" target="_blank" class="small fw-bold text-primary text-decoration-none">
+                                Đổi voucher ưu đãi ngay <i class="bi bi-arrow-up-right-square ms-1"></i>
+                            </a>
+                        </div>
+                    @endauth
                 </div>
             </div>
             <div class="modal-footer border-top">
@@ -4719,60 +4739,90 @@
         async function loadReceivedVouchers() {
             try {
                 const guestIdentifier = sessionStorage.getItem('guest_identifier');
+                const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
                 const response = await fetch('/api/vouchers/received', {
                     method: 'GET',
                     headers: {
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        ...(csrfTokenMeta && { 'X-CSRF-TOKEN': csrfTokenMeta.content }),
                         ...(guestIdentifier && { 'X-Guest-Identifier': guestIdentifier }),
                     },
+                    credentials: 'same-origin',
                 });
+
+                if (!response.ok) return;
 
                 const data = await response.json();
                 const receivedVouchersSection = document.getElementById('receivedVouchersSection');
                 const receivedVouchersList = document.getElementById('receivedVouchersList');
+                const receivedVouchersCount = document.getElementById('receivedVouchersCount');
+
+                if (!receivedVouchersSection || !receivedVouchersList) return;
 
                 if (data.vouchers && data.vouchers.length > 0) {
                     receivedVouchersSection.style.display = 'block';
+                    if (receivedVouchersCount) {
+                        receivedVouchersCount.textContent = `${data.vouchers.length} mã`;
+                    }
                     receivedVouchersList.innerHTML = '';
+
+                    const currentSelectedDiscount = selectedVoucherCode?.value || '';
+                    const currentSelectedShipping = selectedShippingVoucherCode?.value || '';
 
                     data.vouchers.forEach(voucher => {
                         const isShipping = /SHIP|FREE/.test(voucher.code);
+                        const minOrder = Number(voucher.min_order || 0);
+                        const rawVal = Number(voucher.raw_value || 0);
+                        const maxDisc = Number(voucher.max_discount || 0);
+                        const voucherType = isShipping ? 'shipping' : 'discount';
+                        const isCurrentlyActive = isShipping ? (currentSelectedShipping === voucher.code) : (currentSelectedDiscount === voucher.code);
+                        const valueText = isShipping ? `Freeship tối đa ${voucher.value}` : `Giảm ${voucher.value}`;
+                        const labelText = `${voucher.code} - ${valueText}`;
+                        const iconClass = isShipping ? 'bi-truck' : (voucher.type === 'percent' ? 'bi-percent' : 'bi-gift');
+
                         const voucherHtml = `
-                            <div class="voucher-ticket ${isShipping ? 'is-shipping' : 'is-discount'}"
+                            <div class="voucher-ticket ${isShipping ? 'is-shipping' : 'is-discount'} ${isCurrentlyActive ? 'active' : ''}"
                                 data-voucher-card
-                                data-voucher-type="${isShipping ? 'shipping' : 'discount'}"
+                                data-voucher-type="${voucherType}"
                                 data-voucher-code="${escapeHtml(voucher.code)}"
-                                data-voucher-label="${escapeHtml(voucher.description ? `${voucher.code} - ${voucher.description}` : voucher.code)}"
+                                data-voucher-label="${escapeHtml(labelText)}"
                                 data-voucher-discount="0"
-                                data-min-order="${Number(voucher.min_order || 0)}"
+                                data-voucher-disabled="0"
+                                data-min-order="${minOrder}"
                                 data-rate-type="${escapeHtml(voucher.type || 'fixed')}"
-                                data-voucher-value="${Number(voucher.raw_value || 0)}"
-                                data-max-discount="${Number(voucher.max_discount || 0)}"
+                                data-voucher-value="${rawVal}"
+                                data-max-discount="${maxDisc}"
                                 data-point-cost="0"
                                 data-is-redeemable="0"
                                 data-is-received="1"
+                                style="position: relative;"
                             >
-                                <div class="voucher-ticket-brand">
-                                    <span class="brand-circle"><i class="bi bi-gift"></i></span>
+                                <div class="voucher-ticket-brand" style="position: relative;">
+                                    <span class="brand-circle"><i class="bi ${iconClass}"></i></span>
                                     <strong>${escapeHtml(voucher.code)}</strong>
+                                    <span style="position: absolute; top: 0.5rem; right: -0.25rem; background: #fbbf24; color: #78350f; font-size: 0.65rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: 800; transform: rotate(8deg); box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);">
+                                        ĐÃ NHẬN
+                                    </span>
                                 </div>
                                 <div class="voucher-ticket-body">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                        <span class="voucher-kind">Đã nhận</span>
-                                        <span class="fw-semibold text-secondary">${escapeHtml(voucher.value)}</span>
+                                        <span class="voucher-limit">Số lượng có hạn</span>
+                                        <span class="voucher-kind">${isShipping ? 'Freeship' : 'Giảm giá'}</span>
+                                        <span class="fw-semibold text-secondary">${escapeHtml(valueText)}</span>
+                                        ${maxDisc > 0 ? `<span class="fw-semibold text-secondary">tối đa ${new Intl.NumberFormat('vi-VN').format(maxDisc)}đ</span>` : ''}
                                     </div>
-                                    <div class="text-secondary small">
-                                        ${escapeHtml(voucher.description || 'Phiếu ưu đãi')}
+                                    <div class="text-secondary mb-2">
+                                        Đơn tối thiểu ${new Intl.NumberFormat('vi-VN').format(minOrder)}đ
                                     </div>
-                                    <span class="voucher-only mt-2 mb-2" data-voucher-badge>
-                                        Bạn đã nhận voucher này
+                                    <span class="voucher-only mb-2" data-voucher-badge>
+                                        Đang kiểm tra...
                                     </span>
                                 </div>
-                                <button type="button" class="voucher-radio" aria-label="Chọn voucher ${escapeHtml(voucher.code)}"></button>
+                                <button type="button" class="voucher-radio ${isCurrentlyActive ? 'active' : ''}" aria-label="Chọn voucher ${escapeHtml(voucher.code)}" aria-pressed="${isCurrentlyActive ? 'true' : 'false'}"></button>
                             </div>
                         `;
-                        receivedVouchersList.innerHTML += voucherHtml;
+                        receivedVouchersList.insertAdjacentHTML('beforeend', voucherHtml);
                     });
 
                     bindVoucherCards(receivedVouchersList);
@@ -4780,7 +4830,9 @@
                         refreshVoucherCards();
                     }
                 } else {
-                    receivedVouchersSection.style.display = 'none';
+                    if (!receivedVouchersList.children.length) {
+                        receivedVouchersSection.style.display = 'none';
+                    }
                 }
             } catch (error) {
                 console.error('Error loading received vouchers:', error);

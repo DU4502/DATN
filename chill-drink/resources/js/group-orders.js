@@ -81,7 +81,15 @@ const groupBranchPicker = {
             <button id="groupBranch" type="button" class="group-branch-trigger" :class="{ 'is-open': isOpen, 'has-value': selectedBranch }" data-group-branch-trigger @click.stop="isOpen = !isOpen">
                 <span class="group-branch-trigger-content">
                     <span class="group-branch-trigger-icon"><i class="bi bi-geo-alt-fill"></i></span>
-                    <span><strong>{{ selectedBranch ? selectedBranch.name : 'Chọn chi nhánh' }}</strong><small v-if="selectedBranch">{{ selectedBranch.address }}</small><small v-else>Chọn nơi chuẩn bị món</small></span>
+                    <span>
+                        <strong class="d-flex align-items-center gap-2 flex-wrap">
+                            {{ selectedBranch ? selectedBranch.name : 'Chọn chi nhánh' }}
+                            <span v-if="selectedBranch && selectedBranch.is_nearest" class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0" style="font-size: 0.72rem;">Gần bạn nhất</span>
+                            <span v-if="selectedBranch && selectedBranch.distance_km" class="badge bg-light text-secondary border px-1 py-0" style="font-size: 0.72rem;">{{ selectedBranch.distance_km }} km</span>
+                        </strong>
+                        <small v-if="selectedBranch">{{ selectedBranch.address }}</small>
+                        <small v-else>Chọn nơi chuẩn bị món</small>
+                    </span>
                 </span>
                 <i class="bi bi-chevron-down"></i>
             </button>
@@ -90,7 +98,15 @@ const groupBranchPicker = {
                 <div class="group-branch-list">
                     <button v-for="branch in branches" :key="branch.id" type="button" class="group-branch-option" :class="{ 'is-selected': String(branch.id) === selectedId }" @click="selectBranch(branch)">
                         <span class="group-branch-option-icon"><i class="bi bi-geo-alt"></i></span>
-                        <span class="group-branch-option-copy"><strong>{{ branch.name }}</strong><small>{{ branch.address || 'Chưa cập nhật địa chỉ' }}</small></span>
+                        <span class="group-branch-option-copy">
+                            <strong class="d-flex align-items-center gap-2 flex-wrap">
+                                {{ branch.name }}
+                                <span v-if="branch.is_nearest" class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0" style="font-size: 0.72rem;">Gần bạn nhất</span>
+                                <span v-if="branch.distance_km" class="badge bg-light text-secondary border px-1 py-0" style="font-size: 0.72rem;">{{ branch.distance_km }} km</span>
+                                <span v-if="branch.is_too_far" class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1 py-0" style="font-size: 0.72rem;">Xa (>15km)</span>
+                            </strong>
+                            <small>{{ branch.address || 'Chưa cập nhật địa chỉ' }}</small>
+                        </span>
                         <span class="group-branch-check"><i class="bi" :class="String(branch.id) === selectedId ? 'bi-check-circle-fill' : 'bi-circle'"></i></span>
                     </button>
                     <div v-if="!branches.length" class="group-branch-empty"><i class="bi bi-shop-window"></i><span>Chưa có chi nhánh đang hoạt động.</span></div>
@@ -176,6 +192,17 @@ const groupDateTimePicker = {
             this.viewYear = year;
             this.viewMonth = month - 1;
         },
+        addMinutes(minutes) {
+            const target = new Date(Date.now() + minutes * 60 * 1000);
+            const year = target.getFullYear();
+            const month = String(target.getMonth() + 1).padStart(2, '0');
+            const day = String(target.getDate()).padStart(2, '0');
+            this.selectedDate = `${year}-${month}-${day}`;
+            this.selectedHour = String(target.getHours()).padStart(2, '0');
+            this.selectedMinute = String(target.getMinutes()).padStart(2, '0');
+            this.viewYear = year;
+            this.viewMonth = target.getMonth();
+        },
     },
     template: `
         <div class="group-datetime">
@@ -184,6 +211,12 @@ const groupDateTimePicker = {
                 <span><i class="bi bi-clock"></i>{{ displayValue }}</span><i class="bi bi-chevron-down"></i>
             </button>
             <div v-if="isOpen" class="group-datetime-popover" @click.stop>
+                <div class="p-2 border-bottom d-flex flex-wrap gap-1 bg-light">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" @click="addMinutes(15)">+15p</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" @click="addMinutes(30)">+30p</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" @click="addMinutes(60)">+1h</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;" @click="addMinutes(120)">+2h</button>
+                </div>
                 <div class="group-datetime-calendar-head">
                     <button type="button" @click="changeMonth(-1)" aria-label="Tháng trước"><i class="bi bi-chevron-left"></i></button>
                     <strong>{{ monthLabel }}</strong>
@@ -354,13 +387,16 @@ const groupOrderRoom = {
         this.stopTimers?.forEach((stop) => stop());
     },
     methods: {
-        showMessage(message, isError = false) {
+        showMessage(message, type = 'info') {
             document.querySelector('.group-live-toast')?.remove();
             const toast = document.createElement('div');
-            toast.className = `group-live-toast${isError ? ' is-error' : ''}`;
-            toast.textContent = message;
+            const isError = type === 'error' || type === true;
+            const isWarning = type === 'warning';
+            toast.className = `group-live-toast${isError ? ' is-error' : ''}${isWarning ? ' is-warning' : ''}`;
+            const icon = isError ? 'bi-x-circle-fill' : (isWarning ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill');
+            toast.innerHTML = `<i class="bi ${icon} me-2 fs-5"></i><span>${message}</span>`;
             document.body.appendChild(toast);
-            window.setTimeout(() => toast.remove(), 2600);
+            window.setTimeout(() => toast.remove(), 2800);
         },
         async submitAsync(event) {
             const form = event.target.closest('form[data-group-async-action]');
@@ -526,8 +562,147 @@ const groupOrderRoom = {
             const noToppings = this.root.querySelector('[data-no-toppings]');
             const chooseProduct = this.root.querySelector('[data-choose-product-for-toppings]');
             const help = this.root.querySelector('[data-topping-help]');
+            const preview = picker.querySelector('[data-selected-product-preview]');
+            const previewImage = picker.querySelector('[data-selected-product-image]');
+            const previewName = picker.querySelector('[data-selected-product-name]');
+            const previewPrice = picker.querySelector('[data-selected-product-price]');
+            const searchContainer = picker.querySelector('[data-product-search-container]');
+            const changeBtn = picker.querySelector('[data-change-product-btn]');
+            const optionsSection = this.root.querySelector('[data-product-options-section]');
+            const placeholder = this.root.querySelector('[data-product-choice-placeholder]');
+
             const normalize = (text) => text.toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
             const open = () => picker.classList.add('is-open');
+
+            const updateSelectedProduct = (option) => {
+                if (!option) {
+                    if (preview) preview.classList.add('d-none');
+                    if (searchContainer) searchContainer.classList.remove('d-none');
+                    if (optionsSection) optionsSection.classList.add('d-none');
+                    if (placeholder) placeholder.classList.remove('d-none');
+                    const mSub = this.root.querySelector('[data-size-sub="M"]');
+                    const lSub = this.root.querySelector('[data-size-sub="L"]');
+                    if (mSub) mSub.textContent = '+5.000đ';
+                    if (lSub) lSub.textContent = '+10.000đ';
+                    return;
+                }
+
+                const name = option.dataset.name || '';
+                const priceStr = option.dataset.price || '';
+                const basePrice = Number(option.dataset.basePrice || 0);
+                const image = option.dataset.image || '';
+                let sizesMap = {};
+                try {
+                    sizesMap = JSON.parse(option.dataset.sizes || '{}');
+                } catch (e) {}
+
+                if (preview) {
+                    if (previewImage) {
+                        previewImage.src = image;
+                        previewImage.alt = name;
+                    }
+                    if (previewName) previewName.textContent = name;
+                    if (previewPrice) previewPrice.textContent = priceStr;
+                    preview.classList.remove('d-none');
+                    if (searchContainer) searchContainer.classList.add('d-none');
+                }
+
+                if (optionsSection) optionsSection.classList.remove('d-none');
+                if (placeholder) placeholder.classList.add('d-none');
+
+                // Cập nhật giá kích cỡ chuẩn theo sản phẩm được chọn
+                ['M', 'L'].forEach((sz) => {
+                    const subEl = this.root.querySelector(`[data-size-sub="${sz}"]`);
+                    if (!subEl) return;
+                    const fallbackExtra = sz === 'M' ? 5000 : 10000;
+                    const rawPrice = sizesMap[sz] !== undefined ? Number(sizesMap[sz]) : null;
+                    const extraPrice = Number.isFinite(rawPrice)
+                        ? (rawPrice >= basePrice ? Math.max(0, rawPrice - basePrice) : Math.max(0, rawPrice))
+                        : fallbackExtra;
+                    subEl.textContent = '+' + extraPrice.toLocaleString('vi-VN') + 'đ';
+                });
+
+                updateTotalPrice();
+            };
+
+            const qtyInput = this.root.querySelector('[data-group-qty-input]');
+            const minusBtn = this.root.querySelector('[data-group-qty-minus]');
+            const plusBtn = this.root.querySelector('[data-group-qty-plus]');
+            const totalEl = this.root.querySelector('[data-group-total-price]');
+            const toppingChecks = Array.from(this.root.querySelectorAll('[data-group-toppings] input[type="checkbox"]'));
+            const sizeRadios = Array.from(this.root.querySelectorAll('input[name="size"]'));
+
+            const updateTotalPrice = () => {
+                const selectedOption = options.find((opt) => opt.dataset.value === value.value);
+                if (!selectedOption || !totalEl) {
+                    if (totalEl) totalEl.textContent = '';
+                    return;
+                }
+                const basePrice = Number(selectedOption.dataset.basePrice || 0);
+                const checkedSize = this.root.querySelector('input[name="size"]:checked')?.value || 'S';
+                let sizesMap = {};
+                try {
+                    sizesMap = JSON.parse(selectedOption.dataset.sizes || '{}');
+                } catch (e) {}
+                const rawPrice = sizesMap[checkedSize] !== undefined ? Number(sizesMap[checkedSize]) : null;
+                const fallbackExtra = checkedSize === 'M' ? 5000 : (checkedSize === 'L' ? 10000 : 0);
+                const sizeExtra = Number.isFinite(rawPrice)
+                    ? (rawPrice >= basePrice ? Math.max(0, rawPrice - basePrice) : Math.max(0, rawPrice))
+                    : fallbackExtra;
+
+                let toppingsTotal = 0;
+                toppingChecks.filter((c) => c.checked).forEach((chk) => {
+                    const card = chk.closest('[data-topping-id]');
+                    const priceText = card?.querySelector('.group-topping-price')?.textContent || '';
+                    const num = parseInt(priceText.replace(/[^\d]/g, ''), 10) || 0;
+                    toppingsTotal += num;
+                });
+
+                const qty = Number(qtyInput?.value || 1);
+                const itemTotal = (basePrice + sizeExtra + toppingsTotal) * qty;
+                totalEl.textContent = '· ' + itemTotal.toLocaleString('vi-VN') + 'đ';
+            };
+
+            if (minusBtn && qtyInput) {
+                minusBtn.addEventListener('click', () => {
+                    const cur = Number(qtyInput.value) || 1;
+                    if (cur > 1) {
+                        qtyInput.value = cur - 1;
+                        updateTotalPrice();
+                    }
+                }, { signal });
+            }
+            if (plusBtn && qtyInput) {
+                plusBtn.addEventListener('click', () => {
+                    const cur = Number(qtyInput.value) || 1;
+                    if (cur < 20) {
+                        qtyInput.value = cur + 1;
+                        updateTotalPrice();
+                    }
+                }, { signal });
+            }
+            sizeRadios.forEach((radio) => {
+                radio.addEventListener('change', updateTotalPrice, { signal });
+            });
+            toppingChecks.forEach((chk) => {
+                chk.addEventListener('change', () => {
+                    const checkedCount = toppingChecks.filter((c) => c.checked).length;
+                    if (checkedCount > 3) {
+                        chk.checked = false;
+                        this.showMessage('Mỗi ly tối đa 3 món thêm để đảm bảo hương vị và dung tích ly.', 'warning');
+                    }
+                    if (help) {
+                        const currentCount = toppingChecks.filter((c) => c.checked).length;
+                        if (currentCount >= 3) {
+                            help.innerHTML = '<span class="text-warning-emphasis fw-bold"><i class="bi bi-check2-all me-1"></i>Đã chọn 3/3 món thêm</span>';
+                        } else {
+                            help.textContent = 'Chỉ hiển thị món thêm dùng được với đồ uống đã chọn.';
+                        }
+                    }
+                    updateTotalPrice();
+                }, { signal });
+            });
+
             const showToppings = (option) => {
                 const ids = new Set((option?.dataset.toppings || '').split(',').filter(Boolean).map(Number));
                 chooseProduct?.classList.toggle('d-none', Boolean(option));
@@ -538,7 +713,31 @@ const groupOrderRoom = {
                     if (!allowed) label.querySelector('input').checked = false;
                 });
                 noToppings?.classList.toggle('d-none', !option || ids.size > 0);
+                updateTotalPrice();
             };
+
+            // Khởi tạo nếu đã có món được chọn sẵn
+            if (value.value) {
+                const initialOption = options.find((opt) => opt.dataset.value === value.value);
+                if (initialOption) {
+                    showToppings(initialOption);
+                    updateSelectedProduct(initialOption);
+                }
+            }
+
+            if (changeBtn) {
+                changeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (preview) preview.classList.add('d-none');
+                    if (searchContainer) searchContainer.classList.remove('d-none');
+                    value.value = '';
+                    search.value = '';
+                    showToppings(null);
+                    updateSelectedProduct(null);
+                    search.focus();
+                    open();
+                }, { signal });
+            }
 
             search.addEventListener('focus', open, { signal });
             search.addEventListener('click', open, { signal });
@@ -546,6 +745,7 @@ const groupOrderRoom = {
                 const keyword = normalize(search.value.trim());
                 value.value = '';
                 showToppings(null);
+                updateSelectedProduct(null);
                 search.setCustomValidity('Vui lòng chọn một đồ uống trong danh sách.');
                 const matches = options.filter((option) => normalize(option.dataset.search).includes(keyword));
                 options.forEach((option) => { option.hidden = !matches.includes(option); });
@@ -559,6 +759,7 @@ const groupOrderRoom = {
                 search.classList.remove('is-invalid');
                 picker.classList.remove('is-open');
                 showToppings(option);
+                updateSelectedProduct(option);
             }, { signal }));
             document.addEventListener('click', (event) => {
                 if (!picker.contains(event.target)) picker.classList.remove('is-open');
