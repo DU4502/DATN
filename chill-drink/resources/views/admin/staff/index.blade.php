@@ -10,6 +10,8 @@
     .staff-badge-active { background:#dcfce7;color:#166534; }
     .staff-badge-locked { background:#fee2e2;color:#991b1b; }
     .staff-badge-branch { background:var(--sp-amber-soft);color:#92400e; }
+    .staff-badge-role { background:#eef2ff;color:#3730a3; }
+    .staff-badge-shipper { background:#e0f2fe;color:#0369a1; }
     .btn-staff-primary { background:#d97706;border:none;color:#fff;border-radius:8px;padding:.45rem 1rem;font-size:.8rem;font-weight:700;display:inline-flex;align-items:center;gap:.4rem; }
     .btn-staff-primary:hover { background:#b45309;color:#fff; }
     .staff-table th { font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--sp-muted);background:#f9fafb;padding:.65rem .85rem;border-bottom:2px solid var(--sp-border); }
@@ -335,6 +337,7 @@
                 <thead>
                     <tr data-instant-row>
                         <th>Nhân viên</th>
+                        <th>Vai trò</th>
                         <th>Chi nhánh</th>
                         <th class="text-center">Trạng thái</th>
                         <th class="text-center">Ngày tạo</th>
@@ -352,6 +355,13 @@
                                     <small class="text-secondary">{{ $staff->email }}</small>
                                 </div>
                             </div>
+                        </td>
+                        <td>
+                            @if($staff->isShipper())
+                                <span class="staff-badge staff-badge-shipper"><i class="bi bi-truck"></i>{{ $roleOptions[$staff->role_id] ?? 'Shipper' }}</span>
+                            @else
+                                <span class="staff-badge staff-badge-role"><i class="bi bi-person-workspace"></i>{{ $roleOptions[$staff->role_id] ?? 'Nhân viên quầy' }}</span>
+                            @endif
                         </td>
                         <td>
                             @if($staff->branch)
@@ -418,7 +428,10 @@
 
 {{-- Modals sửa nhân viên (đặt ngoài table để tránh lỗi DOM) --}}
 @foreach($staffUsers as $staff)
-@php $editBag = 'editStaff' . $staff->id; @endphp
+@php
+    $editBag = 'editStaff' . $staff->id;
+    $selectedEditRole = (int) ($errors->{$editBag}->any() ? old('role_id', $staff->role_id) : $staff->role_id);
+@endphp
 <div class="modal fade" id="editStaffModal{{ $staff->id }}" tabindex="-1" aria-hidden="true"
      data-auto-open="{{ $errors->{$editBag}->any() ? 'true' : 'false' }}">
     <div class="modal-dialog modal-dialog-centered">
@@ -444,7 +457,17 @@
                     @error('email', $editBag)<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Home branch</label>
+                    <label class="form-label small fw-bold">Vai trò</label>
+                    <select name="role_id" class="form-select @error('role_id', $editBag) is-invalid @enderror" required>
+                        @foreach($roleOptions as $roleId => $roleLabel)
+                            <option value="{{ $roleId }}" @selected($selectedEditRole === (int) $roleId)>{{ $roleLabel }}</option>
+                        @endforeach
+                    </select>
+                    @error('role_id', $editBag)<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="form-text">Email này dùng để đăng nhập theo vai trò đã chọn.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Chi nhánh</label>
                     @if(auth()->user()->isSuperAdmin())
                         @php $transferState = $branchTransferStates[(int)$staff->id] ?? ['allowed' => true, 'reason' => null]; @endphp
                         @if($transferState['allowed'])
@@ -456,7 +479,7 @@
                                     <option value="{{ $b->id }}" @selected($staff->branch_id == $b->id)>{{ $b->name }}</option>
                                 @endforeach
                             </select>
-                            <div class="form-text">Đổi home branch chỉ có hiệu lực khi shipper không còn đơn hoặc chuyến ghép đang hoạt động.</div>
+                            <div class="form-text">Super Admin có thể gán nhân viên vào bất kỳ chi nhánh đang hoạt động.</div>
                             @error('branch_id', $editBag)<div class="invalid-feedback">{{ $message }}</div>@enderror
                         @else
                             <input type="hidden" name="branch_id" value="{{ $staff->branch_id }}">
@@ -465,7 +488,7 @@
                         @endif
                     @else
                     <input type="text" class="form-control" value="{{ $staff->branch?->name ?? 'Chưa gán' }}" disabled>
-                    <div class="form-text text-secondary"><i class="bi bi-lock me-1"></i>Shipper cố định theo chi nhánh. Chỉ Super Admin mới được điều chuyển.</div>
+                    <div class="form-text text-secondary"><i class="bi bi-lock me-1"></i>Admin chỉ quản lý nhân viên thuộc chi nhánh của mình.</div>
                     @endif
                 </div>
                 <div class="row g-3">
@@ -505,7 +528,7 @@
             <div class="modal-body">
                 <div class="alert alert-warning d-flex gap-2 align-items-start" style="font-size:.76rem;border-radius:8px;">
                     <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
-                    <div>Nhân viên có quyền: <strong>Chat hỗ trợ</strong>, <strong>đổi trạng thái đơn hàng</strong> và <strong>đổi trạng thái đơn nhóm</strong> trong chi nhánh được gán.</div>
+                    <div>Chọn đúng vai trò: <strong>Nhân viên quầy</strong> xử lý đơn tại quán, <strong>Shipper</strong> nhận và giao đơn theo chi nhánh được gán.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Họ và tên <span class="text-danger">*</span></label>
@@ -519,16 +542,26 @@
                            value="{{ old('email') }}" required placeholder="nhanvien@chilldrink.com">
                     @error('email', 'createStaff')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Vai trò <span class="text-danger">*</span></label>
+                    <select name="role_id" class="form-select @error('role_id', 'createStaff') is-invalid @enderror" required>
+                        @foreach($roleOptions as $roleId => $roleLabel)
+                            <option value="{{ $roleId }}" @selected((int) old('role_id', \App\Models\User::STAFF_ROLE_ID) === (int) $roleId)>{{ $roleLabel }}</option>
+                        @endforeach
+                    </select>
+                    @error('role_id', 'createStaff')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    <div class="form-text">Email/Gmail nhập ở trên sẽ dùng để đăng nhập tài khoản này.</div>
+                </div>
                 @if(auth()->user()->isSuperAdmin())
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Home branch <span class="text-danger">*</span></label>
+                    <label class="form-label small fw-bold">Chi nhánh <span class="text-danger">*</span></label>
                     <select name="branch_id" class="form-select @error('branch_id', 'createStaff') is-invalid @enderror" required>
                         @foreach($branches as $b)
                             <option value="{{ $b->id }}" @selected(old('branch_id') == $b->id)>{{ $b->name }}</option>
                         @endforeach
                     </select>
                     @error('branch_id', 'createStaff')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    <div class="form-text">Shipper chỉ nhận/ghép đơn của home branch này và luôn quay về đây sau khi giao xong.</div>
+                    <div class="form-text">Super Admin có thể chọn chi nhánh cho cả nhân viên quầy và shipper.</div>
                 </div>
                 @else
                     @if(auth()->user()->branch)

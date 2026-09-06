@@ -32,7 +32,10 @@ class StaffManagementController extends Controller
         $search   = trim((string) $request->query('q', ''));
         $status   = (string) $request->query('status', 'all');
 
-        $query = User::where('role_id', User::SHIPPER_ROLE_ID)->with(['branch', 'shipper'])->orderBy('name');
+        $manageableRoles = $this->manageableRoleIds();
+        $roleOptions = $this->staffRoleOptions();
+
+        $query = User::whereIn('role_id', $manageableRoles)->with(['branch', 'shipper'])->orderBy('name');
 
         // Admin chỉ thấy nhân viên của chi nhánh mình
         if ($authUser->isAdmin() && ! $authUser->isSuperAdmin()) {
@@ -65,13 +68,13 @@ class StaffManagementController extends Controller
 
         $stats = [
             'total'  => (clone $query->getQuery())->count(),
-            'active' => User::where('role_id', User::SHIPPER_ROLE_ID)->when(
+            'active' => User::whereIn('role_id', $manageableRoles)->when(
                 $authUser->isAdmin() && ! $authUser->isSuperAdmin(),
                 fn ($q) => $authUser->branch_id
                     ? $q->where('branch_id', $authUser->branch_id)
                     : $q->whereRaw('1 = 0')
             )->where('is_active', true)->count(),
-            'locked' => User::where('role_id', User::SHIPPER_ROLE_ID)->when(
+            'locked' => User::whereIn('role_id', $manageableRoles)->when(
                 $authUser->isAdmin() && ! $authUser->isSuperAdmin(),
                 fn ($q) => $authUser->branch_id
                     ? $q->where('branch_id', $authUser->branch_id)
@@ -83,7 +86,9 @@ class StaffManagementController extends Controller
         $branchTransferStates = [];
         if ($authUser->isSuperAdmin()) {
             foreach ($staffUsers as $staffUser) {
-                $branchTransferStates[(int) $staffUser->id] = $homeBranches->canTransfer($staffUser);
+                $branchTransferStates[(int) $staffUser->id] = $staffUser->isShipper()
+                    ? $homeBranches->canTransfer($staffUser)
+                    : ['allowed' => true, 'reason' => null];
             }
         }
 
@@ -94,7 +99,8 @@ class StaffManagementController extends Controller
             'search',
             'status',
             'deliveryFeeSettings',
-            'branchTransferStates'
+            'branchTransferStates',
+            'roleOptions'
         ));
     }
 
@@ -219,6 +225,7 @@ class StaffManagementController extends Controller
         $validated = $request->validateWithBag('createStaff', [
             'name'      => ['required', 'string', 'max:150'],
             'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')],
+            'role_id'   => ['nullable', 'integer', Rule::in($this->manageableRoleIds())],
             'password'  => ['required', 'string', 'min:8', 'confirmed'],
             'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment()],
         ], [
@@ -226,6 +233,7 @@ class StaffManagementController extends Controller
             'email.required'     => 'Vui lòng nhập email.',
             'email.email'        => 'Email không đúng định dạng.',
             'email.unique'       => 'Email đã được sử dụng.',
+            'role_id.in'         => 'Vai trò nhân viên không hợp lệ.',
             'password.required'  => 'Vui lòng nhập mật khẩu.',
             'password.min'       => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
@@ -239,21 +247,21 @@ class StaffManagementController extends Controller
                 ->withErrors(['email' => 'Email đã được sử dụng.'], 'createStaff');
         }
 
-        // P15: mỗi shipper phải có một HOME BRANCH cố định.
+        $roleId = (int) ($validated['role_id'] ?? User::SHIPPER_ROLE_ID);
         $branchId = $validated['branch_id'] ?? null;
         if ($authUser->isSuperAdmin() && ! $branchId) {
             return redirect()->back()->withInput()->withErrors([
-                'branch_id' => 'Shipper phải được gán một home branch khi tạo tài khoản.',
+                'branch_id' => 'Tài khoản nhân viên phải được gán chi nhánh khi tạo.',
             ], 'createStaff');
         }
         if ($authUser->isAdmin() && ! $authUser->isSuperAdmin()) {
-            abort_unless($authUser->branch_id, 403, 'Admin phÃ¡i Ä‘Æ°á»£c gÃ¡n chi nhÃ¡nh trÆ°á»›c khi táº¡o nhÃ¢n viÃªn.');
+            abort_unless($authUser->branch_id, 403, 'Admin phải được gán chi nhánh trước khi tạo nhân viên.');
             $branchId = $authUser->branch_id;
         }
 
         if (! Branch::active()->whereKey($branchId)->exists()) {
             return redirect()->back()->withInput()->withErrors([
-                'branch_id' => 'Không thể tạo Shipper tại chi nhánh đã ngừng hoạt động.',
+                'branch_id' => 'Không thể tạo nhân viên tại chi nhánh đã ngừng hoạt động.',
             ], 'createStaff');
         }
 
@@ -261,21 +269,12 @@ class StaffManagementController extends Controller
             'name'      => $validated['name'],
             'email'     => $validated['email'], // đã lowercase từ bước merge trước validate
             'password'  => Hash::make($validated['password']),
-            'role_id'   => User::SHIPPER_ROLE_ID,
+            'role_id'   => $roleId,
             'branch_id' => $branchId,
             'is_active' => true,
         ]);
 
-        Shipper::query()->firstOrCreate(
-            ['user_id' => $staff->id],
-            [
-                'code' => 'SHP-'.str_pad((string) $staff->id, 5, '0', STR_PAD_LEFT),
-                'phone' => (string) ($staff->phone ?? ''),
-                'vehicle_type' => 'bike',
-                'status' => 'offline',
-                'station_branch_id' => $branchId,
-            ]
-        );
+        $this->syncShipperProfile($staff, $branchId);
 
         SystemLog::record(
             $request->user(),
@@ -305,6 +304,7 @@ class StaffManagementController extends Controller
         $validated = $request->validateWithBag($bag, [
             'name'      => ['required', 'string', 'max:150'],
             'email'     => ['required', 'string', 'email', 'max:150', Rule::unique('users', 'email')->ignore($user->id)],
+            'role_id'   => ['nullable', 'integer', Rule::in($this->manageableRoleIds())],
             'branch_id' => ['nullable', 'integer', new ActiveBranchAssignment($user->branch_id ? (int) $user->branch_id : null)],
             'password'  => ['nullable', 'string', 'min:8', 'confirmed'],
         ], [
@@ -312,25 +312,29 @@ class StaffManagementController extends Controller
             'email.required'     => 'Vui lòng nhập email.',
             'email.email'        => 'Email không đúng định dạng.',
             'email.unique'       => 'Email đã được sử dụng.',
+            'role_id.in'         => 'Vai trò nhân viên không hợp lệ.',
             'password.min'       => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password.confirmed' => 'Mật khẩu xác nhận không khớp.',
         ]);
 
+        $actor = auth()->user();
+        $newRoleId = (int) ($validated['role_id'] ?? $user->role_id);
+        $newBranchId = (int) ($user->branch_id ?? 0);
+
         $data = [
             'name'  => $validated['name'],
             'email' => $validated['email'],
+            'role_id' => $newRoleId,
         ];
 
-        // P15: Super Admin được điều chuyển HOME BRANCH, nhưng chỉ khi shipper sạch nhiệm vụ/COD.
-        $actor = auth()->user();
         if ($actor->isSuperAdmin()) {
-            $newBranchId = isset($validated['branch_id']) ? (int) $validated['branch_id'] : 0;
+            $newBranchId = isset($validated['branch_id']) ? (int) $validated['branch_id'] : $newBranchId;
             if ($newBranchId < 1) {
                 return redirect()->back()->withInput()->withErrors([
-                    'branch_id' => 'Shipper phải có một home branch.',
+                    'branch_id' => 'Tài khoản nhân viên phải có một chi nhánh.',
                 ], $bag);
             }
-            if ((int) ($user->branch_id ?? 0) !== $newBranchId) {
+            if ($user->isShipper() && (int) ($user->branch_id ?? 0) !== $newBranchId) {
                 try {
                     $homeBranches->transfer($user, $newBranchId, $actor);
                     $user->refresh();
@@ -340,6 +344,11 @@ class StaffManagementController extends Controller
                     ], $bag);
                 }
             }
+            $data['branch_id'] = $newBranchId;
+        } elseif ($actor->isAdmin()) {
+            abort_unless($actor->branch_id, 403, 'Admin phải được gán chi nhánh trước khi quản lý nhân viên.');
+            $newBranchId = (int) $actor->branch_id;
+            $data['branch_id'] = $newBranchId;
         }
 
         if (! empty($validated['password'])) {
@@ -347,6 +356,7 @@ class StaffManagementController extends Controller
         }
 
         $user->update($data);
+        $this->syncShipperProfile($user->fresh(), $newBranchId);
 
         return redirect()->route('admin.staff.index')
             ->with('success', "Đã cập nhật thông tin nhân viên {$user->name}.");
@@ -393,16 +403,21 @@ class StaffManagementController extends Controller
     {
         $this->ensureCanManage($user);
 
-        abort_unless($request->user()->isSuperAdmin(), 403, 'Chỉ Super Admin được điều chuyển home branch của shipper.');
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Chỉ Super Admin được điều chuyển chi nhánh nhân viên.');
 
         $validated = $request->validate([
             'branch_id' => ['required', 'integer', new ActiveBranchAssignment($user->branch_id ? (int) $user->branch_id : null)],
         ]);
 
-        try {
-            $updated = $homeBranches->transfer($user, (int) $validated['branch_id'], $request->user());
-        } catch (RuntimeException $exception) {
-            return redirect()->back()->with('error', $exception->getMessage());
+        if ($user->isShipper()) {
+            try {
+                $updated = $homeBranches->transfer($user, (int) $validated['branch_id'], $request->user());
+            } catch (RuntimeException $exception) {
+                return redirect()->back()->with('error', $exception->getMessage());
+            }
+        } else {
+            $user->update(['branch_id' => (int) $validated['branch_id']]);
+            $updated = $user->fresh('branch');
         }
 
         return redirect()->back()
@@ -421,7 +436,7 @@ class StaffManagementController extends Controller
 
     private function ensureCanManage(User $user): void
     {
-        if (! $user->isShipper()) {
+        if (! in_array((int) $user->role_id, $this->manageableRoleIds(), true)) {
             abort(403, 'Chỉ được quản lý tài khoản nhân viên.');
         }
 
@@ -431,5 +446,38 @@ class StaffManagementController extends Controller
                 abort(403, 'Bạn không có quyền quản lý nhân viên chi nhánh khác.');
             }
         }
+    }
+
+    private function manageableRoleIds(): array
+    {
+        return [User::STAFF_ROLE_ID, User::SHIPPER_ROLE_ID];
+    }
+
+    private function staffRoleOptions(): array
+    {
+        return [
+            User::STAFF_ROLE_ID => 'Nhân viên quầy',
+            User::SHIPPER_ROLE_ID => 'Shipper',
+        ];
+    }
+
+    private function syncShipperProfile(User $user, int $branchId): void
+    {
+        if ($user->isShipper()) {
+            Shipper::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'code' => 'SHP-'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+                    'phone' => (string) ($user->phone ?? ''),
+                    'vehicle_type' => 'bike',
+                    'status' => 'offline',
+                    'station_branch_id' => $branchId,
+                ]
+            );
+
+            return;
+        }
+
+        $user->shipper?->update(['status' => 'offline']);
     }
 }

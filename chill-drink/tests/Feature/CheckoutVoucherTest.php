@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use App\Models\Category;
 use App\Models\BranchProductStatus;
+use App\Models\LoyaltyPoint;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductSize;
@@ -401,6 +402,132 @@ class CheckoutVoucherTest extends TestCase
             'order_id' => $order->id,
             'discount_amount' => 10000,
         ]);
+    }
+
+    public function test_redeemed_voucher_does_not_deduct_points_again_at_checkout(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $voucher = Voucher::factory()->create([
+            'code' => 'REWARD15',
+            'type' => Voucher::TYPE_PERCENT,
+            'value' => 15,
+            'max_discount' => 25000,
+            'min_order' => 50000,
+            'point_cost' => 50,
+            'is_redeemable' => true,
+        ]);
+        LoyaltyPoint::create([
+            'user_id' => $user->id,
+            'total_points' => 100,
+            'monthly_points' => 100,
+            'lifetime_points' => 100,
+            'current_month' => now()->format('Y-m'),
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('loyalty.index'))
+            ->post(route('loyalty.redeem-voucher', $voucher))
+            ->assertRedirect(route('loyalty.index'));
+
+        $this->assertSame(50, (int) $user->loyaltyPoint()->firstOrFail()->total_points);
+        $this->assertDatabaseHas('point_transactions', [
+            'user_id' => $user->id,
+            'points' => -50,
+            'reference_type' => 'voucher',
+            'reference_id' => $voucher->id,
+        ]);
+
+        $cart = [
+            'cart-reward' => [
+                'product_id' => $product->id,
+                'product_size_id' => $productSize->id,
+                'name' => $product->name,
+                'price' => 100000,
+                'quantity' => 1,
+                'size' => 'M',
+            ],
+        ];
+
+        $this
+            ->actingAs($user)
+            ->withSession(['cart' => $cart])
+            ->get(route('checkout.index'))
+            ->assertOk()
+            ->assertSee('id="receivedVouchersSection"', false)
+            ->assertSee('data-voucher-code="REWARD15"', false)
+            ->assertDontSee('loadReceivedVouchers', false);
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['cart' => $cart])
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
+                'fulfillment_type' => 'pickup',
+                'branch_id' => $this->activeBranch()->id,
+                'voucher_code' => $voucher->code,
+            ]);
+
+        $order = Order::latest()->firstOrFail();
+
+        $response->assertRedirect(route('checkout.success', $order));
+        $this->assertSame(50, (int) $user->loyaltyPoint()->firstOrFail()->total_points);
+        $this->assertDatabaseCount('point_transactions', 1);
+        $this->assertDatabaseHas('user_vouchers', [
+            'user_id' => $user->id,
+            'coupon_id' => $voucher->id,
+            'is_used' => true,
+        ]);
+    }
+
+    public function test_redeemable_voucher_must_be_exchanged_before_checkout(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $voucher = Voucher::factory()->create([
+            'code' => 'LOCKEDREWARD',
+            'min_order' => 0,
+            'point_cost' => 50,
+            'is_redeemable' => true,
+        ]);
+        LoyaltyPoint::create([
+            'user_id' => $user->id,
+            'total_points' => 100,
+            'monthly_points' => 100,
+            'lifetime_points' => 100,
+            'current_month' => now()->format('Y-m'),
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    'cart-reward' => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                    ],
+                ],
+            ])
+            ->from(route('checkout.index'))
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
+                'fulfillment_type' => 'pickup',
+                'branch_id' => $this->activeBranch()->id,
+                'voucher_code' => $voucher->code,
+            ])
+            ->assertRedirect(route('checkout.index'))
+            ->assertSessionHas('error', 'Bạn cần đổi điểm lấy voucher này trước khi sử dụng.');
+
+        $this->assertDatabaseCount('orders', 0);
+        $this->assertSame(100, (int) $user->loyaltyPoint()->firstOrFail()->total_points);
     }
 
     public function test_checkout_rejects_voucher_below_minimum_order(): void

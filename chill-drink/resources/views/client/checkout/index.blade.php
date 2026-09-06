@@ -62,15 +62,12 @@
     $receivedVouchers = collect($receivedVouchers ?? []);
     $ownedVoucherModels = $receivedVouchers->pluck('voucher')->filter();
     $selectableVouchers = $availableVouchers->concat($ownedVoucherModels)->unique('id')->values();
-    $loyaltyContext = $loyaltyContext ?? ['points' => 0];
+    $selectedCheckoutAddress = collect($addressBook ?? [])->firstWhere('id', $selectedAddressId ?? 'primary');
     $selectedCheckoutPhone = trim((string) ($selectedCheckoutAddress['phone'] ?? $user->phone ?? ''));
     $checkoutPhoneReady = $selectedCheckoutPhone !== '' && $selectedCheckoutPhone !== 'Chưa cập nhật';
     $isShippingVoucher = fn ($voucher) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::upper((string) $voucher->code), ['SHIP', 'FREE']) || (isset($voucher->discount_target) && $voucher->discount_target === 'shipping');
-    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext, $shippingFee, $fulfillmentType, $isShippingVoucher) {
+    $canUseCheckoutVoucher = function ($voucher) use ($total, $shippingFee, $fulfillmentType, $isShippingVoucher) {
         $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-        $hasPoints = ! $voucher->is_redeemable
-            || (int) $voucher->point_cost <= 0
-            || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
 
         if ($isShippingVoucher($voucher)) {
             if ($fulfillmentType === 'pickup' || $shippingFee <= 0) {
@@ -78,7 +75,7 @@
             }
         }
 
-        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasPoints;
+        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder;
     };
     $shippingVouchers = $availableVouchers->filter($isShippingVoucher)->values();
     $discountVouchers = $availableVouchers->reject($isShippingVoucher)->values();
@@ -262,6 +259,9 @@
     .checkout-item-actions button:hover { background: var(--drink-soft); }
     .checkout-item-actions button:disabled { cursor: not-allowed; opacity: .4; }
     .checkout-item-actions button.is-remove { color: #dc3545; border-color: #f1c5cb; }
+    .checkout-summary-item.is-unavailable { border-color: rgba(220, 53, 69, .28); background: #fff7f7; }
+    .checkout-summary-item.is-unavailable .checkout-item-img { filter: grayscale(.55); opacity: .68; }
+    .checkout-summary-chip.is-unavailable { color: #b42334; background: #ffe8eb; }
     .delivery-choice { display: block; height: 100%; padding: 1rem; border: 1.5px solid var(--drink-border); border-radius: 16px; cursor: pointer; }
     .delivery-choice:has(input:checked) { border-color: var(--drink-primary); background: var(--drink-soft); box-shadow: 0 0 0 3px rgba(13,147,115,.1); }
     .scheduled-delivery-fields { display: none; padding: 1rem; border-radius: 16px; background: #f7fbfa; border: 1px solid var(--drink-border); }
@@ -1783,7 +1783,7 @@
                                     <option value="">Chọn chi nhánh</option>
                                     @foreach($branches as $branch)
                                         <option value="{{ $branch->id }}"
-                                            @selected((string) old('branch_id', session('group_branch_id')) === (string) $branch->id)
+                                            @selected((string) old('branch_id', session('group_branch_id') ?? session('nearest_branch_id')) === (string) $branch->id)
                                             data-latitude="{{ $branch->latitude ?? '' }}"
                                             data-longitude="{{ $branch->longitude ?? '' }}"
                                             data-distance="">
@@ -2024,6 +2024,11 @@
                             <button type="submit" class="btn btn-primary btn-lg w-100 mt-3" id="placeOrderButton">
                                 <i class="bi bi-check2-circle me-2"></i>Đặt hàng
                             </button>
+                            <div class="alert alert-danger small mt-3 mb-0 d-none" id="checkoutAvailabilityWarning" role="alert" tabindex="-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                <span data-checkout-availability-message></span>
+                                <a href="{{ route('cart.index') }}" class="alert-link d-block mt-1">Quay lại giỏ hàng để cập nhật</a>
+                            </div>
                             <div
                                 class="alert alert-warning small mt-3 mb-0 {{ $checkoutPhoneReady && $primaryAddress !== '' ? 'd-none' : '' }}"
                                 id="checkoutContactWarning"
@@ -2254,7 +2259,6 @@
                                     ? 'bi-truck'
                                     : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                 $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                $hasPoints = true;
                                 $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder;
                                 $disabledReason = ! $hasMinimumOrder
                                     ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
@@ -2309,7 +2313,7 @@
                                     <div class="text-secondary mb-2">
                                         Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
                                         @if($voucher->is_redeemable && $voucher->point_cost > 0)
-                                            · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
+                                            · Đã đổi bằng {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
                                         @endif
                                     </div>
                                     @if($voucherUsable)
@@ -2367,11 +2371,10 @@
                                                 ? 'bi-truck'
                                                 : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                             $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                            $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
+                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder;
                                             $disabledReason = ! $hasMinimumOrder
                                                 ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                                : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
+                                                : null;
                                             if ($voucherIsShipping) {
                                                 if ($fulfillmentType === 'pickup') {
                                                     $voucherUsable = false;
@@ -2571,12 +2574,128 @@
         const branchesListEndpoint = @json(route('api.branches.list'));
         const deliveryQuoteEndpoint = @json(route('api.delivery.quote'));
         const addressLookupEndpoint = @json(route('api.address-lookup'));
+        const checkoutAvailabilityEndpoint = @json(route('checkout.availability'));
         const scheduledDeliveryFields = document.querySelector('[data-scheduled-delivery-fields]');
         const scheduledPaymentNotice = document.querySelector('[data-scheduled-payment-notice]');
         const scheduledDeliveryInput = document.getElementById('scheduled_delivery_time');
         const scheduledRuleText = document.querySelector('[data-scheduled-rule-text]');
         const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
         const prepaidPaymentInput = document.querySelector('input[name="payment_method"][value="vnpay"]');
+
+        function syncCheckoutBranchWithHeader(branchSelect = document.getElementById('branch_id')) {
+            const selectedOption = branchSelect?.options[branchSelect.selectedIndex];
+
+            if (!selectedOption?.value) {
+                return;
+            }
+
+            const branchName = selectedOption.textContent.split('—')[0].trim();
+            const syncRequest = window.syncStorefrontBranch?.(selectedOption.value, branchName);
+            syncRequest?.catch((error) => console.error('Không thể đồng bộ chi nhánh trên header.', error));
+        }
+
+        const unavailableCheckoutProducts = new Map();
+        let checkoutAvailabilitySequence = 0;
+
+        function renderCheckoutAvailability() {
+            document.querySelectorAll('[data-checkout-product-id]').forEach((row) => {
+                const productId = String(row.dataset.checkoutProductId || '');
+                const unavailable = unavailableCheckoutProducts.has(productId);
+                const quantityControl = row.querySelector('[data-checkout-qty-control]');
+                const quantityInput = row.querySelector('[data-checkout-item-quantity-input]');
+
+                row.classList.toggle('is-unavailable', unavailable);
+                row.querySelector('[data-checkout-unavailable-badge]')?.classList.toggle('d-none', !unavailable);
+
+                if (quantityInput) {
+                    quantityInput.disabled = unavailable;
+                }
+
+                if (quantityControl) {
+                    if (unavailable) {
+                        quantityControl.querySelector('[data-checkout-qty-minus]')?.setAttribute('disabled', 'disabled');
+                        quantityControl.querySelector('[data-checkout-qty-plus]')?.setAttribute('disabled', 'disabled');
+                    } else {
+                        updateCheckoutControlState(quantityControl, clampCheckoutQuantity(quantityInput?.value || 1));
+                    }
+                }
+            });
+
+            const unavailableNames = [...unavailableCheckoutProducts.values()];
+            const hasUnavailableProducts = unavailableNames.length > 0;
+            const warning = document.getElementById('checkoutAvailabilityWarning');
+            const message = warning?.querySelector('[data-checkout-availability-message]');
+
+            placeOrderButton?.toggleAttribute('disabled', hasUnavailableProducts);
+            warning?.classList.toggle('d-none', !hasUnavailableProducts);
+
+            if (message && hasUnavailableProducts) {
+                message.textContent = `${unavailableNames.join(', ')} đã tạm hết hàng tại chi nhánh đang chọn. Vui lòng cập nhật giỏ hàng hoặc đổi chi nhánh.`;
+            }
+        }
+
+        async function refreshCheckoutAvailability() {
+            const branchId = document.getElementById('branch_id')?.value;
+
+            if (!branchId) {
+                return;
+            }
+
+            const sequence = ++checkoutAvailabilitySequence;
+
+            try {
+                const url = new URL(checkoutAvailabilityEndpoint, window.location.origin);
+                url.searchParams.set('branch_id', branchId);
+                const response = await fetch(url.toString(), {
+                    headers: { Accept: 'application/json' },
+                    cache: 'no-store',
+                });
+                const payload = await response.json();
+
+                if (sequence !== checkoutAvailabilitySequence || !response.ok || payload.success !== true) {
+                    return;
+                }
+
+                unavailableCheckoutProducts.clear();
+                (payload.unavailable || []).forEach((product) => {
+                    unavailableCheckoutProducts.set(String(product.product_id), product.name || 'Sản phẩm');
+                });
+                renderCheckoutAvailability();
+            } catch (error) {
+                console.warn('Không thể kiểm tra trạng thái sản phẩm tại chi nhánh.', error);
+            }
+        }
+
+        document.addEventListener('product:availability-applied', (event) => {
+            const availability = event.detail || {};
+            const branchId = String(document.getElementById('branch_id')?.value || '');
+
+            if (!branchId || String(availability.branch_id || '') !== branchId) {
+                return;
+            }
+
+            const productId = String(availability.product_id || '');
+            if (!productId) {
+                return;
+            }
+
+            const row = document.querySelector(`[data-checkout-product-id="${CSS.escape(productId)}"]`);
+            if (!row) {
+                return;
+            }
+
+            if (availability.is_available) {
+                unavailableCheckoutProducts.delete(productId);
+            } else {
+                const productName = availability.product_name
+                    || row.querySelector('.checkout-summary-name')?.textContent?.trim()
+                    || 'Sản phẩm';
+                unavailableCheckoutProducts.set(productId, productName);
+                window.showRealtimeToast?.(`${productName} vừa tạm hết hàng tại chi nhánh đang chọn.`, 'warning');
+            }
+
+            renderCheckoutAvailability();
+        });
 
         function syncScheduledPaymentRule() {
             const scheduledInput = document.querySelector('input[name="delivery_type"][value="scheduled"]');
@@ -3930,6 +4049,8 @@
                 branchSelect.disabled = false;
                 branchSelect.required = true;
                 window.updateShippingSummary?.();
+                syncCheckoutBranchWithHeader(branchSelect);
+                void refreshCheckoutAvailability();
                 return;
             }
 
@@ -3990,6 +4111,8 @@
                     branchSelectNote.textContent = 'Vui lòng xác định vị trí giao hàng để tính quãng đường đường bộ.';
                 }
                 window.updateShippingSummary?.();
+                syncCheckoutBranchWithHeader(branchSelect);
+                void refreshCheckoutAvailability();
                 return;
             }
 
@@ -4022,6 +4145,8 @@
                 if (sequence === branchOptionsSequence) {
                     branchSelect.disabled = false;
                     window.updateShippingSummary?.();
+                    syncCheckoutBranchWithHeader(branchSelect);
+                    void refreshCheckoutAvailability();
                 }
             }
         }
@@ -4060,6 +4185,8 @@
 
                 branchSelect.value = nearestBranch.value;
                 await window.updateShippingSummary?.();
+                syncCheckoutBranchWithHeader(branchSelect);
+                void refreshCheckoutAvailability();
 
                 return nearestBranch;
             };
@@ -4476,6 +4603,15 @@
         });
 
         placeOrderButton?.closest('form')?.addEventListener('submit', function (event) {
+            if (unavailableCheckoutProducts.size > 0) {
+                event.preventDefault();
+                const warning = document.getElementById('checkoutAvailabilityWarning');
+                warning?.classList.remove('d-none');
+                warning?.focus({ preventScroll: true });
+                warning?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             const hasPhone = isValidCheckoutPhone(shippingPhoneInput?.value || '');
             const missingDeliveryAddress = Boolean(
                 fulfillmentDeliveryInput?.checked
@@ -4733,122 +4869,11 @@
             input.addEventListener('change', updateShippingSummary);
         });
 
-        document.getElementById('branch_id')?.addEventListener('change', () => window.updateShippingSummary?.());
-
-        // Load received vouchers
-        async function loadReceivedVouchers() {
-            try {
-                const guestIdentifier = sessionStorage.getItem('guest_identifier');
-                const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
-                const response = await fetch('/api/vouchers/received', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        ...(csrfTokenMeta && { 'X-CSRF-TOKEN': csrfTokenMeta.content }),
-                        ...(guestIdentifier && { 'X-Guest-Identifier': guestIdentifier }),
-                    },
-                    credentials: 'same-origin',
-                });
-
-                if (!response.ok) return;
-
-                const data = await response.json();
-                const receivedVouchersSection = document.getElementById('receivedVouchersSection');
-                const receivedVouchersList = document.getElementById('receivedVouchersList');
-                const receivedVouchersCount = document.getElementById('receivedVouchersCount');
-
-                if (!receivedVouchersSection || !receivedVouchersList) return;
-
-                if (data.vouchers && data.vouchers.length > 0) {
-                    receivedVouchersSection.style.display = 'block';
-                    if (receivedVouchersCount) {
-                        receivedVouchersCount.textContent = `${data.vouchers.length} mã`;
-                    }
-                    receivedVouchersList.innerHTML = '';
-
-                    const currentSelectedDiscount = selectedVoucherCode?.value || '';
-                    const currentSelectedShipping = selectedShippingVoucherCode?.value || '';
-
-                    data.vouchers.forEach(voucher => {
-                        const isShipping = /SHIP|FREE/.test(voucher.code);
-                        const minOrder = Number(voucher.min_order || 0);
-                        const rawVal = Number(voucher.raw_value || 0);
-                        const maxDisc = Number(voucher.max_discount || 0);
-                        const voucherType = isShipping ? 'shipping' : 'discount';
-                        const isCurrentlyActive = isShipping ? (currentSelectedShipping === voucher.code) : (currentSelectedDiscount === voucher.code);
-                        const valueText = isShipping ? `Freeship tối đa ${voucher.value}` : `Giảm ${voucher.value}`;
-                        const labelText = `${voucher.code} - ${valueText}`;
-                        const iconClass = isShipping ? 'bi-truck' : (voucher.type === 'percent' ? 'bi-percent' : 'bi-gift');
-
-                        const voucherHtml = `
-                            <div class="voucher-ticket ${isShipping ? 'is-shipping' : 'is-discount'} ${isCurrentlyActive ? 'active' : ''}"
-                                data-voucher-card
-                                data-voucher-type="${voucherType}"
-                                data-voucher-code="${escapeHtml(voucher.code)}"
-                                data-voucher-label="${escapeHtml(labelText)}"
-                                data-voucher-discount="0"
-                                data-voucher-disabled="0"
-                                data-min-order="${minOrder}"
-                                data-rate-type="${escapeHtml(voucher.type || 'fixed')}"
-                                data-voucher-value="${rawVal}"
-                                data-max-discount="${maxDisc}"
-                                data-point-cost="0"
-                                data-is-redeemable="0"
-                                data-is-received="1"
-                                style="position: relative;"
-                            >
-                                <div class="voucher-ticket-brand" style="position: relative;">
-                                    <span class="brand-circle"><i class="bi ${iconClass}"></i></span>
-                                    <strong>${escapeHtml(voucher.code)}</strong>
-                                    <span style="position: absolute; top: 0.5rem; right: -0.25rem; background: #fbbf24; color: #78350f; font-size: 0.65rem; padding: 0.15rem 0.35rem; border-radius: 4px; font-weight: 800; transform: rotate(8deg); box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);">
-                                        ĐÃ NHẬN
-                                    </span>
-                                </div>
-                                <div class="voucher-ticket-body">
-                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                        <span class="voucher-limit">Số lượng có hạn</span>
-                                        <span class="voucher-kind">${isShipping ? 'Freeship' : 'Giảm giá'}</span>
-                                        <span class="fw-semibold text-secondary">${escapeHtml(valueText)}</span>
-                                        ${maxDisc > 0 ? `<span class="fw-semibold text-secondary">tối đa ${new Intl.NumberFormat('vi-VN').format(maxDisc)}đ</span>` : ''}
-                                    </div>
-                                    <div class="text-secondary mb-2">
-                                        Đơn tối thiểu ${new Intl.NumberFormat('vi-VN').format(minOrder)}đ
-                                    </div>
-                                    <span class="voucher-only mb-2" data-voucher-badge>
-                                        Đang kiểm tra...
-                                    </span>
-                                </div>
-                                <button type="button" class="voucher-radio ${isCurrentlyActive ? 'active' : ''}" aria-label="Chọn voucher ${escapeHtml(voucher.code)}" aria-pressed="${isCurrentlyActive ? 'true' : 'false'}"></button>
-                            </div>
-                        `;
-                        receivedVouchersList.insertAdjacentHTML('beforeend', voucherHtml);
-                    });
-
-                    bindVoucherCards(receivedVouchersList);
-                    if (typeof refreshVoucherCards === 'function') {
-                        refreshVoucherCards();
-                    }
-                } else {
-                    if (!receivedVouchersList.children.length) {
-                        receivedVouchersSection.style.display = 'none';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading received vouchers:', error);
-            }
-        }
-
-        // Load received vouchers when modal is shown
-        const voucherModalElement = document.getElementById('voucherModal');
-        if (voucherModalElement) {
-            voucherModalElement.addEventListener('show.bs.modal', () => {
-                if (typeof refreshVoucherCards === 'function') {
-                    refreshVoucherCards();
-                }
-                loadReceivedVouchers();
-            });
-        }
+        document.getElementById('branch_id')?.addEventListener('change', (event) => {
+            window.updateShippingSummary?.();
+            syncCheckoutBranchWithHeader(event.currentTarget);
+            void refreshCheckoutAvailability();
+        });
 
         bindVoucherCards(document);
         if (typeof refreshVoucherCards === 'function') {
@@ -4872,6 +4897,7 @@
             renderBranchOptions();
         }
         updateShippingSummary();
+        void refreshCheckoutAvailability();
         syncCheckoutPhoneState();
         requestCheckoutDeviceLocation();
 

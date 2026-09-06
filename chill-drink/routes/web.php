@@ -53,6 +53,7 @@ use Illuminate\Support\Facades\Route;
 // Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBranch'])->name('select-nearest-branch');
+Route::post('/select-branch', [HomeController::class, 'selectBranch'])->name('branch.select');
 
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');
@@ -206,6 +207,11 @@ Route::middleware(['auth', 'shipper'])
             ShipController::class,
             'updateStatus'
         ])->name('status.update');
+
+        Route::post('/presence/offline', [
+            ShipController::class,
+            'presenceOffline'
+        ])->name('presence.offline');
 
 
         // ==============================
@@ -390,6 +396,7 @@ Route::get('/vnpay/payment/{order}', [VnpayController::class, 'payment'])->name(
 // Checkout (requires authentication)
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('verified')->name('checkout.index');
+    Route::get('/checkout/availability', [CheckoutController::class, 'availability'])->middleware('verified')->name('checkout.availability');
     Route::post('/checkout/process', [CheckoutController::class, 'process'])->middleware('verified')->name('checkout.process');
     Route::post('/checkout/addresses', [CheckoutController::class, 'storeAddress'])->middleware('verified')->name('checkout.addresses.store');
     Route::put('/checkout/addresses/{address}', [CheckoutController::class, 'updateAddress'])->middleware('verified')->name('checkout.addresses.update');

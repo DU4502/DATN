@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Client;
 
+use App\Exceptions\ProductUnavailableException;
 use App\Models\Address;
 use App\Support\GuestOrderAccess;
 use App\Support\RealtimeOrderNotifier;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\BranchProductStatus;
 use App\Models\Category;
 use App\Models\GroupOrder;
 use App\Models\Order;
@@ -95,7 +97,6 @@ class CheckoutController extends Controller
         $shippingDistanceOptions = ShippingFee::distanceOptions();
         $shippingMethods = ShippingFee::methods();
         $paymentOptions = $this->paymentOptions();
-        $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $isGroupCheckout = (bool) $groupCheckout;
         $checkoutDeliveryType = session()->pull('checkout_delivery_type', 'now');
@@ -165,6 +166,10 @@ class CheckoutController extends Controller
         $now = now();
         $availableVouchers = Voucher::query()
             ->where('status', true)
+            ->where(function ($query) {
+                $query->where('is_redeemable', false)
+                    ->orWhere('point_cost', '<=', 0);
+            })
             ->where(function ($query) use ($now) {
                 $query->whereNull('starts_at')
                     ->orWhere('starts_at', '<=', $now);
@@ -227,7 +232,6 @@ class CheckoutController extends Controller
             'paymentOptions',
             'availableVouchers',
             'receivedVouchers',
-            'loyaltyContext',
             'subtotal',
             'addressBook',
             'selectedAddressId',
@@ -245,6 +249,52 @@ class CheckoutController extends Controller
     /**
      * Process checkout
      */
+    public function availability(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'branch_id' => [
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
+        ]);
+
+        $cart = $this->cartForCheckout(
+            session()->get('cart', []),
+            session()->get('checkout_cart_keys')
+        );
+        $productIds = collect($cart)
+            ->pluck('product_id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+        $statuses = BranchProductStatus::query()
+            ->where('branch_id', (int) $validated['branch_id'])
+            ->whereIn('product_id', $productIds)
+            ->get()
+            ->keyBy('product_id');
+
+        $unavailable = collect($cart)
+            ->filter(function ($item) use ($statuses) {
+                $productId = $item['product_id'] ?? null;
+                $status = is_numeric($productId) ? $statuses->get((int) $productId) : null;
+
+                return ! $status || ! $status->is_available;
+            })
+            ->map(fn ($item) => [
+                'product_id' => (int) ($item['product_id'] ?? 0),
+                'name' => (string) ($item['name'] ?? 'Sản phẩm'),
+            ])
+            ->unique('product_id')
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'unavailable' => $unavailable,
+        ])->header('Cache-Control', 'no-store');
+    }
+
     public function process(Request $request)
     {
         $groupMemberUserIds = collect();
@@ -593,6 +643,13 @@ class CheckoutController extends Controller
                 'user_id' => auth()->id(),
                 'message' => $e->getMessage(),
             ]);
+
+            if ($e instanceof ProductUnavailableException) {
+                return redirect()->route('cart.index')->with(
+                    'error',
+                    $e->getMessage().' Món hết hàng đã được bỏ chọn, bạn có thể xóa món hoặc đổi chi nhánh.'
+                );
+            }
 
             // Không đưa câu SQL và cấu trúc cơ sở dữ liệu ra giao diện khách hàng.
             // Chi tiết kỹ thuật vẫn được giữ trong log để quản trị viên xử lý.
@@ -1060,7 +1117,7 @@ class CheckoutController extends Controller
             );
         }
 
-        $this->assertVoucherRankAndPoints($voucher);
+        $this->assertVoucherEligibility($voucher);
 
         $discount = $voucher->discountFor($subtotal);
 
@@ -1076,52 +1133,37 @@ class CheckoutController extends Controller
         return Str::contains(Str::upper((string) $voucher->code), ['SHIP', 'FREE']);
     }
 
-    protected function assertVoucherRankAndPoints(Voucher $voucher): void
+    protected function assertVoucherEligibility(Voucher $voucher): void
     {
-        // Nếu khách đã sở hữu voucher trong ví (đã đổi điểm trước đó), không cần kiểm tra số dư điểm hiện tại
-        if (auth()->check() && Schema::hasTable('user_vouchers')) {
-            $alreadyOwned = \App\Models\UserVoucher::where('user_id', auth()->id())
+        if (! $voucher->is_redeemable || (int) $voucher->point_cost <= 0) {
+            return;
+        }
+
+        $ownedVoucher = auth()->check() && Schema::hasTable('user_vouchers')
+            ? UserVoucher::query()
+                ->where('user_id', auth()->id())
                 ->where('coupon_id', $voucher->id)
-                ->where('is_used', 0)
-                ->exists();
-            if ($alreadyOwned) {
-                return;
-            }
+                ->where('is_used', false)
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>=', now());
+                })
+                ->lockForUpdate()
+                ->first()
+            : null;
+
+        if (! $ownedVoucher) {
+            throw new \RuntimeException('Bạn cần đổi điểm lấy voucher này trước khi sử dụng.');
         }
-
-        $context = $this->loyaltyContext();
-
-        if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost) {
-            throw new \RuntimeException(
-                'Bạn chưa đủ '
-                .number_format((int) $voucher->point_cost, 0, ',', '.')
-                .' điểm để dùng mã voucher này.'
-            );
-        }
-    }
-
-    protected function userCanUseVoucher(Voucher $voucher, array $context): bool
-    {
-        if (auth()->check() && Schema::hasTable('user_vouchers')) {
-            $alreadyOwned = \App\Models\UserVoucher::where('user_id', auth()->id())
-                ->where('coupon_id', $voucher->id)
-                ->where('is_used', 0)
-                ->exists();
-            if ($alreadyOwned) {
-                return true;
-            }
-        }
-
-        return ! ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost);
     }
 
     protected function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
     {
         $voucher->increment('used_count');
 
-        $hadUserVoucher = false;
+        $ownedVoucherUpdated = 0;
         if (auth()->check() && Schema::hasTable('user_vouchers')) {
-            $updated = \App\Models\UserVoucher::where('user_id', auth()->id())
+            $ownedVoucherUpdated = UserVoucher::query()
+                ->where('user_id', auth()->id())
                 ->where('coupon_id', $voucher->id)
                 ->where('is_used', 0)
                 ->limit(1)
@@ -1129,7 +1171,10 @@ class CheckoutController extends Controller
                     'is_used' => 1,
                     'used_at' => now(),
                 ]);
-            $hadUserVoucher = $updated > 0;
+        }
+
+        if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $ownedVoucherUpdated !== 1) {
+            throw new \RuntimeException('Voucher đổi điểm không còn khả dụng trong tài khoản của bạn.');
         }
 
         if (Schema::hasTable('user_coupon_usage')) {
@@ -1142,32 +1187,6 @@ class CheckoutController extends Controller
             ]);
         }
 
-        // Chỉ trừ điểm nếu khách CHƯA đổi voucher bằng điểm trước đó (tức chưa có bản ghi trong user_vouchers)
-        if (! $hadUserVoucher && $voucher->is_redeemable && (int) $voucher->point_cost > 0 && Schema::hasTable('loyalty_points')) {
-            DB::table('loyalty_points')
-                ->where('user_id', auth()->id())
-                ->where('total_points', '>=', (int) $voucher->point_cost)
-                ->decrement('total_points', (int) $voucher->point_cost);
-        }
-    }
-
-    protected function loyaltyContext(bool $lock = true): array
-    {
-        if (! Schema::hasTable('loyalty_points')) {
-            return ['rank' => 'bronze', 'points' => 0];
-        }
-
-        $query = DB::table('loyalty_points')->where('user_id', auth()->id());
-
-        if ($lock) {
-            $query->lockForUpdate();
-        }
-
-        $row = $query->first();
-
-        return [
-            'points' => (int) ($row->total_points ?? 0),
-        ];
     }
 
     protected function paymentOptions(): array

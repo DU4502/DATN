@@ -86,6 +86,8 @@
                 if (input) input.value = payload.is_available ? '0' : '1';
                 if (toggle) toggle.textContent = payload.is_available ? 'Chuyển hết hàng' : 'Chuyển còn hàng';
             });
+
+            document.dispatchEvent(new CustomEvent('product:availability-applied', { detail: payload }));
         };
 
         document.addEventListener('product:availability-updated', function (event) {

@@ -3,12 +3,13 @@
 namespace App\Services;
 
 use App\Events\ProductAvailabilityUpdated;
+use App\Exceptions\ProductUnavailableException;
 use App\Models\Branch;
 use App\Models\BranchProductStatus;
 use App\Models\Product;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
+use Throwable;
 
 class ProductAvailabilityService
 {
@@ -48,11 +49,11 @@ class ProductAvailabilityService
         $status = $this->statusFor($product, $branch, $lock);
 
         if (! $status) {
-            throw new RuntimeException("Sản phẩm {$product->name} hiện chưa được phục vụ tại Chi nhánh {$branch->name}.");
+            throw new ProductUnavailableException("Sản phẩm {$product->name} hiện chưa được phục vụ tại Chi nhánh {$branch->name}.");
         }
 
         if (! $status->is_available) {
-            throw new RuntimeException("Sản phẩm {$product->name} hiện đã hết hàng tại Chi nhánh {$branch->name}.");
+            throw new ProductUnavailableException("Sản phẩm {$product->name} hiện đã hết hàng tại Chi nhánh {$branch->name}.");
         }
 
         return $status;
@@ -64,7 +65,7 @@ class ProductAvailabilityService
             $productId = $item['product_id'] ?? null;
 
             if (! is_numeric($productId)) {
-                throw new RuntimeException('Giỏ hàng có sản phẩm không hợp lệ. Vui lòng cập nhật lại giỏ hàng.');
+                throw new ProductUnavailableException('Giỏ hàng có sản phẩm không hợp lệ. Vui lòng cập nhật lại giỏ hàng.');
             }
 
             $product = Product::query()
@@ -73,13 +74,13 @@ class ProductAvailabilityService
                 ->first();
 
             if (! $product) {
-                throw new RuntimeException('Một sản phẩm trong giỏ đã ngừng bán. Vui lòng cập nhật lại giỏ hàng.');
+                throw new ProductUnavailableException('Một sản phẩm trong giỏ đã ngừng bán. Vui lòng cập nhật lại giỏ hàng.');
             }
 
             try {
                 $this->assertAvailable($product, $branch, $lock);
-            } catch (RuntimeException $exception) {
-                throw new RuntimeException($exception->getMessage().' Vui lòng cập nhật lại giỏ hàng.');
+            } catch (ProductUnavailableException $exception) {
+                throw new ProductUnavailableException($exception->getMessage().' Vui lòng cập nhật lại giỏ hàng.');
             }
         }
     }
@@ -111,7 +112,13 @@ class ProductAvailabilityService
             ['is_available' => $isAvailable]
         ));
 
-        event(new ProductAvailabilityUpdated($status));
+        try {
+            event(new ProductAvailabilityUpdated($status));
+        } catch (Throwable $exception) {
+            // Realtime is an enhancement: a stopped Reverb/Pusher server must not
+            // turn a successful availability update into an HTTP 500 response.
+            report($exception);
+        }
 
         return $status;
     }

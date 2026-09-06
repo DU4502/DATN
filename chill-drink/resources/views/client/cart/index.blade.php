@@ -151,6 +151,34 @@
         border-bottom-color: rgba(100, 123, 120, 0.12);
     }
 
+    .cart-item-card.is-unavailable {
+        opacity: 1;
+        background: linear-gradient(90deg, rgba(255, 241, 242, 0.9), rgba(255, 255, 255, 0.72));
+        border-bottom-color: rgba(220, 53, 69, 0.18);
+    }
+
+    .cart-item-card.is-unavailable .cart-item-image {
+        filter: grayscale(0.55);
+        opacity: 0.72;
+    }
+
+    .cart-unavailable-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.35rem;
+        padding: 0.3rem 0.55rem;
+        border-radius: 999px;
+        background: #fff1f2;
+        color: #c52d3f;
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    .cart-item-card:not(.is-unavailable) .cart-unavailable-badge {
+        display: none;
+    }
+
     .cart-qty {
         display: inline-flex;
         align-items: center;
@@ -539,6 +567,12 @@
             @php
                 $total = 0;
                 $tax = 0;
+                $initialSelectedCount = collect($cart)->filter(function ($item) use ($cartAvailability) {
+                    $status = $cartAvailability->get((int) ($item['product_id'] ?? 0));
+
+                    return $status && $status->is_available;
+                })->count();
+                $initialUnavailableCount = count($cart) - $initialSelectedCount;
             @endphp
 
             <div class="cart-top-actions d-flex align-items-center mb-4">
@@ -556,7 +590,7 @@
                         </label>
                         <div class="cart-select-meta">
                             <div class="text-secondary">
-                                Đã chọn <strong class="text-primary" data-selected-count>{{ count($cart) }}</strong> sản phẩm
+                                Đã chọn <strong class="text-primary" data-selected-count>{{ $initialSelectedCount }}</strong> sản phẩm
                             </div>
                             <form action="{{ route('cart.clear') }}" method="POST" class="d-block m-0" data-ajax-cart>
                                 @csrf
@@ -568,17 +602,36 @@
                         </div>
                     </div>
 
+                    <div class="alert alert-warning border-0 rounded-4 mb-3 {{ $initialUnavailableCount > 0 ? '' : 'd-none' }}" role="status" data-cart-availability-warning>
+                        <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                        Có sản phẩm đang tạm hết hàng tại chi nhánh này. Món vẫn được giữ trong giỏ để bạn có thể xóa hoặc chờ bán lại.
+                    </div>
+
                     <div class="cart-items-card">
                         @foreach($cart as $id => $item)
                             @php
                                 $subtotal = $item['price'] * $item['quantity'];
-                                $total += $subtotal;
+                                $cartItemStatus = $cartAvailability->get((int) ($item['product_id'] ?? 0));
+                                $isCartItemAvailable = $cartItemStatus && $cartItemStatus->is_available;
+                                if ($isCartItemAvailable) {
+                                    $total += $subtotal;
+                                }
                             @endphp
 
-                            <div class="cart-item-card p-3 p-md-4" data-cart-row data-cart-key="{{ $id }}" data-cart-subtotal-value="{{ $subtotal }}">
+                            <div
+                                class="cart-item-card p-3 p-md-4 {{ $isCartItemAvailable ? '' : 'is-unavailable is-unselected' }}"
+                                data-cart-row
+                                data-cart-key="{{ $id }}"
+                                data-product-id="{{ $item['product_id'] ?? '' }}"
+                                data-product-name="{{ $item['name'] }}"
+                                data-product-availability="{{ $item['product_id'] ?? '' }}"
+                                data-branch-id="{{ $branch?->id }}"
+                                data-cart-available="{{ $isCartItemAvailable ? '1' : '0' }}"
+                                data-cart-subtotal-value="{{ $subtotal }}"
+                            >
                                 <div class="cart-item-layout d-flex flex-column flex-md-row align-items-md-center gap-3 gap-md-4">
                                     <label class="cart-select-check" aria-label="Chọn {{ $item['name'] }}">
-                                        <input class="form-check-input" type="checkbox" name="items[]" value="{{ $id }}" checked data-cart-select-item>
+                                        <input class="form-check-input" type="checkbox" name="items[]" value="{{ $id }}" data-cart-select-item @checked($isCartItemAvailable) @disabled(! $isCartItemAvailable)>
                                     </label>
 
                                     <x-product-image
@@ -593,6 +646,10 @@
 
                                     <div class="cart-item-info flex-grow-1">
                                         <h2 class="h4 fw-bold mb-1">{{ $item['name'] }}</h2>
+                                        <span class="cart-unavailable-badge" data-cart-unavailable-badge>
+                                            <i class="bi bi-x-circle-fill" aria-hidden="true"></i>
+                                            Tạm hết hàng tại {{ $branch?->name ?? 'chi nhánh hiện tại' }}
+                                        </span>
                                         <p class="text-secondary small mb-1">
                                             {{ $item['size_label'] ?? 'Kích cỡ M' }}
                                             @if(($item['size_extra'] ?? 0) > 0)
@@ -614,9 +671,9 @@
                                         <form action="{{ route('cart.update', $id) }}" method="POST" class="cart-qty" data-ajax-cart data-cart-qty-form>
                                             @csrf
                                             @method('PATCH')
-                                            <button type="button" data-cart-qty-minus aria-label="Giảm số lượng">-</button>
-                                            <input type="text" name="quantity" value="{{ $item['quantity'] }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" spellcheck="false" min="1" max="99" aria-label="Số lượng" data-cart-quantity="{{ $id }}" data-cart-qty-input>
-                                            <button type="button" data-cart-qty-plus aria-label="Tăng số lượng">+</button>
+                                            <button type="button" data-cart-qty-minus aria-label="Giảm số lượng" @disabled(! $isCartItemAvailable)>-</button>
+                                            <input type="text" name="quantity" value="{{ $item['quantity'] }}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" spellcheck="false" min="1" max="99" aria-label="Số lượng" data-cart-quantity="{{ $id }}" data-cart-qty-input @disabled(! $isCartItemAvailable)>
+                                            <button type="button" data-cart-qty-plus aria-label="Tăng số lượng" @disabled(! $isCartItemAvailable)>+</button>
                                         </form>
 
                                         <div class="cart-item-total d-flex align-items-center gap-3">
@@ -643,7 +700,7 @@
 
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Sản phẩm đã chọn</span>
-                            <strong><span data-selected-count>{{ count($cart) }}</span> món</strong>
+                            <strong><span data-selected-count>{{ $initialSelectedCount }}</span> món</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-3">
                             <span class="text-secondary">Tạm tính tiền món</span>
@@ -668,17 +725,17 @@
                         </div>
 
                         @auth
-                            <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}">
+                            <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill {{ $initialSelectedCount < 1 ? 'disabled' : '' }}" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}" @disabled($initialSelectedCount < 1)>
                                 Thanh toán ngay <i class="bi bi-arrow-right ms-2"></i>
                             </button>
-                            <p class="small text-danger text-center mt-3 mb-0 d-none" data-cart-selection-warning>
+                            <p class="small text-danger text-center mt-3 mb-0 {{ $initialSelectedCount > 0 ? 'd-none' : '' }}" data-cart-selection-warning>
                                 Vui lòng chọn ít nhất một sản phẩm để thanh toán.
                             </p>
                         @else
-                            <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}" data-guest-checkout-url="{{ route('checkout.guest.index') }}">
+                            <button type="button" class="btn btn-primary btn-lg w-100 rounded-pill {{ $initialSelectedCount < 1 ? 'disabled' : '' }}" data-cart-checkout-button data-checkout-url="{{ route('checkout.index') }}" data-guest-checkout-url="{{ route('checkout.guest.index') }}" @disabled($initialSelectedCount < 1)>
                                 Thanh toán ngay <i class="bi bi-arrow-right ms-2"></i>
                             </button>
-                            <p class="small text-danger text-center mt-3 mb-0 d-none" data-cart-selection-warning>
+                            <p class="small text-danger text-center mt-3 mb-0 {{ $initialSelectedCount > 0 ? 'd-none' : '' }}" data-cart-selection-warning>
                                 Vui lòng chọn ít nhất một sản phẩm để thanh toán.
                             </p>
                         @endauth
@@ -809,6 +866,7 @@
             const input = form.querySelector('[data-cart-qty-input]');
             const minusButton = form.querySelector('[data-cart-qty-minus]');
             const plusButton = form.querySelector('[data-cart-qty-plus]');
+            const cartRow = form.closest('[data-cart-row]');
 
             if (!input || !minusButton || !plusButton) {
                 return;
@@ -821,9 +879,11 @@
 
             const render = () => {
                 const quantity = clampQuantity(input.value || 1);
+                const isAvailable = cartRow?.dataset.cartAvailable !== '0';
                 input.value = String(quantity);
-                minusButton.disabled = quantity <= 1;
-                plusButton.disabled = quantity >= 99;
+                input.disabled = !isAvailable;
+                minusButton.disabled = !isAvailable || quantity <= 1;
+                plusButton.disabled = !isAvailable || quantity >= 99;
             };
 
             const stopRepeat = () => {
@@ -959,16 +1019,21 @@
             return Array.from(document.querySelectorAll('[data-cart-select-item]'));
         }
 
+        function selectableItemChecks() {
+            return itemChecks().filter((input) => !input.disabled);
+        }
+
         function formatMoney(value) {
             return `${moneyFormatter.format(Math.max(0, Math.round(value)))}đ`;
         }
 
         function selectedItems() {
-            return itemChecks().filter((input) => input.checked && input.closest('[data-cart-row]'));
+            return selectableItemChecks().filter((input) => input.checked && input.closest('[data-cart-row]'));
         }
 
         function updateSelectionSummary() {
             const checks = itemChecks();
+            const selectableChecks = selectableItemChecks();
             let total = 0;
             let selectedCount = 0;
 
@@ -979,9 +1044,10 @@
                     return;
                 }
 
+                if (input.disabled) input.checked = false;
                 row.classList.toggle('is-unselected', !input.checked);
 
-                if (input.checked) {
+                if (input.checked && !input.disabled) {
                     selectedCount += 1;
                     total += Number(row.dataset.cartSubtotalValue || 0);
                 }
@@ -996,8 +1062,9 @@
             });
 
             if (selectAll) {
-                selectAll.checked = checks.length > 0 && selectedCount === checks.length;
-                selectAll.indeterminate = selectedCount > 0 && selectedCount < checks.length;
+                selectAll.disabled = selectableChecks.length === 0;
+                selectAll.checked = selectableChecks.length > 0 && selectedCount === selectableChecks.length;
+                selectAll.indeterminate = selectedCount > 0 && selectedCount < selectableChecks.length;
             }
 
             if (checkoutButton) {
@@ -1006,10 +1073,14 @@
             }
 
             selectionWarning?.classList.toggle('d-none', selectedCount > 0);
+            document.querySelector('[data-cart-availability-warning]')?.classList.toggle(
+                'd-none',
+                !document.querySelector('[data-cart-row][data-cart-available="0"]')
+            );
         }
 
         selectAll?.addEventListener('change', function () {
-            itemChecks().forEach((input) => {
+            selectableItemChecks().forEach((input) => {
                 input.checked = selectAll.checked;
             });
 
@@ -1077,6 +1148,46 @@
         });
 
         document.addEventListener('cart:updated', updateSelectionSummary);
+        document.addEventListener('product:availability-applied', function (event) {
+            const payload = event.detail;
+            if (!payload) return;
+
+            document.querySelectorAll(
+                `[data-cart-row][data-product-id="${payload.product_id}"][data-branch-id="${payload.branch_id}"]`
+            ).forEach((row) => {
+                const wasAvailable = row.dataset.cartAvailable === '1';
+                const isAvailable = Boolean(payload.is_available);
+                const checkbox = row.querySelector('[data-cart-select-item]');
+                const quantityInput = row.querySelector('[data-cart-qty-input]');
+                const minusButton = row.querySelector('[data-cart-qty-minus]');
+                const plusButton = row.querySelector('[data-cart-qty-plus]');
+                const unavailableBadge = row.querySelector('[data-cart-unavailable-badge]');
+                const quantity = Number.parseInt(quantityInput?.value || '1', 10) || 1;
+
+                row.dataset.cartAvailable = isAvailable ? '1' : '0';
+                row.classList.toggle('is-unavailable', !isAvailable);
+                if (checkbox) {
+                    if (!isAvailable) checkbox.checked = false;
+                    checkbox.disabled = !isAvailable;
+                }
+                if (quantityInput) quantityInput.disabled = !isAvailable;
+                if (minusButton) minusButton.disabled = !isAvailable || quantity <= 1;
+                if (plusButton) plusButton.disabled = !isAvailable || quantity >= 99;
+                if (unavailableBadge && !isAvailable) {
+                    unavailableBadge.innerHTML = '<i class="bi bi-x-circle-fill" aria-hidden="true"></i> Tạm hết hàng tại '
+                        + (payload.branch_name || 'chi nhánh hiện tại');
+                }
+
+                if (wasAvailable && !isAvailable && typeof window.showRealtimeToast === 'function') {
+                    window.showRealtimeToast(
+                        `${payload.product_name || row.dataset.productName || 'Sản phẩm'} vừa tạm hết hàng. Món vẫn được giữ trong giỏ.`,
+                        'warning'
+                    );
+                }
+            });
+
+            updateSelectionSummary();
+        });
         updateSelectionSummary();
 
         const flashToast = sessionStorage.getItem('cart_flash_toast');

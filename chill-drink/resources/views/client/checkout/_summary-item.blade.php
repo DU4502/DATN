@@ -8,7 +8,7 @@
     $basePrice = max(0, (int) ($item['base_price'] ?? max(0, $unitPrice - $sizeExtra - $toppingTotal)));
 @endphp
 
-<div class="checkout-summary-item {{ !empty($extra) ? 'd-none' : '' }}" data-checkout-item="{{ $cartKey }}" @if(!empty($extra)) data-checkout-extra-item @endif>
+<div class="checkout-summary-item {{ !empty($extra) ? 'd-none' : '' }}" data-checkout-item="{{ $cartKey }}" data-checkout-product-id="{{ $item['product_id'] ?? '' }}" @if(!empty($extra)) data-checkout-extra-item @endif>
     <img src="{{ $item['image'] ?? 'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=400&q=80' }}" alt="{{ $item['name'] }}" class="checkout-item-img">
     <div class="checkout-summary-content">
         <div class="checkout-summary-title-row">
@@ -16,6 +16,9 @@
             <strong class="checkout-summary-line-total" data-checkout-item-subtotal>{{ number_format($lineTotal, 0, ',', '.') }}đ</strong>
         </div>
         <div class="checkout-summary-badges">
+            <span class="checkout-summary-chip is-unavailable d-none" data-checkout-unavailable-badge>
+                <i class="bi bi-x-circle-fill"></i>Tạm hết hàng
+            </span>
             @if(!empty($item['group_member_name']))
                 <span class="checkout-summary-chip is-member"><i class="bi bi-person"></i>{{ $item['group_member_name'] }}</span>
             @endif

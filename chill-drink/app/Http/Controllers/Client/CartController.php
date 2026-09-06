@@ -44,9 +44,14 @@ class CartController extends Controller
      */
     public function index()
     {
-        $branch = app(ProductAvailabilityService::class)->currentBranch();
+        $availability = app(ProductAvailabilityService::class);
+        $branch = $availability->currentBranch();
         $cart = $this->refreshCartItems(session()->get('cart', []));
         session()->put('cart', $cart);
+        $cartProducts = Product::query()
+            ->whereIn('id', collect($cart)->pluck('product_id')->filter(fn ($id) => is_numeric($id))->unique())
+            ->get();
+        $cartAvailability = $availability->mapFor($cartProducts, $branch);
 
         $suggestions = Product::query()
             ->where('status', true)
@@ -59,7 +64,7 @@ class CartController extends Controller
             ? Favorite::where('user_id', auth()->id())->pluck('product_id')
             : collect();
 
-        return view('client.cart.index', compact('cart', 'suggestions', 'favoriteProductIds', 'branch'));
+        return view('client.cart.index', compact('cart', 'suggestions', 'favoriteProductIds', 'branch', 'cartAvailability'));
     }
 
     private function cartPayload(string $message): array

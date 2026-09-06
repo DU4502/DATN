@@ -414,7 +414,7 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
         padding: 0.28rem 0.55rem;
         border: 1px solid rgba(13, 147, 115, 0.28);
         border-radius: 6px;
-        color: var(--drink-primary-dark);
+        color: var(--drink-primary-dark, var(--c-primary-dark, #067a5f));
         background: rgba(13, 147, 115, 0.06);
         font-size: 0.78rem;
         font-weight: 800;
@@ -973,24 +973,26 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
         border-radius: 24px;
         box-shadow: 0 20px 60px rgba(8, 42, 38, 0.22);
         overflow: hidden;
+        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
     }
 
-    .quick-add-modal .modal-dialog {
-        max-width: 660px;
-        margin: 1.25rem auto;
+    .quick-add-modal .modal-dialog { max-width: 780px; }
+    .quick-add-modal form {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
     }
-
-    .quick-add-modal .modal-header {
-        padding: 1.1rem 1.4rem 0.35rem;
-    }
-
+    .quick-add-modal .modal-header { padding: 1.5rem 1.75rem 0.75rem; }
     .quick-add-modal .modal-body {
-        padding: 0 1.4rem 1.15rem;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 1.75rem 1.25rem;
+        scrollbar-gutter: stable;
     }
-
-    .quick-add-modal .modal-title {
-        font-size: 1.45rem;
-    }
+    .quick-add-modal .modal-title { font-size: 1.85rem; }
 
     .quick-product-summary {
         display: flex;
@@ -1075,6 +1077,14 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
         padding-top: .6rem;
     }
 
+    .quick-actions-footer {
+        flex: 0 0 auto;
+        padding: 0.85rem 1.75rem 1.25rem;
+        border-top: 1px solid #edf1f0;
+        background: #ffffff;
+        box-shadow: 0 -10px 24px rgba(8, 42, 38, 0.05);
+    }
+
     .quick-quantity {
         display: flex;
         align-items: center;
@@ -1099,30 +1109,18 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
     }
 
     @media (max-width: 767.98px) {
-        .quick-add-modal .modal-dialog {
-            margin: .5rem;
+        .quick-add-modal .modal-dialog { margin: .65rem; }
+        .quick-add-modal .modal-content,
+        .quick-add-modal form {
+            max-height: calc(100vh - 1.3rem);
+            max-height: calc(100dvh - 1.3rem);
         }
-
-        .quick-add-modal .modal-header {
-            padding: 1rem 1rem .3rem;
-        }
-
-        .quick-add-modal .modal-body {
-            padding: 0 1rem 1rem;
-        }
-
-        .quick-levels-grid {
-            grid-template-columns: 1fr;
-            gap: 0.5rem;
-        }
-
-        .quick-topping-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .quick-actions {
-            grid-template-columns: 1fr;
-        }
+        .quick-add-modal .modal-header { padding: 1.2rem 1.1rem .7rem; }
+        .quick-add-modal .modal-body { padding: 0 1.1rem 1.1rem; }
+        .quick-actions-footer { padding: .75rem 1.1rem 1.1rem; }
+        .quick-levels-grid { grid-template-columns: 1fr; gap: 0; }
+        .quick-topping-grid { grid-template-columns: 1fr; }
+        .quick-actions { grid-template-columns: 1fr; }
     }
 
     .quick-add-thumb {
@@ -1400,117 +1398,19 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
             --bs-gutter-y: 0.6rem;
         }
 
-        .shop-products-grid>.col-sm-6 {
-            width: 50%;
-        }
-
-        .home-product {
-            border-radius: 16px;
-        }
-
-        .home-product__body {
-            padding: 0.85rem;
-        }
-
-        .home-product__name {
-            font-size: 0.92rem;
-        }
-
-        .home-product__sku {
-            font-size: 0.72rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .home-product__price {
-            font-size: 1.05rem;
-        }
-
-        .home-product .product-cart-btn {
-            width: 44px;
-            height: 44px;
-        }
-
-        .home-product .product-cart-btn i {
-            font-size: 1.05rem !important;
-        }
-
-        .home-product .product-image-cart-form {
-            opacity: 1;
-            background: transparent;
-        }
-
-        .home-product__tag {
-            top: 0.5rem;
-            left: 0.5rem;
-            padding: 0.2rem 0.5rem;
-            font-size: 0.62rem;
-        }
-
-        .home-product__favorite {
-            width: 34px;
-            height: 34px;
-            top: 0.5rem;
-            right: 0.5rem;
-        }
-
-        .home-product__favorite i {
-            font-size: 0.95rem;
-        }
-
-        .quick-add-modal .modal-header {
-            padding: 0.85rem 0.9rem 0.45rem;
-        }
-
-        .quick-add-modal .modal-body {
-            padding: 0 0.9rem 0.9rem;
-        }
-
-        .quick-product-summary {
-            padding: 0.6rem;
-        }
-
-        .quick-add-thumb {
-            width: 58px;
-            height: 58px;
-            border-radius: 12px;
-        }
-
-        .quick-section {
-            margin-top: 0.6rem;
-            padding-top: 0.6rem;
-        }
-
-        .quick-section-label {
-            margin-bottom: 0.45rem;
-        }
-
-        .quick-size-grid {
-            gap: 0.35rem;
-        }
-
-        .quick-choice {
-            min-height: 40px;
-            padding: 0.4rem;
-        }
-
-        .quick-levels-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.45rem;
-        }
-
-        .quick-topping-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.35rem;
-        }
-
-        .quick-actions {
-            grid-template-columns: auto minmax(0, 1fr);
-            gap: 0.5rem;
-        }
-
-        .quick-submit {
-            min-height: 44px;
-        }
+        .quick-add-modal .modal-header { padding: 0.85rem 0.9rem 0.45rem; }
+        .quick-add-modal .modal-body { padding: 0 0.9rem 0.9rem; }
+        .quick-actions-footer { padding: 0.65rem 0.9rem 0.9rem; }
+        .quick-product-summary { padding: 0.6rem; }
+        .quick-add-thumb { width: 58px; height: 58px; border-radius: 12px; }
+        .quick-section { margin-top: 0.6rem; padding-top: 0.6rem; }
+        .quick-section-label { margin-bottom: 0.45rem; }
+        .quick-size-grid { gap: 0.35rem; }
+        .quick-choice { min-height: 40px; padding: 0.4rem; }
+        .quick-levels-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+        .quick-topping-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.35rem; }
+        .quick-actions { grid-template-columns: auto minmax(0, 1fr); gap: 0.5rem; }
+        .quick-submit { min-height: 44px; }
     }
 
     @media (min-width: 576px) and (max-width: 991.98px) {
@@ -1811,13 +1711,10 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                             <div class="home-product__img">
                                 <span class="home-product__tag">{{ $product->category?->name ?? 'Đồ uống' }}</span>
                                 @auth
-                                @php($isFavorite = $favoriteProductIds->contains($product->id))
-                                <form class="home-product__favorite-form" method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>
-                                    @csrf
-                                    <button type="submit" class="home-product__favorite {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button>
-                                        <i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i>
-                                    </button>
-                                </form>
+                                    @php
+                                        $isFavorite = $favoriteProductIds->contains($product->id);
+                                    @endphp
+                                    <form method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>@csrf<button type="submit" class="product-favorite-btn {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button><i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i></button></form>
                                 @else
                                 <a class="home-product__favorite-form home-product__favorite" href="{{ route('login') }}" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích">
                                     <i class="bi bi-heart"></i>
@@ -2009,16 +1906,17 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                         <div class="quick-topping-grid" data-quick-topping-group></div>
                     </div>
 
-                    <div class="quick-actions">
-                        <div class="quick-quantity" aria-label="Số lượng">
-                            <button type="button" data-quick-qty-minus aria-label="Giảm số lượng">−</button>
-                            <span class="fw-bold fs-5" data-quick-qty-display>1</span>
-                            <button type="button" data-quick-qty-plus aria-label="Tăng số lượng">+</button>
-                        </div>
-                        <button type="submit" class="btn btn-primary rounded-pill fw-bold quick-submit">
-                            Thêm vào giỏ · <span data-quick-total>0đ</span>
-                        </button>
+                </div>
+
+                <div class="quick-actions quick-actions-footer">
+                    <div class="quick-quantity" aria-label="Số lượng">
+                        <button type="button" data-quick-qty-minus aria-label="Giảm số lượng">−</button>
+                        <span class="fw-bold fs-5" data-quick-qty-display>1</span>
+                        <button type="button" data-quick-qty-plus aria-label="Tăng số lượng">+</button>
                     </div>
+                    <button type="submit" class="btn btn-primary rounded-pill fw-bold quick-submit">
+                        Thêm vào giỏ · <span data-quick-total>0đ</span>
+                    </button>
                 </div>
             </form>
         </div>

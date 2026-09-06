@@ -456,6 +456,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 (() => {
     const pulseUrl = @json(route('shipper.assignments.pulse'));
+    const presenceOfflineUrl = @json(route('shipper.presence.offline'));
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
     const pendingSoundKey = 'chilldrink_shipper_pending_assignment_sound';
     const startedAssignmentKey = 'chilldrink_shipper_started_assignment';
     const assignmentBellIntervalMs = 5000;
@@ -649,6 +651,13 @@ document.addEventListener('DOMContentLoaded', () => {
     unlockAudioAndReplayPending();
     setInterval(pollAssignment, assignmentBellIntervalMs);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) pollAssignment(); });
+    window.addEventListener('pagehide', () => {
+        if (!presenceOfflineUrl || !csrfToken) return;
+        const body = new Blob([new URLSearchParams({_token: csrfToken}).toString()], {
+            type: 'application/x-www-form-urlencoded; charset=UTF-8'
+        });
+        navigator.sendBeacon?.(presenceOfflineUrl, body);
+    });
 })();
 </script>
 <script>
