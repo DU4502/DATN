@@ -59,6 +59,61 @@ class BranchInactiveAssignmentTest extends TestCase
         ]);
     }
 
+    public function test_staff_management_lists_staff_and_shippers_with_roles(): void
+    {
+        $superAdmin = $this->user(3);
+        $branch = $this->branch('STAFF-ROLE-LIST');
+        $staff = $this->user(User::STAFF_ROLE_ID, $branch);
+        [$shipperUser] = $this->shipper($branch);
+
+        $this->actingAs($superAdmin)
+            ->get(route('admin.super-admin.manage.staff.index'))
+            ->assertOk()
+            ->assertSee($staff->email)
+            ->assertSee($shipperUser->email)
+            ->assertSee('Vai trò')
+            ->assertSee('Nhân viên quầy')
+            ->assertSee('Shipper');
+    }
+
+    public function test_super_admin_can_create_counter_staff_from_staff_management(): void
+    {
+        $superAdmin = $this->user(3);
+        $branch = $this->branch('ACTIVE-COUNTER-STAFF');
+
+        $this->actingAs($superAdmin)
+            ->post(route('admin.staff.store'), array_merge(
+                $this->accountPayload('counter-staff@gmail.com', $branch),
+                ['role_id' => User::STAFF_ROLE_ID]
+            ))
+            ->assertRedirect(route('admin.staff.index'));
+
+        $created = User::query()->where('email', 'counter-staff@gmail.com')->firstOrFail();
+
+        $this->assertSame(User::STAFF_ROLE_ID, (int) $created->role_id);
+        $this->assertSame((int) $branch->id, (int) $created->branch_id);
+        $this->assertDatabaseMissing('shippers', ['user_id' => $created->id]);
+    }
+
+    public function test_regular_admin_creates_staff_only_inside_their_branch(): void
+    {
+        $ownBranch = $this->branch('ADMIN-OWN');
+        $otherBranch = $this->branch('ADMIN-OTHER');
+        $admin = $this->user(2, $ownBranch);
+
+        $this->actingAs($admin)
+            ->post(route('admin.staff.store'), array_merge(
+                $this->accountPayload('admin-counter@gmail.com', $otherBranch),
+                ['role_id' => User::STAFF_ROLE_ID]
+            ))
+            ->assertRedirect(route('admin.staff.index'));
+
+        $created = User::query()->where('email', 'admin-counter@gmail.com')->firstOrFail();
+
+        $this->assertSame(User::STAFF_ROLE_ID, (int) $created->role_id);
+        $this->assertSame((int) $ownBranch->id, (int) $created->branch_id);
+    }
+
     public function test_shipper_creation_rejects_an_inactive_branch_for_super_and_regular_admin(): void
     {
         $inactiveBranch = $this->branch('INACTIVE-SHIPPER', false);
