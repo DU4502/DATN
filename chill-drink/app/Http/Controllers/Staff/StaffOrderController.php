@@ -164,6 +164,8 @@ class StaffOrderController extends Controller
             'total_formatted' => number_format((int) ($order->total ?? $order->total_price ?? 0), 0, ',', '.').'đ',
             'shipping_address' => $order->getShippingAddress(),
             'note' => $order->note ?: $order->delivery_note,
+            'customer_note' => $order->customerNote(),
+            'delivery_info_note' => $order->deliveryInfoNote(),
             'created_at' => $order->created_at?->format('d/m/Y H:i'),
             'can_confirm' => $canConfirm,
             'confirm_block_reason' => $canConfirm ? null : 'Đơn VNPay phải thanh toán thành công trước khi xác nhận.',

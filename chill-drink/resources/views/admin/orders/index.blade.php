@@ -408,10 +408,24 @@
                                             <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1rem;"></i>
                                             <span>{{ $order->getShippingAddress() }}</span>
                                         </div>
-                                        @if(filled($order->note))
-                                            <div class="alert alert-warning border-0 py-2 px-3 mt-1 mb-0 rounded-3 small">
+                                        @php
+                                            $customerNote = $order->customerNote();
+                                            $deliveryInfo = $order->deliveryInfoNote();
+                                        @endphp
+                                        @if($customerNote)
+                                            <div class="alert alert-warning border-0 py-2 px-3 mt-1 mb-0 rounded-3 small" style="white-space: pre-line; word-break: break-word;">
                                                 <i class="bi bi-chat-left-text-fill me-1 text-warning-emphasis"></i>
-                                                <strong>Ghi chú:</strong> {{ $order->note }}
+                                                <strong>Ghi chú khách:</strong> {{ $customerNote }}
+                                            </div>
+                                        @endif
+                                        @if($deliveryInfo)
+                                            <div class="small text-secondary mt-1 px-1">
+                                                <i class="bi bi-truck me-1 text-primary"></i><span class="text-dark fw-medium">Điều phối:</span> {{ ucfirst($deliveryInfo) }}
+                                            </div>
+                                        @endif
+                                        @if(filled($order->delivery_note))
+                                            <div class="small text-info-emphasis mt-1 px-1">
+                                                <i class="bi bi-clock-history me-1"></i><strong>Hẹn giao:</strong> {{ $order->delivery_note }}
                                             </div>
                                         @endif
                                     </div>
@@ -1111,6 +1125,35 @@
                                             <i class="bi bi-geo-alt text-muted mt-1" style="font-size: 1rem;"></i>
                                             <span>${escapeHtml(payload.shipping_address || 'Chưa cập nhật địa chỉ')}</span>
                                         </div>
+                                        ${(() => {
+                                            const custNote = payload.customer_note || '';
+                                            const delInfo = payload.delivery_info_note || '';
+                                            const delNote = payload.delivery_note || '';
+                                            let html = '';
+                                            if (custNote) {
+                                                html += `
+                                                    <div class="alert alert-warning border-0 py-2 px-3 mt-1 mb-0 rounded-3 small" style="white-space: pre-line; word-break: break-word;">
+                                                        <i class="bi bi-chat-left-text-fill me-1 text-warning-emphasis"></i>
+                                                        <strong>Ghi chú khách:</strong> ${escapeHtml(custNote)}
+                                                    </div>
+                                                `;
+                                            }
+                                            if (delInfo) {
+                                                html += `
+                                                    <div class="small text-secondary mt-1 px-1">
+                                                        <i class="bi bi-truck me-1 text-primary"></i><span class="text-dark fw-medium">Điều phối:</span> ${escapeHtml(delInfo.charAt(0).toUpperCase() + delInfo.slice(1))}
+                                                    </div>
+                                                `;
+                                            }
+                                            if (delNote) {
+                                                html += `
+                                                    <div class="small text-info-emphasis mt-1 px-1">
+                                                        <i class="bi bi-clock-history me-1"></i><strong>Hẹn giao:</strong> ${escapeHtml(delNote)}
+                                                    </div>
+                                                `;
+                                            }
+                                            return html;
+                                        })()}
                                     </div>
 
                                     ${shipperInfoHtml(payload)}

@@ -511,13 +511,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/profile/data-export', [ProfileController::class, 'exportData'])->name('profile.data-export');
     
-    // Address Book Management
-    Route::get('/profile/addresses', [\App\Http\Controllers\Client\ProfileAddressController::class, 'index'])->name('profile.addresses.index');
-    Route::post('/profile/addresses', [\App\Http\Controllers\Client\ProfileAddressController::class, 'store'])->name('profile.addresses.store');
-    Route::put('/profile/addresses/{address}', [\App\Http\Controllers\Client\ProfileAddressController::class, 'update'])->name('profile.addresses.update');
-    Route::delete('/profile/addresses/{address}', [\App\Http\Controllers\Client\ProfileAddressController::class, 'destroy'])->name('profile.addresses.destroy');
-    Route::patch('/profile/addresses/{address}/set-default', [\App\Http\Controllers\Client\ProfileAddressController::class, 'setDefault'])->name('profile.addresses.set-default');
-
     // Loyalty Points
     Route::middleware('verified')->group(function () {
         Route::get('/loyalty-points', [\App\Http\Controllers\Client\LoyaltyPointController::class, 'index'])->name('loyalty.index');

@@ -276,6 +276,49 @@ class Order extends Model
         return $this->contact_phone ?: $this->user?->phone;
     }
 
+    public function customerNote(): ?string
+    {
+        $rawNote = trim((string) ($this->note ?? ''));
+        if ($rawNote === '') {
+            return null;
+        }
+
+        if (preg_match('/^(.*?)(?:[\r\n]+|^)\s*Giao hàng:\s*(?:khoảng cách|phí cố định).*$/uis', $rawNote, $matches)) {
+            $customer = trim($matches[1]);
+            return $customer !== '' ? $customer : null;
+        }
+
+        if (preg_match('/^Giao hàng:\s*(?:khoảng cách|phí cố định)/ui', $rawNote)) {
+            return null;
+        }
+
+        return $rawNote;
+    }
+
+    public function deliveryInfoNote(): ?string
+    {
+        $rawNote = trim((string) ($this->note ?? ''));
+        if ($rawNote === '') {
+            return null;
+        }
+
+        if (preg_match('/Giao hàng:\s*(khoảng cách[^,\r\n]+(?:,\s*\d+\s*cốc)?(?:,\s*phí\s*[^,\r\n]*)?)/ui', $rawNote, $matches)) {
+            return trim($matches[1]);
+        }
+
+        if (preg_match('/Giao hàng:\s*(phí cố định[^,\r\n]*(?:,\s*\d+\s*cốc)?(?:,\s*phí\s*[^,\r\n]*)?)/ui', $rawNote, $matches)) {
+            return trim($matches[1]);
+        }
+
+        if (preg_match('/Giao hàng:\s*(.*)$/uis', $rawNote, $matches)) {
+            $info = trim($matches[1]);
+            $info = preg_replace('/,?\s*địa chỉ:\s*.*$/ui', '', $info);
+            return trim($info) !== '' ? trim($info) : null;
+        }
+
+        return null;
+    }
+
     public function getShippingAddress(): string
     {
         if ($this->address) {

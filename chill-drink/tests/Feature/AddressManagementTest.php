@@ -143,23 +143,13 @@ class AddressManagementTest extends TestCase
         $this->assertDatabaseCount('addresses', 0);
     }
 
-    public function test_customer_can_delete_their_profile_address(): void
+    public function test_profile_address_book_page_has_been_removed(): void
     {
         $user = User::factory()->create();
-        $address = Address::create([
-            'user_id' => $user->id,
-            'receiver_name' => 'Nguyễn Văn E',
-            'phone' => '0901234567',
-            'detail' => '30 Lê Lợi',
-            'label' => 'Nhà',
-            'is_default' => true,
-            'created_at' => now(),
-        ]);
 
         $this->actingAs($user)
-            ->delete(route('profile.addresses.destroy', $address))
-            ->assertRedirect(route('profile.addresses.index'));
-
-        $this->assertDatabaseMissing('addresses', ['id' => $address->id]);
+            ->get('/profile/addresses')
+            ->assertNotFound();
     }
+
 }

@@ -213,10 +213,24 @@
                                         <div><i class="bi bi-telephone me-2"></i>{{ $order->customerPhone() ?: 'Chưa cập nhật' }}</div>
                                         <div><i class="bi bi-envelope me-2"></i>{{ $order->customerEmail() ?: 'Chưa cập nhật' }}</div>
                                         <div><i class="bi bi-geo-alt me-2"></i>{{ $order->getShippingAddress() }}</div>
-                                        @if(filled($order->note))
-                                        <div class="alert alert-warning border-0 py-2 px-3 mt-1 mb-0" style="border-radius:10px;font-size:.82rem;">
+                                        @php
+                                            $customerNote = $order->customerNote();
+                                            $deliveryInfo = $order->deliveryInfoNote();
+                                        @endphp
+                                        @if($customerNote)
+                                        <div class="alert alert-warning border-0 py-2 px-3 mt-1 mb-0" style="border-radius:10px;font-size:.82rem;white-space: pre-line; word-break: break-word;">
                                             <i class="bi bi-chat-left-text-fill me-1 text-warning-emphasis"></i>
-                                            <strong>Ghi chú:</strong> {{ $order->note }}
+                                            <strong>Ghi chú khách:</strong> {{ $customerNote }}
+                                        </div>
+                                        @endif
+                                        @if($deliveryInfo)
+                                        <div class="small text-secondary mt-1 px-1">
+                                            <i class="bi bi-truck me-1 text-primary"></i><span class="text-dark fw-medium">Điều phối:</span> {{ ucfirst($deliveryInfo) }}
+                                        </div>
+                                        @endif
+                                        @if(filled($order->delivery_note))
+                                        <div class="small text-info-emphasis mt-1 px-1">
+                                            <i class="bi bi-clock-history me-1"></i><strong>Hẹn giao:</strong> {{ $order->delivery_note }}
                                         </div>
                                         @endif
                                     </div>

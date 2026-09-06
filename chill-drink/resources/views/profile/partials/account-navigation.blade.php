@@ -9,9 +9,6 @@
     <a href="{{ route('profile.orders') }}" class="profile-tab {{ $activeTab === 'orders' ? 'active' : '' }}">
         <i class="bi bi-receipt me-1"></i>Đơn hàng của tôi
     </a>
-    <a href="{{ route('profile.addresses.index') }}" class="profile-tab {{ $activeTab === 'addresses' ? 'active' : '' }}">
-        <i class="bi bi-geo-alt me-1"></i>Địa chỉ của bạn
-    </a>
     <a href="{{ route('favorites.index') }}" class="profile-tab {{ $activeTab === 'favorites' ? 'active' : '' }}">
         <i class="bi bi-heart me-1"></i>Món yêu thích
     </a>

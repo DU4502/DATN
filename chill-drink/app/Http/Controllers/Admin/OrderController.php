@@ -378,6 +378,8 @@ class OrderController extends Controller
             'customer_email' => $customerEmail,
             'customer_phone' => $customerPhone,
             'note' => $order->note ?? '',
+            'customer_note' => $order->customerNote(),
+            'delivery_info_note' => $order->deliveryInfoNote(),
             'cancellation_reason' => $order->cancellation_reason ?? '',
             'total' => $total,
             'total_formatted' => number_format($total, 0, ',', '.').'đ',

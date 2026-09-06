@@ -740,31 +740,18 @@ $paymentLabels = $paymentLabels ?? [
                         </strong>
                     </div>
                     <div class="mb-1">Thanh toán: <strong class="text-dark">{{ $paymentLabels[$order->payment_method] ?? strtoupper($order->payment_method) }}</strong></div>
-                    @if($order->note)
+                    @php
+                        $customerNote = $order->customerNote();
+                        $deliveryInfo = $order->deliveryInfoNote();
+                    @endphp
+                    @if($customerNote || $deliveryInfo)
                     <div class="mt-1">
-                        @php
-                            // Split note into customer note and delivery info
-                            $noteText = $order->note;
-                            $customerNote = '';
-                            $deliveryInfo = '';
-                            
-                            // Check if note contains "Giao hàng:"
-                            if (preg_match('/^(.*?)(Giao hàng:.*)$/uis', $noteText, $matches)) {
-                                $customerNote = trim($matches[1]);
-                                $deliveryInfo = trim($matches[2]);
-                                // Loại bỏ phần lặp lại địa chỉ vì địa chỉ đã được hiển thị rõ ràng ở dòng trên
-                                $deliveryInfo = preg_replace('/,?\s*địa chỉ:\s*.*$/ui', '', $deliveryInfo);
-                            } else {
-                                $customerNote = $noteText;
-                            }
-                        @endphp
-                        
                         @if($customerNote)
-                        <div class="mb-1">Ghi chú: {{ $customerNote }}</div>
+                        <div class="mb-1 text-dark" style="white-space: pre-line; word-break: break-word;"><i class="bi bi-chat-left-text me-1 text-warning-emphasis"></i><strong>Ghi chú:</strong> {{ $customerNote }}</div>
                         @endif
                         
                         @if($deliveryInfo)
-                        <div>{{ $deliveryInfo }}</div>
+                        <div class="text-secondary small"><i class="bi bi-truck me-1"></i>{{ ucfirst($deliveryInfo) }}</div>
                         @endif
                     </div>
                     @endif
