@@ -11,6 +11,7 @@ use App\Services\DrinkRecommendationService;
 use App\Services\ProductAvailabilityService;
 use App\Support\OrderDistancePolicy;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class HomeController extends Controller
 {
@@ -88,6 +89,47 @@ class HomeController extends Controller
         };
     }
 
+    /**
+     * Change the branch used across the customer storefront.
+     */
+    public function selectBranch(Request $request)
+    {
+        $validated = $request->validate([
+            'branch_id' => [
+                'required',
+                'integer',
+                Rule::exists('branches', 'id')->where(fn ($query) => $query->where('status', true)),
+            ],
+        ], [
+            'branch_id.required' => 'Vui lòng chọn chi nhánh.',
+            'branch_id.exists' => 'Chi nhánh đã chọn không còn hoạt động.',
+        ]);
+
+        $branch = Branch::query()->where('status', true)->findOrFail((int) $validated['branch_id']);
+
+        session([
+            'nearest_branch_id' => $branch->id,
+            'branch_selection_mode' => 'manual',
+        ]);
+
+        $branchName = str_starts_with($branch->name, 'Chi nhánh')
+            ? $branch->name
+            : "Chi nhánh {$branch->name}";
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'branch' => [
+                    'id' => $branch->id,
+                    'name' => $branch->name,
+                    'display_name' => $branchName,
+                ],
+            ]);
+        }
+
+        return back()->with('success', "Đã chuyển sang {$branchName}.");
+    }
+
     public function selectNearestBranch(Request $request)
     {
         $validated = $request->validate([
@@ -127,6 +169,7 @@ class HomeController extends Controller
             $oldBranchId = session('nearest_branch_id');
             session([
                 'nearest_branch_id' => $nearestBranch->id,
+                'branch_selection_mode' => 'automatic',
                 'user_lat' => $latitude,
                 'user_lng' => $longitude,
             ]);

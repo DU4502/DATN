@@ -1740,7 +1740,7 @@
                                     <option value="">Chọn chi nhánh</option>
                                     @foreach($branches as $branch)
                                         <option value="{{ $branch->id }}"
-                                            @selected((string) old('branch_id', session('group_branch_id')) === (string) $branch->id)
+                                            @selected((string) old('branch_id', session('group_branch_id') ?? session('nearest_branch_id')) === (string) $branch->id)
                                             data-latitude="{{ $branch->latitude ?? '' }}"
                                             data-longitude="{{ $branch->longitude ?? '' }}"
                                             data-distance="">
@@ -2492,6 +2492,18 @@
         const scheduledRuleText = document.querySelector('[data-scheduled-rule-text]');
         const codPaymentInput = document.querySelector('input[name="payment_method"][value="cod"]');
         const prepaidPaymentInput = document.querySelector('input[name="payment_method"][value="vnpay"]');
+
+        function syncCheckoutBranchWithHeader(branchSelect = document.getElementById('branch_id')) {
+            const selectedOption = branchSelect?.options[branchSelect.selectedIndex];
+
+            if (!selectedOption?.value) {
+                return;
+            }
+
+            const branchName = selectedOption.textContent.split('—')[0].trim();
+            const syncRequest = window.syncStorefrontBranch?.(selectedOption.value, branchName);
+            syncRequest?.catch((error) => console.error('Không thể đồng bộ chi nhánh trên header.', error));
+        }
 
         function syncScheduledPaymentRule() {
             const scheduledInput = document.querySelector('input[name="delivery_type"][value="scheduled"]');
@@ -3711,6 +3723,7 @@
                 branchSelect.disabled = false;
                 branchSelect.required = true;
                 window.updateShippingSummary?.();
+                syncCheckoutBranchWithHeader(branchSelect);
                 return;
             }
 
@@ -3771,6 +3784,7 @@
                     branchSelectNote.textContent = 'Vui lòng xác định vị trí giao hàng để tính quãng đường đường bộ.';
                 }
                 window.updateShippingSummary?.();
+                syncCheckoutBranchWithHeader(branchSelect);
                 return;
             }
 
@@ -3803,6 +3817,7 @@
                 if (sequence === branchOptionsSequence) {
                     branchSelect.disabled = false;
                     window.updateShippingSummary?.();
+                    syncCheckoutBranchWithHeader(branchSelect);
                 }
             }
         }
@@ -3841,6 +3856,7 @@
 
                 branchSelect.value = nearestBranch.value;
                 await window.updateShippingSummary?.();
+                syncCheckoutBranchWithHeader(branchSelect);
 
                 return nearestBranch;
             };
@@ -4514,7 +4530,10 @@
             input.addEventListener('change', updateShippingSummary);
         });
 
-        document.getElementById('branch_id')?.addEventListener('change', () => window.updateShippingSummary?.());
+        document.getElementById('branch_id')?.addEventListener('change', (event) => {
+            window.updateShippingSummary?.();
+            syncCheckoutBranchWithHeader(event.currentTarget);
+        });
 
         bindVoucherCards(document);
         renderAddressList();

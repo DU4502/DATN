@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 use Tests\TestCase;
 
 class ProductAvailabilityTest extends TestCase
@@ -50,6 +51,44 @@ class ProductAvailabilityTest extends TestCase
             'is_available' => false,
         ]);
         Event::assertDispatched(ProductAvailabilityUpdated::class);
+    }
+
+    public function test_admin_and_super_admin_updates_succeed_when_realtime_broadcast_fails(): void
+    {
+        config()->set('broadcasting.default', 'null');
+
+        $superAdmin = User::factory()->create(['role_id' => 3, 'is_active' => true]);
+        $superAdminBranch = $this->branch('SUPER-REALTIME-OFFLINE');
+        $branchAdminBranch = $this->branch('ADMIN-REALTIME-OFFLINE');
+        $branchAdmin = User::factory()->create([
+            'role_id' => 2,
+            'branch_id' => $branchAdminBranch->id,
+            'is_active' => true,
+        ]);
+        $superAdminProduct = Product::factory()->create();
+        $branchAdminProduct = Product::factory()->create();
+
+        Event::listen(ProductAvailabilityUpdated::class, function (): never {
+            throw new RuntimeException('Realtime server is unavailable.');
+        });
+
+        foreach ([
+            [$superAdmin, $superAdminBranch, $superAdminProduct],
+            [$branchAdmin, $branchAdminBranch, $branchAdminProduct],
+        ] as [$user, $branch, $product]) {
+            $this->actingAs($user)
+                ->patchJson(route('admin.products.branches.availability.update', [$product->id, $branch]), [
+                    'is_available' => false,
+                ])
+                ->assertOk()
+                ->assertJsonPath('is_available', false);
+
+            $this->assertDatabaseHas('branch_product_statuses', [
+                'branch_id' => $branch->id,
+                'product_id' => $product->id,
+                'is_available' => false,
+            ]);
+        }
     }
 
     public function test_branch_admin_cannot_update_another_branch(): void

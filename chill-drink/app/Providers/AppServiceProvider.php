@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\GroupOrder;
+use App\Models\Branch;
 use App\Models\OrderIssueReport;
+use App\Services\ProductAvailabilityService;
 use App\Support\OrderStatus;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
@@ -37,6 +39,18 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
 
         View::composer('layouts.client', function ($view) {
+            $headerBranches = Branch::query()
+                ->where('status', true)
+                ->orderBy('name')
+                ->get();
+            $providedBranch = $view->getData()['branch'] ?? null;
+            $checkoutBranchId = request()->routeIs('checkout.*') ? session('group_branch_id') : null;
+            $headerBranch = $checkoutBranchId
+                ? $headerBranches->firstWhere('id', (int) $checkoutBranchId)
+                : null;
+            $headerBranch ??= $providedBranch instanceof Branch
+                ? $providedBranch
+                : app(ProductAvailabilityService::class)->currentBranch();
             $sessionGroupId = auth()->check() ? session('checkout_group_order_id') : null;
             $sessionCheckoutGroup = $sessionGroupId
                 ? GroupOrder::query()->find($sessionGroupId)
@@ -91,7 +105,7 @@ class AppServiceProvider extends ServiceProvider
                     ->first()
                 : null;
 
-            $view->with(compact('activeOwnedGroup', 'pendingCheckoutGroup'));
+            $view->with(compact('activeOwnedGroup', 'pendingCheckoutGroup', 'headerBranches', 'headerBranch'));
         });
 
         View::composer(['layouts.admin', 'layouts.super-admin'], function ($view) {

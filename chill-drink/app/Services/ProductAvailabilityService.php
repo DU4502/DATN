@@ -9,6 +9,7 @@ use App\Models\Product;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
+use Throwable;
 
 class ProductAvailabilityService
 {
@@ -111,7 +112,13 @@ class ProductAvailabilityService
             ['is_available' => $isAvailable]
         ));
 
-        event(new ProductAvailabilityUpdated($status));
+        try {
+            event(new ProductAvailabilityUpdated($status));
+        } catch (Throwable $exception) {
+            // Realtime is an enhancement: a stopped Reverb/Pusher server must not
+            // turn a successful availability update into an HTTP 500 response.
+            report($exception);
+        }
 
         return $status;
     }

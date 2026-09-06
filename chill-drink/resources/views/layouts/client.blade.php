@@ -417,6 +417,128 @@
             width: clamp(200px, 22vw, 280px);
         }
 
+        .header-branch-button {
+            min-height: 40px;
+            max-width: 190px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.38rem 0.7rem;
+            border: 1.5px solid var(--c-border);
+            border-radius: var(--radius-md);
+            background: var(--c-surface);
+            color: var(--c-ink);
+            text-align: left;
+            transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button.header-branch-button:hover {
+            border-color: var(--c-primary);
+            background: var(--c-primary-light);
+            box-shadow: 0 6px 16px rgba(13, 147, 115, 0.12);
+        }
+
+        .header-branch-button__icon {
+            color: var(--c-primary);
+            font-size: 1rem;
+            flex: 0 0 auto;
+        }
+
+        .header-branch-button__copy {
+            min-width: 0;
+            display: block;
+            line-height: 1.1;
+        }
+
+        .header-branch-button__copy small,
+        .header-branch-button__copy strong {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .header-branch-button__copy small {
+            margin-bottom: 0.12rem;
+            color: var(--c-muted);
+            font-size: 0.62rem;
+            font-weight: 600;
+        }
+
+        .header-branch-button__copy strong {
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        .header-branch-button__chevron {
+            color: var(--c-muted);
+            font-size: 0.72rem;
+            flex: 0 0 auto;
+        }
+
+        .branch-switch-modal .modal-dialog { max-width: 560px; }
+        .branch-switch-modal .modal-content {
+            max-height: calc(100dvh - 2rem);
+            overflow: hidden;
+            border: 0;
+            border-radius: 24px;
+            box-shadow: 0 24px 70px rgba(8, 42, 38, 0.24);
+        }
+        .branch-switch-modal .modal-header { padding: 1.35rem 1.4rem 0.85rem; }
+        .branch-switch-modal .modal-body { padding: 0.5rem 1.4rem 1.4rem; overflow-y: auto; }
+        .branch-option-list { display: grid; gap: 0.65rem; }
+        .branch-option {
+            width: 100%;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 0.8rem;
+            padding: 0.9rem 1rem;
+            border: 1.5px solid var(--c-border);
+            border-radius: 15px;
+            background: var(--c-surface);
+            color: var(--c-ink);
+            text-align: left;
+            transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+        }
+        .branch-option:not(:disabled):hover {
+            border-color: var(--c-primary);
+            background: var(--c-primary-light);
+            transform: translateY(-1px);
+        }
+        .branch-option.is-current {
+            border-color: var(--c-primary);
+            background: var(--c-primary-light);
+        }
+        .branch-option__icon {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: var(--c-surface);
+            color: var(--c-primary);
+            box-shadow: inset 0 0 0 1px var(--c-border);
+        }
+        .branch-option__copy { min-width: 0; }
+        .branch-option__copy strong,
+        .branch-option__copy small { display: block; }
+        .branch-option__copy small {
+            margin-top: 0.15rem;
+            overflow: hidden;
+            color: var(--c-muted);
+            font-size: 0.75rem;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .branch-option__state {
+            color: var(--c-primary-dark);
+            font-size: 0.7rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
         .active-group-return {
             min-height: 40px;
             display: inline-flex;
@@ -1402,9 +1524,16 @@
             }
 
             .nav-actions > .client-search,
+            .nav-actions > .header-branch-button,
             .nav-actions > .active-group-return,
             .nav-actions > form:has(.active-group-return) {
                 grid-column: 1 / -1;
+            }
+
+            .nav-actions > .header-branch-button {
+                width: 100%;
+                max-width: none;
+                justify-content: center;
             }
 
             .nav-actions > .favorite-nav-button { grid-column: 1; }
@@ -1836,6 +1965,38 @@
                             <span class="active-group-return__members" title="{{ $activeOwnedGroup->members_count }} thành viên"><i class="bi bi-person-fill" aria-hidden="true"></i>{{ $activeOwnedGroup->members_count }}</span>
                         </a>
                     @endif
+                    @php
+                        $headerBranchName = $headerBranch?->name
+                            ? (str_starts_with($headerBranch->name, 'Chi nhánh') ? $headerBranch->name : 'Chi nhánh '.$headerBranch->name)
+                            : 'Chưa xác định';
+                    @endphp
+                    @if(($headerBranches ?? collect())->count() > 1)
+                        <button
+                            type="button"
+                            class="header-branch-button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#branchSwitchModal"
+                            data-header-branch
+                            data-current-branch-id="{{ $headerBranch?->id }}"
+                            aria-label="Đổi chi nhánh, hiện tại là {{ $headerBranchName }}"
+                            title="Đổi chi nhánh"
+                        >
+                            <i class="bi bi-geo-alt-fill header-branch-button__icon" aria-hidden="true"></i>
+                            <span class="header-branch-button__copy">
+                                <small>Đang mua tại</small>
+                                <strong data-header-branch-name>{{ $headerBranchName }}</strong>
+                            </span>
+                            <i class="bi bi-chevron-down header-branch-button__chevron" aria-hidden="true"></i>
+                        </button>
+                    @else
+                        <span class="header-branch-button" title="Chi nhánh hiện tại" data-header-branch data-current-branch-id="{{ $headerBranch?->id }}">
+                            <i class="bi bi-geo-alt-fill header-branch-button__icon" aria-hidden="true"></i>
+                            <span class="header-branch-button__copy">
+                                <small>Đang mua tại</small>
+                                <strong data-header-branch-name>{{ $headerBranchName }}</strong>
+                            </span>
+                        </span>
+                    @endif
                     <form action="{{ route('products.index') }}" method="GET" class="d-flex client-search gap-2" role="search">
                         <div class="position-relative flex-grow-1">
                             <i class="bi bi-search position-absolute" style="left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--c-subtle); font-size: 0.85rem;"></i>
@@ -1972,6 +2133,52 @@
             </div>
         </nav>
     </header>
+
+    @if(($headerBranches ?? collect())->count() > 1)
+        <div class="modal fade branch-switch-modal" id="branchSwitchModal" tabindex="-1" aria-labelledby="branchSwitchTitle" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <div>
+                            <h2 class="modal-title h5 fw-bold mb-1" id="branchSwitchTitle">Chọn chi nhánh khác</h2>
+                            <p class="small text-secondary mb-0">Sản phẩm, tồn kho và gợi ý thời tiết sẽ được cập nhật theo chi nhánh bạn chọn.</p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="POST" action="{{ route('branch.select') }}" class="branch-option-list">
+                            @csrf
+                            @foreach($headerBranches as $availableBranch)
+                                @php
+                                    $isCurrentBranch = (int) $headerBranch?->id === (int) $availableBranch->id;
+                                    $availableBranchName = str_starts_with($availableBranch->name, 'Chi nhánh')
+                                        ? $availableBranch->name
+                                        : 'Chi nhánh '.$availableBranch->name;
+                                @endphp
+                                <button
+                                    type="submit"
+                                    name="branch_id"
+                                    value="{{ $availableBranch->id }}"
+                                    data-branch-option-id="{{ $availableBranch->id }}"
+                                    class="branch-option {{ $isCurrentBranch ? 'is-current' : '' }}"
+                                    @disabled($isCurrentBranch)
+                                >
+                                    <span class="branch-option__icon"><i class="bi bi-shop"></i></span>
+                                    <span class="branch-option__copy">
+                                        <strong>{{ $availableBranchName }}</strong>
+                                        <small>{{ $availableBranch->address ?: 'Địa chỉ đang được cập nhật' }}</small>
+                                    </span>
+                                    <span class="branch-option__state">
+                                        {{ $isCurrentBranch ? 'Đang chọn' : 'Chuyển sang' }}
+                                    </span>
+                                </button>
+                            @endforeach
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <main style="min-height: {{ request()->routeIs('login', 'register', 'password.*', 'verification.*') ? 'calc(100dvh - 80px)' : '100vh' }}; overflow: {{ request()->routeIs('login', 'register', 'password.*', 'verification.*') ? 'hidden' : 'visible' }};">
         @yield('content')
@@ -2556,6 +2763,51 @@
         });
     </script>
     <script>
+        (() => {
+            let branchSyncSequence = 0;
+
+            window.syncStorefrontBranch = async function (branchId, branchName = '') {
+                const normalizedId = String(branchId || '');
+                const headerBranch = document.querySelector('[data-header-branch]');
+
+                if (!normalizedId || headerBranch?.dataset.currentBranchId === normalizedId) {
+                    return;
+                }
+
+                const sequence = ++branchSyncSequence;
+                const response = await fetch(@json(route('branch.select', [], false)), {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    },
+                    body: JSON.stringify({ branch_id: normalizedId }),
+                });
+                const payload = await response.json();
+
+                if (sequence !== branchSyncSequence || !response.ok || !payload.success) {
+                    return;
+                }
+
+                const displayName = payload.branch?.display_name || branchName || 'Chi nhánh đã chọn';
+                document.querySelectorAll('[data-header-branch]').forEach((element) => {
+                    element.dataset.currentBranchId = normalizedId;
+                    element.setAttribute('aria-label', `Đổi chi nhánh, hiện tại là ${displayName}`);
+                    const nameElement = element.querySelector('[data-header-branch-name]');
+                    if (nameElement) nameElement.textContent = displayName;
+                });
+                document.querySelectorAll('[data-branch-option-id]').forEach((option) => {
+                    const isCurrent = option.dataset.branchOptionId === normalizedId;
+                    option.disabled = isCurrent;
+                    option.classList.toggle('is-current', isCurrent);
+                    const state = option.querySelector('.branch-option__state');
+                    if (state) state.textContent = isCurrent ? 'Đang chọn' : 'Chuyển sang';
+                });
+            };
+        })();
+    </script>
+    <script>
         document.addEventListener('DOMContentLoaded', function () {
             const paymentLink = document.querySelector('[data-pending-payment-link]');
             const paymentTimer = paymentLink?.querySelector('[data-pending-payment-countdown]');
@@ -2633,6 +2885,8 @@
             @auth
             // Chỉ chạy khi user đã đăng nhập
             if (!navigator.geolocation) return;
+            const hasManualBranchSelection = @json(session('branch_selection_mode') === 'manual');
+            if (hasManualBranchSelection) return;
             const preservePageStateDuringGeoUpdate = @json(request()->routeIs('checkout.*', 'cart.index'));
 
             if (preservePageStateDuringGeoUpdate) {

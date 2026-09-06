@@ -53,6 +53,7 @@ use Illuminate\Support\Facades\Route;
 // Home
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::post('/select-nearest-branch', [HomeController::class, 'selectNearestBranch'])->name('select-nearest-branch');
+Route::post('/select-branch', [HomeController::class, 'selectBranch'])->name('branch.select');
 
 // Products
 Route::get('/products', [ClientProductController::class, 'index'])->name('products.index');

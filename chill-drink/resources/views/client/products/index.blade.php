@@ -255,7 +255,7 @@
         padding: 0.28rem 0.55rem;
         border: 1px solid rgba(13, 147, 115, 0.28);
         border-radius: 6px;
-        color: var(--drink-primary-dark);
+        color: var(--drink-primary-dark, var(--c-primary-dark, #067a5f));
         background: rgba(13, 147, 115, 0.06);
         font-size: 0.78rem;
         font-weight: 800;
@@ -1350,7 +1350,9 @@
                         <div class="col-sm-6 col-xl-4">
                             <article class="shop-product-card">
                                 @auth
-                                    @php($isFavorite = $favoriteProductIds->contains($product->id))
+                                    @php
+                                        $isFavorite = $favoriteProductIds->contains($product->id);
+                                    @endphp
                                     <form method="POST" action="{{ route('favorites.toggle', $product) }}" data-favorite-form>@csrf<button type="submit" class="product-favorite-btn {{ $isFavorite ? 'is-active' : '' }}" aria-label="{{ $isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}" aria-pressed="{{ $isFavorite ? 'true' : 'false' }}" title="{{ $isFavorite ? 'Bỏ yêu thích' : 'Yêu thích' }}" data-favorite-button><i class="bi {{ $isFavorite ? 'bi-heart-fill' : 'bi-heart' }}"></i></button></form>
                                 @else
                                     <a href="{{ route('login') }}" class="product-favorite-btn" aria-label="Đăng nhập để yêu thích" title="Đăng nhập để yêu thích"><i class="bi bi-heart"></i></a>
