@@ -97,6 +97,115 @@ class CheckoutVoucherTest extends TestCase
         $this->assertSame(1, substr_count($response->getContent(), 'data-checkout-extra-item'));
     }
 
+    public function test_checkout_only_renders_the_explicitly_selected_cart_items(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $cartItem = [
+            'product_id' => $product->id,
+            'product_size_id' => $productSize->id,
+            'name' => $product->name,
+            'price' => 100000,
+            'quantity' => 1,
+            'size' => 'M',
+        ];
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['cart' => [
+                'selected-item' => $cartItem,
+                'unselected-item' => $cartItem,
+            ]])
+            ->get(route('checkout.index', ['items' => ['selected-item']]));
+
+        $response->assertOk();
+        $this->assertSame(1, substr_count($response->getContent(), 'data-checkout-item="'));
+        $response->assertSessionHas('checkout_cart_keys', ['selected-item']);
+    }
+
+    public function test_checkout_redirects_when_every_requested_cart_item_is_stale(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['cart' => [
+                'current-item' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ]])
+            ->get(route('checkout.index', ['items' => ['stale-item']]));
+
+        $response->assertRedirect(route('cart.index'));
+        $response->assertSessionHas('error', 'Sản phẩm bạn chọn thanh toán không còn trong giỏ hàng hoặc đã thay đổi, vui lòng chọn lại.');
+        $response->assertSessionMissing('checkout_cart_keys');
+    }
+
+    public function test_checkout_redirects_when_only_part_of_the_requested_selection_still_exists(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession(['cart' => [
+                'current-item' => [
+                    'product_id' => $product->id,
+                    'product_size_id' => $productSize->id,
+                    'name' => $product->name,
+                    'price' => 100000,
+                    'quantity' => 1,
+                    'size' => 'M',
+                ],
+            ]])
+            ->get(route('checkout.index', ['items' => ['current-item', 'stale-item']]));
+
+        $response->assertRedirect(route('cart.index'));
+        $response->assertSessionHas('error', 'Sản phẩm bạn chọn thanh toán không còn trong giỏ hàng hoặc đã thay đổi, vui lòng chọn lại.');
+        $response->assertSessionMissing('checkout_cart_keys');
+    }
+
+    public function test_checkout_process_rejects_a_stale_session_selection_without_creating_an_order(): void
+    {
+        $user = $this->customer();
+        [$product, $productSize] = $this->sellableProduct();
+        $branch = $this->activeBranch();
+
+        $response = $this
+            ->actingAs($user)
+            ->withSession([
+                'cart' => [
+                    'current-item' => [
+                        'product_id' => $product->id,
+                        'product_size_id' => $productSize->id,
+                        'name' => $product->name,
+                        'price' => 100000,
+                        'quantity' => 1,
+                        'size' => 'M',
+                    ],
+                ],
+                'checkout_cart_keys' => ['stale-item'],
+            ])
+            ->post(route('checkout.process'), [
+                'payment_method' => 'cod',
+                'shipping_method_ui' => 'standard',
+                'shipping_phone_ui' => '0901234567',
+                'fulfillment_type' => 'pickup',
+                'branch_id' => $branch->id,
+            ]);
+
+        $response->assertRedirect(route('cart.index'));
+        $response->assertSessionHas('error', 'Sản phẩm bạn chọn thanh toán không còn trong giỏ hàng hoặc đã thay đổi, vui lòng chọn lại.');
+        $response->assertSessionMissing('checkout_cart_keys');
+        $this->assertDatabaseCount('orders', 0);
+    }
+
     public function test_checkout_rejects_removed_payment_methods(): void
     {
         $this

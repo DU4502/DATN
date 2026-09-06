@@ -41,6 +41,8 @@ use Throwable;
 
 class CheckoutController extends Controller
 {
+    private const INVALID_CART_SELECTION_MESSAGE = 'Sản phẩm bạn chọn thanh toán không còn trong giỏ hàng hoặc đã thay đổi, vui lòng chọn lại.';
+
     /**
      * Display checkout page
      */
@@ -81,13 +83,16 @@ class CheckoutController extends Controller
             }
             session(['checkout_cart_keys' => array_keys($cart)]);
         } elseif ($request->query->has('items')) {
-            $selectedKeys = $this->selectedCartKeys($request->query('items', []), $cart);
+            $requestedKeys = $this->requestedCartKeys($request->query('items', []));
+            $selectedKeys = $this->selectedCartKeys($requestedKeys, $cart);
 
-            if (! empty($selectedKeys)) {
+            if (! empty($requestedKeys) && count($selectedKeys) === count($requestedKeys)) {
                 $cart = array_intersect_key($cart, array_flip($selectedKeys));
                 session(['checkout_cart_keys' => $selectedKeys]);
             } else {
                 session()->forget('checkout_cart_keys');
+
+                return redirect()->route('cart.index')->with('error', self::INVALID_CART_SELECTION_MESSAGE);
             }
         } else {
             session()->forget('checkout_cart_keys');
@@ -409,6 +414,12 @@ class CheckoutController extends Controller
         $cart = $this->normalizeCartForCheckout($this->cartForCheckout($fullCart, $selectedKeys));
 
         if (empty($cart)) {
+            if (! empty($fullCart) && ! empty($this->requestedCartKeys($selectedKeys))) {
+                session()->forget('checkout_cart_keys');
+
+                return redirect()->route('cart.index')->with('error', self::INVALID_CART_SELECTION_MESSAGE);
+            }
+
             if ($lastOrderId = session()->get('last_completed_order_id')) {
                 $lastOrder = Order::find($lastOrderId);
                 if ($lastOrder && $lastOrder->user_id === auth()->id()) {
@@ -1550,7 +1561,7 @@ class CheckoutController extends Controller
 
     protected function selectedCartKeys(mixed $keys, array $cart): array
     {
-        $keys = is_array($keys) ? $keys : [$keys];
+        $keys = $this->requestedCartKeys($keys);
         $cartKeys = array_keys($cart);
 
         $matched = [];
@@ -1573,19 +1584,39 @@ class CheckoutController extends Controller
         return array_values(array_unique($matched));
     }
 
+    protected function requestedCartKeys(mixed $keys): array
+    {
+        $keys = is_array($keys) ? $keys : [$keys];
+        $normalized = [];
+
+        foreach ($keys as $key) {
+            if (! is_string($key) && ! is_int($key)) {
+                continue;
+            }
+
+            $key = trim((string) $key);
+            if ($key !== '') {
+                $normalized[] = $key;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
     protected function cartForCheckout(array $cart, mixed $selectedKeys): array
     {
-        if (! is_array($selectedKeys) || empty($selectedKeys)) {
+        $requestedKeys = $this->requestedCartKeys($selectedKeys);
+        if (empty($requestedKeys)) {
             return $cart;
         }
 
-        $filtered = array_intersect_key($cart, array_flip($this->selectedCartKeys($selectedKeys, $cart)));
+        $matchedKeys = $this->selectedCartKeys($requestedKeys, $cart);
 
-        if (empty($filtered) && ! empty($cart)) {
-            return $cart;
+        if (count($matchedKeys) !== count($requestedKeys)) {
+            return [];
         }
 
-        return $filtered;
+        return array_intersect_key($cart, array_flip($matchedKeys));
     }
 
     protected function invalidCheckoutCartKeys(array $cart): array

@@ -590,27 +590,6 @@
         box-shadow: 0 20px 40px rgba(13, 147, 115, 0.34);
     }
 
-    .home-quick-modal .modal-dialog { max-width: 620px; }
-    .home-quick-modal .modal-content { overflow: hidden; border: 0; border-radius: 24px; box-shadow: 0 26px 70px rgba(8, 42, 38, .24); }
-    .home-quick-modal .modal-header { padding: 1.2rem 1.4rem .7rem; }
-    .home-quick-modal .modal-body { padding: .8rem 1.4rem 1.1rem; }
-    .home-quick-thumb { width: 76px; height: 76px; border: 1px solid var(--c-border); border-radius: 18px; padding: .35rem; object-fit: contain; background: #fff; }
-    .home-quick-product { padding: .75rem; border: 1px solid var(--c-border); border-radius: 18px; background: var(--c-bg-warm); }
-    .home-quick-section { padding-top: .9rem; margin-top: .9rem; border-top: 1px solid var(--c-border-light); }
-    .home-quick-label { display: flex; align-items: center; gap: .45rem; margin-bottom: .65rem; color: var(--c-ink); font-size: .82rem; font-weight: 800; }
-    .home-quick-label i { color: var(--c-primary); }
-    .home-quick-choice { min-width: 64px; min-height: 46px; border: 1.5px solid var(--c-border); border-radius: 12px; padding: .48rem .8rem; color: var(--c-ink); background: #fff; font-weight: 800; }
-    .home-quick-choice:hover, .home-quick-choice.active { border-color: var(--c-primary); color: var(--c-primary-dark); background: var(--c-primary-light); box-shadow: 0 0 0 3px rgba(13,147,115,.12); }
-    .home-quick-size { flex: 1 1 0; }
-    .home-quick-choice small { display: block; margin-top: .08rem; color: var(--c-muted); font-size: .68rem; font-weight: 700; }
-    .home-quick-topping { min-width: 0; flex: 1 1 30%; text-align: left; }
-    .home-quick-topping small { display: block; font-size: .72rem; opacity: .8; }
-    .home-quick-footer { display: flex; align-items: center; gap: .8rem; width: 100%; }
-    .home-quick-qty { display: inline-flex; align-items: center; border: 1px solid var(--c-border); border-radius: 999px; background: #fff; }
-    .home-quick-qty button { width: 36px; height: 42px; border: 0; color: var(--c-primary); background: transparent; font-size: 1.15rem; }
-    .home-quick-qty strong { min-width: 24px; text-align: center; }
-    @media (max-width: 575.98px) { .home-quick-topping { flex-basis: 46%; } .home-quick-modal .modal-body { padding-inline: 1rem; } }
-
     .home-product__tag {
         position: absolute;
         top: 0.875rem;
@@ -1212,6 +1191,7 @@
         }
     }
 </style>
+@include('client.partials.drink-customizer-styles')
 
 <div class="home-page">
 
@@ -1342,6 +1322,8 @@
                                     data-price="{{ number_format($product->price, 0, ',', '.') }}đ"
                                     data-base-price="{{ (float) $product->price }}"
                                     data-sizes='@json($product->relationLoaded("sizes") ? $product->sizes->pluck("pivot.price", "name") : [])'
+                                    data-category="{{ $product->category?->name }}"
+                                    data-toppings='@json($product->relationLoaded("toppings") ? $product->toppings->map(fn($topping) => ["name" => $topping->name, "price" => (int) $topping->price]) : [])'
                                     data-image="{{ $product->image_url }}"
                                     data-product-availability="{{ $product->id }}"
                                     data-branch-id="{{ $branch?->id }}"
@@ -1671,44 +1653,40 @@
 
 </div>
 
-<div class="modal fade home-quick-modal" id="homeQuickAddModal" tabindex="-1" aria-labelledby="homeQuickAddTitle" aria-hidden="true">
+<div class="modal fade home-quick-modal drink-customizer" id="homeQuickAddModal" tabindex="-1" aria-labelledby="homeQuickAddTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="homeQuickAddForm" method="POST" data-ajax-cart>
+            <form id="homeQuickAddForm" class="drink-customizer__form" method="POST" data-ajax-cart>
                 @csrf
                 <input type="hidden" name="size" value="S" data-home-quick-input="size">
                 <input type="hidden" name="sugar_level" value="50" data-home-quick-input="sugar">
                 <input type="hidden" name="ice_level" value="100" data-home-quick-input="ice">
                 <input type="hidden" name="toppings" value="[]" data-home-quick-input="toppings">
                 <input type="hidden" name="quantity" value="1" data-home-quick-input="quantity">
-                <div class="modal-header border-0 pb-0">
-                    <h2 class="modal-title h4 fw-bold" id="homeQuickAddTitle">Tùy chọn đồ uống</h2>
+                <div class="modal-header drink-customizer__header border-0 pb-0">
+                    <h2 class="modal-title drink-customizer__title" id="homeQuickAddTitle">Tùy chọn đồ uống</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="home-quick-product d-flex gap-3 align-items-center">
-                        <img class="home-quick-thumb" src="{{ $uiPlaceholderImage('Sản phẩm', 'Đồ uống') }}" alt="Ảnh sản phẩm" data-home-quick-image>
+                <div class="modal-body drink-customizer__body">
+                    <div class="home-quick-product drink-customizer__summary">
+                        <img class="home-quick-thumb drink-customizer__thumb" src="{{ $uiPlaceholderImage('Sản phẩm', 'Đồ uống') }}" alt="Ảnh sản phẩm" data-home-quick-image>
                         <div><div class="fw-bold fs-5" data-home-quick-name></div><div class="text-primary fw-bold" data-home-quick-price></div></div>
                     </div>
-                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-cup-straw"></i>Chọn kích cỡ</div><div class="d-flex gap-2" data-home-quick-group="size">
-                        <button type="button" class="home-quick-choice home-quick-size active" data-value="S" data-extra="0">S<small>Giá gốc</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="M" data-extra="5000">M<small>+5.000đ</small></button><button type="button" class="home-quick-choice home-quick-size" data-value="L" data-extra="10000">L<small>+10.000đ</small></button>
+                    <div class="home-quick-section drink-customizer__section"><div class="home-quick-label drink-customizer__section-title"><i class="bi bi-cup-straw"></i>Chọn kích cỡ</div><div class="drink-customizer__sizes" data-home-quick-group="size">
+                        <button type="button" class="home-quick-choice home-quick-size drink-customizer__choice drink-customizer__size active" data-value="S" data-extra="0">S<small>Giá gốc</small></button><button type="button" class="home-quick-choice home-quick-size drink-customizer__choice drink-customizer__size" data-value="M" data-extra="5000">M<small>+5.000đ</small></button><button type="button" class="home-quick-choice home-quick-size drink-customizer__choice drink-customizer__size" data-value="L" data-extra="10000">L<small>+10.000đ</small></button>
                     </div></div>
-                    <div class="home-quick-section row g-3"><div class="col-md-6"><div class="home-quick-label"><i class="bi bi-droplet"></i>Mức đường</div><div class="d-flex flex-wrap gap-2" data-home-quick-group="sugar">
-                        <button type="button" class="home-quick-choice" data-value="0">0%</button><button type="button" class="home-quick-choice" data-value="30">30%</button><button type="button" class="home-quick-choice" data-value="50">50%</button><button type="button" class="home-quick-choice" data-value="70">70%</button><button type="button" class="home-quick-choice active" data-value="100">100% (Tiêu chuẩn)</button>
+                    <div class="home-quick-section drink-customizer__section drink-customizer__levels"><div><div class="home-quick-label drink-customizer__section-title"><i class="bi bi-droplet"></i>Mức đường</div><div class="drink-customizer__sugar" data-home-quick-group="sugar">
+                        <button type="button" class="home-quick-choice drink-customizer__choice" data-value="0">0%</button><button type="button" class="home-quick-choice drink-customizer__choice" data-value="30">30%</button><button type="button" class="home-quick-choice drink-customizer__choice" data-value="50">50%</button><button type="button" class="home-quick-choice drink-customizer__choice" data-value="70">70%</button><button type="button" class="home-quick-choice drink-customizer__choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
                     </div></div>
-                    <div class="col-md-6"><div class="home-quick-label"><i class="bi bi-snow"></i>Mức đá</div><div class="d-flex flex-wrap gap-2" data-home-quick-group="ice">
-                        <button type="button" class="home-quick-choice" data-value="0">Không đá</button><button type="button" class="home-quick-choice" data-value="50">Ít đá</button><button type="button" class="home-quick-choice active" data-value="100">100% (Tiêu chuẩn)</button>
+                    <div><div class="home-quick-label drink-customizer__section-title"><i class="bi bi-snow"></i>Mức đá</div><div class="drink-customizer__ice" data-home-quick-group="ice">
+                        <button type="button" class="home-quick-choice drink-customizer__choice" data-value="0">Không đá</button><button type="button" class="home-quick-choice drink-customizer__choice" data-value="50">Ít đá</button><button type="button" class="home-quick-choice drink-customizer__choice active" data-value="100" title="100% Tiêu chuẩn">100%</button>
                     </div></div></div>
-                    <div class="home-quick-section"><div class="home-quick-label"><i class="bi bi-plus-circle"></i>Thêm món kèm <span class="text-secondary fw-normal">(có thể chọn nhiều)</span></div><div class="d-flex flex-wrap gap-2" data-home-toppings>
-                        <button type="button" class="home-quick-choice home-quick-topping" data-name="Trân châu đen" data-price="5000">Trân châu đen<small>+5.000đ</small></button>
-                        <button type="button" class="home-quick-choice home-quick-topping" data-name="Kem cheese" data-price="7000">Kem cheese<small>+7.000đ</small></button>
-                        <button type="button" class="home-quick-choice home-quick-topping" data-name="Thạch nha đam" data-price="6000">Thạch nha đam<small>+6.000đ</small></button>
-                    </div></div>
+                    <div class="home-quick-section drink-customizer__section"><div class="home-quick-label drink-customizer__section-title"><i class="bi bi-plus-circle"></i>Thêm món kèm <span>(tối đa 3 món)</span></div><div class="drink-customizer__toppings" data-home-toppings></div></div>
                 </div>
-                <div class="modal-footer border-0 pt-0 px-4 pb-4"><div class="home-quick-footer">
-                    <div class="home-quick-qty"><button type="button" data-home-qty-minus aria-label="Giảm số lượng">−</button><strong data-home-qty-label>1</strong><button type="button" data-home-qty-plus aria-label="Tăng số lượng">+</button></div>
-                    <button type="submit" class="btn btn-primary flex-grow-1 rounded-pill py-3 fw-bold">Thêm vào giỏ · <span data-home-quick-total>0đ</span></button>
-                </div></div>
+                <div class="modal-footer home-quick-footer drink-customizer__footer">
+                    <div class="home-quick-qty drink-customizer__quantity"><button type="button" data-home-qty-minus aria-label="Giảm số lượng">−</button><strong data-home-qty-label>1</strong><button type="button" data-home-qty-plus aria-label="Tăng số lượng">+</button></div>
+                    <button type="submit" class="btn btn-primary rounded-pill fw-bold drink-customizer__submit">Thêm vào giỏ · <span data-home-quick-total>0đ</span></button>
+                </div>
             </form>
         </div>
     </div>
@@ -1736,6 +1714,34 @@
             updateTotal();
         };
 
+        const renderToppings = (items) => {
+            const group = element.querySelector('[data-home-toppings]');
+            if (!group) return;
+
+            const options = Array.isArray(items) && items.length > 0 ? items : [
+                { name: 'Trân châu đen', price: 5000 },
+                { name: 'Kem cheese', price: 7000 },
+                { name: 'Thạch nha đam', price: 6000 },
+            ];
+
+            group.replaceChildren(...options.map((item) => {
+                const button = document.createElement('button');
+                const price = Number(item?.price || 0);
+                button.type = 'button';
+                button.className = 'home-quick-choice home-quick-topping drink-customizer__choice drink-customizer__topping';
+                button.dataset.name = String(item?.name || 'Món kèm');
+                button.dataset.price = String(price);
+                button.setAttribute('aria-pressed', 'false');
+                button.append(document.createTextNode(button.dataset.name));
+
+                const priceLabel = document.createElement('small');
+                priceLabel.textContent = `+${price.toLocaleString('vi-VN')}đ`;
+                button.append(priceLabel);
+
+                return button;
+            }));
+        };
+
         document.querySelectorAll('[data-home-quick-add]').forEach((button) => button.addEventListener('click', () => {
             form.action = button.dataset.action;
             element.querySelector('[data-home-quick-name]').textContent = button.dataset.name || '';
@@ -1748,6 +1754,13 @@
             try {
                 sizesMap = JSON.parse(button.dataset.sizes || '{}');
             } catch(e) {}
+
+            let toppingsList = [];
+            try {
+                toppingsList = JSON.parse(button.dataset.toppings || '[]');
+            } catch(e) {}
+
+            renderToppings(toppingsList);
 
             element.querySelectorAll('[data-home-quick-group="size"] .home-quick-size').forEach((sizeBtn) => {
                 const sz = sizeBtn.dataset.value;
@@ -1762,7 +1775,6 @@
             });
 
             resetGroup('size', 'S'); resetGroup('sugar', '50'); resetGroup('ice', '100');
-            element.querySelectorAll('[data-home-toppings] .home-quick-choice').forEach((item) => item.classList.remove('active'));
             input('toppings').value = '[]';
             updateTotal();
             modal.show();
@@ -1776,7 +1788,18 @@
         element.querySelector('[data-home-toppings]').addEventListener('click', (event) => {
             const button = event.target.closest('.home-quick-choice');
             if (!button) return;
+
+            const isAlreadyActive = button.classList.contains('active');
+            const activeCount = element.querySelectorAll('[data-home-toppings] .home-quick-choice.active').length;
+            if (!isAlreadyActive && activeCount >= 3) {
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Mỗi ly tối đa 3 món kèm.', 'warning');
+                }
+                return;
+            }
+
             button.classList.toggle('active');
+            button.setAttribute('aria-pressed', button.classList.contains('active') ? 'true' : 'false');
             input('toppings').value = JSON.stringify(Array.from(element.querySelectorAll('[data-home-toppings] .active')).map((item) => ({ name: item.dataset.name, price: Number(item.dataset.price) })));
             updateTotal();
         });
