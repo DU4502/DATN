@@ -1028,7 +1028,10 @@
     @endif
 
     {{-- LEGACY OVERVIEW - CURRENTLY ACTIVE --}}
-    <div class="legacy-overview" data-business-overview-region>
+    <div class="legacy-overview"
+        data-business-overview-region
+        data-drilldown-default-from="{{ $analyticsContext->currentStart?->format('Y-m-d H:i:s') }}"
+        data-drilldown-default-to="{{ $analyticsContext->currentEnd?->format('Y-m-d H:i:s') }}">
         <form class="legacy-analytics-form legacy-analytics-form--compact legacy-analytics-filter-plain" method="GET" action="{{ route('admin.super-admin') }}" aria-label="Bộ lọc thời gian" data-legacy-analytics-form
                 data-analytics-default-date="{{ now()->format('Y-m-d') }}"
                 data-analytics-default-week="{{ now()->format('o-\WW') }}"
@@ -1385,6 +1388,13 @@
                 }
 
                 window.history.replaceState({}, '', targetUrl.toString());
+                const refreshedOverview = document.querySelector('[data-business-overview-region]');
+                if (refreshedOverview && typeof window.setDashboardDrilldownDefaults === 'function') {
+                    window.setDashboardDrilldownDefaults({
+                        from: refreshedOverview.getAttribute('data-drilldown-default-from') || '',
+                        to: refreshedOverview.getAttribute('data-drilldown-default-to') || '',
+                    });
+                }
                 syncLegacyAnalyticsPeriodFields();
                 syncLegacyAnalyticsCompareFields();
                 if (typeof syncAnalyticsTabFromLocation === 'function') {

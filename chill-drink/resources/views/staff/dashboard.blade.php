@@ -10,7 +10,9 @@
     .staff-metric-card:focus-visible{outline:3px solid rgba(0,168,112,.25);outline-offset:3px}
     .staff-metric-card::after{content:'Xem chi tiết';font-size:.7rem;font-weight:700;color:#00966a;opacity:0;transition:opacity .18s ease}
     .staff-metric-card:hover::after,.staff-metric-card:focus-visible::after{opacity:1}
-    .dashboard-order-detail{background:#f8fbfa;border-top:1px dashed #d9e8e3}
+    .dashboard-order-modal .modal-content{border:0;border-radius:22px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.22)}
+    .dashboard-order-modal .modal-header{background:linear-gradient(135deg,#effcf8,#fff)}
+    .dashboard-order-modal .modal-body{max-height:min(68vh,680px);overflow-y:auto}
     .dashboard-order-item{display:flex;justify-content:space-between;gap:1rem;padding:.7rem 0;border-bottom:1px dashed #e0ebe7}
     .dashboard-order-item:last-child{border-bottom:0}
 </style>
@@ -106,7 +108,6 @@
         $nextStatus = \App\Support\OrderStatus::storeNextStatus((string) $order->status, $fulfillmentType);
         $canCancel = $order->status === \App\Support\OrderStatus::PENDING;
     @endphp
-    @php($dashboardDetailId = 'dashboard-order-detail-'.$order->id)
     <div data-dashboard-order-container="{{ $order->id }}">
     <div class="p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3"
         data-staff-dashboard-order
@@ -125,7 +126,12 @@
         </div>
         <div class="d-flex align-items-center gap-3">
             <span class="fw-bold text-primary">{{ number_format($order->total ?? 0, 0, ',', '.') }}đ</span>
-            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#{{ $dashboardDetailId }}" aria-expanded="false" aria-controls="{{ $dashboardDetailId }}">
+            <button type="button" class="btn btn-sm btn-outline-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#dashboardOrderDetailModal"
+                data-dashboard-detail-template="dashboard-order-detail-{{ $order->id }}"
+                data-order-id="{{ $order->id }}"
+                data-order-code="{{ $order->displayCode() }}">
                 <i class="bi bi-eye me-1"></i>Chi tiết
             </button>
             @if($nextStatus)
@@ -151,8 +157,8 @@
             @endif
         </div>
     </div>
-    <div class="collapse dashboard-order-detail" id="{{ $dashboardDetailId }}" data-dashboard-order-detail="{{ $order->id }}">
-        <div class="p-4">
+    <template id="dashboard-order-detail-{{ $order->id }}" data-dashboard-order-detail="{{ $order->id }}">
+        <div>
             <div class="row g-4">
                 <div class="col-lg-7">
                     <div class="admin-kicker mb-2">Chi tiết món</div>
@@ -198,7 +204,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </template>
     </div>
     @empty
     <div class="p-5 text-center text-secondary" data-staff-dashboard-empty>
@@ -206,6 +212,25 @@
         <p class="mt-2 mb-0 fw-semibold">Không có đơn hàng nào cần xử lý!</p>
     </div>
     @endforelse
+    </div>
+</div>
+
+<!-- Một modal dùng chung để trang nhẹ và danh sách không bị thay đổi chiều cao -->
+<div class="modal fade dashboard-order-modal" id="dashboardOrderDetailModal" tabindex="-1" aria-labelledby="dashboardOrderDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-bottom px-4 py-3">
+                <div>
+                    <div class="small fw-semibold text-primary text-uppercase mb-1">Chi tiết đơn hàng</div>
+                    <h5 class="modal-title fw-bold mb-0" id="dashboardOrderDetailModalLabel">Đơn hàng</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-4" data-dashboard-order-modal-body></div>
+            <div class="modal-footer border-top px-4 py-3">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -244,6 +269,44 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var detailModal = document.getElementById('dashboardOrderDetailModal');
+    if (detailModal) {
+        detailModal.addEventListener('show.bs.modal', async function (event) {
+            var btn = event.relatedTarget;
+            var template = btn ? document.getElementById(btn.getAttribute('data-dashboard-detail-template')) : null;
+            var body = detailModal.querySelector('[data-dashboard-order-modal-body]');
+            var title = detailModal.querySelector('.modal-title');
+
+            title.textContent = btn?.getAttribute('data-order-code') || 'Đơn hàng';
+            body.replaceChildren();
+            if (template) {
+                body.appendChild(template.content.cloneNode(true));
+            } else {
+                body.innerHTML = '<div class="text-center text-secondary py-4"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang tải chi tiết đơn hàng...</div>';
+                try {
+                    var response = await fetch(`{{ route('staff.dashboard') }}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
+                    });
+                    if (!response.ok) throw new Error('Không thể tải chi tiết đơn hàng.');
+
+                    var page = new DOMParser().parseFromString(await response.text(), 'text/html');
+                    var freshTemplate = page.getElementById(btn.getAttribute('data-dashboard-detail-template'));
+                    if (!freshTemplate) throw new Error('Đơn hàng không còn trong danh sách cần xử lý.');
+
+                    var localTemplate = document.importNode(freshTemplate, true);
+                    document.querySelector('[data-staff-dashboard-orders-list]')?.appendChild(localTemplate);
+                    body.replaceChildren(localTemplate.content.cloneNode(true));
+                } catch (error) {
+                    body.innerHTML = `<div class="alert alert-warning mb-0">${escapeHtml(error.message || 'Không thể tải chi tiết đơn hàng.')}</div>`;
+                }
+            }
+        });
+
+        detailModal.addEventListener('hidden.bs.modal', function () {
+            detailModal.querySelector('[data-dashboard-order-modal-body]').replaceChildren();
+        });
+    }
+
     var cancelModal = document.getElementById('cancelOrderModal');
     if (cancelModal) {
         cancelModal.addEventListener('show.bs.modal', function (event) {
@@ -282,7 +345,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const nextStatus = payload.next_status || null;
         const updateUrl = payload.status_update_url || `{{ url('staff/orders') }}/${orderId}/status`;
-        const detailUrl = payload.url || `{{ route('staff.orders.index') }}?q=${encodeURIComponent(payload.order_code || orderId)}`;
         const row = document.createElement('div');
         row.className = 'p-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3';
         row.dataset.staffDashboardOrder = '';
@@ -302,7 +364,14 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
             <div class="d-flex align-items-center gap-3">
                 <span class="fw-bold text-primary">${escapeHtml(payload.total_formatted || '')}</span>
-                <a href="${escapeHtml(detailUrl)}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye me-1"></i>Chi tiết</a>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#dashboardOrderDetailModal"
+                    data-dashboard-detail-template="dashboard-order-detail-${orderId}"
+                    data-order-id="${orderId}"
+                    data-order-code="${escapeHtml(payload.order_code || `#${orderId}`)}">
+                    <i class="bi bi-eye me-1"></i>Chi tiết
+                </button>
                 ${nextStatus ? `
                     <form action="${escapeHtml(updateUrl)}" method="POST" class="mb-0" data-dashboard-status-form>
                         @csrf

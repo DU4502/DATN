@@ -35,7 +35,9 @@ class SuperAdminAnalyticsPeriodTest extends TestCase
         ]));
 
         $response->assertOk()
-            ->assertViewHas('analyticsContext', fn ($context) => $context->periodType === 'month' && $context->isAllBranches());
+            ->assertViewHas('analyticsContext', fn ($context) => $context->periodType === 'month' && $context->isAllBranches())
+            ->assertSee('data-drilldown-default-from="2026-07-01 00:00:00"', false)
+            ->assertSee('data-drilldown-default-to="2026-07-27 12:00:00"', false);
     }
 
     public function test_legacy_single_branch_id_does_not_change_global_overview_scope(): void

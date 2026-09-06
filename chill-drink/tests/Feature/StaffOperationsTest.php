@@ -152,7 +152,7 @@ class StaffOperationsTest extends TestCase
             ->assertDontSee($otherOrder->order_code);
     }
 
-    public function test_dashboard_processing_order_has_expandable_real_order_details(): void
+    public function test_dashboard_processing_order_opens_real_order_details_in_modal(): void
     {
         $branch = $this->branch('STAFF-DASH-DETAIL');
         $staff = $this->staff($branch);
@@ -193,6 +193,9 @@ class StaffOperationsTest extends TestCase
         $this->actingAs($staff)
             ->get(route('staff.dashboard'))
             ->assertOk()
+            ->assertSee('data-bs-target="#dashboardOrderDetailModal"', false)
+            ->assertSee('id="dashboardOrderDetailModal"', false)
+            ->assertSee('data-dashboard-detail-template="dashboard-order-detail-'.$order->id.'"', false)
             ->assertSee('data-dashboard-order-detail="'.$order->id.'"', false)
             ->assertSee('Chi tiết món')
             ->assertSee('2× Trà sữa kiểm thử')
