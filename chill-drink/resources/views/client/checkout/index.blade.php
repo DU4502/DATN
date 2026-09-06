@@ -3149,6 +3149,7 @@
                 const maxDiscount = Number(card.dataset.maxDiscount || 0);
                 const pointCost = Number(card.dataset.pointCost || 0);
                 const isRedeemable = card.dataset.isRedeemable === '1';
+                const isReceived = card.dataset.isReceived === '1';
 
                 let calculatedDiscount = 0;
                 if (rateType === 'percent') {
@@ -3159,7 +3160,7 @@
                 }
 
                 const hasMinimumOrder = subtotal >= minOrder;
-                const hasPoints = !isRedeemable || pointCost <= 0 || loyaltyPoints >= pointCost;
+                const hasPoints = isReceived || !isRedeemable || pointCost <= 0 || loyaltyPoints >= pointCost;
 
                 let isUsable = calculatedDiscount > 0 && hasMinimumOrder && hasPoints;
                 let disabledReason = '';
