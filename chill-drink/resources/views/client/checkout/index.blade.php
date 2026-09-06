@@ -38,17 +38,13 @@
     $receivedVouchers = collect($receivedVouchers ?? []);
     $ownedVoucherModels = $receivedVouchers->pluck('voucher')->filter();
     $selectableVouchers = $availableVouchers->concat($ownedVoucherModels)->unique('id')->values();
-    $loyaltyContext = $loyaltyContext ?? ['points' => 0];
     $selectedCheckoutAddress = collect($addressBook ?? [])->firstWhere('id', $selectedAddressId ?? 'primary');
     $selectedCheckoutPhone = trim((string) ($selectedCheckoutAddress['phone'] ?? $user->phone ?? ''));
     $checkoutPhoneReady = $selectedCheckoutPhone !== '' && $selectedCheckoutPhone !== 'Chưa cập nhật';
-    $canUseCheckoutVoucher = function ($voucher) use ($total, $loyaltyContext) {
+    $canUseCheckoutVoucher = function ($voucher) use ($total) {
         $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-        $hasPoints = ! $voucher->is_redeemable
-            || (int) $voucher->point_cost <= 0
-            || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
 
-        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder && $hasPoints;
+        return $voucher->discountFor((int) $total) > 0 && $hasMinimumOrder;
     };
     $isShippingVoucher = fn ($voucher) => \Illuminate\Support\Str::contains(\Illuminate\Support\Str::upper((string) $voucher->code), ['SHIP', 'FREE']);
     $shippingVouchers = $availableVouchers->filter($isShippingVoucher)->values();
@@ -2216,11 +2212,10 @@
                                     ? 'bi-truck'
                                     : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                 $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
+                                $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder;
                                 $disabledReason = ! $hasMinimumOrder
                                     ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                    : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
+                                    : null;
                             @endphp
                             <div
                                 class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
@@ -2256,7 +2251,7 @@
                                     <div class="text-secondary mb-2">
                                         Đơn tối thiểu {{ number_format((int) $voucher->min_order, 0, ',', '.') }}đ
                                         @if($voucher->is_redeemable && $voucher->point_cost > 0)
-                                            · {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
+                                            · Đã đổi bằng {{ number_format($voucher->point_cost, 0, ',', '.') }} điểm
                                         @endif
                                     </div>
                                     @if($voucherUsable)
@@ -2315,11 +2310,10 @@
                                                 ? 'bi-truck'
                                                 : ($voucher->is_redeemable ? 'bi-gift' : ($voucher->type === 'percent' ? 'bi-percent' : 'bi-ticket-perforated'));
                                             $hasMinimumOrder = (int) $total >= (int) $voucher->min_order;
-                                            $hasPoints = ! $voucher->is_redeemable || (int) $voucher->point_cost <= 0 || (int) ($loyaltyContext['points'] ?? 0) >= (int) $voucher->point_cost;
-                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder && $hasPoints;
+                                            $voucherUsable = $voucherDiscount > 0 && $hasMinimumOrder;
                                             $disabledReason = ! $hasMinimumOrder
                                                 ? 'Cần đơn từ ' . number_format((int) $voucher->min_order, 0, ',', '.') . 'đ'
-                                                : (! $hasPoints ? 'Cần ' . number_format((int) $voucher->point_cost, 0, ',', '.') . ' điểm' : null);
+                                                : null;
                                         @endphp
                                         <div
                                             class="voucher-ticket {{ $voucherIsShipping ? 'is-shipping' : 'is-discount' }} {{ (($voucherIsShipping ? $selectedShippingVoucherCode : $selectedVoucherCode) === $voucher->code) && $voucherUsable ? 'active' : '' }} {{ $voucherUsable ? '' : 'is-disabled' }}"
@@ -4521,67 +4515,6 @@
         });
 
         document.getElementById('branch_id')?.addEventListener('change', () => window.updateShippingSummary?.());
-
-        // Load received vouchers
-        async function loadReceivedVouchers() {
-            try {
-                const guestIdentifier = sessionStorage.getItem('guest_identifier');
-                const response = await fetch('/api/vouchers/received', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        ...(guestIdentifier && { 'X-Guest-Identifier': guestIdentifier }),
-                    },
-                });
-
-                const data = await response.json();
-                const receivedVouchersSection = document.getElementById('receivedVouchersSection');
-                const receivedVouchersList = document.getElementById('receivedVouchersList');
-
-                if (data.vouchers && data.vouchers.length > 0) {
-                    receivedVouchersSection.style.display = 'block';
-                    receivedVouchersList.innerHTML = '';
-
-                    data.vouchers.forEach(voucher => {
-                        const voucherHtml = `
-                            <div class="voucher-ticket ${/SHIP|FREE/.test(voucher.code) ? 'is-shipping' : 'is-discount'}" data-voucher-card data-voucher-type="${/SHIP|FREE/.test(voucher.code) ? 'shipping' : 'discount'}" data-voucher-code="${escapeHtml(voucher.code)}" data-voucher-label="${escapeHtml(voucher.description ? `${voucher.code} - ${voucher.description}` : voucher.code)}" data-voucher-discount="0">
-                                <div class="voucher-ticket-brand">
-                                    <span class="brand-circle"><i class="bi bi-gift"></i></span>
-                                    <strong>${escapeHtml(voucher.code)}</strong>
-                                </div>
-                                <div class="voucher-ticket-body">
-                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                        <span class="voucher-kind">Đã nhận</span>
-                                        <span class="fw-semibold text-secondary">${escapeHtml(voucher.value)}</span>
-                                    </div>
-                                    <div class="text-secondary small">
-                                        ${escapeHtml(voucher.description || 'Phiếu ưu đãi')}
-                                    </div>
-                                    <span class="voucher-only mt-2 mb-2">
-                                        Bạn đã nhận voucher này
-                                    </span>
-                                </div>
-                                <button type="button" class="voucher-radio" aria-label="Chọn voucher ${escapeHtml(voucher.code)}"></button>
-                            </div>
-                        `;
-                        receivedVouchersList.innerHTML += voucherHtml;
-                    });
-
-                    bindVoucherCards(receivedVouchersList);
-                } else {
-                    receivedVouchersSection.style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Error loading received vouchers:', error);
-            }
-        }
-
-        // Load received vouchers when modal is shown
-        const voucherModalElement = document.getElementById('voucherModal');
-        if (voucherModalElement) {
-            voucherModalElement.addEventListener('show.bs.modal', loadReceivedVouchers);
-        }
 
         bindVoucherCards(document);
         renderAddressList();

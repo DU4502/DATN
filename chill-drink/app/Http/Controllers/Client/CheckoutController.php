@@ -89,7 +89,6 @@ class CheckoutController extends Controller
         $shippingDistanceOptions = ShippingFee::distanceOptions();
         $shippingMethods = ShippingFee::methods();
         $paymentOptions = $this->paymentOptions();
-        $loyaltyContext = $this->loyaltyContext(false);
         $subtotal = $this->cartSubtotal($cart);
         $isGroupCheckout = (bool) $groupCheckout;
         $checkoutDeliveryType = session()->pull('checkout_delivery_type', 'now');
@@ -159,6 +158,10 @@ class CheckoutController extends Controller
         $now = now();
         $availableVouchers = Voucher::query()
             ->where('status', true)
+            ->where(function ($query) {
+                $query->where('is_redeemable', false)
+                    ->orWhere('point_cost', '<=', 0);
+            })
             ->where(function ($query) use ($now) {
                 $query->whereNull('starts_at')
                     ->orWhere('starts_at', '<=', $now);
@@ -219,7 +222,6 @@ class CheckoutController extends Controller
             'paymentOptions',
             'availableVouchers',
             'receivedVouchers',
-            'loyaltyContext',
             'subtotal',
             'addressBook',
             'selectedAddressId',
@@ -1038,7 +1040,7 @@ class CheckoutController extends Controller
             );
         }
 
-        $this->assertVoucherRankAndPoints($voucher);
+        $this->assertVoucherEligibility($voucher);
 
         $discount = $voucher->discountFor($subtotal);
 
@@ -1054,30 +1056,37 @@ class CheckoutController extends Controller
         return Str::contains(Str::upper((string) $voucher->code), ['SHIP', 'FREE']);
     }
 
-    protected function assertVoucherRankAndPoints(Voucher $voucher): void
+    protected function assertVoucherEligibility(Voucher $voucher): void
     {
-        $context = $this->loyaltyContext();
-
-        if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost) {
-            throw new \RuntimeException(
-                'Bạn chưa đủ '
-                .number_format((int) $voucher->point_cost, 0, ',', '.')
-                .' điểm để dùng mã voucher này.'
-            );
+        if (! $voucher->is_redeemable || (int) $voucher->point_cost <= 0) {
+            return;
         }
-    }
 
-    protected function userCanUseVoucher(Voucher $voucher, array $context): bool
-    {
-        return ! ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $context['points'] < (int) $voucher->point_cost);
+        $ownedVoucher = auth()->check() && Schema::hasTable('user_vouchers')
+            ? UserVoucher::query()
+                ->where('user_id', auth()->id())
+                ->where('coupon_id', $voucher->id)
+                ->where('is_used', false)
+                ->where(function ($query) {
+                    $query->whereNull('expires_at')->orWhere('expires_at', '>=', now());
+                })
+                ->lockForUpdate()
+                ->first()
+            : null;
+
+        if (! $ownedVoucher) {
+            throw new \RuntimeException('Bạn cần đổi điểm lấy voucher này trước khi sử dụng.');
+        }
     }
 
     protected function recordVoucherUsage(Voucher $voucher, int $orderId, int $discount): void
     {
         $voucher->increment('used_count');
 
+        $ownedVoucherUpdated = 0;
         if (auth()->check() && Schema::hasTable('user_vouchers')) {
-            \App\Models\UserVoucher::where('user_id', auth()->id())
+            $ownedVoucherUpdated = UserVoucher::query()
+                ->where('user_id', auth()->id())
                 ->where('coupon_id', $voucher->id)
                 ->where('is_used', 0)
                 ->limit(1)
@@ -1085,6 +1094,10 @@ class CheckoutController extends Controller
                     'is_used' => 1,
                     'used_at' => now(),
                 ]);
+        }
+
+        if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && $ownedVoucherUpdated !== 1) {
+            throw new \RuntimeException('Voucher đổi điểm không còn khả dụng trong tài khoản của bạn.');
         }
 
         if (Schema::hasTable('user_coupon_usage')) {
@@ -1097,31 +1110,6 @@ class CheckoutController extends Controller
             ]);
         }
 
-        if ($voucher->is_redeemable && (int) $voucher->point_cost > 0 && Schema::hasTable('loyalty_points')) {
-            DB::table('loyalty_points')
-                ->where('user_id', auth()->id())
-                ->where('total_points', '>=', (int) $voucher->point_cost)
-                ->decrement('total_points', (int) $voucher->point_cost);
-        }
-    }
-
-    protected function loyaltyContext(bool $lock = true): array
-    {
-        if (! Schema::hasTable('loyalty_points')) {
-            return ['rank' => 'bronze', 'points' => 0];
-        }
-
-        $query = DB::table('loyalty_points')->where('user_id', auth()->id());
-
-        if ($lock) {
-            $query->lockForUpdate();
-        }
-
-        $row = $query->first();
-
-        return [
-            'points' => (int) ($row->total_points ?? 0),
-        ];
     }
 
     protected function paymentOptions(): array

@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Branch;
 use App\Models\Category;
+use App\Models\LoyaltyPoint;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -161,7 +162,15 @@ class OrderCancellationTest extends TestCase
         $voucher = Voucher::factory()->create([
             'used_count' => 1,
             'usage_limit' => 1,
-            'is_redeemable' => false,
+            'point_cost' => 50,
+            'is_redeemable' => true,
+        ]);
+        LoyaltyPoint::create([
+            'user_id' => $customer->id,
+            'total_points' => 50,
+            'monthly_points' => 100,
+            'lifetime_points' => 100,
+            'current_month' => now()->format('Y-m'),
         ]);
         $ownedVoucher = UserVoucher::create([
             'user_id' => $customer->id,
@@ -196,6 +205,7 @@ class OrderCancellationTest extends TestCase
         $this->assertSame(0, (int) $voucher->fresh()->used_count);
         $this->assertFalse($ownedVoucher->fresh()->is_used);
         $this->assertNull($ownedVoucher->fresh()->used_at);
+        $this->assertSame(50, (int) $customer->loyaltyPoint()->firstOrFail()->total_points);
         $this->assertDatabaseMissing('user_coupon_usage', ['order_id' => $order->id]);
     }
 }

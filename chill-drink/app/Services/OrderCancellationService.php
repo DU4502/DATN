@@ -203,16 +203,8 @@ class OrderCancellationService
                     DB::table('user_coupon_usage')->where('order_id', $locked->id)->delete();
                 }
 
-                $voucher = Voucher::query()->find($locked->coupon_id);
-                if ($usageExists
-                    && $locked->user_id
-                    && $voucher?->is_redeemable
-                    && (int) $voucher->point_cost > 0
-                    && Schema::hasTable('loyalty_points')) {
-                    DB::table('loyalty_points')
-                        ->where('user_id', $locked->user_id)
-                        ->increment('total_points', (int) $voucher->point_cost);
-                }
+                // Điểm đã được trừ khi đổi voucher, không phải khi đặt đơn.
+                // Khi hủy đơn chỉ mở lại voucher; hoàn thêm điểm sẽ tạo lợi ích kép.
             }
 
             if ($oldStatus === OrderStatus::COMPLETED) {
