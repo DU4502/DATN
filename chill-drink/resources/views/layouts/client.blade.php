@@ -563,17 +563,66 @@
         .active-group-return.is-checkout { color: #92400e; border-color: #f6c76d; background: #fff8e8; }
         .active-group-return.is-checkout:hover { color: #78350f; background: #ffefc7; }
 
-        @media (min-width: 1200px) {
+        @media (min-width: 1400px) {
+            .site-header .navbar {
+                flex-wrap: nowrap;
+            }
+
             #clientNavbar.navbar-collapse {
                 display: flex !important;
                 flex-basis: auto;
                 flex-grow: 1;
+                min-width: 0;
                 align-items: center;
                 visibility: visible !important;
             }
+
+            #clientNavbar .navbar-nav {
+                flex: 0 0 auto;
+            }
+
+            #clientNavbar .nav-link {
+                white-space: nowrap;
+            }
+
+            .nav-actions {
+                min-width: 0;
+                flex-wrap: nowrap !important;
+            }
+
+            .nav-actions.has-group-action {
+                gap: .45rem !important;
+            }
+
+            .nav-actions.has-group-action .active-group-return,
+            .nav-actions.has-group-action > form,
+            .nav-actions.has-group-action .favorite-nav-button,
+            .nav-actions.has-group-action > [data-cart-button],
+            .nav-actions.has-group-action > .dropdown {
+                flex: 0 0 auto;
+            }
+
+            .nav-actions.has-group-action .client-search {
+                width: clamp(180px, 18vw, 240px);
+                flex: 0 1 240px;
+            }
+
+            .nav-actions.has-group-action .header-branch-button {
+                max-width: 165px;
+            }
         }
 
-        @media (max-width: 1199.98px) {
+        @media (min-width: 1400px) and (max-width: 1919.98px) {
+            .nav-actions.has-group-action .active-group-return__label {
+                display: none !important;
+            }
+
+            .nav-actions.has-group-action .active-group-return {
+                padding-inline: .7rem;
+            }
+        }
+
+        @media (max-width: 1399.98px) {
             #clientNavbar.navbar-collapse:not(.show) {
                 display: none !important;
             }
@@ -1486,7 +1535,7 @@
         }
 
         /* ─── Responsive ─── */
-        @media (max-width: 1199.98px) {
+        @media (max-width: 1399.98px) {
             .client-search {
                 width: 100%;
                 margin-top: 0;
@@ -1902,7 +1951,7 @@
     </div>
 
     <header class="site-header sticky-top" id="siteHeader">
-        <nav class="navbar navbar-expand-xl container py-2">
+        <nav class="navbar navbar-expand-xxl container py-2">
             <a href="{{ route('home') }}" class="navbar-brand d-flex align-items-center gap-2 fw-bold m-0">
                 <img src="{{ asset('images/logo.png') }}" alt="Chill Drink Logo" class="brand-mark" style="object-fit: contain; padding: 2px;">
                 <span class="brand-text">Chill Drink</span>
@@ -1913,7 +1962,7 @@
             </button>
 
             <div class="collapse navbar-collapse flex-grow-1" id="clientNavbar">
-                <ul class="navbar-nav ms-xl-4 gap-xl-1">
+                <ul class="navbar-nav ms-xxl-4 gap-xxl-1">
                     <li class="nav-item">
                         <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Trang Chủ</a>
                     </li>
@@ -1928,7 +1977,7 @@
                     </li>
                 </ul>
 
-                <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-xl-auto mt-2 mt-xl-0">
+                <div class="nav-actions d-flex flex-wrap align-items-center gap-2 ms-xxl-auto mt-2 mt-xxl-0 {{ (!empty($pendingCheckoutGroup) || (!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))) ? 'has-group-action' : '' }}">
                     @if(!empty($pendingCheckoutGroup))
                         @if(!request()->routeIs('checkout.*'))
                         @php
@@ -1937,13 +1986,13 @@
                         @if($pendingCheckoutGroup->order && $pendingCheckoutGroup->order->payment_method === 'vnpay' && $pendingCheckoutGroup->order->payment_status !== 'paid')
                             <a href="{{ route('vnpay.payment', $pendingCheckoutGroup->order) }}" class="active-group-return is-checkout" data-pending-payment-link data-expires-at="{{ $pendingPaymentExpiresAt?->toIso8601String() }}" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
                                 <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                                <span>Tiếp tục thanh toán</span>
+                                <span class="active-group-return__label">Tiếp tục thanh toán</span>
                                 <span class="active-group-return__time" data-pending-payment-countdown>--:--</span>
                             </a>
                         @elseif((int) session('checkout_group_order_id') === (int) $pendingCheckoutGroup->id)
                             <a href="{{ route('checkout.index') }}" class="active-group-return is-checkout" data-pending-payment-link data-expires-at="{{ $pendingPaymentExpiresAt?->toIso8601String() }}" title="Tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
                                 <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                                <span>Tiếp tục thanh toán</span>
+                                <span class="active-group-return__label">Tiếp tục thanh toán</span>
                                 <span class="active-group-return__time" data-pending-payment-countdown>--:--</span>
                             </a>
                         @else
@@ -1951,7 +2000,7 @@
                                 @csrf
                                 <button type="submit" class="active-group-return is-checkout" data-pending-payment-link data-expires-at="{{ $pendingPaymentExpiresAt?->toIso8601String() }}" title="Khôi phục và tiếp tục thanh toán đơn nhóm {{ $pendingCheckoutGroup->name }}">
                                     <i class="bi bi-credit-card-fill" aria-hidden="true"></i>
-                                    <span>Tiếp tục thanh toán</span>
+                                    <span class="active-group-return__label">Tiếp tục thanh toán</span>
                                     <span class="active-group-return__time" data-pending-payment-countdown>--:--</span>
                                 </button>
                             </form>
@@ -1960,7 +2009,7 @@
                     @elseif(!empty($activeOwnedGroup) && !request()->routeIs('group-orders.show'))
                         <a href="{{ route('group-orders.show', $activeOwnedGroup->code) }}" class="active-group-return" title="Quay lại phòng {{ $activeOwnedGroup->name }}">
                             <i class="bi bi-people-fill" aria-hidden="true"></i>
-                            <span class="d-none d-xl-inline">{{ $activeOwnedGroup->owner_id === auth()->id() ? 'Phòng đang mở' : 'Phòng đang tham gia' }}</span>
+                            <span class="active-group-return__label">{{ $activeOwnedGroup->owner_id === auth()->id() ? 'Phòng đang mở' : 'Phòng đang tham gia' }}</span>
                             <span class="active-group-return__time" data-active-group-countdown data-closes-at="{{ $activeOwnedGroup->closes_at->toIso8601String() }}">--:--</span>
                             <span class="active-group-return__members" title="{{ $activeOwnedGroup->members_count }} thành viên"><i class="bi bi-person-fill" aria-hidden="true"></i>{{ $activeOwnedGroup->members_count }}</span>
                         </a>
