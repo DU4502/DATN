@@ -16,7 +16,6 @@ class ShipperBundleService
     public const MAX_CUPS_PER_TRIP = 20;
     public const FAR_ORDER_KM = 8.0;
     public const MAX_ESTIMATED_TRIP_SECONDS = 75 * 60;
-    public const PICKUP_DEPARTURE_LOCK_DISTANCE_M = 200.0;
 
     private const ACTIVE_ORDER_STATUSES = [
         OrderStatus::CONFIRMED,
@@ -46,9 +45,8 @@ class ShipperBundleService
     }
 
     /**
-     * Chỉ khóa ghép thêm sau khi shipper đã lấy hàng và thực sự rời quán.
-     * Trước thời điểm đó, các đơn đang chờ lấy vẫn có thể ghép theo luật tuyến
-     * và giới hạn tải hiện có của chuyến.
+     * Chỉ ghép khi chuyến hiện tại còn ở pha chờ lấy hàng.
+     * Sau khi đã xác nhận lấy hàng thì không bắn thêm đơn mới nữa.
      *
      * @param Collection<int,Order> $activeOrders
      */
@@ -56,26 +54,7 @@ class ShipperBundleService
     {
         foreach ($activeOrders as $activeOrder) {
             $status = OrderStatus::normalize((string) $activeOrder->status);
-            if (! in_array($status, [OrderStatus::SHIPPER_PICKED_UP, OrderStatus::DELIVERING], true)) {
-                continue;
-            }
-
-            $points = $this->orderPointSet($activeOrder);
-            if (! $points
-                || ! is_numeric($shipper->current_latitude)
-                || ! is_numeric($shipper->current_longitude)) {
-                // Không đủ GPS để chứng minh shipper còn ở quán thì khóa an toàn.
-                return false;
-            }
-
-            $distanceM = $this->haversineKm(
-                (float) $shipper->current_latitude,
-                (float) $shipper->current_longitude,
-                (float) $points['branch']['latitude'],
-                (float) $points['branch']['longitude'],
-            ) * 1000;
-
-            if ($distanceM >= self::PICKUP_DEPARTURE_LOCK_DISTANCE_M) {
+            if (in_array($status, [OrderStatus::SHIPPER_PICKED_UP, OrderStatus::DELIVERING], true)) {
                 return false;
             }
         }

@@ -512,18 +512,18 @@ class DeliveryBundleDispatchTest extends TestCase
         $this->assertDatabaseHas('delivery_bundle_trip_orders', ['order_id' => $newOrder->id]);
     }
 
-    public function test_bundle_dispatch_stops_after_shipper_leaves_store_200m_after_pickup(): void
+    public function test_bundle_dispatch_stops_after_shipper_picked_up(): void
     {
         Notification::fake();
 
         $branch = $this->createBranch('BND-LOCK', 10.7769, 106.7009);
         $shipper = $this->createShipper($branch, 'BUNDLE-LOCK', 'busy');
         $primary = $this->createOrder($branch, 'BUNDLE-LOCK-PRIMARY', $shipper);
-        $primary->forceFill(['status' => 'delivering'])->save();
+        $primary->forceFill(['status' => 'shipper_picked_up'])->save();
         $newOrder = $this->createOrder($branch, 'BUNDLE-LOCK-NEW');
 
         $shipper->forceFill([
-            'current_latitude' => (float) $branch->latitude + (250 / 111320),
+            'current_latitude' => (float) $branch->latitude + (1 / 111320),
             'current_longitude' => (float) $branch->longitude,
         ])->save();
 
@@ -536,6 +536,38 @@ class DeliveryBundleDispatchTest extends TestCase
         ShipmentHistory::create([
             'shipment_id' => $shipment->id,
             'status' => 'accepted',
+        ]);
+
+        $this->mockBundleRouting();
+
+        $result = app(ShipperDispatchService::class)->dispatchConfirmedOrder($newOrder);
+
+        $this->assertSame('waiting', $result['status']);
+        $this->assertNull($newOrder->fresh()->shipper_id);
+        $this->assertDatabaseMissing('delivery_bundle_trip_orders', [
+            'order_id' => $newOrder->id,
+        ]);
+    }
+
+    public function test_bundle_dispatch_stops_while_shipper_is_delivering(): void
+    {
+        Notification::fake();
+
+        $branch = $this->createBranch('BND-DELIVERING', 10.7769, 106.7009);
+        $shipper = $this->createShipper($branch, 'BUNDLE-DELIVERING', 'busy');
+        $primary = $this->createOrder($branch, 'BUNDLE-DELIVERING-PRIMARY', $shipper);
+        $primary->forceFill(['status' => 'delivering'])->save();
+        $newOrder = $this->createOrder($branch, 'BUNDLE-DELIVERING-NEW');
+
+        $shipment = Shipment::create([
+            'order_id' => $primary->id,
+            'shipper_id' => $shipper->id,
+            'status' => 'delivering',
+            'assigned_at' => now(),
+        ]);
+        ShipmentHistory::create([
+            'shipment_id' => $shipment->id,
+            'status' => 'delivering',
         ]);
 
         $this->mockBundleRouting();

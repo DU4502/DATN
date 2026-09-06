@@ -349,7 +349,7 @@ class ShipperDispatchService
                 return [
                     'status' => 'waiting',
                     'shipper' => null,
-                    'message' => 'Shipper đã rời quán quá 200m sau khi lấy hàng; cần giao/thu tiền đơn hiện tại trước khi ghép thêm.',
+                    'message' => 'Shipper đã lấy hàng rồi; cần giao/thu tiền đơn hiện tại trước khi ghép thêm.',
                 ];
             }
 
