@@ -428,6 +428,60 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
         z-index: 20;
     }
 
+    @media (min-width: 992px) {
+        .shop-sidebar {
+            align-self: flex-start;
+            max-height: calc(100dvh - 112px);
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding-right: 0.3rem;
+            scrollbar-color: rgba(13, 147, 115, 0.45) transparent;
+            scrollbar-width: thin;
+        }
+
+        .shop-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .shop-sidebar::-webkit-scrollbar-thumb {
+            border-radius: 999px;
+            background: rgba(13, 147, 115, 0.45);
+        }
+    }
+
+    [data-product-results] {
+        position: relative;
+        min-height: 240px;
+        transition: opacity 0.18s ease;
+    }
+
+    [data-product-results].is-loading {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+
+    [data-product-results].is-loading::after {
+        content: "";
+        position: absolute;
+        top: 4rem;
+        left: 50%;
+        width: 38px;
+        height: 38px;
+        border: 4px solid rgba(13, 147, 115, 0.2);
+        border-top-color: var(--drink-primary, #0d9373);
+        border-radius: 50%;
+        animation: productFilterSpin 0.7s linear infinite;
+        transform: translateX(-50%);
+        z-index: 5;
+    }
+
+    @keyframes productFilterSpin {
+        to {
+            transform: translateX(-50%) rotate(360deg);
+        }
+    }
+
     .btn-new-products {
         background: linear-gradient(135deg, #ff9f1c 0%, #f77f00 100%);
         border: none;
@@ -1004,10 +1058,16 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
         }
     }
 
-    @media (max-width: 767.98px) {
+    @media (max-width: 991.98px) {
         .shop-sidebar {
             position: static;
+            max-height: none;
+            overflow: visible;
         }
+
+    }
+
+    @media (max-width: 767.98px) {
 
         .shop-main-top,
         .shop-hero,
@@ -1242,11 +1302,9 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                                 <i class="bi bi-funnel-fill text-primary" style="font-size: 1rem;"></i>
                                 <span>Bộ lọc</span>
                             </h2>
-                            @if(request('category') || request('sort') || request('min_price') || request('max_price'))
-                            <a href="{{ route('products.index') }}" class="text-secondary small text-decoration-none fw-semibold d-inline-flex align-items-center gap-1" title="Xóa tất cả bộ lọc">
+                            <a href="{{ route('products.index') }}" data-filter-reset class="text-secondary small text-decoration-none fw-semibold d-inline-flex align-items-center gap-1 {{ request('category') || request('sort') || request('min_price') || request('max_price') || !empty($searchQuery) ? '' : 'd-none' }}" title="Xóa tất cả bộ lọc">
                                 <i class="bi bi-arrow-counterclockwise"></i>Làm mới
                             </a>
-                            @endif
                         </div>
 
                         <button type="button" class="filter-panel__mobile-toggle" aria-expanded="false" aria-controls="productFilterBody">
@@ -1298,20 +1356,20 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                                     <span>Danh mục</span>
                                 </h3>
                                 <div class="category-list d-grid gap-1">
-                                    <a href="{{ route('products.index') }}" class="category-chip {{ !request('category') && empty($searchQuery) ? 'active' : '' }}">
+                                    <a href="{{ route('products.index') }}" data-category-filter class="category-chip {{ !request('category') && empty($searchQuery) ? 'active' : '' }}">
                                         <span>Tất cả</span>
                                         <span class="category-radio" aria-hidden="true"></span>
                                     </a>
                                     @forelse($categories as $category)
-                                    <a href="{{ route('products.index', ['category' => $category->id]) }}" class="category-chip {{ request('category') == $category->id ? 'active' : '' }}">
+                                    <a href="{{ route('products.index', ['category' => $category->id]) }}" data-category-filter class="category-chip {{ request('category') == $category->id ? 'active' : '' }}">
                                         <span>{{ $category->name }}</span>
                                         <span class="category-radio" aria-hidden="true"></span>
                                     </a>
                                     @empty
-                                    <a href="{{ route('products.index') }}" class="category-chip"><span>Trà sữa</span><span class="category-radio" aria-hidden="true"></span></a>
-                                    <a href="{{ route('products.index') }}" class="category-chip"><span>Cà phê</span><span class="category-radio" aria-hidden="true"></span></a>
-                                    <a href="{{ route('products.index') }}" class="category-chip"><span>Nước ép</span><span class="category-radio" aria-hidden="true"></span></a>
-                                    <a href="{{ route('products.index') }}" class="category-chip"><span>Sinh tố</span><span class="category-radio" aria-hidden="true"></span></a>
+                                    <a href="{{ route('products.index') }}" data-category-filter class="category-chip"><span>Trà sữa</span><span class="category-radio" aria-hidden="true"></span></a>
+                                    <a href="{{ route('products.index') }}" data-category-filter class="category-chip"><span>Cà phê</span><span class="category-radio" aria-hidden="true"></span></a>
+                                    <a href="{{ route('products.index') }}" data-category-filter class="category-chip"><span>Nước ép</span><span class="category-radio" aria-hidden="true"></span></a>
+                                    <a href="{{ route('products.index') }}" data-category-filter class="category-chip"><span>Sinh tố</span><span class="category-radio" aria-hidden="true"></span></a>
                                     @endforelse
                                 </div>
                             </div>
@@ -1351,11 +1409,9 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                                         <span id="maxPriceLabel">{{ number_format(request('max_price', 100000), 0, ',', '.') }}đ</span>
                                     </div>
 
-                                    @if(request('min_price') || request('max_price'))
-                                    <div class="mt-3">
-                                        <a href="{{ route('products.index', request()->except(['min_price', 'max_price'])) }}" class="btn btn-outline-secondary w-100 fw-bold btn-sm rounded-pill">Xóa lọc giá</a>
+                                    <div class="mt-3 {{ request('min_price') || request('max_price') ? '' : 'd-none' }}" data-price-reset-wrap>
+                                        <a href="{{ route('products.index', request()->except(['min_price', 'max_price'])) }}" data-price-reset class="btn btn-outline-secondary w-100 fw-bold btn-sm rounded-pill">Xóa lọc giá</a>
                                     </div>
-                                    @endif
                                 </form>
                             </div>
 
@@ -1457,6 +1513,8 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                     </div>
                 </div>
 
+                @fragment('product-results')
+                <div id="productResults" data-product-results aria-live="polite">
                 <div class="shop-grid-head mb-4">
                     <div>
                         <h2 class="h4 fw-bold mb-1">Danh sách đồ uống</h2>
@@ -1619,6 +1677,8 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                     {{ $products->links('pagination::bootstrap-5') }}
                 </div>
                 @endif
+                </div>
+                @endfragment
             </div>
         </div>
     </div>
@@ -1713,7 +1773,11 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
             });
         });
 
-        document.querySelectorAll('[data-favorite-form]').forEach((favoriteForm) => {
+        function bindFavoriteForms(scope = document) {
+            scope.querySelectorAll('[data-favorite-form]').forEach((favoriteForm) => {
+                if (favoriteForm.dataset.favoriteBound === 'true') return;
+                favoriteForm.dataset.favoriteBound = 'true';
+
             favoriteForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const favoriteButton = favoriteForm.querySelector('[data-favorite-button]');
@@ -1743,7 +1807,10 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                     favoriteButton.classList.remove('is-loading');
                 }
             });
-        });
+            });
+        }
+
+        bindFavoriteForms();
 
         document.querySelectorAll('[data-sort-dropdown]').forEach((dropdown) => {
             const form = dropdown.closest('form');
@@ -1779,7 +1846,10 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                     }
                     dropdown.classList.remove('open');
                     toggle?.setAttribute('aria-expanded', 'false');
-                    form?.submit();
+                    const nextUrl = new URL(window.location.href);
+                    nextUrl.searchParams.set('sort', option.dataset.sortValue || 'popular');
+                    nextUrl.searchParams.delete('page');
+                    loadProductResults(nextUrl);
                 });
             });
         });
@@ -1942,7 +2012,11 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
             syncQuickToppings();
         }
 
-        document.querySelectorAll('[data-quick-add]').forEach((button) => {
+        function bindQuickAddButtons(scope = document) {
+            scope.querySelectorAll('[data-quick-add]').forEach((button) => {
+            if (button.dataset.quickAddBound === 'true') return;
+            button.dataset.quickAddBound = 'true';
+
             button.addEventListener('click', () => {
                 form.action = button.dataset.action || '#';
                 fields.name.textContent = button.dataset.name || 'Đồ uống';
@@ -1996,7 +2070,10 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
                 updateQuickTotal();
                 modal.show();
             });
-        });
+            });
+        }
+
+        bindQuickAddButtons();
 
         modalElement.querySelectorAll('[data-quick-group]').forEach((group) => {
             group.addEventListener('click', (event) => {
@@ -2162,10 +2239,155 @@ $currentSortLabel = $sortOptions[$currentSort] ?? $sortOptions['popular'];
 
                 // Auto-submit after 500ms of inactivity
                 debounceTimer = setTimeout(() => {
-                    priceFilterForm.submit();
+                    const nextUrl = new URL(window.location.href);
+                    nextUrl.searchParams.set('min_price', minPriceInput.value || '0');
+                    nextUrl.searchParams.set('max_price', maxPriceInput.value || '100000');
+                    nextUrl.searchParams.delete('page');
+                    loadProductResults(nextUrl);
                 }, 500);
             });
         }
+
+        const productIndexUrl = new URL(@json(route('products.index')), window.location.origin);
+        let productRequestController = null;
+
+        function isProductIndexUrl(url) {
+            return url.origin === productIndexUrl.origin && url.pathname === productIndexUrl.pathname;
+        }
+
+        function syncFilterControls(url) {
+            const category = url.searchParams.get('category') || '';
+            document.querySelectorAll('[data-category-filter]').forEach((link) => {
+                const linkCategory = new URL(link.href, window.location.origin).searchParams.get('category') || '';
+                link.classList.toggle('active', linkCategory === category);
+            });
+
+            const sort = url.searchParams.get('sort') || 'popular';
+            document.querySelectorAll('[data-sort-dropdown]').forEach((dropdown) => {
+                const input = dropdown.closest('form')?.querySelector('[data-sort-input]');
+                const options = dropdown.querySelectorAll('[data-sort-value]');
+                if (input) input.value = sort;
+
+                options.forEach((option) => {
+                    const isActive = option.dataset.sortValue === sort;
+                    option.classList.toggle('active', isActive);
+                    if (isActive) {
+                        const label = dropdown.querySelector('[data-sort-label]');
+                        if (label) label.textContent = option.textContent.trim();
+                    }
+                });
+            });
+
+            const minPrice = url.searchParams.get('min_price') || '0';
+            const maxPrice = url.searchParams.get('max_price') || '100000';
+            if (minPriceInput) minPriceInput.value = minPrice;
+            if (maxPriceInput) maxPriceInput.value = maxPrice;
+            if (priceRange) priceRange.value = maxPrice;
+            if (minPriceLabel) minPriceLabel.textContent = Number(minPrice).toLocaleString('vi-VN') + 'đ';
+            if (maxPriceLabel) maxPriceLabel.textContent = Number(maxPrice).toLocaleString('vi-VN') + 'đ';
+
+            const hasPriceFilter = url.searchParams.has('min_price') || url.searchParams.has('max_price');
+            const priceResetWrap = document.querySelector('[data-price-reset-wrap]');
+            const priceReset = document.querySelector('[data-price-reset]');
+            priceResetWrap?.classList.toggle('d-none', !hasPriceFilter);
+            if (priceReset) {
+                const resetPriceUrl = new URL(url);
+                resetPriceUrl.searchParams.delete('min_price');
+                resetPriceUrl.searchParams.delete('max_price');
+                resetPriceUrl.searchParams.delete('page');
+                priceReset.href = resetPriceUrl.toString();
+            }
+
+            const filterKeys = ['category', 'sort', 'min_price', 'max_price', 'search'];
+            const hasFilters = filterKeys.some((key) => url.searchParams.has(key));
+            document.querySelector('[data-filter-reset]')?.classList.toggle('d-none', !hasFilters);
+        }
+
+        async function loadProductResults(target, options = {}) {
+            const url = target instanceof URL ? target : new URL(target, window.location.origin);
+            if (!isProductIndexUrl(url)) {
+                window.location.assign(url.toString());
+                return;
+            }
+
+            productRequestController?.abort();
+            productRequestController = new AbortController();
+            const currentResults = document.querySelector('[data-product-results]');
+            currentResults?.classList.add('is-loading');
+            currentResults?.setAttribute('aria-busy', 'true');
+
+            try {
+                const response = await fetch(url.toString(), {
+                    headers: {
+                        'Accept': 'text/html',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-Product-Fragment': 'true',
+                    },
+                    credentials: 'same-origin',
+                    signal: productRequestController.signal,
+                });
+
+                if (!response.ok) throw new Error('product_filter_failed');
+
+                const template = document.createElement('template');
+                template.innerHTML = (await response.text()).trim();
+                const nextResults = template.content.querySelector('[data-product-results]');
+                if (!nextResults || !currentResults) throw new Error('product_fragment_missing');
+
+                currentResults.replaceWith(nextResults);
+                bindFavoriteForms(nextResults);
+                bindQuickAddButtons(nextResults);
+                syncFilterControls(url);
+
+                if (options.updateHistory !== false) {
+                    window.history.pushState({}, '', url.toString());
+                }
+
+                if (options.scrollToResults) {
+                    nextResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                window.location.assign(url.toString());
+            }
+        }
+
+        document.addEventListener('click', (event) => {
+            const link = event.target.closest('a[href]');
+            if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+
+            const targetUrl = new URL(link.href, window.location.origin);
+            if (!isProductIndexUrl(targetUrl)) return;
+
+            const isCategory = link.matches('[data-category-filter]');
+            const isReset = link.matches('[data-filter-reset]');
+            const isPriceReset = link.matches('[data-price-reset]');
+            const isResultNavigation = Boolean(link.closest('[data-product-results]'));
+            if (!isCategory && !isReset && !isPriceReset && !isResultNavigation) return;
+
+            event.preventDefault();
+            let nextUrl = new URL(window.location.href);
+
+            if (isReset) {
+                nextUrl = new URL(productIndexUrl);
+            } else if (isCategory) {
+                const category = targetUrl.searchParams.get('category');
+                category ? nextUrl.searchParams.set('category', category) : nextUrl.searchParams.delete('category');
+                nextUrl.searchParams.delete('page');
+            } else if (isPriceReset) {
+                nextUrl.searchParams.delete('min_price');
+                nextUrl.searchParams.delete('max_price');
+                nextUrl.searchParams.delete('page');
+            } else {
+                nextUrl = targetUrl;
+            }
+
+            loadProductResults(nextUrl, { scrollToResults: isResultNavigation });
+        });
+
+        window.addEventListener('popstate', () => {
+            loadProductResults(new URL(window.location.href), { updateHistory: false });
+        });
     });
 </script>
 @endsection

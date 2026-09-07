@@ -78,6 +78,38 @@ class ToppingManagementTest extends TestCase
             ->assertSessionHas('error');
 
         $this->assertDatabaseHas('toppings', ['id' => $topping->id]);
+
+        $superAdmin = User::factory()->create([
+            'role_id' => 3,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->followingRedirects()
+            ->delete(route('admin.toppings.destroy', $topping))
+            ->assertOk()
+            ->assertSee('Không thể xóa Topping đã xuất hiện trong lịch sử đơn hàng.');
+    }
+
+    public function test_super_admin_can_delete_unused_topping_and_sees_success_message(): void
+    {
+        $superAdmin = User::factory()->create([
+            'role_id' => 3,
+            'is_active' => true,
+        ]);
+        $topping = Topping::create([
+            'name' => 'Topping chưa sử dụng',
+            'price' => 5000,
+            'status' => true,
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->followingRedirects()
+            ->delete(route('admin.toppings.destroy', $topping))
+            ->assertOk()
+            ->assertSee('Xóa Topping thành công!');
+
+        $this->assertDatabaseMissing('toppings', ['id' => $topping->id]);
     }
 
     private function admin(): User

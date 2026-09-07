@@ -111,6 +111,11 @@ class KeepSuperAdminContext
 
         $parameters = array_merge($parameters, $request->query());
 
+        // This GET is only an intermediate redirect from the legacy admin URL
+        // to the Super Admin workspace. Preserve controller flash messages so
+        // they are still available when the destination page is rendered.
+        $request->session()->reflash();
+
         return redirect()->to(route($targetRoute, $parameters));
     }
 }

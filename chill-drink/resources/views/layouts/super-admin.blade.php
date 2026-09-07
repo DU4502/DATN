@@ -393,8 +393,19 @@
         }
 
         .root-dropdown-title { padding: 0.5rem 0.75rem; font-size: 0.82rem; font-weight: 800; }
+        .root-notification-header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+        .root-notification-read-all {
+            border: 0;
+            padding: 0.3rem 0.45rem;
+            background: transparent;
+            color: var(--root-green-dark);
+            font-size: 0.7rem;
+            font-weight: 750;
+        }
+        .root-notification-read-all:hover { text-decoration: underline; }
         .root-dropdown-empty { padding: 0.9rem 0.75rem; color: var(--root-muted); font-size: 0.75rem; }
         .root-dropdown .dropdown-item { border-radius: 8px; padding: 0.68rem 0.75rem; font-size: 0.78rem; }
+        .root-notification-item.is-unread { border-radius: 8px; background: #effaf6; }
         .root-notification-item strong, .root-notification-item span { display: block; }
         .root-notification-item span { margin-top: 0.16rem; color: var(--root-muted); font-size: 0.68rem; }
 
@@ -537,13 +548,23 @@
                         <button type="button" class="root-topbar-btn position-relative" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Thông báo">
                             <i class="bi bi-bell"></i>
                             @if(($unreadNotificationCount ?? 0) > 0)
-                                <span class="root-notification-count">{{ min(99, $unreadNotificationCount) }}</span>
+                                <span class="root-notification-count" data-notify-unread-count data-notify-hide-when-zero>{{ min(99, $unreadNotificationCount) }}</span>
                             @endif
                         </button>
                         <div class="dropdown-menu dropdown-menu-end root-dropdown">
-                            <div class="root-dropdown-title">Thông báo</div>
+                            <div class="root-dropdown-title root-notification-header">
+                                <span>Thông báo gần đây</span>
+                                @if(($unreadNotificationCount ?? 0) > 0)
+                                    <form method="POST" action="{{ route('notifications.mark-all-read') }}" data-instant-form data-instant-mark-read>
+                                        @csrf
+                                        <button type="submit" class="root-notification-read-all">
+                                            <i class="bi bi-check2-all me-1"></i>Đã đọc tất cả
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                             @forelse(($notifications ?? collect()) as $notification)
-                                <div class="dropdown-item-text root-notification-item">
+                                <div class="dropdown-item-text root-notification-item {{ $notification->read_at ? '' : 'is-unread' }}" @if(!$notification->read_at) data-notify-unread @endif>
                                     <strong>{{ data_get($notification->data, 'title', 'Thông báo hệ thống') }}</strong>
                                     <span>{{ data_get($notification->data, 'message', $notification->created_at?->diffForHumans()) }}</span>
                                 </div>
@@ -577,6 +598,20 @@
             </header>
 
             <main class="root-page">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Đóng"></button>
+                    </div>
+                @endif
+
                 @yield('content')
             </main>
 

@@ -10,6 +10,18 @@ class ProductBranchSelectionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_product_filters_can_return_only_the_product_results_fragment(): void
+    {
+        $this
+            ->withHeader('X-Product-Fragment', 'true')
+            ->get(route('products.index', ['sort' => 'price_asc']))
+            ->assertOk()
+            ->assertSee('data-product-results', false)
+            ->assertSee('shop-products-grid', false)
+            ->assertDontSee('shop-sidebar', false)
+            ->assertDontSee('quickAddModal', false);
+    }
+
     public function test_customer_can_change_the_branch_used_by_the_product_catalog(): void
     {
         $firstBranch = Branch::create([

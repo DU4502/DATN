@@ -182,7 +182,13 @@ class ProductController extends Controller
             ->latest('id')
             ->first();
 
-        return view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers', 'branch', 'latestProduct'));
+        $view = view('client.products.index', compact('products', 'categories', 'searchQuery', 'demoProducts', 'favoriteProductIds', 'featuredVouchers', 'branch', 'latestProduct'));
+
+        if ($request->header('X-Product-Fragment') === 'true') {
+            return $view->fragment('product-results');
+        }
+
+        return $view;
     }
 
     /**

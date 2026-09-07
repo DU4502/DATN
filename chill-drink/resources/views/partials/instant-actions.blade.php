@@ -107,7 +107,14 @@
         if (!form.matches('[data-instant-mark-read]')) return;
         document.querySelectorAll('.notify-card.is-unread').forEach((card) => card.classList.remove('is-unread'));
         document.querySelectorAll('.notify-dot').forEach((dot) => dot.remove());
-        document.querySelectorAll('[data-notify-unread-count]').forEach((node) => { node.textContent = '0'; });
+        document.querySelectorAll('[data-notify-unread-count]').forEach((node) => {
+            node.textContent = '0';
+            if (node.hasAttribute('data-notify-hide-when-zero')) node.hidden = true;
+        });
+        document.querySelectorAll('[data-notify-unread]').forEach((node) => {
+            node.classList.remove('is-unread');
+            node.removeAttribute('data-notify-unread');
+        });
         document.querySelectorAll('.shipper-mobile-badge').forEach((node) => node.remove());
         form.remove();
     };
